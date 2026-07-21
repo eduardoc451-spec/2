@@ -1,6 +1,9 @@
-import os
-import sys
 import re
+import streamlit as st
+
+# Defina a constante global para ser usada em qualquer lugar do script
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'import os
+import sys
 import json
 import warnings
 import logging
