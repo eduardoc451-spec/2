@@ -1340,7 +1340,13 @@ def mostrar_formulario_cidade():
         # Diálogo Interno (Comentários)
         bloco_comentarios("1.1", res_data, ano_sel)
 
-# =============================================================================
+    import re
+    import streamlit as st
+
+    # Regex unificada para todos os quesitos
+    REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
+        
+    # =============================================================================
     # QUESITO 1.2 • PÁGINA ELETRÔNICA COMPDEC (100% INDEPENDENTE)
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_1_2_final_{ano_sel}", border=True):
