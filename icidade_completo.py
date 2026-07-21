@@ -81,25 +81,25 @@ def init_connection_pool():
     return pool.SimpleConnectionPool(1, 10, dsn=db_url)
 
 db_pool = init_connection_pool()
-
-# CÓDIGO CORRIGIDO
 class get_connection:
 
     def __enter__(self):
-        self.conn = criar_ou_obter_conexao()  # sua função de conexão
+        # VOLTE A SINTAXE ORIGINAL DA SUA CONEXÃO AQUI
+        # (exemplo: self.conn = psycopg2.connect(...) ou st.connection(...))
+        self.conn = suafuncao_de_conexao_original()
         return self.conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.conn:
+        if hasattr(self, "conn") and self.conn:
             try:
-                # Verifica se a conexão não está fechada (closed == 0 significa aberta)
+                # Só tenta rollback/commit se a conexão ainda estiver aberta
                 if getattr(self.conn, "closed", 0) == 0:
                     if exc_type:
                         self.conn.rollback()
                     else:
                         self.conn.commit()
             except Exception:
-                pass  # Ignora erros de rollback se a conexão já caiu
+                pass  # Ignora se a conexão já tiver sido encerrada
             finally:
                 try:
                     if getattr(self.conn, "closed", 0) == 0:
