@@ -1257,6 +1257,9 @@ def mostrar_formulario_cidade():
     # Garante a exposição da variável r10 para dependências condicionais de outros quesitos
     r10 = v_salvo_10
 
+    # Bloco de comentários renderizado
+            bloco_comentarios("1.0", res_data, ano_sel)
+
     # =============================================================================
     # QUESITO 1.1 • INSTRUMENTO NORMATIVO COMPDEC (100% INDEPENDENTE)
     # =============================================================================
