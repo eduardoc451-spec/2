@@ -8,26 +8,15 @@ from datetime import datetime, date
 from io import BytesIO
 
 import psycopg2
-import streamlit as st
-
-# Desativa alertas não críticos nos logs
-warnings.filterwarnings("ignore")
-
-# Constante global de expressão regular para captura de URLs em qualquer quesito
-REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
-# =============================================================================
-# BLOQUEIO INTERNO NATIVO DO STREAMLIT (ANTES DE QUALQUER OPERAÇÃO)
-# =============================================================================
-os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
-os.environ["PYTHONWARNINGS"] = "ignore"
-
-import streamlit as st
-import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
+import streamlit as st
 
-# Silencia o interpretador Python padrão
+# Silencia alertas e logs não críticos no console/interface
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
+os.environ["PYTHONWARNINGS"] = "ignore"
 logging.getLogger("streamlit").setLevel(logging.ERROR)
 
 # Bibliotecas para o PDF (Requer: pip install reportlab)
@@ -46,6 +35,9 @@ from plotly.subplots import make_subplots
 # =============================================================================
 # CONSTANTES GLOBAIS
 # =============================================================================
+
+# Constante global de expressão regular para captura de URLs em qualquer quesito
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
 
 CATEGORIAS_MAP = {
     "planejamento":   {"label": "Planejamento",    "qids": ["1.0", "1.3", "1.4"]},
@@ -81,19 +73,14 @@ def init_connection_pool():
     return pool.SimpleConnectionPool(1, 10, dsn=db_url)
 
 db_pool = init_connection_pool()
+
 class get_connection:
-
+    """Context manager seguro para obter e devolver conexões ao pool sem estourar exceções."""
     def __enter__(self):
-        # ⚠️ RESTAURE AQUI O SEU CÓDIGO ORIGINAL DE CONEXÃO
-        # Exemplo com psycopg2 usando secrets do Streamlit:
-        # self.conn = psycopg2.connect(st.secrets["postgres"]["url"])
-        # OU usando variáveis/parâmetros diretos:
-        # self.conn = psycopg2.connect(host=..., database=..., user=..., password=...)
-
+        self.conn = db_pool.getconn()
         return self.conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Trata o fechamento de forma segura sem estourar o InterfaceError
         if hasattr(self, "conn") and self.conn:
             try:
                 if getattr(self.conn, "closed", 0) == 0:
@@ -101,14 +88,11 @@ class get_connection:
                         self.conn.rollback()
                     else:
                         self.conn.commit()
-            except Exception:
-                pass
+            except Exception as e:
+                logging.error(f"Erro no encerramento da transação: {e}")
             finally:
-                try:
-                    if getattr(self.conn, "closed", 0) == 0:
-                        self.conn.close()
-                except Exception:
-                    pass
+                # Devolve a conexão ao pool em vez de fechar
+                db_pool.putconn(self.conn)
 
 # =============================================================================
 # MODAL DE AVISO AUTOMÁTICO
