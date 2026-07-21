@@ -1333,6 +1333,94 @@ def mostrar_formulario_cidade():
 
         # Diálogo Interno (Comentários)
         bloco_comentarios("1.1", res_data, ano_sel)
+
+    # =============================================================================
+    # QUESITO 1.2 • PÁGINA ELETRÔNICA COMPDEC (100% INDEPENDENTE)
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_1_2_final_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.2 - Endereço Eletrônico do Instrumento Normativo", expanded=True):
+            st.subheader("1.2 • Página Eletrônica do Instrumento")
+            st.write("**Informe a página eletrônica (link na internet) do instrumento normativo que criou a COMPDEC ou órgão similar:**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.2' para registrar.*")
+
+            # Recupera o estado salvo no dicionário de dados
+            dq12 = res_data.get("1.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_12 = dq12.get("valor", "")
+
+            # Chaves fixas por componente e ano
+            chave_input_12 = f"v12_{ano_sel}"
+            chave_link_12 = f"l_12_txt_{ano_sel}"
+            chave_coment_12 = f"coment_1.2_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
+
+            c12_1, c12_2 = st.columns([1, 1])
+            with c12_1:
+                val_text_12 = st.text_input(
+                    "Endereço eletrônico (URL):",
+                    value=v_salvo_12,
+                    key=chave_input_12,
+                    placeholder="https://www.municipio.sp.gov.br/legislacao"
+                )
+
+            with c12_2:
+                link_12 = st.text_area(
+                    "Link de Evidência / Print do Portal (1.2):",
+                    value=dq12.get("link", ""),
+                    key=chave_link_12,
+                    height=100
+                )
+                placeholder_links_12 = st.empty()
+                links_12_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_12 or "")]
+                if links_12_visuais:
+                    placeholder_links_12.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_12_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.2", key=f"btn_salvar_1_2_{ano_sel}", type="primary"):
+                # Quesito informativo/textual, pontuação fixa em 0.0
+                pts_12 = 0.0
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_12, dq12.get("comentario", ""))
+
+                # 2. Salva no banco/backend
+                save_resp("1.2", val_text_12, pts_12, link_12, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local para refletir na UI
+                res_data["1.2"] = {
+                    "valor": val_text_12,
+                    "pontos": pts_12,
+                    "link": link_12,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_12 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, dq12.get("link", "") or "")]
+
+                if link_12 != dq12.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 1.2 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            st.markdown(
+                "<span style='color:#28a745; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 1.2: 0.0 pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
+        modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
        
    # =============================================================================
     # QUESITO 2.0 • TREINAMENTO E CAPACITAÇÃO EM DEFESA CIVIL (100% INDEPENDENTE)
