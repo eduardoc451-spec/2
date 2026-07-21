@@ -1333,13 +1333,7 @@ def mostrar_formulario_cidade():
 
         # Diálogo Interno (Comentários)
         bloco_comentarios("1.1", res_data, ano_sel)
-
-    import re
-    import streamlit as st
-
-    # Regex unificada para todos os quesitos
-    REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
-        
+       
    # =============================================================================
     # QUESITO 2.0 • TREINAMENTO E CAPACITAÇÃO EM DEFESA CIVIL (100% INDEPENDENTE)
     # =============================================================================
