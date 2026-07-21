@@ -1399,7 +1399,6 @@ def mostrar_formulario_cidade():
     if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
         modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
-
     # =============================================================================
     # QUESITO 1.3 • SUBORDINAÇÃO DA COMPDEC (100% INDEPENDENTE)
     # =============================================================================
