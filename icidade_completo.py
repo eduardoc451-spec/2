@@ -1224,17 +1224,19 @@ def mostrar_formulario_cidade():
                 if links_10_visuais:
                     placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-            # -----------------------------------------------------------------
+           # -----------------------------------------------------------------
             # BOTÃO DE SALVAMENTO MANUAL
             # -----------------------------------------------------------------
             if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                 pts_10 = opcoes_10.get(val_radio_10, 0.0)
                 
-                # Salva no banco/backend e atualiza dicionário local
+                # 1. Salva no banco/backend
                 save_resp("1.0", val_radio_10, pts_10, link_10)
+                
+                # 2. Atualiza o dicionário local
                 res_data["1.0"] = {"valor": val_radio_10, "pontos": pts_10, "link": link_10}
 
-                # Validação/Processamento de links para exibição de modal
+                # 3. Validação/Processamento de links para exibição de modal
                 links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
                 links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
 
@@ -1242,22 +1244,17 @@ def mostrar_formulario_cidade():
                     st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                     st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
-                st.success("Resposta do Quesito 1.0 salva com sucesso!")
-
-            pts_atuais_10 = d10.get("pontos", 0.0)
-            cor_txt_10 = "#28a745" if pts_atuais_10 == 40.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
-            st.markdown(
-                f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
-                f"📊 Impacto de Pontuação no Quesito 1.0: {pts_atuais_10:.1f} pontos</span>",
-                unsafe_allow_html=True
-            )
-            bloco_comentarios("1.0", res_data, ano_sel)
+                st.toast("Resposta do Quesito 1.0 salva com sucesso!", icon="✅")
+                
+                # 4. FORÇA O RECARREGAMENTO DA TELA (Resolve o duplo clique)
+                st.rerun()
 
     # GATILHO DO MODAL 1.0
     if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
         modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
+    # Garante a exposição da variável r10 para dependências condicionais de outros quesitos
     r10 = v_salvo_10
 
     # =============================================================================
