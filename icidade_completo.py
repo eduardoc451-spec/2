@@ -1137,21 +1137,21 @@ def render_graficos(res_data_atual, ano_sel):
 # =============================================================================
 
 def mostrar_formulario_cidade():
-    total_pts, res_data, ano_sel = render_sidebar()
-    st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
+        total_pts, res_data, ano_sel = render_sidebar()
+        st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
 
-    st.markdown("""
-        <style>
-        .quesito-card {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-left: 6px solid #2c3e50;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+        st.markdown("""
+            <style>
+            .quesito-card {
+                background-color: #f8f9fa;
+                padding: 20px;
+                border-left: 6px solid #2c3e50;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                border: 1px solid #ddd;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 
     # -------------------------------------------------------------------------
     # ABAS PRINCIPAIS
