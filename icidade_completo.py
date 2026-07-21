@@ -84,22 +84,25 @@ db_pool = init_connection_pool()
 class get_connection:
 
     def __enter__(self):
-        # VOLTE A SINTAXE ORIGINAL DA SUA CONEXÃO AQUI
-        # (exemplo: self.conn = psycopg2.connect(...) ou st.connection(...))
-        self.conn = suafuncao_de_conexao_original()
+        # ⚠️ RESTAURE AQUI O SEU CÓDIGO ORIGINAL DE CONEXÃO
+        # Exemplo com psycopg2 usando secrets do Streamlit:
+        # self.conn = psycopg2.connect(st.secrets["postgres"]["url"])
+        # OU usando variáveis/parâmetros diretos:
+        # self.conn = psycopg2.connect(host=..., database=..., user=..., password=...)
+
         return self.conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # Trata o fechamento de forma segura sem estourar o InterfaceError
         if hasattr(self, "conn") and self.conn:
             try:
-                # Só tenta rollback/commit se a conexão ainda estiver aberta
                 if getattr(self.conn, "closed", 0) == 0:
                     if exc_type:
                         self.conn.rollback()
                     else:
                         self.conn.commit()
             except Exception:
-                pass  # Ignora se a conexão já tiver sido encerrada
+                pass
             finally:
                 try:
                     if getattr(self.conn, "closed", 0) == 0:
