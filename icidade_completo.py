@@ -1340,314 +1340,314 @@ def mostrar_formulario_cidade():
         # Diálogo Interno (Comentários)
         bloco_comentarios("1.1", res_data, ano_sel)
 
+# =============================================================================
+    # QUESITO 1.2 • PÁGINA ELETRÔNICA COMPDEC (100% INDEPENDENTE)
     # =============================================================================
-# QUESITO 1.2 • PÁGINA ELETRÔNICA COMPDEC (100% INDEPENDENTE)
-# =============================================================================
-with st.container(key=f"container_bloco_compdec_1_2_final_{ano_sel}", border=True):
-    with st.expander("📌 Quesito 1.2 - Endereço Eletrônico do Instrumento Normativo", expanded=True):
-        st.subheader("1.2 • Página Eletrônica do Instrumento")
-        st.write("**Informe a página eletrônica (link na internet) do instrumento normativo que criou a COMPDEC ou órgão similar:**")
-        st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
+    with st.container(key=f"container_bloco_compdec_1_2_final_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.2 - Endereço Eletrônico do Instrumento Normativo", expanded=True):
+            st.subheader("1.2 • Página Eletrônica do Instrumento")
+            st.write("**Informe a página eletrônica (link na internet) do instrumento normativo que criou a COMPDEC ou órgão similar:**")
+            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
 
-        dq12 = res_data.get("1.2") or {"valor": "", "pontos": 0.0, "link": ""}
-        v_salvo_12 = dq12.get("valor", "")
+            dq12 = res_data.get("1.2") or {"valor": "", "pontos": 0.0, "link": ""}
+            v_salvo_12 = dq12.get("valor", "")
 
-        chave_input_12 = f"v12_{ano_sel}"
-        chave_link_12 = f"l_12_txt_{ano_sel}"
+            chave_input_12 = f"v12_{ano_sel}"
+            chave_link_12 = f"l_12_txt_{ano_sel}"
 
-        def cb_quesito_12():
-            val = st.session_state.get(chave_input_12, "")
-            lnk = st.session_state.get(chave_link_12, "")
+            def cb_quesito_12():
+                val = st.session_state.get(chave_input_12, "")
+                lnk = st.session_state.get(chave_link_12, "")
 
-            save_resp("1.2", val, 0.0, lnk)
-            res_data["1.2"] = {"valor": val, "pontos": 0.0, "link": lnk}
+                save_resp("1.2", val, 0.0, lnk)
+                res_data["1.2"] = {"valor": val, "pontos": 0.0, "link": lnk}
 
-            links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
-            links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, dq12.get("link", "") or "")]
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, dq12.get("link", "") or "")]
 
-            if lnk != dq12.get("link", "") and links_atuais and links_atuais != links_antigos:
-                st.session_state[f"links_pendentes_1_2_{ano_sel}"] = links_atuais
-                st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = True
+                if lnk != dq12.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = True
 
-        c12_1, c12_2 = st.columns([1, 1])
-        with c12_1:
-            st.text_input(
-                "Endereço eletrônico (URL):",
-                value=v_salvo_12,
-                key=chave_input_12,
-                on_change=cb_quesito_12,
-                placeholder="https://www.municipio.sp.gov.br/legislacao"
-            )
+            c12_1, c12_2 = st.columns([1, 1])
+            with c12_1:
+                st.text_input(
+                    "Endereço eletrônico (URL):",
+                    value=v_salvo_12,
+                    key=chave_input_12,
+                    on_change=cb_quesito_12,
+                    placeholder="https://www.municipio.sp.gov.br/legislacao"
+                )
 
-        with c12_2:
-            link_12 = st.text_area(
-                "Link de Evidência / Print do Portal (1.2):",
-                value=dq12.get("link", ""),
-                key=chave_link_12,
-                on_change=cb_quesito_12,
-                height=100
-            )
-            placeholder_links_12 = st.empty()
-            links_12_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_12 or "")]
-            if links_12_visuais:
-                placeholder_links_12.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_12_visuais]))
+            with c12_2:
+                link_12 = st.text_area(
+                    "Link de Evidência / Print do Portal (1.2):",
+                    value=dq12.get("link", ""),
+                    key=chave_link_12,
+                    on_change=cb_quesito_12,
+                    height=100
+                )
+                placeholder_links_12 = st.empty()
+                links_12_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_12 or "")]
+                if links_12_visuais:
+                    placeholder_links_12.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_12_visuais]))
 
-        st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.2: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
-        bloco_comentarios("1.2", res_data, ano_sel)
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.2: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            bloco_comentarios("1.2", res_data, ano_sel)
 
-# GATILHO DO MODAL 1.2
-if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
-    modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
-    st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
+    # GATILHO DO MODAL 1.2
+    if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
+        modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
 
-# =============================================================================
-# QUESITO 1.3 • SUBORDINAÇÃO DA COMPDEC (100% INDEPENDENTE)
-# =============================================================================
-with st.container(key=f"container_bloco_compdec_1_3_final_{ano_sel}", border=True):
-    with st.expander("📌 Quesito 1.3 - Secretaria ou Diretoria de Subordinação", expanded=True):
-        st.subheader("1.3 • Estrutura Organizacional")
-        st.write("**A COMPDEC ou órgão similar está associada ou subordinada a qual secretaria/diretoria?**")
-        st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-        
-        opcoes_13 = {
-            "Selecione...": 0.0,
-            "Gabinete do Prefeito (05 pts)": 5.0, 
-            "Segurança Pública (00 pts)": 0.0, 
-            "Controladoria (00 pts)": 0.0, 
-            "Outra (00 pts)": 0.0
-        }
-        
-        d13 = res_data.get("1.3") or {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-        v_salvo_13 = d13.get("valor", "Selecione...")
-        
-        chave_radio_13 = f"r_13_{ano_sel}"
-        chave_link_13 = f"l_13_txt_{ano_sel}"
-
-        def cb_radio_13():
-            val = st.session_state.get(chave_radio_13, "Selecione...")
-            pts = opcoes_13.get(val, 0.0)
-            lnk = st.session_state.get(chave_link_13, d13.get("link", ""))
+    # =============================================================================
+    # QUESITO 1.3 • SUBORDINAÇÃO DA COMPDEC (100% INDEPENDENTE)
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_1_3_final_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.3 - Secretaria ou Diretoria de Subordinação", expanded=True):
+            st.subheader("1.3 • Estrutura Organizacional")
+            st.write("**A COMPDEC ou órgão similar está associada ou subordinada a qual secretaria/diretoria?**")
+            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
             
-            save_resp("1.3", val, pts, lnk)
-            res_data["1.3"] = {"valor": val, "pontos": pts, "link": lnk}
+            opcoes_13 = {
+                "Selecione...": 0.0,
+                "Gabinete do Prefeito (05 pts)": 5.0, 
+                "Segurança Pública (00 pts)": 0.0, 
+                "Controladoria (00 pts)": 0.0, 
+                "Outra (00 pts)": 0.0
+            }
+            
+            d13 = res_data.get("1.3") or {"valor": "Selecione...", "pontos": 0.0, "link": ""}
+            v_salvo_13 = d13.get("valor", "Selecione...")
+            
+            chave_radio_13 = f"r_13_{ano_sel}"
+            chave_link_13 = f"l_13_txt_{ano_sel}"
 
-        def cb_text_13():
-            lnk = st.session_state.get(chave_link_13, "")
-            val = st.session_state.get(chave_radio_13, v_salvo_13)
-            pts = opcoes_13.get(val, 0.0)
-            
-            save_resp("1.3", val, pts, lnk)
-            res_data["1.3"] = {"valor": val, "pontos": pts, "link": lnk}
-            
-            links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
-            links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d13.get("link", "") or "")]
-            
-            if lnk != d13.get("link", "") and links_atuais and links_atuais != links_antigos:
-                st.session_state[f"links_pendentes_1_3_{ano_sel}"] = links_atuais
-                st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = True
+            def cb_radio_13():
+                val = st.session_state.get(chave_radio_13, "Selecione...")
+                pts = opcoes_13.get(val, 0.0)
+                lnk = st.session_state.get(chave_link_13, d13.get("link", ""))
+                
+                save_resp("1.3", val, pts, lnk)
+                res_data["1.3"] = {"valor": val, "pontos": pts, "link": lnk}
 
-        c13_1, c13_2 = st.columns([1, 1])
-        with c13_1:
-            lista_opcoes_13 = list(opcoes_13.keys())
-            idx_13 = lista_opcoes_13.index(v_salvo_13) if v_salvo_13 in lista_opcoes_13 else 0
-            
-            st.radio(
-                "Selecione a subordinação:",
-                options=lista_opcoes_13,
-                index=idx_13,
-                key=chave_radio_13,
-                on_change=cb_radio_13,
-                label_visibility="collapsed"
-            )
-            
-        with c13_2:
-            link_13 = st.text_area(
-                "Link de Evidência / Organograma (1.3):",
-                value=d13.get("link", ""),
-                key=chave_link_13,
-                on_change=cb_text_13,
-                height=135
-            )
-            placeholder_links_13 = st.empty()
-            links_13_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_13 or "")]
-            if links_13_visuais:
-                placeholder_links_13.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_13_visuais]))
+            def cb_text_13():
+                lnk = st.session_state.get(chave_link_13, "")
+                val = st.session_state.get(chave_radio_13, v_salvo_13)
+                pts = opcoes_13.get(val, 0.0)
+                
+                save_resp("1.3", val, pts, lnk)
+                res_data["1.3"] = {"valor": val, "pontos": pts, "link": lnk}
+                
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d13.get("link", "") or "")]
+                
+                if lnk != d13.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = True
 
-        pts_atuais_13 = d13.get("pontos", 0.0)
-        cor_txt_13 = "#28a745" if pts_atuais_13 == 5.0 else ("#dc3545" if v_salvo_13 != "Selecione..." else "#6c757d")
-        st.markdown(f"<span style='color:{cor_txt_13}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.3: {pts_atuais_13:.1f} pontos</span>", unsafe_allow_html=True)
-        bloco_comentarios("1.3", res_data, ano_sel)
+            c13_1, c13_2 = st.columns([1, 1])
+            with c13_1:
+                lista_opcoes_13 = list(opcoes_13.keys())
+                idx_13 = lista_opcoes_13.index(v_salvo_13) if v_salvo_13 in lista_opcoes_13 else 0
+                
+                st.radio(
+                    "Selecione a subordinação:",
+                    options=lista_opcoes_13,
+                    index=idx_13,
+                    key=chave_radio_13,
+                    on_change=cb_radio_13,
+                    label_visibility="collapsed"
+                )
+                
+            with c13_2:
+                link_13 = st.text_area(
+                    "Link de Evidência / Organograma (1.3):",
+                    value=d13.get("link", ""),
+                    key=chave_link_13,
+                    on_change=cb_text_13,
+                    height=135
+                )
+                placeholder_links_13 = st.empty()
+                links_13_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_13 or "")]
+                if links_13_visuais:
+                    placeholder_links_13.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_13_visuais]))
 
-# GATILHO DO MODAL 1.3
-if st.session_state.get(f"gatilho_modal_1_3_{ano_sel}", False):
-    modal_aviso_link("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []))
-    st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = False
+            pts_atuais_13 = d13.get("pontos", 0.0)
+            cor_txt_13 = "#28a745" if pts_atuais_13 == 5.0 else ("#dc3545" if v_salvo_13 != "Selecione..." else "#6c757d")
+            st.markdown(f"<span style='color:{cor_txt_13}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.3: {pts_atuais_13:.1f} pontos</span>", unsafe_allow_html=True)
+            bloco_comentarios("1.3", res_data, ano_sel)
 
-# =============================================================================
-# QUESITO 1.4 • ATUAÇÃO SISTÊMICA DA COMPDEC (100% INDEPENDENTE)
-# =============================================================================
-with st.container(key=f"container_bloco_compdec_1_4_final_{ano_sel}", border=True):
-    with st.expander("📌 Quesito 1.4 - Atuação Sistêmica e Articulação da Defesa Civil", expanded=True):
-        st.subheader("1.4 • Articulação Sistêmica (PNPDEC)")
-        st.write("**Os órgãos e entidades da administração pública municipal atuam de forma sistêmica, articulados com a COMPDEC, nas ações de prevenção, mitigação, preparação, resposta e recuperação de acordo com a Política Nacional de Proteção e Defesa Civil - PNPDEC?**")
-        st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-        
-        opcoes_14 = {
-            "Selecione...": 0.0,
-            "Sim, inclusive com a participação de entidades privadas e da comunidade (50 pts)": 50.0,
-            "Sim, com participação de entidades privadas (20 pts)": 20.0,
-            "Sim, com participação da comunidade (20 pts)": 20.0,
-            "Sim, apenas com representantes da administração municipal (10 pts)": 10.0,
-            "Não atuam de forma sistêmica (00 pts)": 0.0
-        }
-        
-        d14 = res_data.get("1.4") or {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-        v_salvo_14 = d14.get("valor", "Selecione...")
-        
-        chave_radio_14 = f"r_14_{ano_sel}"
-        chave_link_14 = f"l_14_txt_{ano_sel}"
+    # GATILHO DO MODAL 1.3
+    if st.session_state.get(f"gatilho_modal_1_3_{ano_sel}", False):
+        modal_aviso_link("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = False
 
-        def cb_radio_14():
-            val = st.session_state.get(chave_radio_14, "Selecione...")
-            pts = opcoes_14.get(val, 0.0)
-            lnk = st.session_state.get(chave_link_14, d14.get("link", ""))
+    # =============================================================================
+    # QUESITO 1.4 • ATUAÇÃO SISTÊMICA DA COMPDEC (100% INDEPENDENTE)
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_1_4_final_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.4 - Atuação Sistêmica e Articulação da Defesa Civil", expanded=True):
+            st.subheader("1.4 • Articulação Sistêmica (PNPDEC)")
+            st.write("**Os órgãos e entidades da administração pública municipal atuam de forma sistêmica, articulados com a COMPDEC, nas ações de prevenção, mitigação, preparação, resposta e recuperação de acordo com a Política Nacional de Proteção e Defesa Civil - PNPDEC?**")
+            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
             
-            save_resp("1.4", val, pts, lnk)
-            res_data["1.4"] = {"valor": val, "pontos": pts, "link": lnk}
+            opcoes_14 = {
+                "Selecione...": 0.0,
+                "Sim, inclusive com a participação de entidades privadas e da comunidade (50 pts)": 50.0,
+                "Sim, com participação de entidades privadas (20 pts)": 20.0,
+                "Sim, com participação da comunidade (20 pts)": 20.0,
+                "Sim, apenas com representantes da administração municipal (10 pts)": 10.0,
+                "Não atuam de forma sistêmica (00 pts)": 0.0
+            }
+            
+            d14 = res_data.get("1.4") or {"valor": "Selecione...", "pontos": 0.0, "link": ""}
+            v_salvo_14 = d14.get("valor", "Selecione...")
+            
+            chave_radio_14 = f"r_14_{ano_sel}"
+            chave_link_14 = f"l_14_txt_{ano_sel}"
 
-        def cb_text_14():
-            lnk = st.session_state.get(chave_link_14, "")
-            val = st.session_state.get(chave_radio_14, v_salvo_14)
-            pts = opcoes_14.get(val, 0.0)
-            
-            save_resp("1.4", val, pts, lnk)
-            res_data["1.4"] = {"valor": val, "pontos": pts, "link": lnk}
-            
-            links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
-            links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d14.get("link", "") or "")]
-            
-            if lnk != d14.get("link", "") and links_atuais and links_atuais != links_antigos:
-                st.session_state[f"links_pendentes_1_4_{ano_sel}"] = links_atuais
-                st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = True
+            def cb_radio_14():
+                val = st.session_state.get(chave_radio_14, "Selecione...")
+                pts = opcoes_14.get(val, 0.0)
+                lnk = st.session_state.get(chave_link_14, d14.get("link", ""))
+                
+                save_resp("1.4", val, pts, lnk)
+                res_data["1.4"] = {"valor": val, "pontos": pts, "link": lnk}
 
-        c14_1, c14_2 = st.columns([1, 1])
-        with c14_1:
-            lista_opcoes_14 = list(opcoes_14.keys())
-            idx_14 = lista_opcoes_14.index(v_salvo_14) if v_salvo_14 in lista_opcoes_14 else 0
-            
-            st.radio(
-                "Nível de atuação:",
-                options=lista_opcoes_14,
-                index=idx_14,
-                key=chave_radio_14,
-                on_change=cb_radio_14,
-                label_visibility="collapsed"
-            )
-            
-        with c14_2:
-            link_14 = st.text_area(
-                "Link de Evidência / Relatórios / Atas (1.4):",
-                value=d14.get("link", ""),
-                key=chave_link_14,
-                on_change=cb_text_14,
-                height=155
-            )
-            placeholder_links_14 = st.empty()
-            links_14_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_14 or "")]
-            if links_14_visuais:
-                placeholder_links_14.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_14_visuais]))
+            def cb_text_14():
+                lnk = st.session_state.get(chave_link_14, "")
+                val = st.session_state.get(chave_radio_14, v_salvo_14)
+                pts = opcoes_14.get(val, 0.0)
+                
+                save_resp("1.4", val, pts, lnk)
+                res_data["1.4"] = {"valor": val, "pontos": pts, "link": lnk}
+                
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d14.get("link", "") or "")]
+                
+                if lnk != d14.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = True
 
-        pts_atuais_14 = d14.get("pontos", 0.0)
-        cor_txt_14 = "#28a745" if pts_atuais_14 >= 20.0 else ("#dc3545" if v_salvo_14 != "Selecione..." else "#6c757d")
-        st.markdown(f"<span style='color:{cor_txt_14}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.4: {pts_atuais_14:.1f} pontos</span>", unsafe_allow_html=True)
-        bloco_comentarios("1.4", res_data, ano_sel)
+            c14_1, c14_2 = st.columns([1, 1])
+            with c14_1:
+                lista_opcoes_14 = list(opcoes_14.keys())
+                idx_14 = lista_opcoes_14.index(v_salvo_14) if v_salvo_14 in lista_opcoes_14 else 0
+                
+                st.radio(
+                    "Nível de atuação:",
+                    options=lista_opcoes_14,
+                    index=idx_14,
+                    key=chave_radio_14,
+                    on_change=cb_radio_14,
+                    label_visibility="collapsed"
+                )
+                
+            with c14_2:
+                link_14 = st.text_area(
+                    "Link de Evidência / Relatórios / Atas (1.4):",
+                    value=d14.get("link", ""),
+                    key=chave_link_14,
+                    on_change=cb_text_14,
+                    height=155
+                )
+                placeholder_links_14 = st.empty()
+                links_14_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_14 or "")]
+                if links_14_visuais:
+                    placeholder_links_14.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_14_visuais]))
 
-# GATILHO DO MODAL 1.4
-if st.session_state.get(f"gatilho_modal_1_4_{ano_sel}", False):
-    modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
-    st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
+            pts_atuais_14 = d14.get("pontos", 0.0)
+            cor_txt_14 = "#28a745" if pts_atuais_14 >= 20.0 else ("#dc3545" if v_salvo_14 != "Selecione..." else "#6c757d")
+            st.markdown(f"<span style='color:{cor_txt_14}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.4: {pts_atuais_14:.1f} pontos</span>", unsafe_allow_html=True)
+            bloco_comentarios("1.4", res_data, ano_sel)
 
-# =============================================================================
-# QUESITO 1.5 • MOTIVO DA NÃO INSTITUIÇÃO DA COMPDEC (100% INDEPENDENTE)
-# =============================================================================
-with st.container(key=f"container_bloco_compdec_1_5_final_{ano_sel}", border=True):
-    with st.expander("📌 Quesito 1.5 - Motivo da Não Instituição da COMPDEC", expanded=True):
-        st.subheader("1.5 • Justificativa de Não Instituição")
-        st.write("**Motivo da COMPDEC não ter sido instituída:**")
-        st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-        
-        opcoes_15 = {
-            "Selecione...": 0.0,
-            "Instrumento normativo em elaboração": 0.0, 
-            "Falta de estrutura": 0.0, 
-            "Outros": 0.0
-        }
-        
-        d15 = res_data.get("1.5") or {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-        v_salvo_15 = d15.get("valor", "Selecione...")
-        
-        chave_radio_15 = f"r_15_{ano_sel}"
-        chave_link_15 = f"l_15_txt_{ano_sel}"
+    # GATILHO DO MODAL 1.4
+    if st.session_state.get(f"gatilho_modal_1_4_{ano_sel}", False):
+        modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
 
-        def cb_radio_15():
-            val = st.session_state.get(chave_radio_15, "Selecione...")
-            pts = opcoes_15.get(val, 0.0)
-            lnk = st.session_state.get(chave_link_15, d15.get("link", ""))
+    # =============================================================================
+    # QUESITO 1.5 • MOTIVO DA NÃO INSTITUIÇÃO DA COMPDEC (100% INDEPENDENTE)
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_1_5_final_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.5 - Motivo da Não Instituição da COMPDEC", expanded=True):
+            st.subheader("1.5 • Justificativa de Não Instituição")
+            st.write("**Motivo da COMPDEC não ter sido instituída:**")
+            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
             
-            save_resp("1.5", val, pts, lnk)
-            res_data["1.5"] = {"valor": val, "pontos": pts, "link": lnk}
+            opcoes_15 = {
+                "Selecione...": 0.0,
+                "Instrumento normativo em elaboração": 0.0, 
+                "Falta de estrutura": 0.0, 
+                "Outros": 0.0
+            }
+            
+            d15 = res_data.get("1.5") or {"valor": "Selecione...", "pontos": 0.0, "link": ""}
+            v_salvo_15 = d15.get("valor", "Selecione...")
+            
+            chave_radio_15 = f"r_15_{ano_sel}"
+            chave_link_15 = f"l_15_txt_{ano_sel}"
 
-        def cb_text_15():
-            lnk = st.session_state.get(chave_link_15, "")
-            val = st.session_state.get(chave_radio_15, v_salvo_15)
-            pts = opcoes_15.get(val, 0.0)
-            
-            save_resp("1.5", val, pts, lnk)
-            res_data["1.5"] = {"valor": val, "pontos": pts, "link": lnk}
-            
-            links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
-            links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d15.get("link", "") or "")]
-            
-            if lnk != d15.get("link", "") and links_atuais and links_atuais != links_antigos:
-                st.session_state[f"links_pendentes_1_5_{ano_sel}"] = links_atuais
-                st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = True
+            def cb_radio_15():
+                val = st.session_state.get(chave_radio_15, "Selecione...")
+                pts = opcoes_15.get(val, 0.0)
+                lnk = st.session_state.get(chave_link_15, d15.get("link", ""))
+                
+                save_resp("1.5", val, pts, lnk)
+                res_data["1.5"] = {"valor": val, "pontos": pts, "link": lnk}
 
-        c15_1, c15_2 = st.columns([1, 1])
-        with c15_1:
-            lista_opcoes_15 = list(opcoes_15.keys())
-            idx_15 = lista_opcoes_15.index(v_salvo_15) if v_salvo_15 in lista_opcoes_15 else 0
-            
-            st.radio(
-                "Selecione o motivo:",
-                options=lista_opcoes_15,
-                index=idx_15,
-                key=chave_radio_15,
-                on_change=cb_radio_15,
-                label_visibility="collapsed"
-            )
-            
-        with c15_2:
-            link_15 = st.text_area(
-                "Link de Evidência / Ofício Justificativo (1.5):",
-                value=d15.get("link", ""),
-                key=chave_link_15,
-                on_change=cb_text_15,
-                height=115
-            )
-            placeholder_links_15 = st.empty()
-            links_15_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_15 or "")]
-            if links_15_visuais:
-                placeholder_links_15.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_15_visuais]))
+            def cb_text_15():
+                lnk = st.session_state.get(chave_link_15, "")
+                val = st.session_state.get(chave_radio_15, v_salvo_15)
+                pts = opcoes_15.get(val, 0.0)
+                
+                save_resp("1.5", val, pts, lnk)
+                res_data["1.5"] = {"valor": val, "pontos": pts, "link": lnk}
+                
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d15.get("link", "") or "")]
+                
+                if lnk != d15.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = True
 
-        pts_atuais_15 = d15.get("pontos", 0.0)
-        cor_txt_15 = "#6c757d" if v_salvo_15 == "Selecione..." else "#28a745"
-        st.markdown(f"<span style='color:{cor_txt_15}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.5: {pts_atuais_15:.1f} pontos (Informativo)</span>", unsafe_allow_html=True)
-        bloco_comentarios("1.5", res_data, ano_sel)
+            c15_1, c15_2 = st.columns([1, 1])
+            with c15_1:
+                lista_opcoes_15 = list(opcoes_15.keys())
+                idx_15 = lista_opcoes_15.index(v_salvo_15) if v_salvo_15 in lista_opcoes_15 else 0
+                
+                st.radio(
+                    "Selecione o motivo:",
+                    options=lista_opcoes_15,
+                    index=idx_15,
+                    key=chave_radio_15,
+                    on_change=cb_radio_15,
+                    label_visibility="collapsed"
+                )
+                
+            with c15_2:
+                link_15 = st.text_area(
+                    "Link de Evidência / Ofício Justificativo (1.5):",
+                    value=d15.get("link", ""),
+                    key=chave_link_15,
+                    on_change=cb_text_15,
+                    height=115
+                )
+                placeholder_links_15 = st.empty()
+                links_15_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_15 or "")]
+                if links_15_visuais:
+                    placeholder_links_15.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_15_visuais]))
 
-# GATILHO DO MODAL 1.5
-if st.session_state.get(f"gatilho_modal_1_5_{ano_sel}", False):
-    modal_aviso_link("1.5", st.session_state.get(f"links_pendentes_1_5_{ano_sel}", []))
-    st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = False
+            pts_atuais_15 = d15.get("pontos", 0.0)
+            cor_txt_15 = "#6c757d" if v_salvo_15 == "Selecione..." else "#28a745"
+            st.markdown(f"<span style='color:{cor_txt_15}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.5: {pts_atuais_15:.1f} pontos (Informativo)</span>", unsafe_allow_html=True)
+            bloco_comentarios("1.5", res_data, ano_sel)
+
+    # GATILHO DO MODAL 1.5
+    if st.session_state.get(f"gatilho_modal_1_5_{ano_sel}", False):
+        modal_aviso_link("1.5", st.session_state.get(f"links_pendentes_1_5_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 2.0 • TREINAMENTO E CAPACITAÇÃO EM DEFESA CIVIL (100% INDEPENDENTE)
