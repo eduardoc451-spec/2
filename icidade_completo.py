@@ -1150,7 +1150,7 @@ def mostrar_formulario_cidade():
         # renderizar_questao("1.3", res_data)
 
     with aba_graficos:
-        render_graficos(res_data, ano_sel
+        render_graficos(res_data, ano_sel)
 # =============================================================================
     # QUESITO 1.0 • COORDENADORIA MUNICIPAL DE DEFESA CIVIL (COMPDEC)
     # =============================================================================
