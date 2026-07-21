@@ -1137,21 +1137,15 @@ def render_graficos(res_data_atual, ano_sel):
 # =============================================================================
 
 def mostrar_formulario_cidade():
-    total_pts, res_data, ano_sel = render_sidebar()
-    st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
+    # Caso render_sidebar() retorne None por algum motivo
+    dados_sidebar = render_sidebar()
+    
+    if dados_sidebar and len(dados_sidebar) == 3:
+        total_pts, res_data, ano_sel = dados_sidebar
+    else:
+        total_pts, res_data, ano_sel = 0, {}, "2026"  # Valor padrão de fallback
 
-    st.markdown("""
-        <style>
-        .quesito-card {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-left: 6px solid #2c3e50;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
 
     # -------------------------------------------------------------------------
     # ABAS PRINCIPAIS
