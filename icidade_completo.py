@@ -1167,7 +1167,7 @@ def mostrar_formulario_cidade():
                 "**Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil-COMPDEC "
                 "ou órgão similar responsável pela execução, coordenação e mobilização de todas as ações de defesa civil no município?**"
             )
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.0' para registrar.*")
 
             opcoes_10 = {
                 "Selecione...": 0.0,
@@ -1183,49 +1183,52 @@ def mostrar_formulario_cidade():
             chave_radio_10 = f"r_10_{ano_sel}"
             chave_link_10 = f"l_10_txt_{ano_sel}"
 
-            def cb_quesito_10():
-                val = st.session_state.get(chave_radio_10, "Selecione...")
-                pts = opcoes_10.get(val, 0.0)
-                lnk = st.session_state.get(chave_link_10, "")
-
-                # Atualiza repositório e backend
-                save_resp("1.0", val, pts, lnk)
-                res_data["1.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-                # Validação de Modal de Links
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
-
-                if lnk != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
-
             c10_1, c10_2 = st.columns([1, 1])
             with c10_1:
                 lista_opcoes_10 = list(opcoes_10.keys())
                 idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
 
-                st.radio(
+                # Sem o parâmetro on_change
+                val_radio_10 = st.radio(
                     "Selecione o status do órgão:",
                     options=lista_opcoes_10,
                     index=idx_10,
                     key=chave_radio_10,
-                    on_change=cb_quesito_10,
                     label_visibility="collapsed"
                 )
 
             with c10_2:
+                # Sem o parâmetro on_change
                 link_10 = st.text_area(
                     "Link de Evidência / Decreto de Criação (1.0):",
                     value=d10.get("link", ""),
                     key=chave_link_10,
-                    on_change=cb_quesito_10,
                     height=100
                 )
                 placeholder_links_10 = st.empty()
                 links_10_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
                 if links_10_visuais:
                     placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
+                pts_10 = opcoes_10.get(val_radio_10, 0.0)
+                
+                # Salva no banco/backend e atualiza dicionário local
+                save_resp("1.0", val_radio_10, pts_10, link_10)
+                res_data["1.0"] = {"valor": val_radio_10, "pontos": pts_10, "link": link_10}
+
+                # Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
+
+                if link_10 != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+
+                st.success("Resposta do Quesito 1.0 salva com sucesso!")
 
             pts_atuais_10 = d10.get("pontos", 0.0)
             cor_txt_10 = "#28a745" if pts_atuais_10 == 40.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
