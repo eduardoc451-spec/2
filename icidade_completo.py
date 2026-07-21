@@ -1,15 +1,17 @@
-import re
-import streamlit as st
-
-# Defina a constante global para ser usada em qualquer lugar do script
-REGEX_PURE_URL = r'((https?://[^\s<>"]+))'import os
+import os
 import sys
+import re
 import json
 import warnings
 import logging
-import psycopg2
 from datetime import datetime, date
 from io import BytesIO
+
+import psycopg2
+import streamlit as st
+
+# Constante global de expressão regular para captura de URLs
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
 
 # =============================================================================
 # BLOQUEIO INTERNO NATIVO DO STREAMLIT (ANTES DE QUALQUER OPERAÇÃO)
