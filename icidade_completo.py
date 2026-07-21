@@ -10,9 +10,11 @@ from io import BytesIO
 import psycopg2
 import streamlit as st
 
-# Constante global de expressão regular para captura de URLs
-REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
+# Desativa alertas não críticos nos logs
+warnings.filterwarnings("ignore")
 
+# Constante global de expressão regular para captura de URLs em qualquer quesito
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
 # =============================================================================
 # BLOQUEIO INTERNO NATIVO DO STREAMLIT (ANTES DE QUALQUER OPERAÇÃO)
 # =============================================================================
