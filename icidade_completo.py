@@ -865,9 +865,29 @@ def zerar_questionario(ano):
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("DELETE FROM respostas WHERE ano = %s", (ano,))
-        st.cache_data.clear() # Limpa o cache após deletar
+        st.cache_data.clear()  # Limpa o cache após deletar
     except Exception as e:
         st.error(f"Erro ao zerar questionário: {e}")
+
+# Janela pop-up de confirmação definida no escopo global
+@st.dialog("🔒 Confirmação de Segurança")
+def confirmar_zerar_dialog(ano):
+    st.warning(f"Você está prestes a apagar todas as respostas de {ano}. Esta ação é irreversível!")
+    
+    senha = st.text_input("Digite a senha de administrador:", type="password")
+    
+    col_Sim, col_Nao = st.columns(2)
+    with col_Sim:
+        if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
+            if senha == "fidelios":
+                zerar_questionario(ano)
+                st.success(f"✅ Questionário de {ano} foi zerado!")
+                st.rerun()
+            else:
+                st.error("❌ Senha incorreta!")
+    with col_Nao:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
 
 def render_sidebar():
     st.sidebar.title("🛠️ Painel de Controle")
@@ -877,7 +897,7 @@ def render_sidebar():
     res_data = load_respostas(ano_sel)
     total_pts = sum(item.get("pontos", 0) for item in res_data.values())
 
-    if total_pts <= 500:   faixa, cor = "C",  "red"
+    if total_pts <= 500:    faixa, cor = "C",  "red"
     elif total_pts <= 599: faixa, cor = "C+", "orange"
     elif total_pts <= 749: faixa, cor = "B",  "#d4d400"
     elif total_pts <= 899: faixa, cor = "B+", "lightgreen"
@@ -892,36 +912,20 @@ def render_sidebar():
     st.sidebar.divider()
     
     col1, col2 = st.sidebar.columns(2)
-    with col1:
-        if st.button("📄 Gerar Relatório PDF", use_container_width=True):
-            pdf = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
-            st.download_button(
-                "⬇️ Baixar PDF", pdf, f"Relatorio_{ano_sel}.pdf", "application/pdf", use_container_width=True
-            )
     
-    # 1. Janela pop-up de confirmação com verificação de senha
-    @st.dialog("🔒 Confirmação de Segurança")
-    def confirmar_zerar_dialog(ano):
-        st.warning(f"Você está prestes a apagar todas as respostas de {ano}. Esta ação é irreversível!")
-        
-        senha = st.text_input("Digite a senha de administrador:", type="password")
-        
-        col_Sim, col_Nao = st.columns(2)
-        with col_Sim:
-            if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
-                if senha == "fidelios":
-                    zerar_questionario(ano)
-                    st.success(f"✅ Questionário de {ano} foi zerado!")
-                    st.rerun()
-                else:
-                    st.error("❌ Senha incorreta!")
-        with col_Nao:
-            if st.button("Cancelar", use_container_width=True):
-                st.rerun()
+    # Botão de Download direto (gera o PDF ao clicar, sem recarregar a tela antes)
+    with col1:
+        st.download_button(
+            label="📄 Baixar PDF",
+            data=gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa),
+            file_name=f"Relatorio_{ano_sel}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
 
-    # 2. Chamada do Modal na Sidebar
+    # Botão para abrir o Modal de confirmação
     with col2:
-        if st.button("🔄 Zerar Questionário", help="Limpar todas as respostas do ano selecionado", use_container_width=True):
+        if st.button("🔄 Zerar", help="Limpar todas as respostas do ano selecionado", use_container_width=True):
             confirmar_zerar_dialog(ano_sel)
 
     return total_pts, res_data, ano_sel
