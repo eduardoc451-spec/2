@@ -1,0 +1,9 @@
+streamlit
+pandas
+plotly
+reportlab
+<<<<<<< HEAD
+python-dateutil
+=======
+python-dateutil
+>>>>>>> 0e8801fc2a4dfabd236ca0e127ce6d59d895f969
