@@ -82,21 +82,30 @@ def init_connection_pool():
 
 db_pool = init_connection_pool()
 
-class ConnectionContext:
-    """Gerenciador de contexto para gerenciar conexões do pool com segurança."""
+# CÓDIGO CORRIGIDO
+class get_connection:
+
     def __enter__(self):
-        self.conn = db_pool.getconn()
+        self.conn = criar_ou_obter_conexao()  # sua função de conexão
         return self.conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type:
-            self.conn.rollback()
-        else:
-            self.conn.commit()
-        db_pool.putconn(self.conn)
-
-def get_connection():
-    return ConnectionContext()
+        if self.conn:
+            try:
+                # Verifica se a conexão não está fechada (closed == 0 significa aberta)
+                if getattr(self.conn, "closed", 0) == 0:
+                    if exc_type:
+                        self.conn.rollback()
+                    else:
+                        self.conn.commit()
+            except Exception:
+                pass  # Ignora erros de rollback se a conexão já caiu
+            finally:
+                try:
+                    if getattr(self.conn, "closed", 0) == 0:
+                        self.conn.close()
+                except Exception:
+                    pass
 
 # =============================================================================
 # MODAL DE AVISO AUTOMÁTICO
