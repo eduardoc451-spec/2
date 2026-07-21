@@ -486,6 +486,15 @@ def analyze_recurrence(ano_atual, res_data_atual):
                         break
     return reincidencias
 
+import os
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+
 # =============================================================================
 # 3. GERADOR DO RELATÓRIO PDF
 # =============================================================================
@@ -501,27 +510,29 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
     # -------------------------------------------------------------------------
     elements.append(Spacer(1, 100))
     
-    try:
-        logo = Image("iegm.png", width=380, height=180)
-        logo.hAlign = 'CENTER'
-        elements.append(logo)
-    except Exception:
+    # --- TRATAMENTO SEGURO DA IMAGEM DA CAPA ---
+    logo_path = "iegm.png"
+    if os.path.exists(logo_path):
+        try:
+            logo = Image(logo_path, width=380, height=180)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+        except Exception as e:
+            elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
+    else:
         elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
         
     elements.append(Spacer(1, 50))
     
-    # --- ADICIONE ESTA LINHA ABAIXO PARA DEFINIR O ESTILO DO TÍTULO ---
     style_titulo_capa = ParagraphStyle(
         'TituloCapa', 
         parent=styles['Normal'], 
         fontName='Helvetica-Bold', 
         fontSize=24, 
         textColor=colors.HexColor("#2c3e50"), 
-        alignment=1  # 1 significa centralizado
+        alignment=1  # Centralizado
     )
-    # ------------------------------------------------------------------
 
-    # Agora o ReportLab saberá o que é 'style_titulo_capa'
     elements.append(Paragraph("Relatório I-Cidade", style_titulo_capa))
     elements.append(Spacer(1, 15))
     
@@ -556,7 +567,6 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
     ]))
     elements.append(tabela_sumario)
     elements.append(PageBreak())
-
 
     # -------------------------------------------------------------------------
     # 1. RESUMO EXECUTIVO (ANÁLISE COMPARATIVA DE EXERCÍCIOS)
@@ -645,7 +655,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
     elements.append(Spacer(1, 15))
 
     # -------------------------------------------------------------------------
-    # 2. ANÁLISE DE DESEMPENHO POR QUESITO (FORTES E FRACOS COLETADOS)
+    # 2. ANÁLISE DE DESEMPENHO POR QUESITO
     # -------------------------------------------------------------------------
     elements.append(Paragraph("<b>2. ANÁLISE DE DESEMPENHO POR QUESITO</b>", styles["h2"]))
     elements.append(Spacer(1, 6))
@@ -696,7 +706,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
         elements.append(Spacer(1, 15))
 
     # -------------------------------------------------------------------------
-    # 3. ANÁLISE DE IMPACTO E PENALIDADES (EFICIÊNCIA PREVENTIVA)
+    # 3. ANÁLISE DE IMPACTO E PENALIDADES
     # -------------------------------------------------------------------------
     elements.append(Paragraph("<b>3. ANÁLISE DE IMPACTO E PENALIDADES (EFICIÊNCIA PREVENTIVA)</b>", styles["h2"]))
     elements.append(Spacer(1, 6))
@@ -759,7 +769,6 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
     for qid, info in dados.items():
         if qid.startswith("COM_") or not isinstance(info, dict): continue
         resp = str(info.get("valor", "")).strip(); resp_l = resp.lower(); metas = ""; status = ""
-        # (Lógica das ODS aqui...) - Mantido conforme sua especificação anterior
         if qid == "1.0": metas = "11.5, 16.6"; status = "Atendido" if "sim" in resp_l else "Não Atendido"
         elif qid == "1.4": metas = "11.5, 16.6"; status = "Não Atendido" if "não atuam de forma sistêmica" in resp_l else "Atendido"
         elif qid == "2.0": metas = "11.5, 16.6"; status = "Atendido" if "sim" in resp_l else "Não Atendido"
@@ -812,7 +821,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
         elements.append(Spacer(1, 15))
 
     # -------------------------------------------------------------------------
-    # 📊 6. SÉRIE HISTÓRICA DO I-CIDADE (CONSOLIDADO FINAL)
+    # 6. SÉRIE HISTÓRICA DO I-CIDADE
     # -------------------------------------------------------------------------
     elements.append(Spacer(1, 10))
 
@@ -834,17 +843,16 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
     
     bc.valueAxis.valueMin = 0; bc.valueAxis.valueMax = 1000; bc.valueAxis.valueStep = 200; bc.valueAxis.labels.fontSize = 8
     
-    # 🔥 ATIVAÇÃO DOS RÓTULOS (PONTUAÇÃO EM CIMA DA BARRA)
+    # Rótulos (Pontuação em cima da barra)
     bc.barLabels.nudge = 8
     bc.barLabels.fontSize = 8
     bc.barLabels.fontName = 'Helvetica-Bold'
-    bc.barLabelFormat = '%.1f'  # Formato com uma casa decimal
+    bc.barLabelFormat = '%.1f'
     
     bc.bars[0].fillColor = colors.HexColor("#1b4f72")
     bc.bars[0].strokeColor = colors.HexColor("#2c3e50")
     bc.bars[0].strokeWidth = 0.5
 
-    # Título do Gráfico solicitado
     desenho_grafico.add(String(240, 150, "Série Histórica do I-cidade", textAnchor='middle', fontName='Helvetica-Bold', fontSize=12, fillColor=colors.HexColor("#2c3e50")))
     desenho_grafico.add(bc)
     
