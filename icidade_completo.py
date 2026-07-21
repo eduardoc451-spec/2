@@ -4,6 +4,7 @@ import re
 import json
 import warnings
 import logging
+import psycopg2
 from datetime import datetime, date
 from io import BytesIO
 
