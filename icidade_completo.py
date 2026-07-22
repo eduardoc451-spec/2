@@ -5470,70 +5470,92 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_11_3_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 11.3.1 • TRANSPARÊNCIA TARIFÁRIA (100% INDEPENDENTE)
+    # QUESITO 11.3.1 • TRANSPARÊNCIA TARIFÁRIA
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_11_3_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 11.3.1 - Transparência dos Benefícios Tarifários", expanded=True):
             st.subheader("11.3.1 • Transparência")
             st.write("**Informe a página eletrônica (link na internet) em que os benefícios tarifários concedidos no valor das tarifas do transporte público foram divulgados: Se não estiver disponível na internet, inserir no campo de resposta o texto XYZ**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d1131 = res_data.get("11.3.1", {"valor": "Link fornecido", "pontos": 0.0, "link": ""})
-            if d1131 is None: d1131 = {"valor": "Link fornecido", "pontos": 0.0, "link": ""}
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 11.3.1' para registrar.*")
 
-            def cb_text_1131():
-                lnk = st.session_state[f"l_1131_txt_{ano_sel}"]
-                val = "Link fornecido"
-                
-                if lnk and lnk.strip().upper() == "XYZ":
-                    val = "Não disponível (XYZ)"
-                
-                save_resp("11.3.1", val, 0.0, lnk)
-                res_data["11.3.1"] = {"valor": val, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d1131.get("link", "") or "")]
-                
-                if lnk != d1131.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_11_3_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_11_3_1_{ano_sel}"] = True
+            # Recupera o estado salvo no dicionário de dados
+            d1131 = res_data.get("11.3.1") or {"valor": "Link fornecido", "pontos": 0.0, "link": "", "comentario": ""}
+
+            # Chaves fixas para os componentes do Streamlit
+            chave_link_1131 = f"l_1131_txt_{ano_sel}"
+            chave_just_1131 = f"j_1131_txt_{ano_sel}"
+            chave_coment_1131 = f"coment_11.3.1_{ano_sel}"
 
             col_inp1131, col_j1131 = st.columns([1, 1])
             with col_inp1131:
                 link_1131 = st.text_input(
-                    "Link (Transparência):", 
-                    value=d1131.get("link", ""), 
-                    key=f"l_1131_txt_{ano_sel}", 
-                    on_change=cb_text_1131, 
+                    "Link (Transparência):",
+                    value=d1131.get("link", ""),
+                    key=chave_link_1131,
                     placeholder="Cole a URL oficial do portal de transparência ou digite XYZ..."
                 )
-                
+
                 placeholder_links_1131 = st.empty()
-                links_1131_visuais = [u[0] for u in re.findall(regex_pure_url, link_1131 or "")]
+                links_1131_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_1131 or "")]
                 if links_1131_visuais:
                     placeholder_links_1131.markdown(f"<div style='padding-top: 10px;'>🔗 **Link Ativo:** <a href='{links_1131_visuais[0]}' target='_blank'>{links_1131_visuais[0]}</a></div>", unsafe_allow_html=True)
                 elif link_1131 and link_1131.strip().upper() == "XYZ":
                     placeholder_links_1131.markdown("<div style='padding-top: 10px;'>⚠️ *Benefícios não divulgados eletronicamente (Código XYZ registrado).*</div>", unsafe_allow_html=True)
-                
+
             with col_j1131:
-                # Campo de justificativa adicionado conforme solicitado
-                st.text_area(
+                justificativa_1131 = st.text_area(
                     "Justificativa / Detalhes Adicionais (11.3.1):",
                     value=d1131.get("justificativa", ""),
-                    key=f"j_1131_txt_{ano_sel}",
+                    key=chave_just_1131,
                     placeholder="Espaço para observações internas, motivos da não publicação ou notas sobre os benefícios tarifários...",
-                    height=110,
-                    on_change=cb_text_1131  # Reutiliza o callback para salvar o estado consolidado
+                    height=110
                 )
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 11.3.1: 0.0 pontos (Informativo / Transparência)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("11.3.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 11.3.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 11.3.1", key=f"btn_salvar_11_3_1_{ano_sel}", type="primary"):
+                # 1. Determina o valor do quesito com base no texto inserido
+                lnk_inserido = st.session_state.get(chave_link_1131, "").strip()
+                val_1131 = "Link fornecido"
+                if lnk_inserido and lnk_inserido.upper() == "XYZ":
+                    val_1131 = "Não disponível (XYZ)"
+
+                comentario_para_salvar = st.session_state.get(chave_coment_1131, d1131.get("comentario", ""))
+                just_para_salvar = st.session_state.get(chave_just_1131, d1131.get("justificativa", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("11.3.1", val_1131, 0.0, lnk_inserido, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["11.3.1"] = {
+                    "valor": val_1131,
+                    "pontos": 0.0,
+                    "link": lnk_inserido,
+                    "justificativa": just_para_salvar,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk_inserido or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d1131.get("link", "") or "")]
+
+                if lnk_inserido != d1131.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_11_3_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_11_3_1_{ano_sel}"] = True
+
+                st.toast("Quesito 11.3.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 11.3.1: 0.0 pontos (Informativo / Transparência)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 11.3.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_11_3_1_{ano_sel}", False):
         modal_aviso_link("11.3.1", st.session_state.get(f"links_pendentes_11_3_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_3_1_{ano_sel}"] = False
