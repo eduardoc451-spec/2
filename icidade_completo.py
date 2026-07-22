@@ -4299,42 +4299,24 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 8.1.1 • UTILIZAÇÃO DO NÚMERO 199 (100% INDEPENDENTE)
+    # QUESITO 8.1.1 • UTILIZAÇÃO DO NÚMERO 199
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_8_1_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 8.1.1 - Utilização do Número Nacional 199", expanded=True):
             st.subheader("8.1.1 • Linha Telefônica 199")
             st.write("**Sobre o número de telefone de emergência, utiliza o número 199 da Defesa Civil?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.1.1' para registrar.*")
+
             opcoes_811 = ["Selecione...", "Sim", "Não"]
-            
-            d811 = res_data.get("8.1.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d811 is None: d811 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d811 = res_data.get("8.1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_811 = d811.get("valor", "Selecione...")
-            chave_radio_811 = f"r_811_{v_salvo_811}_{ano_sel}"
 
-            def cb_radio_811():
-                val = st.session_state[chave_radio_811]
-                lnk = st.session_state.get(f"l_811_txt_{ano_sel}", d811.get("link", ""))
-                save_resp("8.1.1", val, 0.0, lnk)
-                res_data["8.1.1"] = {"valor": val, "pontos": 0.0, "link": lnk}
-
-            def cb_text_811():
-                lnk = st.session_state[f"l_811_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_811, v_salvo_811)
-                
-                save_resp("8.1.1", val, 0.0, lnk)
-                res_data["8.1.1"] = {"valor": val, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d811.get("link", "") or "")]
-                
-                if lnk != d811.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_8_1_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_8_1_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_811 = f"r_811_{ano_sel}"
+            chave_link_811 = f"l_811_txt_{ano_sel}"
+            chave_coment_811 = f"coment_8.1.1_{ano_sel}"
 
             col_r811, col_j811 = st.columns([1, 1])
             with col_r811:
@@ -4344,7 +4326,6 @@ def mostrar_formulario_cidade():
                     options=opcoes_811,
                     index=idx_811,
                     key=chave_radio_811,
-                    on_change=cb_radio_811,
                     label_visibility="collapsed"
                 )
                 st.markdown("<div style='padding-top: 5px;'></div>", unsafe_allow_html=True)
@@ -4355,25 +4336,60 @@ def mostrar_formulario_cidade():
 
             with col_j811:
                 link_811 = st.text_area(
-                    "Evidência de Ativação do 199 (8.1.1):", 
-                    value=d811.get("link", ""), 
-                    key=f"l_811_txt_{ano_sel}", 
-                    on_change=cb_text_811, 
+                    "Evidência de Ativação do 199 (8.1.1):",
+                    value=d811.get("link", ""),
+                    key=chave_link_811,
                     placeholder="Ex: Decreto de criação, conta telefônica, print do painel...",
                     height=100
                 )
                 placeholder_links_811 = st.empty()
-                links_811_visuais = [u[0] for u in re.findall(regex_pure_url, link_811 or "")]
+                links_811_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_811 or "")]
                 if links_811_visuais:
-                    placeholder_links_811.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_811_visuais]))
+                    placeholder_links_811.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_811_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.1.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("8.1.1", res_data, ano_sel)
 
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.1.1", key=f"btn_salvar_8_1_1_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_811 = st.session_state.get(chave_radio_811, v_salvo_811)
+                pts_811 = 0.0  # Quesito informativo
+                comentario_para_salvar = st.session_state.get(chave_coment_811, d811.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("8.1.1", val_selecionado_811, pts_811, link_811, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["8.1.1"] = {
+                    "valor": val_selecionado_811,
+                    "pontos": pts_811,
+                    "link": link_811,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_811 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d811.get("link", "") or "")]
+
+                if link_811 != d811.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_1_1_{ano_sel}"] = True
+
+                st.toast("Quesito 8.1.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.1.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 8.1.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_8_1_1_{ano_sel}", False):
         modal_aviso_link("8.1.1", st.session_state.get(f"links_pendentes_8_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_1_1_{ano_sel}"] = False
-
 
     # =============================================================================
     # QUESITO 8.1.1.1 • DISPONIBILIDADE 24 HORAS DO 199 (100% INDEPENDENTE)
