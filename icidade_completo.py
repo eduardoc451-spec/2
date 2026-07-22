@@ -1698,103 +1698,109 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_2_1_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 2.2 • PÚBLICO-ALVO DOS CURSOS E TREINAMENTOS (100% INDEPENDENTE)
+    # QUESITO 2.2 • PÚBLICO-ALVO DOS CURSOS E TREINAMENTOS
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_2_2_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 2.2 - Público Alvo de Cursos e Treinamentos", expanded=True):
+        with st.expander("📌 Quesito 2.2 - Público Alvo de Cursos e Treinamentos", expanded=True):
             st.subheader("2.2 • Público dos Treinamentos")
             st.write("**A Prefeitura Municipal ofereceu cursos/treinamento sobre Proteção e Defesa Civil para qual público?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Recupera o estado salvo no dicionário de dados
-            d22 = res_data.get("2.2", {"valor": "[]", "pontos": 0.0, "link": ""})
-            if d22 is None: d22 = {"valor": "[]", "pontos": 0.0, "link": ""}
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 2.2' para registrar.*")
+
+            # Estado inicial / persistente
+            d22 = res_data.get("2.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
             valor_salvo_22 = d22.get("valor", "[]")
-            
-            # Definição das chaves únicas de estado para os checkboxes
+
+            # Chaves fixas por componente e ano
             chk_key_1 = f"c22a_chk_{ano_sel}"
             chk_key_2 = f"c22b_chk_{ano_sel}"
             chk_key_3 = f"c22c_chk_{ano_sel}"
             chk_key_4 = f"c22d_chk_{ano_sel}"
-
-            def cb_checkbox_22():
-                # Captura os estados atuais das caixas de seleção na tela
-                c1 = st.session_state.get(chk_key_1, False)
-                c2 = st.session_state.get(chk_key_2, False)
-                c3 = st.session_state.get(chk_key_3, False)
-                c4 = st.session_state.get(chk_key_4, False)
-                
-                sel22 = []
-                p22 = 0.0
-                
-                # Regra de negócio acumulativa ou exclusão mútua por "Nenhum"
-                if c4:
-                    sel22 = ["Nenhum"]
-                    p22 = 0.0
-                else:
-                    if c1: p22 += 5.0; sel22.append("Escolas")
-                    if c2: p22 += 3.0; sel22.append("Secretarias")
-                    if c3: p22 += 2.0; sel22.append("Munícipes")
-                
-                lnk = st.session_state.get(f"l_22_txt_{ano_sel}", d22.get("link", ""))
-                val_str = str(sel22)
-                
-                save_resp("2.2", val_str, p22, lnk)
-                res_data["2.2"] = {"valor": val_str, "pontos": p22, "link": lnk}
-
-            def cb_text_22():
-                lnk = st.session_state[f"l_22_txt_{ano_sel}"]
-                
-                # Reconstrói os pontos baseado nas seleções salvas para manter a consistência no texto
-                c1 = st.session_state.get(chk_key_1, "Escolas" in valor_salvo_22)
-                c2 = st.session_state.get(chk_key_2, "Secretarias" in valor_salvo_22)
-                c3 = st.session_state.get(chk_key_3, "Munícipes" in valor_salvo_22)
-                c4 = st.session_state.get(chk_key_4, "Nenhum" in valor_salvo_22)
-                
-                sel22 = []
-                p22 = 0.0
-                if c4:
-                    sel22 = ["Nenhum"]
-                else:
-                    if c1: p22 += 5.0; sel22.append("Escolas")
-                    if c2: p22 += 3.0; sel22.append("Secretarias")
-                    if c3: p22 += 2.0; sel22.append("Munícipes")
-                
-                val_str = str(sel22)
-                save_resp("2.2", val_str, p22, lnk)
-                res_data["2.2"] = {"valor": val_str, "pontos": p22, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d22.get("link", "") or "")]
-                
-                if lnk != d22.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_2_2_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = True
+            chave_link_22 = f"l_22_txt_{ano_sel}"
+            chave_coment_22 = f"coment_2.2_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             c22_1, c22_2 = st.columns([1, 1])
             with c22_1:
-                st.checkbox("Para escolas – 05 pts", value="Escolas" in valor_salvo_22, key=chk_key_1, on_change=cb_checkbox_22)
-                st.checkbox("Para outras secretarias / entidades municipais – 03 pts", value="Secretarias" in valor_salvo_22, key=chk_key_2, on_change=cb_checkbox_22)
-                st.checkbox("Para munícipes ou empresas – 02 pts", value="Munícipes" in valor_salvo_22, key=chk_key_3, on_change=cb_checkbox_22)
-                st.checkbox("Não ofereceu nenhum curso/treinamento no ano – 00 pts", value="Nenhum" in valor_salvo_22, key=chk_key_4, on_change=cb_checkbox_22)
-                
-            with c22_2:
-                link_22 = st.text_area("Evidência 2.2:", value=d22.get("link", ""), key=f"l_22_txt_{ano_sel}", on_change=cb_text_22, height=140)
-                placeholder_links_22 = st.empty()
-                links_22_visuais = [u[0] for u in re.findall(regex_pure_url, link_22 or "")]
-                if links_22_visuais:
-                    placeholder_links_22.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_22_visuais]))
+                chk_escolas = st.checkbox("Para escolas – 05 pts", value="Escolas" in valor_salvo_22, key=chk_key_1)
+                chk_secretarias = st.checkbox("Para outras secretarias / entidades municipais – 03 pts", value="Secretarias" in valor_salvo_22, key=chk_key_2)
+                chk_municipes = st.checkbox("Para munícipes ou empresas – 02 pts", value="Munícipes" in valor_salvo_22, key=chk_key_3)
+                chk_nenhum = st.checkbox("Não ofereceu nenhum curso/treinamento no ano – 00 pts", value="Nenhum" in valor_salvo_22, key=chk_key_4)
 
-            pts_atuais_22 = d22.get("pontos", 0.0)
-            cor_txt_22 = "#28a745" if pts_atuais_22 > 0.0 else ("#dc3545" if "Nenhum" in valor_salvo_22 else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_22}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 2.2: {pts_atuais_22:.1f} pontos</span>", unsafe_allow_html=True)
+            with c22_2:
+                link_22 = st.text_area(
+                    "Evidência 2.2:",
+                    value=d22.get("link", ""),
+                    key=chave_link_22,
+                    height=140
+                )
+                placeholder_links_22 = st.empty()
+                links_22_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_22 or "")]
+                if links_22_visuais:
+                    placeholder_links_22.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_22_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("2.2", res_data, ano_sel)
 
-    # GATILHO DO MODAL 2.2
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 2.2", key=f"btn_salvar_2_2_{ano_sel}", type="primary"):
+                sel22 = []
+                pts_22 = 0.0
+
+                # Regra de negócio acumulativa ou exclusão mútua por "Nenhum"
+                if chk_nenhum:
+                    sel22 = ["Nenhum"]
+                    pts_22 = 0.0
+                else:
+                    if chk_escolas:
+                        pts_22 += 5.0
+                        sel22.append("Escolas")
+                    if chk_secretarias:
+                        pts_22 += 3.0
+                        sel22.append("Secretarias")
+                    if chk_municipes:
+                        pts_22 += 2.0
+                        sel22.append("Munícipes")
+
+                val_str_22 = str(sel22)
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_22, d22.get("comentario", ""))
+
+                # 2. Salva no banco/backend
+                save_resp("2.2", val_str_22, pts_22, link_22, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["2.2"] = {
+                    "valor": val_str_22,
+                    "pontos": pts_22,
+                    "link": link_22,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_22 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d22.get("link", "") or "")]
+
+                if link_22 != d22.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 2.2 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Evita inconsistências de estado)
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_22 = d22.get("pontos", 0.0)
+            cor_txt_22 = "#28a745" if pts_atuais_22 > 0.0 else ("#dc3545" if "Nenhum" in valor_salvo_22 else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_22}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 2.2: {pts_atuais_22:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 2.2 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_2_2_{ano_sel}", False):
         modal_aviso_link("2.2", st.session_state.get(f"links_pendentes_2_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = False
