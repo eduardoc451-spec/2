@@ -1,30 +1,36 @@
+import os
+import sys
 import re
 import json
+import warnings
 import logging
-from io import BytesIO
 from datetime import datetime, date
+from io import BytesIO
 
-import streamlit as st
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
+import streamlit as st
 
-# Importação da conexão definida no seu main.py
-from main import get_connection  
+# Silencia alertas e logs não críticos no console/interface
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
+os.environ["PYTHONWARNINGS"] = "ignore"
+logging.getLogger("streamlit").setLevel(logging.ERROR)
 
-# =============================================================================
-# BIBLIOTECAS PARA O PDF (ReportLab)
-# =============================================================================
+# Bibliotecas para o PDF (Requer: pip install reportlab)
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.graphics.charts.barcharts import VerticalBarChart
 
-# =============================================================================
-# BIBLIOTECAS PARA OS GRÁFICOS (Plotly)
-# =============================================================================
+# Bibliotecas para os Gráficos (Requer: pip install plotly)
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots  # Corrigido: removido o 'como' do final
+from plotly.subplots import make_subplots
 
 # =============================================================================
 # CONSTANTES GLOBAIS
