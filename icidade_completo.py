@@ -4488,88 +4488,98 @@ def mostrar_formulario_cidade():
         modal_aviso_link("8.1.1.1", st.session_state.get(f"links_pendentes_8_1_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_1_1_1_{ano_sel}"] = False
     # =============================================================================
-    # QUESITO 8.2 • REGISTRO ELETRÔNICO DE OCORRÊNCIAS (100% INDEPENDENTE)
+    # QUESITO 8.2 • REGISTRO ELETRÔNICO DE OCORRÊNCIAS
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_8_2_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 8.2 - Registro Eletrônico de Ocorrências", expanded=True):
             st.subheader("8.2 • Registro Eletrônico")
             st.write("**O Município registra as ocorrências de Defesa Civil de forma eletrônica?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.2' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações
             opcoes_82 = {
                 "Selecione...": 0.0,
                 "Sim (50 pts)": 50.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d82 = res_data.get("8.2", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d82 is None: d82 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d82 = res_data.get("8.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_82 = d82.get("valor", "Selecione...")
-            chave_radio_82 = f"r_82_{v_salvo_82}_{ano_sel}"
 
-            def cb_radio_82():
-                val = st.session_state[chave_radio_82]
-                pts = opcoes_82.get(val, 0.0)
-                lnk = st.session_state.get(f"l_82_txt_{ano_sel}", d82.get("link", ""))
-                
-                save_resp("8.2", val, pts, lnk)
-                res_data["8.2"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_82():
-                lnk = st.session_state[f"l_82_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_82, v_salvo_82)
-                pts = opcoes_82.get(val, 0.0)
-                
-                save_resp("8.2", val, pts, lnk)
-                res_data["8.2"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d82.get("link", "") or "")]
-                
-                if lnk != d82.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_8_2_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_82 = f"r_82_{ano_sel}"
+            chave_link_82 = f"l_82_txt_{ano_sel}"
+            chave_coment_82 = f"coment_8.2_{ano_sel}"
 
             col_r82, col_j82 = st.columns([1, 1])
             with col_r82:
                 lista_opcoes_82 = list(opcoes_82.keys())
                 idx_82 = lista_opcoes_82.index(v_salvo_82) if v_salvo_82 in lista_opcoes_82 else 0
-                
+
                 st.radio(
                     "Registro eletrônico?",
                     options=lista_opcoes_82,
                     index=idx_82,
                     key=chave_radio_82,
-                    on_change=cb_radio_82,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j82:
                 link_82 = st.text_area(
-                    "Evidência do Sistema (8.2):", 
-                    value=d82.get("link", ""), 
-                    key=f"l_82_txt_{ano_sel}", 
-                    on_change=cb_text_82, 
+                    "Evidência do Sistema (8.2):",
+                    value=d82.get("link", ""),
+                    key=chave_link_82,
                     placeholder="Ex: Link do sistema informatizado, prints das telas de cadastro, decreto de adoção...",
                     height=100
                 )
                 placeholder_links_82 = st.empty()
-                links_82_visuais = [u[0] for u in re.findall(regex_pure_url, link_82 or "")]
+                links_82_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_82 or "")]
                 if links_82_visuais:
-                    placeholder_links_82.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_82_visuais]))
+                    placeholder_links_82.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_82_visuais]))
 
-            pts_atuais_82 = d82.get("pontos", 0.0)
-            cor_txt_82 = "#28a745" if pts_atuais_82 == 50.0 else ("#dc3545" if v_salvo_82 != "Selecione..." else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_82}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.2: {pts_atuais_82:.1f} pontos</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("8.2", res_data, ano_sel)
 
-    # GATILHO DO MODAL 8.2
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.2", key=f"btn_salvar_8_2_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_82 = st.session_state.get(chave_radio_82, v_salvo_82)
+                pts_82 = opcoes_82.get(val_selecionado_82, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_82, d82.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("8.2", val_selecionado_82, pts_82, link_82, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["8.2"] = {
+                    "valor": val_selecionado_82,
+                    "pontos": pts_82,
+                    "link": link_82,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_82 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d82.get("link", "") or "")]
+
+                if link_82 != d82.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
+
+                st.toast("Quesito 8.2 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            pts_atuais_82 = d82.get("pontos", 0.0)
+            cor_txt_82 = "#28a745" if pts_atuais_82 == 50.0 else ("#dc3545" if v_salvo_82 != "Selecione..." else "#6c757d")
+            st.markdown(f"<span style='color:{cor_txt_82}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.2: +{pts_atuais_82:.1f} pontos</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 8.2 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_8_2_{ano_sel}", False):
         modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
