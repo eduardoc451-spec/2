@@ -6853,51 +6853,94 @@ def mostrar_formulario_cidade():
         modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = False
 
-    # -------------------------------------------------------------------------
-    # --- QUESITO 17.1 (ENCERRAMENTO/FEEDBACK) --------------------------------
-    # -------------------------------------------------------------------------
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("QUESITO 17.1")
-    st.write("**Utilize o espaço abaixo para registrar suas impressões e sugestões sobre o questionário.**")
+    # =============================================================================
+    # QUESITO 17.1 • ENCERRAMENTO E FEEDBACK (100% INDEPENDENTE)
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_17_1_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 17.1 - Registro de Impressões e Sugestões", expanded=True):
+            st.subheader("17.1 • Encerramento / Feedback")
+            st.write("**Utilize o espaço abaixo para registrar suas impressões e sugestões sobre o questionário.**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 17.1' para registrar.*")
 
-    d171 = res_data.get("17.1", {"valor": None, "pontos": 0.0, "link": ""})
-    opcoes_171 = ["Sim", "Não"]
-    idx171 = opcoes_171.index(d171["valor"]) if d171["valor"] in opcoes_171 else None
+            # Recupera o estado salvo no dicionário de dados
+            d171 = res_data.get("17.1") or {"valor": None, "pontos": 0.0, "link": "", "comentario": ""}
+            opcoes_171 = ["Sim", "Não"]
+            v_salvo_171 = d171.get("valor")
+            idx171 = opcoes_171.index(v_salvo_171) if v_salvo_171 in opcoes_171 else None
 
-    col_r171, col_j171 = st.columns([1, 2])
-    with col_r171:
-        r171 = st.radio(f"Gostaria de registrar impressões em {ano_sel}?", opcoes_171, index=idx171, key=f"q171_radio_{ano_sel}")
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_171 = f"q171_radio_{ano_sel}"
+            chave_link_171 = f"l171_text_{ano_sel}"
+            chave_coment_171 = f"coment_17.1_{ano_sel}"
 
-    with col_j171:
-        l171 = st.text_area(
-            "Espaço para Registro (17.1):",
-            value=d171["link"],
-            key=f"l171_text_{ano_sel}",
-            placeholder="Sugestões ou observações sobre este exercício...",
-            height=120,
-            disabled=(r171 != "Sim")
-        )
-        
-        # MOSTRA O LINK ATIVO AZUL SE EXISTIR NO CAMPO
-        links_171_atuais = re.findall(r'(https?://[^\s]+)', l171)
-        if links_171_atuais:
-            st.markdown(f"🔗 **Link Ativo:** [{links_171_atuais[0]}]({links_171_atuais[0]})")
+            col_r171, col_j171 = st.columns([1, 2])
+            with col_r171:
+                r171 = st.radio(
+                    f"Gostaria de registrar impressões em {ano_sel}?",
+                    opcoes_171,
+                    index=idx171,
+                    key=chave_radio_171
+                )
 
-    # PROCESSAMENTO DE SALVAMENTO E TRAVA DO MODAL DO QUESITO 17.1
-    if r171 is not None and (r171 != d171["valor"] or l171 != d171["link"]):
-        save_resp("17.1", r171, 0.0, l171)
-        
-        if links_171_atuais:
-            links_171_antigos = re.findall(r'(https?://[^\s]+)', d171["link"])
-            if not links_171_antigos or links_171_atuais[0] != links_171_antigos[0]:
-                modal_aviso_link("17.1", links_171_atuais)
-            else:
+            with col_j171:
+                l171 = st.text_area(
+                    "Espaço para Registro (17.1):",
+                    value=d171.get("link", ""),
+                    key=chave_link_171,
+                    placeholder="Sugestões ou observações sobre este exercício...",
+                    height=120,
+                    disabled=(r171 != "Sim")
+                )
+
+                # MOSTRA O LINK ATIVO AZUL SE EXISTIR NO CAMPO
+                placeholder_links_171 = st.empty()
+                links_171_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, l171 or "")]
+                if links_171_visuais:
+                    placeholder_links_171.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_171_visuais]))
+
+            # Renderiza o bloco de comentários
+            bloco_comentarios("17.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 17.1", key=f"btn_salvar_17_1_{ano_sel}", type="primary"):
+                # 1. Coleta os valores selecionados nos campos
+                val_selecionado_171 = st.session_state.get(chave_radio_171, v_salvo_171)
+                pts_171 = 0.0
+                comentario_para_salvar = st.session_state.get(chave_coment_171, d171.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("17.1", val_selecionado_171, pts_171, l171, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["17.1"] = {
+                    "valor": val_selecionado_171,
+                    "pontos": pts_171,
+                    "link": l171,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, l171 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d171.get("link", "") or "")]
+
+                if l171 != d171.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_17_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = True
+
+                st.toast("Quesito 17.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
                 st.rerun()
-        else:
-            st.rerun()
 
-    bloco_comentarios("17.1", res_data)
-    st.markdown('</div>', unsafe_allow_html=True)
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 17.1: 0.0 pontos (Feedback Informativo)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 17.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_17_1_{ano_sel}", False):
+        modal_aviso_link("17.1", st.session_state.get(f"links_pendentes_17_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = False
 
     # =============================================================================
     # SEÇÃO: DADOS EXTERNOS DO i-CIDADE
