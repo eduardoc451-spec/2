@@ -1478,84 +1478,109 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
        
    # =============================================================================
-    # QUESITO 2.0 • TREINAMENTO E CAPACITAÇÃO EM DEFESA CIVIL (100% INDEPENDENTE)
+    # QUESITO 2.0 • TREINAMENTO E CAPACITAÇÃO EM DEFESA CIVIL
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_2_0_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 2.0 - Treinamento e Capacitação de Agentes", expanded=True):
+        with st.expander("📌 Quesito 2.0 - Treinamento e Capacitação de Agentes", expanded=True):
             st.subheader("2.0 • Capacitação de Agentes")
-            st.write("**Sobre treinamento e capacitação sobre Proteção e Defesa Civil, a Prefeitura capacita seus agentes para ações municipais de Defesa Civil?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Mapeamento oficial de opções e pontuações do quesito 2.0
+            st.write(
+                "**Sobre treinamento e capacitação sobre Proteção e Defesa Civil, a Prefeitura "
+                "capacita seus agentes para ações municipais de Defesa Civil?**"
+            )
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 2.0' para registrar.*")
+
             opcoes_20 = {
                 "Selecione...": 0.0,
                 "Sim (20 pts)": 20.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados
-            d20 = res_data.get("2.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d20 is None: d20 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Estado inicial / persistente
+            d20 = res_data.get("2.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_20 = d20.get("valor", "Selecione...")
-            chave_radio_20 = f"r_20_{v_salvo_20}_{ano_sel}"
 
-            def cb_radio_20():
-                val = st.session_state[chave_radio_20]
-                pts = opcoes_20.get(val, 0.0)
-                lnk = st.session_state.get(f"l_20_txt_{ano_sel}", d20.get("link", ""))
-                
-                save_resp("2.0", val, pts, lnk)
-                res_data["2.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_20():
-                lnk = st.session_state[f"l_20_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_20, v_salvo_20)
-                pts = opcoes_20.get(val, 0.0)
-                
-                save_resp("2.0", val, pts, lnk)
-                res_data["2.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d20.get("link", "") or "")]
-                
-                if lnk != d20.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_2_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_radio_20 = f"r_20_{ano_sel}"
+            chave_link_20 = f"l_20_txt_{ano_sel}"
+            chave_coment_20 = f"coment_2.0_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             c20_1, c20_2 = st.columns([1, 1])
             with c20_1:
                 lista_opcoes_20 = list(opcoes_20.keys())
                 idx_20 = lista_opcoes_20.index(v_salvo_20) if v_salvo_20 in lista_opcoes_20 else 0
-                
-                st.radio(
-                    "Resposta 2.0:",
+
+                val_radio_20 = st.radio(
+                    "Selecione o status da capacitação:",
                     options=lista_opcoes_20,
                     index=idx_20,
                     key=chave_radio_20,
-                    on_change=cb_radio_20,
                     label_visibility="collapsed"
                 )
-                
-            with c20_2:
-                link_20 = st.text_area("Justificativa e Evidência (2.0):", value=d20.get("link", ""), key=f"l_20_txt_{ano_sel}", on_change=cb_text_20, height=100)
-                placeholder_links_20 = st.empty()
-                links_20_visuais = [u[0] for u in re.findall(regex_pure_url, link_20 or "")]
-                if links_20_visuais:
-                    placeholder_links_20.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_20_visuais]))
 
-            pts_atuais_20 = d20.get("pontos", 0.0)
-            cor_txt_20 = "#28a745" if pts_atuais_20 == 20.0 else ("#dc3545" if v_salvo_20 != "Selecione..." else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_20}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 2.0: {pts_atuais_20:.1f} pontos</span>", unsafe_allow_html=True)
+            with c20_2:
+                link_20 = st.text_area(
+                    "Justificativa e Evidência (2.0):",
+                    value=d20.get("link", ""),
+                    key=chave_link_20,
+                    height=100
+                )
+                placeholder_links_20 = st.empty()
+                links_20_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_20 or "")]
+                if links_20_visuais:
+                    placeholder_links_20.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_20_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("2.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 2.0
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 2.0", key=f"btn_salvar_2_0_{ano_sel}", type="primary"):
+                pts_20 = opcoes_20.get(val_radio_20, 0.0)
+                
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_20, d20.get("comentario", ""))
+                
+                # 2. Salva no banco/backend
+                save_resp("2.0", val_radio_20, pts_20, link_20, comentario_para_salvar)
+                
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["2.0"] = {
+                    "valor": val_radio_20, 
+                    "pontos": pts_20, 
+                    "link": link_20, 
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_20 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d20.get("link", "") or "")]
+
+                if link_20 != d20.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 2.0 salvos com sucesso!", icon="✅")
+                
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Evita inconsistências de estado)
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_20 = d20.get("pontos", 0.0)
+            cor_txt_20 = "#28a745" if pts_atuais_20 == 20.0 else ("#dc3545" if v_salvo_20 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_20}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 2.0: {pts_atuais_20:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 2.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_2_0_{ano_sel}", False):
         modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
+
+    # Garante a exposição da variável r20 para dependências condicionais de outros quesitos
+    r20 = v_salvo_20
 
     # =============================================================================
     # QUESITO 2.1 • DATA DA ÚLTIMA CAPACITAÇÃO (100% INDEPENDENTE)
