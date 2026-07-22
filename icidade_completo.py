@@ -2541,22 +2541,18 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 5.1 • PRINCIPAIS AMEAÇAS IDENTIFICADAS (100% INDEPENDENTE)
+    # QUESITO 5.1 • PRINCIPAIS AMEAÇAS IDENTIFICADAS
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_5_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 5.1 - Principais Ameaças Identificadas", expanded=True):
+        with st.expander("📌 Quesito 5.1 - Principais Ameaças Identificadas", expanded=True):
             st.subheader("5.1 • Principais Ameaças")
             st.write("**Assinale as principais ameaças identificadas:**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 5.1' para registrar.*")
+
             # Recupera o estado salvo no dicionário de dados
-            d51 = res_data.get("5.1", {"valor": "[]", "pontos": 0.0, "link": ""})
-            if d51 is None: d51 = {"valor": "[]", "pontos": 0.0, "link": ""}
-            
+            d51 = res_data.get("5.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
             valor_salvo_51 = d51.get("valor", "[]")
-            
+
             ameacas_51 = [
                 "Epidemias", 
                 "Estiagem", 
@@ -2569,73 +2565,86 @@ def mostrar_formulario_cidade():
                 "Outros"
             ]
 
-            def cb_checkbox_51():
-                # Varre os estados atuais de cada checkbox no session_state para montar a lista atualizada
-                selecionados_51 = []
-                for ameaca in ameacas_51:
-                    ameaca_id = ameaca.replace(" ", "_").lower()
-                    if st.session_state.get(f"chk51_{ameaca_id}_{ano_sel}", False):
-                        selecionados_51.append(ameaca)
-                
-                pts = 0.0  # Quesito informativo/estrutural
-                lnk = st.session_state.get(f"l_51_txt_{ano_sel}", d51.get("link", ""))
-                val_str = str(selecionados_51)
-                
-                save_resp("5.1", val_str, pts, lnk)
-                res_data["5.1"] = {"valor": val_str, "pontos": pts, "link": lnk}
-
-            def cb_text_51():
-                lnk = st.session_state[f"l_51_txt_{ano_sel}"]
-                
-                # Reconstrói a lista de marcados para garantir a consistência de persistência do texto
-                selecionados_51 = []
-                for ameaca in ameacas_51:
-                    ameaca_id = ameaca.replace(" ", "_").lower()
-                    if st.session_state.get(f"chk51_{ameaca_id}_{ano_sel}", ameaca in valor_salvo_51):
-                        selecionados_51.append(ameaca)
-                        
-                val_str = str(selecionados_51)
-                save_resp("5.1", val_str, 0.0, lnk)
-                res_data["5.1"] = {"valor": val_str, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d51.get("link", "") or "")]
-                
-                if lnk != d51.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_5_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_link_51 = f"l_51_txt_{ano_sel}"
+            chave_coment_51 = f"coment_5.1_{ano_sel}"  # Chave padrão da função bloco_comentarios
 
             col_c51, col_j51 = st.columns([1, 1])
             with col_c51:
-                # Geração dinâmica dos elementos de checkbox mapeados e atrelados ao callback
+                # Geração dinâmica dos elementos de checkbox mapeados com base no estado salvo
                 for ameaca in ameacas_51:
                     ameaca_id = ameaca.replace(" ", "_").lower()
                     st.checkbox(
                         ameaca,
                         value=ameaca in valor_salvo_51,
-                        key=f"chk51_{ameaca_id}_{ano_sel}",
-                        on_change=cb_checkbox_51
+                        key=f"chk51_{ameaca_id}_{ano_sel}"
                     )
-                
+
             with col_j51:
                 link_51 = st.text_area(
-                    "Descrição / Evidências (5.1):", 
-                    value=d51.get("link", ""), 
-                    key=f"l_51_txt_{ano_sel}", 
-                    on_change=cb_text_51, 
-                    placeholder="Se marcou 'Outros', especifique aqui...", 
+                    "Descrição / Evidências (5.1):",
+                    value=d51.get("link", ""),
+                    key=chave_link_51,
+                    placeholder="Se marcou 'Outros', especifique aqui... Cole links de apoio se houver.",
                     height=240
                 )
                 placeholder_links_51 = st.empty()
-                links_51_visuais = [u[0] for u in re.findall(regex_pure_url, link_51 or "")]
+                links_51_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_51 or "")]
                 if links_51_visuais:
-                    placeholder_links_51.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_51_visuais]))
+                    placeholder_links_51.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_51_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 5.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("5.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 5.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 5.1", key=f"btn_salvar_5_1_{ano_sel}", type="primary"):
+                # 1. Coleta as opções marcadas no momento do clique
+                selecionados_51 = []
+                for ameaca in ameacas_51:
+                    ameaca_id = ameaca.replace(" ", "_").lower()
+                    if st.session_state.get(f"chk51_{ameaca_id}_{ano_sel}", False):
+                        selecionados_51.append(ameaca)
+
+                val_str_51 = str(selecionados_51)
+                pts_51 = 0.0  # Quesito estritamente informativo
+
+                # 2. Captura o comentário do session_state
+                comentario_para_salvar = st.session_state.get(chave_coment_51, d51.get("comentario", ""))
+
+                # 3. Salva no banco de dados / backend
+                save_resp("5.1", val_str_51, pts_51, link_51, comentario_para_salvar)
+
+                # 4. Atualiza o dicionário local res_data
+                res_data["5.1"] = {
+                    "valor": val_str_51,
+                    "pontos": pts_51,
+                    "link": link_51,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 5. Processamento e validação de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_51 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d51.get("link", "") or "")]
+
+                if link_51 != d51.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_5_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = True
+
+                st.toast("Opções e comentários do Quesito 5.1 salvos com sucesso!", icon="✅")
+
+                # 6. Força a atualização da interface
+                st.rerun()
+
+            # Exibição de pontuação informativa
+            st.markdown(
+                "<span style='color:#28a745; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 5.1: 0.0 pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 5.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_5_1_{ano_sel}", False):
         modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = False
