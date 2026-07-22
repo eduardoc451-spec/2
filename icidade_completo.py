@@ -6161,25 +6161,13 @@ def mostrar_formulario_cidade():
     # =============================================================================
     # QUESITO 13.1 • AÇÕES DE MOBILIDADE ATIVA REALIZADAS (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
     ano_anterior = int(str(ano_sel).strip()[:4]) - 1
 
     with st.container(key=f"container_bloco_compdec_13_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 13.1 - Detalhamento das Ações Realizadas em {ano_anterior}", expanded=True):
             st.subheader("13.1 • Ações de Mobilidade Ativa")
             st.write(f"**Assinale as ações realizadas para estimular a adoção/uso dos meios de transporte não motorizados em {ano_anterior}:**")
-            st.caption("ℹ *Salvamento automático por eventos nativos de estado.*")
-            
-            d131 = res_data.get("13.1", {"valor": "[]", "pontos": 0.0, "link": ""})
-            if d131 is None: d131 = {"valor": "[]", "pontos": 0.0, "link": ""}
-            
-            # Sanitização do valor recuperado para conversão segura em lista literal python
-            raw_v131 = d131.get("valor", "[]")
-            if not raw_v131.startswith("["): raw_v131 = "[]"
-            try:
-                lista_salva_131 = eval(raw_v131)
-            except:
-                lista_salva_131 = []
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 13.1' para registrar.*")
 
             acoes_131 = [
                 "Instalação/manutenção de ciclovias ou ciclofaixas",
@@ -6188,33 +6176,21 @@ def mostrar_formulario_cidade():
                 "Outras"
             ]
 
-            def cb_checkbox_131():
-                sel_atual = []
-                for ac in acoes_131:
-                    ac_key = ac.replace(" ", "_").replace("/", "_").replace("-", "_").lower()
-                    if st.session_state.get(f"chk_131_{ac_key}_{ano_sel}", False):
-                        sel_atual.append(ac)
-                
-                lnk = st.session_state.get(f"l_131_txt_{ano_sel}", d131.get("link", ""))
-                val_str = str(sel_atual)
-                
-                save_resp("13.1", val_str, 0.0, lnk)
-                res_data["13.1"] = {"valor": val_str, "pontos": 0.0, "link": lnk}
+            # Recupera o estado salvo no dicionário de dados
+            d131 = res_data.get("13.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+            
+            # Sanitização do valor recuperado para conversão segura em lista
+            raw_v131 = d131.get("valor", "[]")
+            if not isinstance(raw_v131, str) or not raw_v131.startswith("["):
+                raw_v131 = "[]"
+            try:
+                lista_salva_131 = eval(raw_v131)
+            except Exception:
+                lista_salva_131 = []
 
-            def cb_text_131():
-                lnk = st.session_state[f"l_131_txt_{ano_sel}"]
-                val_str = d131.get("valor", "[]")
-                
-                save_resp("13.1", val_str, 0.0, lnk)
-                res_data["13.1"] = {"valor": val_str, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d131.get("link", "") or "")]
-                
-                if lnk != d131.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_13_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_link_131 = f"l_131_txt_{ano_sel}"
+            chave_coment_131 = f"coment_13.1_{ano_sel}"
 
             col_c131, col_j131 = st.columns([1, 1])
             with col_c131:
@@ -6222,34 +6198,73 @@ def mostrar_formulario_cidade():
                 for ac in acoes_131:
                     ac_key = ac.replace(" ", "_").replace("/", "_").replace("-", "_").lower()
                     st.checkbox(
-                        ac, 
-                        value=ac in lista_salva_131, 
-                        key=f"chk_131_{ac_key}_{ano_sel}",
-                        on_change=cb_checkbox_131
+                        ac,
+                        value=ac in lista_salva_131,
+                        key=f"chk_131_{ac_key}_{ano_sel}"
                     )
-                
+
             with col_j131:
                 link_131 = st.text_area(
-                    "Detalhes/Localização (13.1):", 
-                    value=d131.get("link", ""), 
-                    key=f"l_131_txt_{ano_sel}", 
-                    on_change=cb_text_131,
+                    "Detalhes/Localização (13.1):",
+                    value=d131.get("link", ""),
+                    key=chave_link_131,
                     placeholder="Especifique os bairros, avenidas, nomes das campanhas ou insira links comprobatórios de execução...",
                     height=130
                 )
                 placeholder_links_131 = st.empty()
-                links_131_visuais = [u[0] for u in re.findall(regex_pure_url, link_131 or "")]
+                links_131_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_131 or "")]
                 if links_131_visuais:
-                    placeholder_links_131.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_131_visuais]))
+                    placeholder_links_131.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_131_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 13.1: 0.0 pontos (Diagnóstico Cumulativo)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("13.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 13.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 13.1", key=f"btn_salvar_13_1_{ano_sel}", type="primary"):
+                # 1. Coleta os valores selecionados nos checkboxes
+                sel_atual_131 = []
+                for ac in acoes_131:
+                    ac_key = ac.replace(" ", "_").replace("/", "_").replace("-", "_").lower()
+                    if st.session_state.get(f"chk_131_{ac_key}_{ano_sel}", False):
+                        sel_atual_131.append(ac)
+
+                val_str_131 = str(sel_atual_131)
+                pts_131 = 0.0  # Quesito diagnóstico cumulativo
+                comentario_para_salvar = st.session_state.get(chave_coment_131, d131.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("13.1", val_str_131, pts_131, link_131, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["13.1"] = {
+                    "valor": val_str_131,
+                    "pontos": pts_131,
+                    "link": link_131,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_131 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d131.get("link", "") or "")]
+
+                if link_131 != d131.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = True
+
+                st.toast("Quesito 13.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 13.1: 0.0 pontos (Diagnóstico Cumulativo)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 13.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_13_1_{ano_sel}", False):
         modal_aviso_link("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = False
-
 
     # =============================================================================
     # QUESITO 13.1.1 • CRONOGRAMA DE MANUTENÇÃO (100% INDEPENDENTE)
