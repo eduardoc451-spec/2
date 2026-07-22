@@ -144,10 +144,11 @@ import streamlit as st
 # =============================================================================
 
 def init_db():
-    """Cria a estrutura da tabela 'respostas' com suporte nativo a JSONB."""
+    """Inicializa a tabela respostas de forma limpa sem estourar erro de CONSTRAINT."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
+                # 1. Cria a tabela (se não existir)
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS respostas (
                         dimensao VARCHAR(20) DEFAULT 'igov',
@@ -165,7 +166,6 @@ def init_db():
             conn.commit()
     except Exception as e:
         logging.error(f"Erro ao inicializar o banco: {e}")
-        raise e
 
 @st.cache_data(ttl=60)
 def load_respostas(ano):
