@@ -62,26 +62,26 @@ FAIXA_CORES = {"C": "#ef4444", "C+": "#f97316", "B": "#eab308", "B+": "#22c55e",
 # =============================================================================
 # CONEXÃO OTIMIZADA E SEGURA COM O NEON (POSTGRESQL)
 # =============================================================================
-import os
-import logging
-import psycopg2
-import streamlit as st
 
 def get_db_url():
-    """Recupera e valida a URL de conexão do Neon."""
+    """Recupera, higieniza e valida a URL de conexão do Neon."""
     db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
     if not db_url:
-        st.error("❌ A variável DATABASE_URL do Neon não foi configurada nos Segredos ou Ambiente!")
+        st.error("❌ A variável DATABASE_URL do Neon não foi configurada nos Segredos do Streamlit!")
         st.stop()
     
-    # Garante suporte a SSL exigido pelo Neon
+    # 1. Remove o parâmetro channel_binding que provoca erros no psycopg2
+    if "channel_binding=" in db_url:
+        db_url = db_url.split("&channel_binding=")[0].split("?channel_binding=")[0]
+    
+    # 2. Garante o parâmetro de criptografia SSL exigido pelo Neon
     if "sslmode=require" not in db_url:
         db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
         
     return db_url
 
 class get_connection:
-    """Context manager seguro para conexões diretas com o Neon."""
+    """Context manager seguro para conexões diretas e gerenciadas com o Neon."""
     def __enter__(self):
         try:
             self.conn = psycopg2.connect(get_db_url())
@@ -101,11 +101,28 @@ class get_connection:
             except Exception as e:
                 logging.error(f"Erro no encerramento da transação: {e}")
             finally:
-                # Fecha a conexão após o uso (deixa o pooler do Neon gerenciar no backend)
+                # Fecha a conexão após o uso (deixa o pooler do Neon gerenciar no servidor)
                 try:
                     self.conn.close()
                 except Exception:
                     pass
+
+# =============================================================================
+# MODAL DE AVISO AUTOMÁTICO
+# =============================================================================
+@st.dialog("⚠️ Atenção! Evidência em Link Externo")
+def modal_aviso_link(qid, links_encontrados):
+    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    for lk in links_encontrados:
+        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
+        
+    st.markdown("""
+    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
+    
+    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
+    """)
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
+        st.rerun()
 # =============================================================================
 # MODAL DE AVISO AUTOMÁTICO
 # =============================================================================
