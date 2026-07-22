@@ -197,15 +197,8 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=""):
                         link = EXCLUDED.link,
                         comentarios = EXCLUDED.comentarios;
                 """, (ano, qid, valor, pontos, link, comentarios))
-            
-            # 🔑 ESSA LINHA RESOLVE O PROBLEMA DA GRAVAÇÃO:
-            conn.commit() 
-            
-        st.cache_data.clear() # Limpa o cache para o painel recalcular os pontos
-    except Exception as e:
-        st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
-            
-        st.cache_data.clear()  # Limpa o cache do Streamlit para atualizar os painéis
+            conn.commit()  # <-- Salva a alteração no Neon
+        st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
 
