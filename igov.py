@@ -1,36 +1,31 @@
-import os
-import sys
-import re
-import json
-import warnings
-import logging
-from datetime import datetime, date
-from io import BytesIO
-
 import psycopg2
-from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 import streamlit as st
+import json
+import logging
 
-# Silencia alertas e logs não críticos no console/interface
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore")
-os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
-os.environ["PYTHONWARNINGS"] = "ignore"
-logging.getLogger("streamlit").setLevel(logging.ERROR)
+# =============================================================================
+# CONEXÃO DIRETA COM O BANCO DE DADOS (POSTGRESQL / NEON)
+# =============================================================================
 
-# Bibliotecas para o PDF (Requer: pip install reportlab)
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
-from reportlab.graphics.shapes import Drawing, String
-from reportlab.graphics.charts.barcharts import VerticalBarChart
-
-# Bibliotecas para os Gráficos (Requer: pip install plotly)
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
+def get_connection():
+    """Conecta ao banco PostgreSQL/Neon usando as credenciais do Streamlit Secrets."""
+    try:
+        # Tenta usar a URL completa se configurada no secrets
+        if "postgres" in st.secrets and "url" in st.secrets["postgres"]:
+            return psycopg2.connect(st.secrets["postgres"]["url"])
+        
+        # Caso contrário, usa os parâmetros individuais de conexão
+        return psycopg2.connect(
+            host=st.secrets["postgres"]["host"],
+            database=st.secrets["postgres"]["database"],
+            user=st.secrets["postgres"]["user"],
+            password=st.secrets["postgres"]["password"],
+            port=st.secrets["postgres"].get("port", 5432)
+        )
+    except Exception as e:
+        st.error(f"Erro de Conexão com o Banco de Dados: {e}")
+        raise e
 
 # =============================================================================
 # CONSTANTES GLOBAIS
