@@ -1207,7 +1207,7 @@ def mostrar_formulario_gov():
                     comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
                     
                     # Salva no banco/backend através da função save_resp
-                    save_resp("1.0", val_radio_10, pts_10, link_10, comentario_para_salvar)
+                    salvar_resposta(ano_sel, "1.0", val_radio_10, pts_10, link_10)
                     
                     # Atualiza a memória local res_data
                     res_data["1.0"] = {
