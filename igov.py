@@ -1,12 +1,27 @@
-import os
-import re
 import json
 import logging
+import os
+import re
+from datetime import date, datetime
 from io import BytesIO
-from datetime import datetime, date
+
 import psycopg2
-from psycopg2.extras import RealDictCursor
 import streamlit as st
+from psycopg2.extras import RealDictCursor
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 # =============================================================================
 # CONEXÃO COM O BANCO DE DADOS
