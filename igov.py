@@ -183,17 +183,25 @@ def load_respostas(ano):
         st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
         return {}
 
-def salvar_resposta(ano, qid, valor, pontos, link=""):
+def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=""):
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas (dimensao, ano, id, valor, pontos, link)
-                    VALUES ('igov', %s, %s, %s, %s, %s)
+                    INSERT INTO respostas (dimensao, ano, id, valor, pontos, link, comentarios)
+                    VALUES ('igov', %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (dimensao, ano, id) 
-                    DO UPDATE SET valor = EXCLUDED.valor, pontos = EXCLUDED.pontos, link = EXCLUDED.link;
-                """, (ano, qid, valor, pontos, link))
-        st.cache_data.clear()
+                    DO UPDATE SET 
+                        valor = EXCLUDED.valor, 
+                        pontos = EXCLUDED.pontos, 
+                        link = EXCLUDED.link,
+                        comentarios = EXCLUDED.comentarios;
+                """, (ano, qid, valor, pontos, link, comentarios))
+            
+            # ⚠️ FUNDAMENTAL PARA GRAVAR NO NEON POSTGRESQL:
+            conn.commit()
+            
+        st.cache_data.clear()  # Limpa o cache do Streamlit para atualizar os painéis
     except Exception as e:
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
 
