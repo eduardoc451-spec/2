@@ -1,30 +1,54 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import streamlit as st
-import json
-import logging
-
-# =============================================================================
-# CONEXÃO DIRETA COM O BANCO DE DADOS (POSTGRESQL / NEON)
-# =============================================================================
 
 def get_connection():
-    """Conecta ao banco PostgreSQL/Neon usando as credenciais do Streamlit Secrets."""
+    """Conecta ao banco PostgreSQL/Neon testando dinamicamente as estruturas do Secrets."""
     try:
-        # Tenta usar a URL completa se configurada no secrets
-        if "postgres" in st.secrets and "url" in st.secrets["postgres"]:
-            return psycopg2.connect(st.secrets["postgres"]["url"])
+        # 1. Tenta buscar uma URL de conexão direta (vários nomes comuns)
+        url = None
+        for key in ["postgres_url", "DATABASE_URL", "POSTGRES_URL", "neon_url", "db_url"]:
+            if key in st.secrets:
+                url = st.secrets[key]
+                break
         
-        # Caso contrário, usa os parâmetros individuais de conexão
+        # Se encontrou dentro do bloco "postgres" ou "database"
+        if not url:
+            if "postgres" in st.secrets and "url" in st.secrets["postgres"]:
+                url = st.secrets["postgres"]["url"]
+            elif "database" in st.secrets and "url" in st.secrets["database"]:
+                url = st.secrets["database"]["url"]
+
+        if url:
+            return psycopg2.connect(url)
+
+        # 2. Se não encontrou URL, tenta parâmetros individuais no bloco 'postgres' ou 'database'
+        cfg = None
+        if "postgres" in st.secrets:
+            cfg = st.secrets["postgres"]
+        elif "database" in st.secrets:
+            cfg = st.secrets["database"]
+        
+        if cfg:
+            return psycopg2.connect(
+                host=cfg.get("host"),
+                database=cfg.get("database") or cfg.get("dbname"),
+                user=cfg.get("user") or cfg.get("username"),
+                password=cfg.get("password"),
+                port=cfg.get("port", 5432)
+            )
+
+        # 3. Tenta pegar os parâmetros direto na raiz do Secrets (host, user, password soltos)
         return psycopg2.connect(
-            host=st.secrets["postgres"]["host"],
-            database=st.secrets["postgres"]["database"],
-            user=st.secrets["postgres"]["user"],
-            password=st.secrets["postgres"]["password"],
-            port=st.secrets["postgres"].get("port", 5432)
+            host=st.secrets.get("host"),
+            database=st.secrets.get("database") or st.secrets.get("dbname"),
+            user=st.secrets.get("user") or st.secrets.get("username"),
+            password=st.secrets.get("password"),
+            port=st.secrets.get("port", 5432)
         )
+
     except Exception as e:
-        st.error(f"Erro de Conexão com o Banco de Dados: {e}")
+        st.error(f"Erro ao conectar com o Neon/PostgreSQL: {e}")
         raise e
 
 # =============================================================================
