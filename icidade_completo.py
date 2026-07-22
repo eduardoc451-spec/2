@@ -2015,12 +2015,10 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 3.1.1 • DATA DE TREINAMENTO DINÂMICA (100% INDEPENDENTE)
+    # QUESITO 3.1.1 • DATA DE TREINAMENTO DINÂMICA
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_3_1_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 3.1.1 - Data do Último Treinamento de Voluntários", expanded=True):
+        with st.expander("📌 Quesito 3.1.1 - Data do Último Treinamento de Voluntários", expanded=True):
             st.subheader("3.1.1 • Treinamento de Voluntários")
             st.write("**Qual a data do último treinamento de associações de voluntários?**")
             
@@ -2030,54 +2028,22 @@ def mostrar_formulario_cidade():
             * 📅 **A partir de 01/01/{ano_sel}:** 10 pontos.
             * 🚫 **Observação:** Treinamentos em {ano_sel + 1} não pontuam.
             """)
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Recupera os dados históricos salvos no dicionário
-            d311 = res_data.get("3.1.1", {"valor": None, "pontos": 0.0, "link": ""})
-            if d311 is None: d311 = {"valor": None, "pontos": 0.0, "link": ""}
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.1.1' para registrar.*")
 
+            # Recupera os dados históricos salvos no dicionário
+            d311 = res_data.get("3.1.1") or {"valor": None, "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_311 = d311.get("valor", None)
+
+            # Tratamento da data salva para exibição no componente
             try:
                 dt_i_311 = datetime.strptime(v_salvo_311, '%Y-%m-%d').date() if v_salvo_311 else date(ano_sel, 1, 1)
-            except:
+            except Exception:
                 dt_i_311 = date(ano_sel, 1, 1)
 
-            chave_date_311 = f"dt_311_{v_salvo_311}_{ano_sel}"
-
-            def cb_date_311():
-                dt_sel = st.session_state[chave_date_311]
-                # Lógica matemática de pontuação baseada no ano selecionado
-                if dt_sel >= date(ano_sel, 1, 1) and dt_sel.year == ano_sel:
-                    pts = 10.0
-                else:
-                    pts = 0.0
-                
-                val = str(dt_sel)
-                lnk = st.session_state.get(f"l_311_txt_{ano_sel}", d311.get("link", ""))
-                
-                save_resp("3.1.1", val, pts, lnk)
-                res_data["3.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_311():
-                lnk = st.session_state[f"l_311_txt_{ano_sel}"]
-                dt_sel = st.session_state.get(chave_date_311, dt_i_311)
-                
-                if dt_sel >= date(ano_sel, 1, 1) and dt_sel.year == ano_sel:
-                    pts = 10.0
-                else:
-                    pts = 0.0
-                    
-                val = str(dt_sel)
-                save_resp("3.1.1", val, pts, lnk)
-                res_data["3.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d311.get("link", "") or "")]
-                
-                if lnk != d311.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_3_1_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_3_1_1_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_date_311 = f"dt_311_{ano_sel}"
+            chave_link_311 = f"l_311_txt_{ano_sel}"
+            chave_coment_311 = f"coment_3.1.1_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             col_d311, col_j311 = st.columns([1, 1])
             with col_d311:
@@ -2085,29 +2051,80 @@ def mostrar_formulario_cidade():
                     "Data do treinamento:",
                     value=dt_i_311,
                     key=chave_date_311,
-                    on_change=cb_date_311,
                     format="DD/MM/YYYY"
                 )
                 
-                # feedback visual do cálculo em tempo real
-                if data_sel_311 >= date(ano_sel, 1, 1) and data_sel_311.year == ano_sel:
+                # Feedback visual do cálculo em tempo real baseado no input atual
+                if data_sel_311 and data_sel_311 >= date(ano_sel, 1, 1) and data_sel_311.year == ano_sel:
                     st.success(f"Pontuação Calculada: 10 pts ({data_sel_311.strftime('%d/%m/%Y')})")
                 else:
-                    st.warning(f"Pontuação Calculada: 00 pts ({data_sel_311.strftime('%d/%m/%Y')})")
-                
-            with col_j311:
-                link_311 = st.text_area("Justificativa (3.1.1):", value=d311.get("link", ""), key=f"l_311_txt_{ano_sel}", on_change=cb_text_311, height=100)
-                placeholder_links_311 = st.empty()
-                links_311_visuais = [u[0] for u in re.findall(regex_pure_url, link_311 or "")]
-                if links_311_visuais:
-                    placeholder_links_311.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_311_visuais]))
+                    st.warning(f"Pontuação Calculada: 00 pts ({data_sel_311.strftime('%d/%m/%Y') if data_sel_311 else 'N/A'})")
 
-            pts_atuais_311 = d311.get("pontos", 0.0)
-            cor_txt_311 = "#28a745" if pts_atuais_311 == 10.0 else "#dc3545"
-            st.markdown(f"<span style='color:{cor_txt_311}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 3.1.1: {pts_atuais_311:.1f} pontos</span>", unsafe_allow_html=True)
+            with col_j311:
+                link_311 = st.text_area(
+                    "Justificativa / Evidência (3.1.1):",
+                    value=d311.get("link", ""),
+                    key=chave_link_311,
+                    height=100,
+                    placeholder="Cole o link dos comprovantes ou atas aqui..."
+                )
+                placeholder_links_311 = st.empty()
+                links_311_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_311 or "")]
+                if links_311_visuais:
+                    placeholder_links_311.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_311_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("3.1.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 3.1.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.1.1", key=f"btn_salvar_3_1_1_{ano_sel}", type="primary"):
+                # Lógica matemática de pontuação baseada na data informada
+                if data_sel_311 and data_sel_311 >= date(ano_sel, 1, 1) and data_sel_311.year == ano_sel:
+                    pts_311 = 10.0
+                else:
+                    pts_311 = 0.0
+
+                val_str_311 = str(data_sel_311) if data_sel_311 else ""
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_311, d311.get("comentario", ""))
+
+                # 2. Salva no banco/backend
+                save_resp("3.1.1", val_str_311, pts_311, link_311, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["3.1.1"] = {
+                    "valor": val_str_311,
+                    "pontos": pts_311,
+                    "link": link_311,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_311 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d311.get("link", "") or "")]
+
+                if link_311 != d311.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_1_1_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 3.1.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_311 = d311.get("pontos", 0.0)
+            cor_txt_311 = "#28a745" if pts_atuais_311 == 10.0 else "#dc3545"
+            st.markdown(
+                f"<span style='color:{cor_txt_311}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.1.1: {pts_atuais_311:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.1.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_3_1_1_{ano_sel}", False):
         modal_aviso_link("3.1.1", st.session_state.get(f"links_pendentes_3_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_1_1_{ano_sel}"] = False
