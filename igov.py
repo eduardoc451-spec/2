@@ -183,39 +183,19 @@ def load_respostas(ano):
         st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
         return {}
 
-def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Executa o UPSERT da resposta no Neon e invalida os caches de leitura."""
-    ano_sel = st.session_state.get("ano_referencia_global")
-    if not ano_sel:
-        st.warning("Nenhum ano de referência selecionado!")
-        return
-
-    if comentarios is None:
-        dados_atuais = load_respostas(ano_sel)
-        comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
-
-    comentarios_json = json.dumps(comentarios, ensure_ascii=False)
-    timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+def salvar_resposta(ano, qid, valor, pontos, link=""):
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
-                    ON CONFLICT (id, ano) DO UPDATE SET
-                        valor = EXCLUDED.valor,
-                        pontos = EXCLUDED.pontos,
-                        link = EXCLUDED.link,
-                        comentarios = EXCLUDED.comentarios,
-                        atualizado_em = EXCLUDED.atualizado_em;
-                """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
-            conn.commit()
-        
-        # Invalida o cache do Streamlit para forçar atualização das views de leitura
+                    INSERT INTO respostas (dimensao, ano, id, valor, pontos, link)
+                    VALUES ('igov', %s, %s, %s, %s, %s)
+                    ON CONFLICT (dimensao, ano, id) 
+                    DO UPDATE SET valor = EXCLUDED.valor, pontos = EXCLUDED.pontos, link = EXCLUDED.link;
+                """, (ano, qid, valor, pontos, link))
         st.cache_data.clear()
     except Exception as e:
-        st.error(f"Erro ao salvar questão {qid}: {e}")
+        st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
 
 @st.cache_data(ttl=60)
 def get_all_years_data():
