@@ -2439,81 +2439,103 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = False
 
 # =============================================================================
-    # QUESITO 5.0 • MAPEAMENTO PRÓPRIO DE AMEAÇAS (100% INDEPENDENTE)
+    # QUESITO 5.0 • MAPEAMENTO PRÓPRIO DE AMEAÇAS
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_5_0_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 5.0 - Mapeamento Próprio de Ameaças", expanded=True):
+        with st.expander("📌 Quesito 5.0 - Mapeamento Próprio de Ameaças", expanded=True):
             st.subheader("5.0 • Mapeamento de Ameaças")
             st.write("**O Município realizou, por conta própria, o mapeamento e identificação das principais ameaças existentes em seu território?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Mapeamento oficial de opções e pontuações
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 5.0' para registrar.*")
+
+            # Mapeamento oficial de opções e pontuações do quesito 5.0
             opcoes_50 = {
                 "Selecione...": 0.0,
                 "Sim (200 pts)": 200.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados
-            d50 = res_data.get("5.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d50 is None: d50 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Estado inicial / persistente
+            d50 = res_data.get("5.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_50 = d50.get("valor", "Selecione...")
-            chave_radio_50 = f"r_50_{v_salvo_50}_{ano_sel}"
 
-            def cb_radio_50():
-                val = st.session_state[chave_radio_50]
-                pts = opcoes_50.get(val, 0.0)
-                lnk = st.session_state.get(f"l_50_txt_{ano_sel}", d50.get("link", ""))
-                
-                save_resp("5.0", val, pts, lnk)
-                res_data["5.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_50():
-                lnk = st.session_state[f"l_50_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_50, v_salvo_50)
-                pts = opcoes_50.get(val, 0.0)
-                
-                save_resp("5.0", val, pts, lnk)
-                res_data["5.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d50.get("link", "") or "")]
-                
-                if lnk != d50.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_radio_50 = f"r_50_{ano_sel}"
+            chave_link_50 = f"l_50_txt_{ano_sel}"
+            chave_coment_50 = f"coment_5.0_{ano_sel}"  # Chave padrão utilizada pela função bloco_comentarios
 
             col_r50, col_j50 = st.columns([1, 1])
             with col_r50:
                 lista_opcoes_50 = list(opcoes_50.keys())
                 idx_50 = lista_opcoes_50.index(v_salvo_50) if v_salvo_50 in lista_opcoes_50 else 0
-                
-                st.radio(
+
+                val_radio_50 = st.radio(
                     "Resposta 5.0:",
                     options=lista_opcoes_50,
                     index=idx_50,
                     key=chave_radio_50,
-                    on_change=cb_radio_50,
                     label_visibility="collapsed"
                 )
-                
-            with col_j50:
-                link_50 = st.text_area("Justificativa Técnica (5.0):", value=d50.get("link", ""), key=f"l_50_txt_{ano_sel}", on_change=cb_text_50, height=100)
-                placeholder_links_50 = st.empty()
-                links_50_visuais = [u[0] for u in re.findall(regex_pure_url, link_50 or "")]
-                if links_50_visuais:
-                    placeholder_links_50.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_50_visuais]))
 
-            pts_atuais_50 = d50.get("pontos", 0.0)
-            cor_txt_50 = "#28a745" if pts_atuais_50 == 200.0 else ("#dc3545" if v_salvo_50 != "Selecione..." else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_50}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 5.0: {pts_atuais_50:.1f} pontos</span>", unsafe_allow_html=True)
+            with col_j50:
+                link_50 = st.text_area(
+                    "Justificativa Técnica / Evidência (5.0):",
+                    value=d50.get("link", ""),
+                    key=chave_link_50,
+                    height=100,
+                    placeholder="Cole o link do documento, mapeamento ou comprovante aqui..."
+                )
+                placeholder_links_50 = st.empty()
+                links_50_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_50 or "")]
+                if links_50_visuais:
+                    placeholder_links_50.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_50_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("5.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 5.0
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 5.0", key=f"btn_salvar_5_0_{ano_sel}", type="primary"):
+                # Cálculo da pontuação
+                pts_50 = opcoes_50.get(val_radio_50, 0.0)
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_50, d50.get("comentario", ""))
+
+                # 2. Salva no banco/backend
+                save_resp("5.0", val_radio_50, pts_50, link_50, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["5.0"] = {
+                    "valor": val_radio_50,
+                    "pontos": pts_50,
+                    "link": link_50,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_50 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d50.get("link", "") or "")]
+
+                if link_50 != d50.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 5.0 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição do impacto da pontuação
+            pts_atuais_50 = d50.get("pontos", 0.0)
+            cor_txt_50 = "#28a745" if pts_atuais_50 == 200.0 else ("#dc3545" if v_salvo_50 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_50}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 5.0: {pts_atuais_50:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 5.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_5_0_{ano_sel}", False):
         modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
