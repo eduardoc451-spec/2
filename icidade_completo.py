@@ -5076,84 +5076,98 @@ def mostrar_formulario_cidade():
         modal_aviso_link("11.1.1", st.session_state.get(f"links_pendentes_11_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_1_1_{ano_sel}"] = False
 
-    # =============================================================================
-    # QUESITO 11.1.1.1 • APLICAÇÃO DE PENALIDADES (100% INDEPENDENTE)
+   # =============================================================================
+    # QUESITO 11.1.1.1 • APLICAÇÃO DE PENALIDADES
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_11_1_1_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 11.1.1.1 - Aplicação de Sanções Administrativas", expanded=True):
             st.subheader("11.1.1.1 • Penalidades")
             st.write("**Foi aplicada penalidade pela meta não cumprida?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 11.1.1.1' para registrar.*")
+
             opcoes_11111 = {
                 "Selecione...": 0.0,
                 "Sim (00 pts)": 0.0,
                 "Não (-50 pts)": -50.0
             }
-            
-            d11111 = res_data.get("11.1.1.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d11111 is None: d11111 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d11111 = res_data.get("11.1.1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_11111 = d11111.get("valor", "Selecione...")
-            chave_radio_11111 = f"r_11111_{v_salvo_11111}_{ano_sel}"
 
-            def cb_radio_11111():
-                val = st.session_state[chave_radio_11111]
-                pts = opcoes_11111.get(val, 0.0)
-                lnk = st.session_state.get(f"l_11111_txt_{ano_sel}", d11111.get("link", ""))
-                
-                save_resp("11.1.1.1", val, pts, lnk)
-                res_data["11.1.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_11111():
-                lnk = st.session_state[f"l_11111_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_11111, v_salvo_11111)
-                pts = opcoes_11111.get(val, 0.0)
-                
-                save_resp("11.1.1.1", val, pts, lnk)
-                res_data["11.1.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d11111.get("link", "") or "")]
-                
-                if lnk != d11111.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_11_1_1_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_11_1_1_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_11111 = f"r_11111_{ano_sel}"
+            chave_link_11111 = f"l_11111_txt_{ano_sel}"
+            chave_coment_11111 = f"coment_11.1.1.1_{ano_sel}"
 
             col_r11111, col_j11111 = st.columns([1, 1])
             with col_r11111:
                 lista_opcoes_11111 = list(opcoes_11111.keys())
                 idx_11111 = lista_opcoes_11111.index(v_salvo_11111) if v_salvo_11111 in lista_opcoes_11111 else 0
-                
+
                 st.radio(
                     "Aplicação de penalidade:",
                     options=lista_opcoes_11111,
                     index=idx_11111,
                     key=chave_radio_11111,
-                    on_change=cb_radio_11111,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j11111:
-                l11111 = st.text_area(
-                    "Auto de Infração (11.1.1.1):", 
-                    value=d11111.get("link", ""), 
-                    key=f"l_11111_txt_{ano_sel}", 
-                    on_change=cb_text_11111, 
+                link_11111 = st.text_area(
+                    "Auto de Infração (11.1.1.1):",
+                    value=d11111.get("link", ""),
+                    key=chave_link_11111,
                     placeholder="Ex: Link de publicação do diário oficial de multas aplicadas, rescisões...",
                     height=110
                 )
                 placeholder_links_11111 = st.empty()
-                links_11111_atuais = [u[0] for u in re.findall(regex_pure_url, l11111 or "")]
-                if links_11111_atuais:
-                    placeholder_links_11111.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_11111_atuais]))
+                links_11111_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_11111 or "")]
+                if links_11111_visuais:
+                    placeholder_links_11111.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_11111_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("11.1.1.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 11.1.1.1", key=f"btn_salvar_11_1_1_1_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_11111 = st.session_state.get(chave_radio_11111, v_salvo_11111)
+                pts_11111 = opcoes_11111.get(val_selecionado_11111, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_11111, d11111.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("11.1.1.1", val_selecionado_11111, pts_11111, link_11111, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["11.1.1.1"] = {
+                    "valor": val_selecionado_11111,
+                    "pontos": pts_11111,
+                    "link": link_11111,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_11111 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d11111.get("link", "") or "")]
+
+                if link_11111 != d11111.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_11_1_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_11_1_1_1_{ano_sel}"] = True
+
+                st.toast("Quesito 11.1.1.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_11111 = d11111.get("pontos", 0.0)
             cor_txt_11111 = "#dc3545" if pts_atuais_11111 < 0.0 else ("#28a745" if v_salvo_11111 == "Sim (00 pts)" else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_11111}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 11.1.1.1: {pts_atuais_11111:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("11.1.1.1", res_data, ano_sel)
 
+    # GATILHO DO MODAL 11.1.1.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_11_1_1_1_{ano_sel}", False):
         modal_aviso_link("11.1.1.1", st.session_state.get(f"links_pendentes_11_1_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_1_1_1_{ano_sel}"] = False
