@@ -162,34 +162,26 @@ def init_db():
         raise e
 
 @st.cache_data(ttl=60)
-def load_respostas(ano: int) -> dict:
-    """Busca do banco de dados PostgreSQL todas as respostas do ano selecionado."""
-    respostas = {}
+def load_respostas(ano):
     try:
         with get_connection() as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
+                    "SELECT id, valor, pontos, link FROM respostas WHERE ano = %s AND dimensao = 'igov'", 
                     (ano,)
                 )
                 rows = cursor.fetchall()
+                res = {}
                 for row in rows:
-                    comentarios = row["comentarios"] or []
-                    if isinstance(comentarios, str):
-                        try:
-                            comentarios = json.loads(comentarios)
-                        except Exception:
-                            comentarios = []
-                            
-                    respostas[row["id"]] = {
-                        "valor": row["valor"] or "",
-                        "pontos": row["pontos"] or 0.0,
-                        "link": row["link"] or "",
-                        "comentarios": comentarios
+                    res[row[0]] = {
+                        "valor": row[1],
+                        "pontos": float(row[2]) if row[2] is not None else 0.0,
+                        "link": row[3]
                     }
+                return res
     except Exception as e:
-        logging.error(f"Erro ao carregar respostas do ano {ano}: {e}")
-    return respostas
+        st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
+        return {}
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
     """Executa o UPSERT da resposta no Neon e invalida os caches de leitura."""
