@@ -134,6 +134,11 @@ def modal_aviso_link(qid, links_encontrados):
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
         st.rerun()
 
+import json
+import logging
+from datetime import datetime, date
+import streamlit as st
+
 # =============================================================================
 # 3. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL)
 # =============================================================================
@@ -145,15 +150,16 @@ def init_db():
             with conn.cursor() as cursor:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS respostas (
-                        id VARCHAR(50) NOT NULL,
+                        dimensao VARCHAR(20) DEFAULT 'igov',
                         ano INTEGER NOT NULL,
+                        id VARCHAR(50) NOT NULL,
                         valor TEXT,
                         pontos DOUBLE PRECISION DEFAULT 0,
                         link TEXT,
                         comentarios JSONB DEFAULT '[]'::jsonb,
                         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (id, ano)
+                        PRIMARY KEY (dimensao, ano, id)
                     );
                 """)
             conn.commit()
@@ -167,40 +173,67 @@ def load_respostas(ano):
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, valor, pontos, link FROM respostas WHERE ano = %s AND dimensao = 'igov'", 
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s AND dimensao = 'igov'", 
                     (ano,)
                 )
                 rows = cursor.fetchall()
                 res = {}
                 for row in rows:
+                    # Garantir que comentarios venha como lista/objeto Python
+                    com_data = row[4]
+                    if isinstance(com_data, str):
+                        try:
+                            com_data = json.loads(com_data)
+                        except Exception:
+                            com_data = []
+                    elif com_data is None:
+                        com_data = []
+
                     res[row[0]] = {
                         "valor": row[1],
                         "pontos": float(row[2]) if row[2] is not None else 0.0,
-                        "link": row[3]
+                        "link": row[3],
+                        "comentarios": com_data
                     }
                 return res
     except Exception as e:
         st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
         return {}
 
-def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=""):
+def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
     try:
+        # Trata o campo comentarios para o formato JSON correto exigido pelo PostgreSQL (JSONB)
+        if comentarios is None:
+            comentarios = []
+        
+        # Converte lista/dict Python para string JSON formatada
+        comentarios_json = json.dumps(comentarios, ensure_ascii=False)
+
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO respostas (dimensao, ano, id, valor, pontos, link, comentarios)
-                    VALUES ('igov', %s, %s, %s, %s, %s, %s)
+                    VALUES ('igov', %s, %s, %s, %s, %s, %s::jsonb)
                     ON CONFLICT (dimensao, ano, id) 
                     DO UPDATE SET 
                         valor = EXCLUDED.valor, 
                         pontos = EXCLUDED.pontos, 
                         link = EXCLUDED.link,
-                        comentarios = EXCLUDED.comentarios;
-                """, (ano, qid, valor, pontos, link, comentarios))
+                        comentarios = EXCLUDED.comentarios,
+                        atualizado_em = CURRENT_TIMESTAMP;
+                """, (ano, qid, valor, pontos, link, comentarios_json))
             conn.commit()  # <-- Salva a alteração no Neon
+            
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
+
+# ALIAS / ALIAS DE COMPATIBILIDADE PARA MANTER COMPATÍVEL COM SAVE_RESP
+def save_resp(qid, valor, pontos, link="", comentarios=None, ano=None):
+    """Função wrapper para evitar erros de NameError ao chamar save_resp em subcomponentes."""
+    if ano is None:
+        ano = st.session_state.get("ano_referencia_global", date.today().year)
+    salvar_resposta(ano, qid, valor, pontos, link, comentarios)
 
 @st.cache_data(ttl=60)
 def get_all_years_data():
@@ -208,24 +241,31 @@ def get_all_years_data():
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT ano, id, valor, pontos, link FROM respostas WHERE dimensao = 'igov'"
+                    "SELECT ano, id, valor, pontos, link, comentarios FROM respostas WHERE dimensao = 'igov'"
                 )
                 rows = cursor.fetchall()
                 all_data = {}
                 for row in rows:
-                    ano, qid, valor, pontos, link = row
+                    ano, qid, valor, pontos, link, comentarios = row
                     if ano not in all_data:
                         all_data[ano] = {}
+                    
+                    if isinstance(comentarios, str):
+                        try:
+                            comentarios = json.loads(comentarios)
+                        except Exception:
+                            comentarios = []
+
                     all_data[ano][qid] = {
                         "valor": valor,
                         "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link
+                        "link": link,
+                        "comentarios": comentarios or []
                     }
                 return all_data
     except Exception as e:
         st.error(f"Erro ao carregar histórico do i-Gov TI: {e}")
         return {}
-
 # =============================================================================
 # 4. COMPONENTES DE INTERFACE
 # =============================================================================
