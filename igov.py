@@ -791,106 +791,384 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     buffer.seek(0)
     return buffer.getvalue()
 
+import streamlit as st
+import plotly.graph_objects as go
+
 # =============================================================================
-# 3. INTERFACE E FORMULÁRIO (STREAMLIT)
+# CONSTANTES E MAPEAMENTOS DO I-GOV TI
 # =============================================================================
+
+# Dicionário de pontuações máximas do i-Gov TI
+PONTUACOES_MAX = {
+    "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
+    "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
+    "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
+    "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
+    "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
+}
+
+# Cores padrão do IEG-M por faixa
+FAIXA_CORES = {
+    "C": "#ef4444",   # Vermelho
+    "C+": "#f97316",  # Laranja
+    "B": "#eab308",   # Amarelo
+    "B+": "#22c55e",  # Verde Claro
+    "A": "#16a34a"    # Verde
+}
+
+# Categorias / Dimensões do i-Gov TI
+CATEGORIAS_MAP = {
+    "planejamento": {
+        "label": "1. Planejamento de TI",
+        "qids": ["1.0", "1.1", "1.2", "1.3", "1.3.1", "1.4.1", "1.4.2"]
+    },
+    "estrutura": {
+        "label": "2. Estrutura Organizacional e Pessoas",
+        "qids": ["2.0", "2.1", "2.2", "2.3"]
+    },
+    "sistemas": {
+        "label": "3. Sistemas de Informação e Processos",
+        "qids": ["3.0", "3.1", "3.1.1", "3.1.1.1", "3.2.1", "3.3", "3.4", "3.5", "3.6"]
+    },
+    "infraestrutura": {
+        "label": "4. Infraestrutura e Serviços",
+        "qids": ["4.0"]
+    },
+    "seguranca": {
+        "label": "6. Segurança da Informação",
+        "qids": ["6.0", "6.1", "6.2", "6.3", "6.4"]
+    },
+    "contratacoes": {
+        "label": "7. Contratações de TI",
+        "qids": ["7.0", "7.1", "7.2", "7.3"]
+    },
+    "transparencia": {
+        "label": "8. Transparência e Dados Abertos",
+        "qids": ["8.0", "8.2.1", "8.2.2"]
+    },
+    "governanca": {
+        "label": "9. Governança Digital",
+        "qids": ["9.1"]
+    }
+}
+
+# =============================================================================
+# 4. SIDEBAR (I-GOV TI)
+# =============================================================================
+
+def zerar_questionario(ano):
+    """Deleta todas as respostas do ano selecionado no Neon PostgreSQL."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM respostas WHERE ano = %s", (ano,))
+        st.cache_data.clear()  # Limpa o cache após deletar
+    except Exception as e:
+        st.error(f"Erro ao zerar questionário: {e}")
+
+# Janela pop-up de confirmação definida no escopo global
+@st.dialog("🔒 Confirmação de Segurança")
+def confirmar_zerar_dialog(ano):
+    st.warning(f"Você está prestes a apagar todas as respostas do i-Gov TI de {ano}. Esta ação é irreversível!")
+    
+    senha = st.text_input("Digite a senha de administrador:", type="password")
+    
+    col_Sim, col_Nao = st.columns(2)
+    with col_Sim:
+        if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
+            if senha == "fidelios":
+                zerar_questionario(ano)
+                st.success(f"✅ Questionário de {ano} foi zerado!")
+                st.rerun()
+            else:
+                st.error("❌ Senha incorreta!")
+    with col_Nao:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
 def render_sidebar():
-    st.sidebar.title("🛠️ Painel i-GOV TI")
-    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    st.sidebar.title("💻 i-Gov TI - Painel")
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
     ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
+
     res_data = load_respostas(ano_sel)
     
-    total_pts = sum(float(item.get("pontos", 0)) for k, item in res_data.items() if not k.startswith("COM_"))
-    
-    if total_pts <= 499:   faixa, cor = "C",  "red"
+    # Soma de pontos desconsiderando registros de comentários
+    total_pts = sum(
+        item.get("pontos", 0) 
+        for qid, item in res_data.items() 
+        if isinstance(item, dict) and not qid.startswith("COM_")
+    )
+
+    if total_pts <= 500:    faixa, cor = "C",  "red"
     elif total_pts <= 599: faixa, cor = "C+", "orange"
     elif total_pts <= 749: faixa, cor = "B",  "#d4d400"
     elif total_pts <= 899: faixa, cor = "B+", "lightgreen"
-    elif total_pts <= 1000: faixa, cor = "A",  "green"
+    else:                  faixa, cor = "A",  "green"
 
     st.sidebar.metric("Pontuação Total", f"{total_pts:.1f} pts")
-    st.sidebar.markdown(f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>", unsafe_allow_html=True)
-    
-    # 🔥 Botão de Download do Relatório PDF Integrado na Sidebar (COM HISTÓRICO TRATADO)
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📄 Relatórios")
-    
-    # 1. Busca os dados brutos de todos os anos no banco de dados para a série histórica
-    try:
-        dados_historicos_brutos = get_all_years_data()
-    except Exception:
-        dados_historicos_brutos = {}
-        
-    # 2. TRATAMENTO CRÍTICO: Garante que as chaves dos anos sejam inteiros (ex: converte "2024" para 2024)
-    historico_tratado = {}
-    if isinstance(dados_historicos_brutos, dict):
-        for ano_chave, valor_ano in dados_historicos_brutos.items():
-            try:
-                ano_int = int(str(ano_chave).strip()[:4])
-                historico_tratado[ano_int] = valor_ano
-            except (ValueError, TypeError):
-                continue
-
-    # 3. Alimenta o session_state como garantia extra para o componente do gráfico
-    st.session_state.all_data = historico_tratado
-
-    # 4. Gera o relatório passando o dicionário histórico tratado para o gráfico puxar os dados
-    pdf_buffer = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, historico_tratado)
-    
-    st.sidebar.download_button(
-        label="📥 Baixar Relatório PDF",
-        data=pdf_buffer.getvalue(),  # Extrai o valor binário correto
-        file_name=f"Relatorio_i-Gov TI_{ano_sel}.pdf",
-        mime="application/pdf"
+    st.sidebar.markdown(
+        f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>",
+        unsafe_allow_html=True
     )
+
+    st.sidebar.divider()
     
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🔄 Zerar Questionário"):
-        with get_connection() as conn:
-            conn.execute("DELETE FROM respostas WHERE ano = ?", (ano_sel,))
-            conn.commit()
-        st.rerun()
-        
+    col1, col2 = st.sidebar.columns(2)
+    
+    # Botão de Download direto
+    with col1:
+        all_data_historico = get_all_years_data()
+        st.download_button(
+            label="📄 Baixar PDF",
+            data=gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, all_data=all_data_historico),
+            file_name=f"Relatorio_iGovTI_{ano_sel}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+
+    # Botão para abrir o Modal de confirmação
+    with col2:
+        if st.button("🔄 Zerar", help="Limpar todas as respostas do ano selecionado", use_container_width=True):
+            confirmar_zerar_dialog(ano_sel)
+
     return total_pts, res_data, ano_sel
 
+# =============================================================================
+# 5. GRÁFICOS COMPARATIVOS (I-GOV TI)
+# =============================================================================
 
-def mostrar_formulario_gov():
-    # =========================================================================
-    # CORREÇÃO CRÍTICA PARA CONFLITO DE ESCOPO DO 're' (UNBOUNDLOCALERROR)
-    # =========================================================================
-    global re
-    import sys
-    re = sys.modules['re']
-    # =========================================================================
+def get_faixa(total):
+    if total <= 500:  return "C"
+    if total <= 599:  return "C+"
+    if total <= 749:  return "B"
+    if total <= 899:  return "B+"
+    return "A"
 
-    init_db()
-    total_pts, res_data, ano_sel = render_sidebar()
+
+def calcular_pontos_por_categoria(res_data):
+    resultado = {}
+    for cat_key, cat_info in CATEGORIAS_MAP.items():
+        resultado[cat_key] = sum(
+            res_data.get(qid, {}).get("pontos", 0) for qid in cat_info["qids"]
+        )
+    return resultado
+
+
+def calcular_max_por_categoria():
+    resultado = {}
+    for cat_key, cat_info in CATEGORIAS_MAP.items():
+        resultado[cat_key] = sum(PONTUACOES_MAX.get(qid, 0) for qid in cat_info["qids"])
+    return resultado
+
+
+def grafico_comparativo_total(all_data):
+    anos = sorted(all_data.keys())
+    totais, faixas, cores = [], [], []
+    for ano in anos:
+        res = all_data[ano]
+        total = sum(v.get("pontos", 0) for k, v in res.items() if isinstance(v, dict) and not k.startswith("COM_"))
+        faixa = get_faixa(total)
+        totais.append(total)
+        faixas.append(faixa)
+        cores.append(FAIXA_CORES[faixa])
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[str(a) for a in anos],
+        y=totais,
+        marker_color=cores,
+        text=[f"{t:.1f} pts<br>Faixa {f}" for t, f in zip(totais, faixas)],
+        textposition="outside",
+        hovertemplate="<b>%{x}</b><br>%{text}<extra></extra>",
+    ))
+    for y_val, label, cor in [
+        (500, "C→C+", "#f97316"), (600, "C+→B", "#eab308"),
+        (750, "B→B+", "#22c55e"), (900, "B+→A", "#16a34a")
+    ]:
+        fig.add_hline(y=y_val, line_dash="dash", line_color=cor,
+                      annotation_text=label, annotation_position="right")
+    fig.update_layout(
+        title="Pontuação Total do i-Gov TI por Ano",
+        xaxis_title="Ano", yaxis_title="Pontos",
+        plot_bgcolor="white", paper_bgcolor="white",
+        showlegend=False, height=400,
+    )
+    return fig
+
+
+def grafico_evolucao_categorias(all_data):
+    anos = sorted(all_data.keys())
+    CORES_CAT = ["#1e3a5f","#0ea5e9","#22c55e","#f97316","#ef4444","#8b5cf6","#ec4899","#6b7280"]
+    fig = go.Figure()
+    for idx, (cat_key, cat_info) in enumerate(CATEGORIAS_MAP.items()):
+        valores = [
+            sum(all_data.get(ano, {}).get(qid, {}).get("pontos", 0) for qid in cat_info["qids"])
+            for ano in anos
+        ]
+        fig.add_trace(go.Scatter(
+            x=[str(a) for a in anos], y=valores,
+            mode="lines+markers", name=cat_info["label"],
+            line=dict(color=CORES_CAT[idx % len(CORES_CAT)], width=2),
+            marker=dict(size=7),
+        ))
+    fig.update_layout(
+        title="Evolução do i-Gov TI por Categoria ao Longo dos Anos",
+        xaxis_title="Ano", yaxis_title="Pontos",
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.4),
+        height=450,
+    )
+    return fig
+
+
+def grafico_radar_categorias(res_data, ano):
+    maximos = calcular_max_por_categoria()
+    pontos  = calcular_pontos_por_categoria(res_data)
+    labels  = [CATEGORIAS_MAP[k]["label"] for k in CATEGORIAS_MAP]
+    valores_pct = [
+        round(max(0, pontos.get(k, 0) / maximos[k] * 100), 1) if maximos[k] > 0 else 0
+        for k in CATEGORIAS_MAP
+    ]
+    labels_fechado  = labels + [labels[0]]
+    valores_fechado = valores_pct + [valores_pct[0]]
+    fig = go.Figure(go.Scatterpolar(
+        r=valores_fechado, theta=labels_fechado,
+        fill="toself", fillcolor="rgba(30,58,95,0.15)",
+        line=dict(color="#1e3a5f", width=2),
+        hovertemplate="%{theta}: %{r:.1f}%<extra></extra>",
+    ))
+    fig.update_layout(
+        title=f"Desempenho por Categoria — i-Gov TI ({ano})",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+        showlegend=False, height=420, paper_bgcolor="white",
+    )
+    return fig
+
+
+def grafico_quesitos_barra(res_data, ano):
+    qids_pontuaveis = sorted([q for q, v in PONTUACOES_MAX.items() if v > 0], key=lambda x: [int(i) if i.isdigit() else 999 for i in x.split('.')])
+    qids, obtido, maximo, cores = [], [], [], []
+    for qid in qids_pontuaveis:
+        pts = res_data.get(qid, {}).get("pontos", 0)
+        mx  = PONTUACOES_MAX[qid]
+        qids.append(qid)
+        obtido.append(pts)
+        maximo.append(mx)
+        if pts == mx:   cores.append("#16a34a")
+        elif pts < 0:   cores.append("#ef4444")
+        elif pts == 0:  cores.append("#9ca3af")
+        else:           cores.append("#0ea5e9")
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        name="Máximo", x=maximo, y=qids, orientation="h",
+        marker_color="rgba(200,200,200,0.35)", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Bar(
+        name="Obtido", x=obtido, y=qids, orientation="h",
+        marker_color=cores,
+        hovertemplate="<b>Quesito %{y}</b><br>Obtido: %{x} pts<extra></extra>",
+    ))
+    fig.update_layout(
+        title=f"Pontuação por Quesito — i-Gov TI ({ano})",
+        barmode="overlay", xaxis_title="Pontos",
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=max(500, len(qids) * 22),
+        legend=dict(orientation="h"),
+        yaxis=dict(autorange="reversed"),
+    )
+    return fig
+
+
+def grafico_pontos_por_ano(all_data):
+    """Gráfico de barras vertical com pontos totais por ano."""
+    anos = sorted(all_data.keys())
+    totais = []
+    cores = []
     
-    st.markdown("""
-        <style>
-        .quesito-card {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-left: 6px solid #1e3a5f;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.title(f"📊 Auditoria i-Gov TI - {ano_sel}")
+    for ano in anos:
+        res = all_data[ano]
+        total = sum(v.get("pontos", 0) for k, v in res.items() if isinstance(v, dict) and not k.startswith("COM_"))
+        totais.append(total)
+        
+        # Definir cor baseado na faixa
+        if total <= 500:   cores.append("#ef4444")  # C - Vermelho
+        elif total <= 599: cores.append("#f97316")  # C+ - Laranja
+        elif total <= 749: cores.append("#eab308")  # B - Amarelo
+        elif total <= 899: cores.append("#22c55e")  # B+ - Verde Claro
+        else:              cores.append("#16a34a")  # A - Verde
     
-    aba_quest, aba_graf = st.tabs(["📋 Questionário", "📈 Gráficos"])
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[str(a) for a in anos],
+        y=totais,
+        marker_color=cores,
+        text=[f"{t:.1f} pts" for t in totais],
+        textposition="outside",
+        hovertemplate="<b>Ano: %{x}</b><br>Pontos: %{y:.1f}<extra></extra>",
+    ))
     
-    with aba_quest:
-        # Veja se o seu erro estava aqui para baixo:
-        # Se a linha "st.header("1.0 Estrutura de TIC")" estiver aqui dentro, 
-        # ela PRECISA ter 8 espaços de recuo (2 tabs) por estar dentro do "with aba_quest:"
-        st.write("Conteúdo do questionário aqui...")
+    fig.update_layout(
+        title="Pontuação Total por Ano (i-Gov TI)",
+        xaxis_title="Ano",
+        yaxis_title="Pontos",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        showlegend=False,
+        height=400,
+    )
+    
+    return fig
 
-        # --- SEÇÃO 1: INFRAESTRUTURA E SETOR ---
-        st.header("1.0 Estrutura de TIC")
+def render_graficos(res_data_atual, ano_sel):
+    st.header("📊 Painel Gráfico - i-Gov TI")
+    
+    all_data = get_all_years_data()
+    
+    if not all_data:
+        st.info("Nenhum dado registrado ainda. Preencha os quesitos para ver os gráficos.")
+        return
+
+    # Exibição dos Gráficos Organizativos
+    col1, col2 = st.columns(2)
+    with col1:
+        st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
+    with col2:
+        st.plotly_chart(grafico_radar_categorias(res_data_atual, ano_sel), use_container_width=True)
+
+    st.plotly_chart(grafico_evolucao_categorias(all_data), use_container_width=True)
+    st.plotly_chart(grafico_quesitos_barra(res_data_atual, ano_sel), use_container_width=True)
+
+# =============================================================================
+# 6. FORMULÁRIO PRINCIPAL (I-GOV TI)
+# =============================================================================
+
+def mostrar_formulario_igov_ti():
+    # Caso render_sidebar() retorne None por algum motivo
+    dados_sidebar = render_sidebar()
+    
+    if dados_sidebar and len(dados_sidebar) == 3:
+        total_pts, res_data, ano_sel = dados_sidebar
+    else:
+        total_pts, res_data, ano_sel = 0, {}, "2026"  # Valor padrão de fallback
+
+    st.title(f"💻 Governance & TI (i-Gov TI) - {ano_sel}")
+
+    # -------------------------------------------------------------------------
+    # ABAS PRINCIPAIS
+    # -------------------------------------------------------------------------
+    aba_questionario, aba_graficos = st.tabs(["📋 Questionário i-Gov TI", "📊 Gráficos & Desempenho"])
+
+    with aba_questionario:
+        st.info("Preencha os quesitos de Governança e Tecnologia da Informação abaixo.")
+        
+        # Exemplo de chamadas utilizando a função otimizada de renderização/salvamento:
+        # renderizar_questao("1.0", res_data)
+        # renderizar_questao("2.0", res_data)
+
+    with aba_graficos:
+        render_graficos(res_data, ano_sel)
         
         # =============================================================================
         # QUESITO 1.0 • SETOR DE TIC (100% INDEPENDENTE COM 8 ESPAÇOS DE INDENTAÇÃO)
