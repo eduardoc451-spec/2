@@ -3842,18 +3842,15 @@ def mostrar_formulario_cidade():
     if st.session_state.get(f"gatilho_modal_7_4_1_{ano_sel}", False):
         modal_aviso_link("7.4.1", st.session_state.get(f"links_pendentes_7_4_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_4_1_{ano_sel}"] = False
-
+# =============================================================================
+    # QUESITO 7.5 • CADASTRO DE ABRIGOS CEPDEC
     # =============================================================================
-    # QUESITO 7.5 • CADASTRO DE ABRIGOS CEPDEC (100% INDEPENDENTE)
-    # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_7_5_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 7.5 - Cadastro de Locais para Abrigo (CEPDEC)", expanded=True):
             st.subheader("7.5 • Cadastro de Abrigos")
             st.write("**Possui cadastro dos locais para abrigo à população em situação de desastre junto à Coordenadoria Estadual de Proteção e Defesa Civil (CEPDEC)?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 7.5' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações progressivas
             opcoes_75 = {
                 "Selecione...": 0.0,
@@ -3861,74 +3858,88 @@ def mostrar_formulario_cidade():
                 "Sim, mas não está atualizado (03 pts)": 3.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d75 = res_data.get("7.5", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d75 is None: d75 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d75 = res_data.get("7.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_75 = d75.get("valor", "Selecione...")
-            chave_radio_75 = f"r_75_{v_salvo_75}_{ano_sel}"
 
-            def cb_radio_75():
-                val = st.session_state[chave_radio_75]
-                pts = opcoes_75.get(val, 0.0)
-                lnk = st.session_state.get(f"l_75_txt_{ano_sel}", d75.get("link", ""))
-                
-                save_resp("7.5", val, pts, lnk)
-                res_data["7.5"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_75():
-                lnk = st.session_state[f"l_75_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_75, v_salvo_75)
-                pts = opcoes_75.get(val, 0.0)
-                
-                save_resp("7.5", val, pts, lnk)
-                res_data["7.5"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d75.get("link", "") or "")]
-                
-                if lnk != d75.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_7_5_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_7_5_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_75 = f"r_75_{ano_sel}"
+            chave_link_75 = f"l_75_txt_{ano_sel}"
+            chave_coment_75 = f"coment_7.5_{ano_sel}"
 
             col_r75, col_j75 = st.columns([1, 1])
             with col_r75:
                 lista_opcoes_75 = list(opcoes_75.keys())
                 idx_75 = lista_opcoes_75.index(v_salvo_75) if v_salvo_75 in lista_opcoes_75 else 0
-                
+
                 st.radio(
                     "Cadastro de Abrigos (CEPDEC):",
                     options=lista_opcoes_75,
                     index=idx_75,
                     key=chave_radio_75,
-                    on_change=cb_radio_75,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j75:
                 link_75 = st.text_area(
-                    "Evidência do Cadastro/Protocolo (7.5):", 
-                    value=d75.get("link", ""), 
-                    key=f"l_75_txt_{ano_sel}", 
-                    on_change=cb_text_75, 
+                    "Evidência do Cadastro/Protocolo (7.5):",
+                    value=d75.get("link", ""),
+                    key=chave_link_75,
+                    placeholder="Descreva as evidências ou insira os links de comprovação do cadastro...",
                     height=135
                 )
                 placeholder_links_75 = st.empty()
-                links_75_visuais = [u[0] for u in re.findall(regex_pure_url, link_75 or "")]
+                links_75_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_75 or "")]
                 if links_75_visuais:
-                    placeholder_links_75.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_75_visuais]))
+                    placeholder_links_75.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_75_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("7.5", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 7.5", key=f"btn_salvar_7_5_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_75 = st.session_state.get(chave_radio_75, v_salvo_75)
+                pts_75 = opcoes_75.get(val_selecionado_75, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_75, d75.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("7.5", val_selecionado_75, pts_75, link_75, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["7.5"] = {
+                    "valor": val_selecionado_75,
+                    "pontos": pts_75,
+                    "link": link_75,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_75 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d75.get("link", "") or "")]
+
+                if link_75 != d75.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_5_{ano_sel}"] = True
+
+                st.toast("Quesito 7.5 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_75 = d75.get("pontos", 0.0)
             cor_txt_75 = "#28a745" if pts_atuais_75 > 0.0 else ("#dc3545" if v_salvo_75 == "Não (00 pts)" else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_75}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.5: +{pts_atuais_75:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("7.5", res_data, ano_sel)
 
-    # GATILHO DO MODAL 7.5
+    # GATILHO DO MODAL 7.5 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_7_5_{ano_sel}", False):
         modal_aviso_link("7.5", st.session_state.get(f"links_pendentes_7_5_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_5_{ano_sel}"] = False
+        
 # =============================================================================
     # QUESITO 7.6 • FORNECEDORES DE AJUDA HUMANITÁRIA (100% INDEPENDENTE)
     # =============================================================================
