@@ -6950,79 +6950,91 @@ def mostrar_formulario_cidade():
     # =============================================================================
     # QUESITO C1 • ONU MCR2030 (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_externo_c1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito C1 - Programa Construindo Cidades Resilientes (MCR2030) da ONU", expanded=True):
             st.subheader("QUESITO C1")
             st.write(f"**O Município estava inscrito no Programa Construindo Cidades Resilientes 2030 da ONU?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito C1' para registrar.*")
+
             opcoes_c1 = ["Selecione...", "Sim", "Não"]
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            dc1 = res_data.get("C1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if dc1 is None: dc1 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            dc1 = res_data.get("C1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_c1 = dc1.get("valor", "Selecione...")
-            chave_radio_c1 = f"r_c1_{v_salvo_c1}_{ano_sel}"
 
-            def cb_radio_c1():
-                val = st.session_state[chave_radio_c1]
-                lnk = st.session_state.get(f"l_c1_txt_{ano_sel}", dc1.get("link", ""))
-                
-                save_resp("C1", val, 0.0, lnk)
-                res_data["C1"] = {"valor": val, "pontos": 0.0, "link": lnk}
-
-            def cb_text_c1():
-                lnk = st.session_state[f"l_c1_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_c1, v_salvo_c1)
-                
-                save_resp("C1", val, 0.0, lnk)
-                res_data["C1"] = {"valor": val, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, dc1.get("link", "") or "")]
-                
-                if lnk != dc1.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_c1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_c1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_c1 = f"r_c1_{ano_sel}"
+            chave_link_c1 = f"l_c1_txt_{ano_sel}"
+            chave_coment_c1 = f"coment_C1_{ano_sel}"
 
             col_rc1, col_jc1 = st.columns([1, 1])
             with col_rc1:
                 idx_c1 = opcoes_c1.index(v_salvo_c1) if v_salvo_c1 in opcoes_c1 else 0
                 st.radio(
-                    "Inscrito no MCR2030?", 
-                    options=opcoes_c1, 
-                    index=idx_c1, 
+                    "Inscrito no MCR2030?",
+                    options=opcoes_c1,
+                    index=idx_c1,
                     key=chave_radio_c1,
-                    on_change=cb_radio_c1,
                     label_visibility="collapsed"
                 )
-                
+
             with col_jc1:
                 link_c1 = st.text_area(
-                    f"Comprovante ({ano_sel}) (C1):", 
-                    value=dc1.get("link", ""), 
-                    key=f"l_c1_txt_{ano_sel}", 
-                    on_change=cb_text_c1, 
+                    f"Comprovante ({ano_sel}) (C1):",
+                    value=dc1.get("link", ""),
+                    key=chave_link_c1,
                     placeholder="Insira o link do certificado de adesão, link do perfil público do município no painel MCR2030 ou documento comprobatório ONU...",
                     height=110
                 )
                 placeholder_links_c1 = st.empty()
-                links_c1_visuais = [u[0] for u in re.findall(regex_pure_url, link_c1 or "")]
+                links_c1_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_c1 or "")]
                 if links_c1_visuais:
-                    placeholder_links_c1.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_c1_visuais]))
+                    placeholder_links_c1.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_c1_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito C1: 0.0 pontos (Indicador de Alinhamento Global)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("C1", res_data, ano_sel)
 
-    # GATILHO DO MODAL C1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito C1", key=f"btn_salvar_c1_{ano_sel}", type="primary"):
+                # 1. Coleta os valores selecionados nos campos
+                val_selecionado_c1 = st.session_state.get(chave_radio_c1, v_salvo_c1)
+                pts_c1 = 0.0
+                comentario_para_salvar = st.session_state.get(chave_coment_c1, dc1.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("C1", val_selecionado_c1, pts_c1, link_c1, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["C1"] = {
+                    "valor": val_selecionado_c1,
+                    "pontos": pts_c1,
+                    "link": link_c1,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_c1 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, dc1.get("link", "") or "")]
+
+                if link_c1 != dc1.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_c1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_c1_{ano_sel}"] = True
+
+                st.toast("Quesito C1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito C1: 0.0 pontos (Indicador de Alinhamento Global)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL C1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_c1_{ano_sel}", False):
         modal_aviso_link("C1", st.session_state.get(f"links_pendentes_c1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_c1_{ano_sel}"] = False
-
+        
     # =============================================================================
     # QUESITO C1.1 • ESTÁGIO MCR2030 DA ONU (100% INDEPENDENTE)
     # =============================================================================
