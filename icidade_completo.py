@@ -5370,86 +5370,101 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_11_2_1_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 11.3 • RESULTADO FINANCEIRO DO TRANSPORTE (100% INDEPENDENTE)
+    # QUESITO 11.3 • RESULTADO FINANCEIRO DO TRANSPORTE
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_11_3_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 11.3 - Resultado Financeiro do Transporte Público", expanded=True):
             st.subheader("11.3 • Resultado Financeiro")
-            st.write("**Quanto ao custo do transporte público (tarifa de remuneração da prestação de serviço de transporte público) e o preço de passagem (tarifa pública cobrada do usuário), informe qual o resultado no ano de 2025:**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
             
+            # Pega apenas os números do ano (desenraiza textos complexos como "2026 - IEGM")
+            ano_puro = "".join([c for c in str(ano_sel) if c.isdigit()])[:4]
+            ano_anterior = int(ano_puro) - 1 if ano_puro.isdigit() else "anterior"
+
+            st.write(f"**Quanto ao custo do transporte público (tarifa de remuneração da prestação de serviço de transporte público) e o preço de passagem (tarifa pública cobrada do usuário), informe qual o resultado no ano de {ano_anterior}:**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 11.3' para registrar.*")
+
             opcoes_113 = {
                 "Selecione...": 0.0,
                 "Déficit ou subsídio tarifário": 0.0,
                 "Superávit tarifário": 0.0,
                 "Não sabe informar": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d113 = res_data.get("11.3", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d113 is None: d113 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d113 = res_data.get("11.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_113 = d113.get("valor", "Selecione...")
-            chave_radio_113 = f"r_113_{v_salvo_113}_{ano_sel}"
 
-            def cb_radio_113():
-                val = st.session_state[chave_radio_113]
-                pts = opcoes_113.get(val, 0.0)
-                lnk = st.session_state.get(f"l_113_txt_{ano_sel}", d113.get("link", ""))
-                
-                save_resp("11.3", val, pts, lnk)
-                res_data["11.3"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_113():
-                lnk = st.session_state[f"l_113_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_113, v_salvo_113)
-                pts = opcoes_113.get(val, 0.0)
-                
-                save_resp("11.3", val, pts, lnk)
-                res_data["11.3"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d113.get("link", "") or "")]
-                
-                if lnk != d113.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_11_3_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_11_3_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_113 = f"r_113_{ano_sel}"
+            chave_link_113 = f"l_113_txt_{ano_sel}"
+            chave_coment_113 = f"coment_11.3_{ano_sel}"
 
             col_r113, col_j113 = st.columns([1, 1])
             with col_r113:
                 lista_opcoes_113 = list(opcoes_113.keys())
                 idx_113 = lista_opcoes_113.index(v_salvo_113) if v_salvo_113 in lista_opcoes_113 else 0
-                
+
                 st.radio(
                     "Resultado:",
                     options=lista_opcoes_113,
                     index=idx_113,
                     key=chave_radio_113,
-                    on_change=cb_radio_113,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j113:
                 link_113 = st.text_area(
-                    "Justificativa Financeira (11.3):", 
-                    value=d113.get("link", ""), 
-                    key=f"l_113_txt_{ano_sel}", 
-                    on_change=cb_text_113, 
+                    "Justificativa Financeira (11.3):",
+                    value=d113.get("link", ""),
+                    key=chave_link_113,
                     placeholder="Ex: Balanço financeiro do sistema de transporte, dotação orçamentária de subsídios ou ata do conselho municipal...",
                     height=110
                 )
                 placeholder_links_113 = st.empty()
-                links_113_visuais = [u[0] for u in re.findall(regex_pure_url, link_113 or "")]
+                links_113_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_113 or "")]
                 if links_113_visuais:
-                    placeholder_links_113.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_113_visuais]))
+                    placeholder_links_113.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_113_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 11.3: 0.0 pontos (Diagnóstico Financeiro)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("11.3", res_data, ano_sel)
 
-    # GATILHO DO MODAL 11.3
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 11.3", key=f"btn_salvar_11_3_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_113 = st.session_state.get(chave_radio_113, v_salvo_113)
+                pts_113 = opcoes_113.get(val_selecionado_113, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_113, d113.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("11.3", val_selecionado_113, pts_113, link_113, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["11.3"] = {
+                    "valor": val_selecionado_113,
+                    "pontos": pts_113,
+                    "link": link_113,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_113 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d113.get("link", "") or "")]
+
+                if link_113 != d113.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_11_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_11_3_{ano_sel}"] = True
+
+                st.toast("Quesito 11.3 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 11.3: 0.0 pontos (Diagnóstico Financeiro)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 11.3 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_11_3_{ano_sel}", False):
         modal_aviso_link("11.3", st.session_state.get(f"links_pendentes_11_3_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_3_{ano_sel}"] = False
