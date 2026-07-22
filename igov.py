@@ -787,9 +787,32 @@ def confirmar_zerar_dialog(ano):
             st.rerun()
 
 # =============================================================================
+# FUNÇÃO AUXILIAR: BUSCAR HISTÓRICO DE TODOS OS ANOS
+# =============================================================================
+def get_all_years_data():
+    """
+    Recupera as respostas de todos os anos cadastrados no banco de dados.
+    Evita o erro NameError ao gerar relatórios consolidados no PDF.
+    """
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    all_data = {}
+    
+    for a in anos:
+        try:
+            # Chama a função nativa de carregamento de respostas por ano
+            respostas = load_respostas(a)
+            if respostas:
+                all_data[a] = respostas
+        except Exception:
+            # Se falhar ou o ano não tiver respostas salvas, ignora silenciosamente
+            pass
+
+    return all_data
+
+
+# =============================================================================
 # 4. SIDEBAR (I-GOV TI) CORRIGIDA
 # =============================================================================
-
 def render_sidebar():
     st.sidebar.title("💻 i-Gov TI - Painel")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
@@ -830,10 +853,15 @@ def render_sidebar():
     
     # Botão de Download direto
     with col1:
+        # Recupera os dados históricos de todos os anos sem erro
         all_data_historico = get_all_years_data()
+        
+        # Gera o relatório PDF
+        pdf_bytes = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, all_data=all_data_historico)
+        
         st.download_button(
             label="📄 Baixar PDF",
-            data=gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, all_data=all_data_historico),
+            data=pdf_bytes,
             file_name=f"Relatorio_iGovTI_{ano_sel}.pdf",
             mime="application/pdf",
             use_container_width=True
@@ -845,7 +873,6 @@ def render_sidebar():
             confirmar_zerar_dialog(ano_sel)
 
     return total_pts, res_data, ano_sel
-
 # =============================================================================
 # 5. GRÁFICOS COMPARATIVOS (I-GOV TI)
 # =============================================================================
