@@ -63,59 +63,100 @@ def modal_aviso_link(qid, links_encontrados):
         st.rerun()
 
 # =============================================================================
-# 1. CONEXÃO OTIMIZADA E SEGURA COM O NEON (POSTGRESQL)
+# 1. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL - PADRÃO ICIDADE)
 # =============================================================================
-import os
-import json
-import re
-import logging
-from datetime import datetime, date
-import streamlit as st
-import psycopg2
-from psycopg2.extras import RealDictCursor
 
-def get_db_url():
-    """Recupera, higieniza e valida a URL de conexão do Neon."""
-    db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
-    if not db_url:
-        st.error("❌ A variável DATABASE_URL do Neon não foi configurada nos Segredos do Streamlit!")
-        st.stop()
-    
-    # Remove parâmetros incompatíveis com o driver psycopg2
-    if "channel_binding=" in db_url:
-        db_url = db_url.split("&channel_binding=")[0].split("?channel_binding=")[0]
-    
-    # Exige criptografia SSL para conexão com o Neon
-    if "sslmode=require" not in db_url:
-        db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
+def init_db():
+    """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS respostas (
+                        id VARCHAR(50) NOT NULL,
+                        ano INTEGER NOT NULL,
+                        valor TEXT,
+                        pontos DOUBLE PRECISION DEFAULT 0,
+                        link TEXT,
+                        comentarios JSONB DEFAULT '[]'::jsonb,
+                        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (id, ano)
+                    );
+                """)
+            conn.commit()
+    except Exception as e:
+        logging.error(f"Erro ao inicializar o banco: {e}")
+        raise e
+
+
+@st.cache_data(ttl=60)
+def load_respostas(ano: int) -> dict:
+    """Busca do banco de dados todas as respostas relativas a um ano específico."""
+    respostas = {}
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
+                    (ano,)
+                )
+                rows = cursor.fetchall()
+                for row in rows:
+                    comentarios = row["comentarios"] or []
+                    if isinstance(comentarios, str):
+                        try:
+                            comentarios = json.loads(comentarios)
+                        except Exception:
+                            comentarios = []
+                            
+                    respostas[row["id"]] = {
+                        "valor": row["valor"] or "",
+                        "pontos": float(row["pontos"]) if row["pontos"] is not None else 0.0,
+                        "link": row["link"] or "",
+                        "comentarios": comentarios
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao carregar respostas do ano {ano}: {e}")
+    return respostas
+
+
+def save_resp(qid, valor, pontos, link="", comentarios=None):
+    """Salva/Atualiza a resposta no Neon e atualiza a interface."""
+    ano_sel = st.session_state.get("ano_referencia_global")
+    if not ano_sel:
+        st.warning("Nenhum ano de referência selecionado!")
+        return
+
+    if comentarios is None:
+        dados_atuais = load_respostas(ano_sel)
+        comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
+
+    comentarios_json = json.dumps(comentarios, ensure_ascii=False)
+    timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
+                    ON CONFLICT (id, ano) DO UPDATE SET
+                        valor = EXCLUDED.valor,
+                        pontos = EXCLUDED.pontos,
+                        link = EXCLUDED.link,
+                        comentarios = EXCLUDED.comentarios,
+                        atualizado_em = EXCLUDED.atualizado_em;
+                """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
+            conn.commit()
         
-    return db_url
+        st.cache_data.clear()
+    except Exception as e:
+        st.error(f"Erro ao salvar {qid}: {e}")
 
-class get_connection:
-    """Context manager seguro para conexões gerenciadas com PostgreSQL/Neon."""
-    def __enter__(self):
-        try:
-            self.conn = psycopg2.connect(get_db_url())
-            return self.conn
-        except Exception as e:
-            logging.error(f"Erro ao conectar com o Neon PostgreSQL: {e}")
-            raise e
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if hasattr(self, "conn") and self.conn:
-            try:
-                if getattr(self.conn, "closed", 0) == 0:
-                    if exc_type:
-                        self.conn.rollback()
-                    else:
-                        self.conn.commit()
-            except Exception as e:
-                logging.error(f"Erro no encerramento da transação: {e}")
-            finally:
-                try:
-                    self.conn.close()
-                except Exception:
-                    pass
+# Alias para garantir compatibilidade caso alguma parte chame salvar_resposta
+def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
+    save_resp(qid, valor, pontos, link, comentarios)
 
 # =============================================================================
 # 2. MODAL DE AVISO AUTOMÁTICO
