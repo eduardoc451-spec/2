@@ -4392,84 +4392,101 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_8_1_1_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 8.1.1.1 • DISPONIBILIDADE 24 HORAS DO 199 (100% INDEPENDENTE)
+    # QUESITO 8.1.1.1 • DISPONIBILIDADE 24 HORAS DO 199
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_8_1_1_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 8.1.1.1 - Atendimento Continuado 24 Horas", expanded=True):
             st.subheader("8.1.1.1 • Regime de Operação (24h)")
             st.write("**O telefone 199 tem atendimento 24 horas por dia?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.1.1.1' para registrar.*")
+
+            # Mapeamento oficial de opções e pontuações
             opcoes_8111 = {
                 "Selecione...": 0.0,
                 "Sim (20 pts)": 20.0,
                 "Não (00 pts)": 0.0
             }
-            
-            d8111 = res_data.get("8.1.1.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d8111 is None: d8111 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d8111 = res_data.get("8.1.1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_8111 = d8111.get("valor", "Selecione...")
-            chave_radio_8111 = f"r_8111_{v_salvo_8111}_{ano_sel}"
 
-            def cb_radio_8111():
-                val = st.session_state[chave_radio_8111]
-                pts = opcoes_8111.get(val, 0.0)
-                lnk = st.session_state.get(f"l_8111_txt_{ano_sel}", d8111.get("link", ""))
-                save_resp("8.1.1.1", val, pts, lnk)
-                res_data["8.1.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_8111():
-                lnk = st.session_state[f"l_8111_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_8111, v_salvo_8111)
-                pts = opcoes_8111.get(val, 0.0)
-                
-                save_resp("8.1.1.1", val, pts, lnk)
-                res_data["8.1.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d8111.get("link", "") or "")]
-                
-                if lnk != d8111.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_8_1_1_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_8_1_1_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_8111 = f"r_8111_{ano_sel}"
+            chave_link_8111 = f"l_8111_txt_{ano_sel}"
+            chave_coment_8111 = f"coment_8.1.1.1_{ano_sel}"
 
             col_r8111, col_j8111 = st.columns([1, 1])
             with col_r8111:
                 lista_opcoes_8111 = list(opcoes_8111.keys())
                 idx_8111 = lista_opcoes_8111.index(v_salvo_8111) if v_salvo_8111 in lista_opcoes_8111 else 0
+
                 st.radio(
                     "Atendimento 24h?",
                     options=lista_opcoes_8111,
                     index=idx_8111,
                     key=chave_radio_8111,
-                    on_change=cb_radio_8111,
                     label_visibility="collapsed"
                 )
+
             with col_j8111:
                 link_8111 = st.text_area(
-                    "Evidência do Regime de Escala/Plantonistas (8.1.1.1):", 
-                    value=d8111.get("link", ""), 
-                    key=f"l_8111_txt_{ano_sel}", 
-                    on_change=cb_text_8111, 
+                    "Evidência do Regime de Escala/Plantonistas (8.1.1.1):",
+                    value=d8111.get("link", ""),
+                    key=chave_link_8111,
                     placeholder="Ex: Escala de servidores, link do diário oficial...",
                     height=100
                 )
                 placeholder_links_8111 = st.empty()
-                links_8111_visuais = [u[0] for u in re.findall(regex_pure_url, link_8111 or "")]
+                links_8111_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_8111 or "")]
                 if links_8111_visuais:
-                    placeholder_links_8111.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_8111_visuais]))
+                    placeholder_links_8111.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_8111_visuais]))
 
-            pts_atuais_8111 = d8111.get("pontos", 0.0)
-            cor_txt_8111 = "#28a745" if pts_atuais_8111 == 20.0 else ("#dc3545" if v_salvo_8111 != "Selecione..." else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_8111}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.1.1.1: {pts_atuais_8111:.1f} pontos</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("8.1.1.1", res_data, ano_sel)
 
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.1.1.1", key=f"btn_salvar_8_1_1_1_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_8111 = st.session_state.get(chave_radio_8111, v_salvo_8111)
+                pts_8111 = opcoes_8111.get(val_selecionado_8111, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_8111, d8111.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("8.1.1.1", val_selecionado_8111, pts_8111, link_8111, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["8.1.1.1"] = {
+                    "valor": val_selecionado_8111,
+                    "pontos": pts_8111,
+                    "link": link_8111,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_8111 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d8111.get("link", "") or "")]
+
+                if link_8111 != d8111.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_1_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_1_1_1_{ano_sel}"] = True
+
+                st.toast("Quesito 8.1.1.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            pts_atuais_8111 = d8111.get("pontos", 0.0)
+            cor_txt_8111 = "#28a745" if pts_atuais_8111 == 20.0 else ("#dc3545" if v_salvo_8111 != "Selecione..." else "#6c757d")
+            st.markdown(f"<span style='color:{cor_txt_8111}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.1.1.1: +{pts_atuais_8111:.1f} pontos</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 8.1.1.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_8_1_1_1_{ano_sel}", False):
         modal_aviso_link("8.1.1.1", st.session_state.get(f"links_pendentes_8_1_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_1_1_1_{ano_sel}"] = False
-
     # =============================================================================
     # QUESITO 8.2 • REGISTRO ELETRÔNICO DE OCORRÊNCIAS (100% INDEPENDENTE)
     # =============================================================================
