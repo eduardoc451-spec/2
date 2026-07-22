@@ -57,33 +57,9 @@ def get_connection():
         raise e
 
 # =============================================================================
-# CONSTANTES GLOBAIS
-# =============================================================================
-CATEGORIAS_MAP = {
-    "infraestrutura": {"label": "Infraestrutura e Setor", "qids": ["1.0", "1.1", "1.2", "1.3", "1.3.1", "1.4", "1.4.1", "1.4.2"]},
-    "planejamento":   {"label": "Planejamento (PDTIC)", "qids": ["2.0", "2.1", "2.2", "2.3"]},
-    "seguranca":      {"label": "Segurança da Informação", "qids": ["3.0", "3.1", "3.1.1", "3.1.1.1", "3.2", "3.2.1", "3.3", "3.4", "3.5", "3.6", "3.6.1"]},
-    "transparencia":  {"label": "Transparência e LAI", "qids": ["4.0", "4.1", "4.2", "6.0", "6.1", "6.2", "6.3", "6.4", "7.0", "7.1", "7.2", "7.3"]},
-    "gov_digital":    {"label": "Governo Digital", "qids": ["5.0", "5.1", "5.2", "5.3", "9.0", "9.1", "9.2"]},
-    "sistemas":       {"label": "Sistemas de Gestão", "qids": ["8.0", "8.1", "8.2", "8.2.1", "8.2.2", "8.3", "8.4"]},
-    "lgpd":           {"label": "LGPD", "qids": ["10.0", "10.1", "10.2", "10.3", "10.4", "10.5", "10.5.1", "11.0", "11.1"]},
-}
-
-PONTUACOES_MAX = {
-    "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
-    "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
-    "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
-    "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
-    "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
-}
-
-FAIXA_CORES = {"C": "#ef4444", "C+": "#f97316", "B": "#eab308", "B+": "#22c55e", "A": "#16a34a"}
-
-# =============================================================================
-# OPERAÇÕES NO BANCO DE DADOS (UNIFICADAS)
+# OPERAÇÕES NO BANCO DE DADOS
 # =============================================================================
 def init_db():
-    """Inicializa a tabela respostas garantindo compatibilidade de chave e colunas."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -105,9 +81,8 @@ def init_db():
     except Exception as e:
         logging.error(f"Erro ao inicializar o banco: {e}")
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def load_respostas(ano: int) -> dict:
-    """Carrega todas as respostas do ano e dimensão especificados."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -138,41 +113,7 @@ def load_respostas(ano: int) -> dict:
         st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
         return {}
 
-@st.cache_data(ttl=60)
-def get_all_years_data() -> dict:
-    """Busca do banco de dados todo o histórico de respostas cadastradas para o i-Gov TI."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT ano, id, valor, pontos, link, comentarios FROM respostas WHERE dimensao = 'igov' OR dimensao IS NULL"
-                )
-                rows = cursor.fetchall()
-                all_data = {}
-                for row in rows:
-                    ano, qid, valor, pontos, link, comentarios = row
-                    if ano not in all_data:
-                        all_data[ano] = {}
-                    
-                    if isinstance(comentarios, str):
-                        try:
-                            comentarios = json.loads(comentarios)
-                        except Exception:
-                            comentarios = []
-
-                    all_data[ano][qid] = {
-                        "valor": valor or "",
-                        "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link or "",
-                        "comentarios": comentarios or []
-                    }
-                return all_data
-    except Exception as e:
-        st.error(f"Erro ao carregar histórico do i-Gov TI: {e}")
-        return {}
-
 def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
-    """Salva/Atualiza a resposta no banco de dados com UPSERT correto."""
     if comentarios is None:
         comentarios = []
     
@@ -194,39 +135,19 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
                 """, (ano, qid, str(valor), float(pontos), str(link), comentarios_json))
             conn.commit()
         
-        # Limpa o cache do Streamlit para forçar a nova leitura do banco
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
 
 def save_resp(qid, valor, pontos, link="", comentarios=None, ano=None):
-    """Função wrapper para salvar no banco utilizando o ano global selecionado."""
     if ano is None:
         ano = st.session_state.get("ano_referencia_global", date.today().year)
     salvar_resposta(ano, qid, valor, pontos, link, comentarios)
 
 # =============================================================================
-# MODAL DE AVISO AUTOMÁTICO
-# =============================================================================
-@st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados):
-    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    for lk in links_encontrados:
-        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
-        
-    st.markdown("""
-    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
-    
-    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
-    """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
-        st.rerun()
-
-# =============================================================================
 # COMPONENTES DE INTERFACE
 # =============================================================================
 def renderizar_questao(qid, res_data):
-    """Renderiza os campos do quesito garantindo leitura atualizada e persistência rápida."""
     dados_q = res_data.get(qid, {})
     val_existente = dados_q.get("valor", "")
     pts_existente = float(dados_q.get("pontos", 0.0))
@@ -257,10 +178,7 @@ def renderizar_questao(qid, res_data):
             )
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
-                # Preserva o histórico de comentários existente ao salvar a questão isoladamente
                 comentarios_atuais = dados_q.get("comentarios", [])
-                
-                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
                 save_resp(
                     qid=qid, 
                     valor=novo_valor, 
@@ -269,30 +187,22 @@ def renderizar_questao(qid, res_data):
                     comentarios=comentarios_atuais
                 )
                 st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
-                if links:
-                    modal_aviso_link(qid, links)
-                else:
-                    st.rerun()
+                st.rerun()
 
         bloco_comentarios(qid, res_data)
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
-    """Renderiza a caixa de diálogo e controle de status do quesito sem conflitos de estado."""
     ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
     
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
-    key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
     key_radio = f"rad_status_{id_chave}_{ano_sel}"
     
-    if key_estado_limpar not in st.session_state:
-        st.session_state[key_estado_limpar] = False
-        
     dados_questao = res_data.get(questao_id, {})
     historico = list(dados_questao.get("comentarios", []))
     
-    # Descobre o último status definido no histórico
+    # Determina o último status registrado
     status_global = "Resolvido"
     for com in historico:
         if isinstance(com, dict) and "status_definido" in com:
@@ -304,33 +214,32 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
         opcoes_status = ["Resolvido", "Pendente"]
         idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
         
-        # Função interna disparada ao mudar o radio diretamente (sem loops de renderização)
-        def on_status_change():
-            novo_st = st.session_state[key_radio]
-            if novo_st != status_global:
-                log_mudanca = {
-                    "autor": "Sistema / " + usuario_atual,
-                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "texto": f"ℹ️ Alterou o status do quesito para: **{novo_st.upper()}**.",
-                    "status_definido": novo_st
-                }
-                historico.append(log_mudanca)
-                save_resp(
-                    qid=questao_id,
-                    valor=dados_questao.get("valor", ""),
-                    pontos=dados_questao.get("pontos", 0),
-                    link=dados_questao.get("link", ""),
-                    comentarios=historico
-                )
-
-        st.radio(
+        # Radio sem callback direto para evitar crash de session_state
+        novo_status = st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
             index=idx_status_atual,
             horizontal=True,
-            key=key_radio,
-            on_change=on_status_change
+            key=key_radio
         )
+        
+        # Se alterado manualmente, insere no histórico e salva
+        if novo_status != status_global:
+            log_mudanca = {
+                "autor": "Sistema / " + usuario_atual,
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status.upper()}**.",
+                "status_definido": novo_status
+            }
+            historico.append(log_mudanca)
+            save_resp(
+                qid=questao_id,
+                valor=dados_questao.get("valor", ""),
+                pontos=dados_questao.get("pontos", 0),
+                link=dados_questao.get("link", ""),
+                comentarios=historico
+            )
+            st.rerun()
 
         # Exibição do Histórico
         if historico:
@@ -371,11 +280,6 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                         )
                         st.rerun()
         
-        # Limpeza do campo após salvar texto
-        if st.session_state[key_estado_limpar]:
-            st.session_state[key_texto] = ""
-            st.session_state[key_estado_limpar] = False
-            
         novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
         
         if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
@@ -394,8 +298,28 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                     link=dados_questao.get("link", ""),
                     comentarios=historico
                 )
-                st.session_state[key_estado_limpar] = True
                 st.rerun()
+
+# =============================================================================
+# FUNÇÃO PRINCIPAL DA PÁGINA (CHAMADA NO main.py)
+# =============================================================================
+def mostrar_formulario_gov():
+    """Função principal chamada no main.py na linha 381."""
+    init_db()
+    
+    # Garante a existência da variável no session_state
+    if "ano_referencia_global" not in st.session_state:
+        st.session_state["ano_referencia_global"] = datetime.now().year
+        
+    ano = st.session_state["ano_referencia_global"]
+    res_data = load_respostas(ano)
+    
+    st.title("Formulário i-Gov TI")
+    
+    # Exemplo de renderização dos campos de um formulário de questões
+    qids = ["1.0", "1.1", "1.2", "2.0", "3.0"] # Substitua com sua lista de QIDs ou categorias
+    for qid in qids:
+        renderizar_questao(qid, res_data)
 import os
 from io import BytesIO
 from reportlab.lib import colors
