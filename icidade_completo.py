@@ -117,50 +117,26 @@ def modal_aviso_link(qid, links_encontrados):
 
 def init_db():
     """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir."""
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS respostas (
-                    id VARCHAR(50) NOT NULL,
-                    ano INTEGER NOT NULL,
-                    valor TEXT,
-                    pontos DOUBLE PRECISION DEFAULT 0,
-                    link TEXT,
-                    comentarios JSONB DEFAULT '[]'::jsonb,
-                    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (id, ano)
-                );
-            """)
-
-@st.cache_data(ttl=60)
-def load_respostas(ano):
-    """Carrega as respostas com cache ativo para respostas instantâneas."""
-    dados_ano = {}
     try:
         with get_connection() as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s", (ano,)
-                )
-                rows = cursor.fetchall()
-                for row in rows:
-                    comentarios = row["comentarios"] if row["comentarios"] is not None else []
-                    if isinstance(comentarios, str):
-                        try:
-                            comentarios = json.loads(comentarios)
-                        except Exception:
-                            comentarios = []
-
-                    dados_ano[row["id"]] = {
-                        "valor": row["valor"], 
-                        "pontos": row["pontos"], 
-                        "link": row["link"],
-                        "comentarios": comentarios
-                    }
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS respostas (
+                        id VARCHAR(50) NOT NULL,
+                        ano INTEGER NOT NULL,
+                        valor TEXT,
+                        pontos DOUBLE PRECISION DEFAULT 0,
+                        link TEXT,
+                        comentarios JSONB DEFAULT '[]'::jsonb,
+                        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (id, ano)
+                    );
+                """)
+            conn.commit()  # <-- OBRIGATÓRIO PARA SALVAR A TABELA
     except Exception as e:
-        logging.error(f"Erro ao carregar respostas: {e}")
-    return dados_ano
+        logging.error(f"Erro ao inicializar o banco: {e}")
+        raise e  # Lança o erro para você ver no log do Streamlit
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
     """Salva/Atualiza a resposta no Neon apenas no momento em que o botão for clicado."""
