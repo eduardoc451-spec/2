@@ -126,6 +126,7 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
+                # Caso a PK no banco seja (id, ano), troque abaixo por ON CONFLICT (id, ano)
                 cursor.execute("""
                     INSERT INTO respostas (dimensao, ano, id, valor, pontos, link, comentarios, atualizado_em)
                     VALUES ('igov', %s, %s, %s, %s, %s, %s::jsonb, CURRENT_TIMESTAMP)
@@ -143,11 +144,7 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
     except Exception as e:
         logging.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
-        
-        st.cache_data.clear()
-    except Exception as e:
-        logging.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
-        st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
+
 
 def save_resp(qid, valor, pontos, link="", comentarios=None, ano=None):
     if ano is None:
