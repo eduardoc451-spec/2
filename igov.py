@@ -136,8 +136,13 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
                         link = EXCLUDED.link,
                         comentarios = EXCLUDED.comentarios,
                         atualizado_em = CURRENT_TIMESTAMP;
-                """, (ano, qid, str(valor), float(pontos), str(link), comentarios_json))
+                """, (ano, str(qid), str(valor), float(pontos), str(link), comentarios_json))
             conn.commit()
+        
+        st.cache_data.clear()
+    except Exception as e:
+        logging.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
+        st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
         
         st.cache_data.clear()
     except Exception as e:
