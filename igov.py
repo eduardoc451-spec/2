@@ -861,8 +861,8 @@ CATEGORIAS_MAP = {
     }
 }
 
-# =============================================================================
-# 4. SIDEBAR (I-GOV TI)
+## =============================================================================
+# FUNÇÕES DE LIMPEZA E BANCO CORRIGIDAS
 # =============================================================================
 
 def zerar_questionario(ano):
@@ -873,6 +873,7 @@ def zerar_questionario(ano):
                     "DELETE FROM respostas WHERE ano = %s AND dimensao = 'igov'", 
                     (ano,)
                 )
+            conn.commit() # 🔑 OBRIGATÓRIO PARA APLICAR A DELEÇÃO
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao zerar questionário do i-Gov TI: {e}")
@@ -897,29 +898,41 @@ def confirmar_zerar_dialog(ano):
         if st.button("Cancelar", use_container_width=True):
             st.rerun()
 
+# =============================================================================
+# 4. SIDEBAR (I-GOV TI) CORRIGIDA
+# =============================================================================
+
 def render_sidebar():
     st.sidebar.title("💻 i-Gov TI - Painel")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    
+    # Pega o ano atual do selectbox
     ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
 
+    # Carrega dados diretamente do banco
     res_data = load_respostas(ano_sel)
     
-    # Soma de pontos desconsiderando registros de comentários
-    total_pts = sum(
-        item.get("pontos", 0) 
-        for qid, item in res_data.items() 
-        if isinstance(item, dict) and not qid.startswith("COM_")
-    )
+    # Soma de pontos convertendo com segurança para float (evita erros se vier None ou str)
+    total_pts = 0.0
+    for qid, item in res_data.items():
+        if isinstance(item, dict) and not str(qid).startswith("COM_"):
+            try:
+                pts_val = float(item.get("pontos", 0.0) or 0.0)
+                total_pts += pts_val
+            except (ValueError, TypeError):
+                pass
 
-    if total_pts <= 500:    faixa, cor = "C",  "red"
-    elif total_pts <= 599: faixa, cor = "C+", "orange"
-    elif total_pts <= 749: faixa, cor = "B",  "#d4d400"
-    elif total_pts <= 899: faixa, cor = "B+", "lightgreen"
-    else:                  faixa, cor = "A",  "green"
+    # Lógica de cálculo da Faixa
+    if total_pts <= 500:   faixa, cor = "C",  "#dc3545" # vermelho
+    elif total_pts <= 599: faixa, cor = "C+", "#fd7e14" # laranja
+    elif total_pts <= 749: faixa, cor = "B",  "#ffc107" # amarelo
+    elif total_pts <= 899: faixa, cor = "B+", "#28a745" # verde claro
+    else:                  faixa, cor = "A",  "#198754" # verde escuro
 
+    # Exibição visual da métrica
     st.sidebar.metric("Pontuação Total", f"{total_pts:.1f} pts")
     st.sidebar.markdown(
-        f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>",
+        f"**Faixa:** <span style='color:{cor}; font-size:22px; font-weight:bold;'>{faixa}</span>",
         unsafe_allow_html=True
     )
 
