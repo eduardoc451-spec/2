@@ -162,19 +162,53 @@ def init_db():
                         PRIMARY KEY (id, ano)
                     );
                 """)
-            conn.commit()  # <-- OBRIGATÓRIO PARA SALVAR A TABELA
+            conn.commit()
     except Exception as e:
         logging.error(f"Erro ao inicializar o banco: {e}")
-        raise e  # Lança o erro para você ver no log do Streamlit
+        raise e
+
+
+@st.cache_data(ttl=60)
+def load_respostas(ano: int) -> dict:
+    """Busca do banco de dados todas as respostas relativas a um ano específico."""
+    respostas = {}
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
+                    (ano,)
+                )
+                rows = cursor.fetchall()
+                for row in rows:
+                    comentarios = row["comentarios"] or []
+                    if isinstance(comentarios, str):
+                        try:
+                            comentarios = json.loads(comentarios)
+                        except Exception:
+                            comentarios = []
+                            
+                    respostas[row["id"]] = {
+                        "valor": row["valor"] or "",
+                        "pontos": row["pontos"] or 0.0,
+                        "link": row["link"] or "",
+                        "comentarios": comentarios
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao carregar respostas do ano {ano}: {e}")
+    return respostas
+
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Salva/Atualiza a resposta no Neon apenas no momento em que o botão for clicado."""
+    """Salva/Atualiza a resposta no Neon e atualiza a interface."""
     ano_sel = st.session_state.get("ano_referencia_global")
     if not ano_sel:
+        st.warning("Nenhum ano de referência selecionado!")
         return
-    
-    dados_atuais = load_respostas(ano_sel)
+
+    # Se comentários não forem fornecidos, busca do banco/cache para não sobrescrever com vazio
     if comentarios is None:
+        dados_atuais = load_respostas(ano_sel)
         comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
 
     comentarios_json = json.dumps(comentarios, ensure_ascii=False)
@@ -193,8 +227,9 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
                         comentarios = EXCLUDED.comentarios,
                         atualizado_em = EXCLUDED.atualizado_em;
                 """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
+            conn.commit()
         
-        # Invalida o cache para que a interface leia os novos dados salvos
+        # Limpa o cache para que `load_respostas` e `get_all_years_data` tragam dados novos
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar {qid}: {e}")
@@ -238,9 +273,7 @@ def renderizar_questao(qid, res_data):
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # O BANCO DE DADOS SÓ É ACIONADO NESTE BOTÃO
             if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
-                # Verifica links no texto de evidência antes de salvar
                 links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
                 
                 save_resp(
@@ -252,11 +285,12 @@ def renderizar_questao(qid, res_data):
                 
                 st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
                 
-                if links:
+                if links and "modal_aviso_link" in globals():
                     modal_aviso_link(qid, links)
 
         # Diálogo Interno (Comentários)
         bloco_comentarios(qid, res_data)
+
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
     """Gera o diálogo interno avançado com histórico e status."""
@@ -271,7 +305,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
         st.session_state[key_estado_limpar] = False
         
     dados_questao = res_data.get(questao_id, {})
-    historico = dados_questao.get("comentarios", [])
+    historico = list(dados_questao.get("comentarios", []))
     
     status_global = "Resolvido"
     for com in historico:
@@ -282,7 +316,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
     
     with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
         opcoes_status = ["Resolvido", "Pendente"]
-        idx_status_atual = opcoes_status.index(status_global)
+        idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
         
         novo_status_clicado = st.radio(
             f"Definir status para {id_chave}:",
@@ -379,31 +413,37 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
 
 @st.cache_data(ttl=60)
 def get_all_years_data():
+    """Retorna todos os registros agrupados por ano."""
     all_data = {}
-    with get_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC")
-            rows = cursor.fetchall()
-            for row in rows:
-                qid, ano = row["id"], row["ano"]
-                comentarios = row["comentarios"] if row["comentarios"] is not None else []
-                if isinstance(comentarios, str):
-                    try:
-                        comentarios = json.loads(comentarios)
-                    except Exception:
-                        comentarios = []
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC")
+                rows = cursor.fetchall()
+                for row in rows:
+                    qid, ano = row["id"], row["ano"]
+                    comentarios = row["comentarios"] or []
+                    if isinstance(comentarios, str):
+                        try:
+                            comentarios = json.loads(comentarios)
+                        except Exception:
+                            comentarios = []
 
-                if ano not in all_data:
-                    all_data[ano] = {}
-                all_data[ano][qid] = {
-                    "valor": row["valor"], 
-                    "pontos": row["pontos"], 
-                    "link": row["link"], 
-                    "comentarios": comentarios
-                }
+                    if ano not in all_data:
+                        all_data[ano] = {}
+                    all_data[ano][qid] = {
+                        "valor": row["valor"] or "", 
+                        "pontos": row["pontos"] or 0.0, 
+                        "link": row["link"] or "", 
+                        "comentarios": comentarios
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao buscar dados históricos: {e}")
     return all_data
 
+
 def analyze_performance(res_data):
+    """Mapeia os pontos fortes e fragilidades do ano atual."""
     pontos_fortes = []
     criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
     criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
@@ -461,7 +501,9 @@ def analyze_performance(res_data):
 
     return pontos_fortes, criticos_zero, criticos_negativos
 
+
 def analyze_recurrence(ano_atual, res_data_atual):
+    """Compara as perdas de pontos do ano selecionado com anos anteriores (reincidências)."""
     reincidencias = []
     all_data = get_all_years_data()
 
@@ -472,12 +514,16 @@ def analyze_recurrence(ano_atual, res_data_atual):
         "11.1.1", "11.2", "12.1", "12.1.3", "14.0", "15.0", "16.0", "C1.1"
     ]
 
+    # Seleciona os anos anteriores ordenados do mais recente para o mais antigo
     anos_anteriores = sorted([a for a in all_data.keys() if a < ano_atual], reverse=True)
 
     for qid_atual, info_atual in res_data_atual.items():
         if qid_atual.startswith("COM_") or qid_atual not in qids_pontuaveis:
             continue
+            
         pontos_atual = info_atual.get("pontos", 0)
+        
+        # Considera que houve perda/problema se os pontos forem <= 0
         if pontos_atual <= 0:
             for ano_anterior in anos_anteriores:
                 if qid_atual in all_data[ano_anterior]:
@@ -485,6 +531,7 @@ def analyze_recurrence(ano_atual, res_data_atual):
                     if pontos_anterior <= 0:
                         reincidencias.append((qid_atual, ano_anterior, pontos_anterior, pontos_atual))
                         break
+
     return reincidencias
 
 import os
