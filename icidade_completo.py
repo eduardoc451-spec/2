@@ -5158,11 +5158,9 @@ def mostrar_formulario_cidade():
         modal_aviso_link("11.1.1.1", st.session_state.get(f"links_pendentes_11_1_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_1_1_1_{ano_sel}"] = False
 
+   # =============================================================================
+    # QUESITO 11.2 • PESQUISA DE SATISFAÇÃO DO USUÁRIO
     # =============================================================================
-    # QUESITO 11.2 • PESQUISA DE SATISFAÇÃO DO USUÁRIO (100% INDEPENDENTE)
-    # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_11_2_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 11.2 - Pesquisa de Satisfação dos Usuários", expanded=True):
             st.subheader("11.2 • Pesquisa de Satisfação")
@@ -5172,83 +5170,94 @@ def mostrar_formulario_cidade():
             ano_anterior = int(ano_puro) - 1 if ano_puro.isdigit() else "anterior"
             
             st.write(f"**Foi realizada pesquisa de satisfação dos usuários em {ano_anterior}?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 11.2' para registrar.*")
+
             opcoes_112 = {
                 "Selecione...": 0.0,
                 "Sim (00 pts)": 0.0,
                 "Não (-20 pts)": -20.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d112 = res_data.get("11.2", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d112 is None: d112 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d112 = res_data.get("11.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_112 = d112.get("valor", "Selecione...")
-            chave_radio_112 = f"r_112_{v_salvo_112}_{ano_sel}"
 
-            def cb_radio_112():
-                val = st.session_state[chave_radio_112]
-                pts = opcoes_112.get(val, 0.0)
-                lnk = st.session_state.get(f"l_112_txt_{ano_sel}", d112.get("link", ""))
-                
-                save_resp("11.2", val, pts, lnk)
-                res_data["11.2"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_112():
-                lnk = st.session_state[f"l_112_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_112, v_salvo_112)
-                pts = opcoes_112.get(val, 0.0)
-                
-                save_resp("11.2", val, pts, lnk)
-                res_data["11.2"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d112.get("link", "") or "")]
-                
-                if lnk != d112.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_11_2_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_11_2_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_112 = f"r_112_{ano_sel}"
+            chave_link_112 = f"l_112_txt_{ano_sel}"
+            chave_coment_112 = f"coment_11.2_{ano_sel}"
 
             col_r112, col_j112 = st.columns([1, 1])
             with col_r112:
                 lista_opcoes_112 = list(opcoes_112.keys())
                 idx_112 = lista_opcoes_112.index(v_salvo_112) if v_salvo_112 in lista_opcoes_112 else 0
-                
+
                 st.radio(
                     "Realizou pesquisa?",
                     options=lista_opcoes_112,
                     index=idx_112,
                     key=chave_radio_112,
-                    on_change=cb_radio_112,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j112:
                 link_112 = st.text_area(
-                    f"Resultado da Pesquisa {ano_anterior} (11.2):", 
-                    value=d112.get("link", ""), 
-                    key=f"l_112_txt_{ano_sel}", 
-                    on_change=cb_text_112, 
-                    placeholder="Ex: Link dos gráficos de satisfação, relatório consolidado ou formulário aplicado...",
+                    f"Resultado da Pesquisa {ano_anterior} (11.2):",
+                    value=d112.get("link", ""),
+                    key=chave_link_112,
+                    placeholder="Ex: Link dos gráficos de satisfação, relatório consolidado ou formulário applied...",
                     height=110
                 )
                 placeholder_links_112 = st.empty()
-                links_112_visuais = [u[0] for u in re.findall(regex_pure_url, link_112 or "")]
+                links_112_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_112 or "")]
                 if links_112_visuais:
-                    placeholder_links_112.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_112_visuais]))
+                    placeholder_links_112.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_112_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("11.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 11.2", key=f"btn_salvar_11_2_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_112 = st.session_state.get(chave_radio_112, v_salvo_112)
+                pts_112 = opcoes_112.get(val_selecionado_112, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_112, d112.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("11.2", val_selecionado_112, pts_112, link_112, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["11.2"] = {
+                    "valor": val_selecionado_112,
+                    "pontos": pts_112,
+                    "link": link_112,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_112 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d112.get("link", "") or "")]
+
+                if link_112 != d112.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_11_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_11_2_{ano_sel}"] = True
+
+                st.toast("Quesito 11.2 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_112 = d112.get("pontos", 0.0)
             cor_txt_112 = "#dc3545" if pts_atuais_112 < 0.0 else ("#28a745" if v_salvo_112 == "Sim (00 pts)" else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_112}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 11.2: {pts_atuais_112:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("11.2", res_data, ano_sel)
 
-    # GATILHO DO MODAL 11.2
+    # GATILHO DO MODAL 11.2 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_11_2_{ano_sel}", False):
         modal_aviso_link("11.2", st.session_state.get(f"links_pendentes_11_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_2_{ano_sel}"] = False
-
 
    # =============================================================================
     # QUESITO 11.2.1 • AÇÕES BASEADAS NA PESQUISA DE SATISFAÇÃO (100% INDEPENDENTE)
