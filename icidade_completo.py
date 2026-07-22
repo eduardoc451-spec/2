@@ -2141,7 +2141,7 @@ def mostrar_formulario_cidade():
             # Mapeamento oficial de opções e pontuações do quesito 4.0
             opcoes_40 = {
                 "Selecione...": 0.0,
-                "Sim": 10.0,
+                "Sim": 0.0,
                 "Não": 0.0
             }
 
