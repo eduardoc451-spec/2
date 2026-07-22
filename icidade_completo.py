@@ -5972,82 +5972,93 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_12_1_3_{ano_sel}"] = False
 
 
-    # =============================================================================
+   # =============================================================================
     # QUESITO 12.1.3.1 • PERIODICIDADE DA FISCALIZAÇÃO (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_12_1_3_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 12.1.3.1 - Periodicidade e Evidência das Ações", expanded=True):
             st.subheader("12.1.3.1 • Periodicidade e Evidência")
-            st.write("Informe a periodicidade da fiscalização realizada e anexe o comprovante correspondente:")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.write("**Informe a periodicidade da fiscalização realizada e anexe o comprovante correspondente:**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 12.1.3.1' para registrar.*")
+
             perio_opcoes = ["Selecione...", "Diariamente", "Semanalmente", "Mensalmente", "Anualmente"]
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d12131 = res_data.get("12.1.3.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d12131 is None: d12131 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d12131 = res_data.get("12.1.3.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_12131 = d12131.get("valor", "Selecione...")
-            chave_radio_12131 = f"r_12131_{v_salvo_12131}_{ano_sel}"
 
-            def cb_radio_12131():
-                val = st.session_state[chave_radio_12131]
-                lnk = st.session_state.get(f"l_12131_txt_{ano_sel}", d12131.get("link", ""))
-                
-                save_resp("12.1.3.1", val, 0.0, lnk)
-                res_data["12.1.3.1"] = {"valor": val, "pontos": 0.0, "link": lnk}
-
-            def cb_text_12131():
-                lnk = st.session_state[f"l_12131_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_12131, v_salvo_12131)
-                
-                save_resp("12.1.3.1", val, 0.0, lnk)
-                res_data["12.1.3.1"] = {"valor": val, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d12131.get("link", "") or "")]
-                
-                if lnk != d12131.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_12_1_3_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_12_1_3_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_12131 = f"r_12131_{ano_sel}"
+            chave_link_12131 = f"l_12131_txt_{ano_sel}"
+            chave_coment_12131 = f"coment_12.1.3.1_{ano_sel}"
 
             col_p12131, col_j12131 = st.columns([1, 1])
             with col_p12131:
                 idx_p = perio_opcoes.index(v_salvo_12131) if v_salvo_12131 in perio_opcoes else 0
                 st.radio(
-                    "Periodicidade:", 
-                    options=perio_opcoes, 
-                    index=idx_p, 
+                    "Periodicidade:",
+                    options=perio_opcoes,
+                    index=idx_p,
                     key=chave_radio_12131,
-                    on_change=cb_radio_12131,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j12131:
                 link_12131 = st.text_area(
-                    "Evidência / Ordem de Serviço (12.1.3.1):", 
-                    value=d12131.get("link", ""), 
-                    key=f"l_12131_txt_{ano_sel}", 
-                    on_change=cb_text_12131, 
+                    "Evidência / Ordem de Serviço (12.1.3.1):",
+                    value=d12131.get("link", ""),
+                    key=chave_link_12131,
                     placeholder="Ex: Link para o cronograma de fiscalização, portaria de designação de fiscais ou escala de plantão...",
                     height=110
                 )
                 placeholder_links_12131 = st.empty()
-                links_12131_visuais = [u[0] for u in re.findall(regex_pure_url, link_12131 or "")]
+                links_12131_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_12131 or "")]
                 if links_12131_visuais:
-                    placeholder_links_12131.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_12131_visuais]))
+                    placeholder_links_12131.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_12131_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 12.1.3.1: 0.0 pontos (Informativo de Rotina)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("12.1.3.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 12.1.3.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 12.1.3.1", key=f"btn_salvar_12_1_3_1_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_12131 = st.session_state.get(chave_radio_12131, v_salvo_12131)
+                pts_12131 = 0.0  # Quesito informativo de rotina
+                comentario_para_salvar = st.session_state.get(chave_coment_12131, d12131.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("12.1.3.1", val_selecionado_12131, pts_12131, link_12131, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["12.1.3.1"] = {
+                    "valor": val_selecionado_12131,
+                    "pontos": pts_12131,
+                    "link": link_12131,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_12131 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d12131.get("link", "") or "")]
+
+                if link_12131 != d12131.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_12_1_3_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_12_1_3_1_{ano_sel}"] = True
+
+                st.toast("Quesito 12.1.3.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 12.1.3.1: 0.0 pontos (Informativo de Rotina)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 12.1.3.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_12_1_3_1_{ano_sel}", False):
         modal_aviso_link("12.1.3.1", st.session_state.get(f"links_pendentes_12_1_3_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_12_1_3_1_{ano_sel}"] = False
-
     # =============================================================================
     # QUESITO 13.0 • MOBILIDADE ATIVA (100% INDEPENDENTE)
     # =============================================================================
