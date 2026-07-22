@@ -199,35 +199,27 @@ def salvar_resposta(ano, qid, valor, pontos, link=""):
 
 @st.cache_data(ttl=60)
 def get_all_years_data():
-    """Recupera o histórico completo de todos os anos cadastrados."""
-    all_data = {}
     try:
         with get_connection() as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC"
+                    "SELECT ano, id, valor, pontos, link FROM respostas WHERE dimensao = 'igov'"
                 )
-                for row in cursor.fetchall():
-                    ano = row["ano"]
-                    qid = row["id"]
-                    comentarios = row["comentarios"] or []
-                    if isinstance(comentarios, str):
-                        try:
-                            comentarios = json.loads(comentarios)
-                        except Exception:
-                            comentarios = []
-
+                rows = cursor.fetchall()
+                all_data = {}
+                for row in rows:
+                    ano, qid, valor, pontos, link = row
                     if ano not in all_data:
                         all_data[ano] = {}
                     all_data[ano][qid] = {
-                        "valor": row["valor"] or "",
-                        "pontos": row["pontos"] or 0.0,
-                        "link": row["link"] or "",
-                        "comentarios": comentarios
+                        "valor": valor,
+                        "pontos": float(pontos) if pontos is not None else 0.0,
+                        "link": link
                     }
+                return all_data
     except Exception as e:
-        logging.error(f"Erro ao carregar dados históricos: {e}")
-    return all_data
+        st.error(f"Erro ao carregar histórico do i-Gov TI: {e}")
+        return {}
 
 # =============================================================================
 # 4. COMPONENTES DE INTERFACE
@@ -829,14 +821,16 @@ CATEGORIAS_MAP = {
 # =============================================================================
 
 def zerar_questionario(ano):
-    """Deleta todas as respostas do ano selecionado no Neon PostgreSQL."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("DELETE FROM respostas WHERE ano = %s", (ano,))
-        st.cache_data.clear()  # Limpa o cache após deletar
+                cursor.execute(
+                    "DELETE FROM respostas WHERE ano = %s AND dimensao = 'igov'", 
+                    (ano,)
+                )
+        st.cache_data.clear()
     except Exception as e:
-        st.error(f"Erro ao zerar questionário: {e}")
+        st.error(f"Erro ao zerar questionário do i-Gov TI: {e}")
 
 # Janela pop-up de confirmação definida no escopo global
 @st.dialog("🔒 Confirmação de Segurança")
