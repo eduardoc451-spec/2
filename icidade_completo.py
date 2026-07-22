@@ -6759,94 +6759,96 @@ def mostrar_formulario_cidade():
   # =============================================================================
     # QUESITO 16.0 • MANUTENÇÃO DE VIAS PÚBLICAS (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_16_0_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 16.0 - Condições de Manutenção Viária e Pavimentação", expanded=True):
             st.subheader("16.0 • Manutenção de Vias")
             st.write("**Há manutenção adequada das vias públicas no Município?**")
-            st.caption("ℹ *Referência: Manuais de Manutenção Rodoviária do DNIT. Salvamento automático por callbacks nativos.*")
-            
-            opts160 = {
-                "Selecione...": 0.0,
-                "Sim, integralmente - Todos os calçamentos públicos (00 pts)": 0.0,
-                "Sim, parcialmente - Em parte dos calçamentos públicos (-10 pts)": -10.0,
-                "Não possui acessibilidade em calçamentos públicos (-50 pts)": -50.0
-            }
-            
-            # Ajuste de opções baseado no dicionário fornecido na regra de negócios original
+            st.caption("ℹ *Referência: Manuais de Manutenção Rodoviária do DNIT. Preencha os campos abaixo e clique no botão 'Salvar Quesito 16.0' para registrar.*")
+
             opts160 = {
                 "Selecione...": 0.0,
                 "Sim, integralmente - Todas as vias públicas municipais (50 pts)": 50.0,
                 "Sim, parcialmente - Em parte das vias municipais (10 pts)": 10.0,
                 "Não estão adequadas (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d160 = res_data.get("16.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d160 is None: d160 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d160 = res_data.get("16.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_160 = d160.get("valor", "Selecione...")
-            chave_radio_160 = f"r_160_{v_salvo_160}_{ano_sel}"
 
-            def cb_radio_160():
-                val = st.session_state[chave_radio_160]
-                pts = float(opts160.get(val, 0.0))
-                lnk = st.session_state.get(f"l_160_txt_{ano_sel}", d160.get("link", ""))
-                
-                save_resp("16.0", val, pts, lnk)
-                res_data["16.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_160():
-                lnk = st.session_state[f"l_160_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_160, v_salvo_160)
-                pts = float(opts160.get(val, 0.0))
-                
-                save_resp("16.0", val, pts, lnk)
-                res_data["16.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d160.get("link", "") or "")]
-                
-                if lnk != d160.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_16_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_160 = f"r_160_{ano_sel}"
+            chave_link_160 = f"l_160_txt_{ano_sel}"
+            chave_coment_160 = f"coment_16.0_{ano_sel}"
 
             col_r160, col_j160 = st.columns([1, 1])
             with col_r160:
                 lista_opcoes_160 = list(opts160.keys())
                 idx_160 = lista_opcoes_160.index(v_salvo_160) if v_salvo_160 in lista_opcoes_160 else 0
-                
+
                 st.radio(
                     "Qualidade da manutenção:",
                     options=lista_opcoes_160,
                     index=idx_160,
                     key=chave_radio_160,
-                    on_change=cb_radio_160,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j160:
                 link_160 = st.text_area(
-                    f"Contratos / Cronograma de Obras ({ano_sel}) (16.0):", 
-                    value=d160.get("link", ""), 
-                    key=f"l_160_txt_{ano_sel}", 
-                    on_change=cb_text_160, 
+                    f"Contratos / Cronograma de Obras ({ano_sel}) (16.0):",
+                    value=d160.get("link", ""),
+                    key=chave_link_160,
                     placeholder="Ex: Link do cronograma oficial de recapeamento, contratos de operação tapa-buracos publicados no Portal da Transparência...",
                     height=130
                 )
                 placeholder_links_160 = st.empty()
-                links_160_visuais = [u[0] for u in re.findall(regex_pure_url, link_160 or "")]
+                links_160_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_160 or "")]
                 if links_160_visuais:
-                    placeholder_links_160.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_160_visuais]))
+                    placeholder_links_160.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_160_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("16.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 16.0", key=f"btn_salvar_16_0_{ano_sel}", type="primary"):
+                # 1. Coleta os valores selecionados nos campos
+                val_selecionado_160 = st.session_state.get(chave_radio_160, v_salvo_160)
+                pts_160 = float(opts160.get(val_selecionado_160, 0.0))
+                comentario_para_salvar = st.session_state.get(chave_coment_160, d160.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("16.0", val_selecionado_160, pts_160, link_160, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["16.0"] = {
+                    "valor": val_selecionado_160,
+                    "pontos": pts_160,
+                    "link": link_160,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_160 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d160.get("link", "") or "")]
+
+                if link_160 != d160.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_16_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = True
+
+                st.toast("Quesito 16.0 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_160 = d160.get("pontos", 0.0)
             cor_txt_160 = "#dc3545" if pts_atuais_160 == 0.0 else ("#28a745" if pts_atuais_160 == 50.0 else "#ffc107")
             st.markdown(f"<span style='color:{cor_txt_160}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 16.0: {pts_atuais_160:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("16.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 16.0
+    # GATILHO DO MODAL 16.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_16_0_{ano_sel}", False):
         modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = False
