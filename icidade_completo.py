@@ -7038,14 +7038,12 @@ def mostrar_formulario_cidade():
     # =============================================================================
     # QUESITO C1.1 • ESTÁGIO MCR2030 DA ONU (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_externo_c1_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito C1.1 - Estágio de Classificação no Programa MCR2030", expanded=True):
             st.subheader("QUESITO C1.1")
             st.write(f"**O Município foi classificado em qual estágio do Programa?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito C1.1' para registrar.*")
+
             opts_c11 = {
                 "Selecione...": 0.0,
                 "Etapa A (10 pts)": 10.0,
@@ -7053,71 +7051,84 @@ def mostrar_formulario_cidade():
                 "Etapa C (50 pts)": 50.0,
                 "Não classificada (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            dc11 = res_data.get("C1.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if dc11 is None: dc11 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            dc11 = res_data.get("C1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_c11 = dc11.get("valor", "Selecione...")
-            chave_radio_c11 = f"r_c11_{v_salvo_c11}_{ano_sel}"
 
-            def cb_radio_c11():
-                val = st.session_state[chave_radio_c11]
-                pts = float(opts_c11.get(val, 0.0))
-                lnk = st.session_state.get(f"l_c11_txt_{ano_sel}", dc11.get("link", ""))
-                
-                save_resp("C1.1", val, pts, lnk)
-                res_data["C1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_c11():
-                lnk = st.session_state[f"l_c11_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_c11, v_salvo_c11)
-                pts = float(opts_c11.get(val, 0.0))
-                
-                save_resp("C1.1", val, pts, lnk)
-                res_data["C1.1"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, dc11.get("link", "") or "")]
-                
-                if lnk != dc11.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_c1_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_c1_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_c11 = f"r_c11_{ano_sel}"
+            chave_link_c11 = f"l_c11_txt_{ano_sel}"
+            chave_coment_c11 = f"coment_C1.1_{ano_sel}"
 
             col_rc11, col_jc11 = st.columns([1, 1])
             with col_rc11:
                 lista_opcoes_c11 = list(opts_c11.keys())
                 idx_c11 = lista_opcoes_c11.index(v_salvo_c11) if v_salvo_c11 in lista_opcoes_c11 else 0
+
                 st.radio(
-                    "Estágio atual:", 
-                    options=lista_opcoes_c11, 
-                    index=idx_c11, 
+                    "Estágio atual:",
+                    options=lista_opcoes_c11,
+                    index=idx_c11,
                     key=chave_radio_c11,
-                    on_change=cb_radio_c11,
                     label_visibility="collapsed"
                 )
-                
+
             with col_jc11:
                 link_c11 = st.text_area(
-                    f"Evidência Classificação ({ano_sel}) (C1.1):", 
-                    value=dc11.get("link", ""), 
-                    key=f"l_c11_txt_{ano_sel}", 
-                    on_change=cb_text_c11, 
+                    f"Evidência Classificação ({ano_sel}) (C1.1):",
+                    value=dc11.get("link", ""),
+                    key=chave_link_c11,
                     placeholder="Insira o link do painel de controle da ONU, relatórios de autoavaliação validados ou documentos técnicos de auditoria MCR2030...",
                     height=130
                 )
                 placeholder_links_c11 = st.empty()
-                links_c11_visuais = [u[0] for u in re.findall(regex_pure_url, link_c11 or "")]
+                links_c11_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_c11 or "")]
                 if links_c11_visuais:
-                    placeholder_links_c11.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_c11_visuais]))
+                    placeholder_links_c11.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_c11_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("C1.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito C1.1", key=f"btn_salvar_c1_1_{ano_sel}", type="primary"):
+                # 1. Coleta os valores selecionados nos campos
+                val_selecionado_c11 = st.session_state.get(chave_radio_c11, v_salvo_c11)
+                pts_c11 = float(opts_c11.get(val_selecionado_c11, 0.0))
+                comentario_para_salvar = st.session_state.get(chave_coment_c11, dc11.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("C1.1", val_selecionado_c11, pts_c11, link_c11, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["C1.1"] = {
+                    "valor": val_selecionado_c11,
+                    "pontos": pts_c11,
+                    "link": link_c11,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_c11 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, dc11.get("link", "") or "")]
+
+                if link_c11 != dc11.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_c1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_c1_1_{ano_sel}"] = True
+
+                st.toast("Quesito C1.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_c11 = dc11.get("pontos", 0.0)
             cor_txt_c11 = "#28a745" if pts_atuais_c11 > 0.0 else "#6c757d"
             st.markdown(f"<span style='color:{cor_txt_c11}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito C1.1: +{pts_atuais_c11:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("C1.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL C1.1
+    # GATILHO DO MODAL C1.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_c1_1_{ano_sel}", False):
         modal_aviso_link("C1.1", st.session_state.get(f"links_pendentes_c1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_c1_1_{ano_sel}"] = False
