@@ -3055,17 +3055,15 @@ def mostrar_formulario_cidade():
         modal_aviso_link("5.2", st.session_state.get(f"links_pendentes_5_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = False
 # =============================================================================
-    # QUESITO 6.0 • VISTORIAS EM EDIFICAÇÕES VULNERÁVEIS (100% INDEPENDENTE)
+    # QUESITO 6.0 • VISTORIAS EM EDIFICAÇÕES VULNERÁVEIS
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_6_0_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 6.0 - Vistorias em Edificações Vulneráveis", expanded=True):
             st.subheader("6.0 • Vistorias Preventivas")
             st.write("**A Secretaria responsável realizou vistorias em edificações vulneráveis com o objetivo de identificar a necessidade de intervenção preventiva nos imóveis?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Mapeamento oficial de opções e pontuações (incluindo pontuação negativa flutuante)
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 6.0' para registrar.*")
+
+            # Mapeamento oficial de opções e pontuações
             opcoes_60 = {
                 "Selecione...": 0.0,
                 "Sim, de acordo com um cronograma preestabelecido (00 pts)": 0.0,
@@ -3073,71 +3071,84 @@ def mostrar_formulario_cidade():
                 "Não foram vistoriadas (-50 pts)": -50.0,
                 "Não houve casos de edificações vulneráveis (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d60 = res_data.get("6.0", {"valor": "Selecione...", "pontos": -50.0, "link": ""})
-            if d60 is None: d60 = {"valor": "Selecione...", "pontos": -50.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d60 = res_data.get("6.0") or {"valor": "Selecione...", "pontos": -50.0, "link": "", "comentario": ""}
             v_salvo_60 = d60.get("valor", "Selecione...")
-            chave_radio_60 = f"r_60_{v_salvo_60}_{ano_sel}"
 
-            def cb_radio_60():
-                val = st.session_state[chave_radio_60]
-                pts = opcoes_60.get(val, 0.0)
-                lnk = st.session_state.get(f"l_60_txt_{ano_sel}", d60.get("link", ""))
-                
-                save_resp("6.0", val, pts, lnk)
-                res_data["6.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_60():
-                lnk = st.session_state[f"l_60_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_60, v_salvo_60)
-                pts = opcoes_60.get(val, 0.0)
-                
-                save_resp("6.0", val, pts, lnk)
-                res_data["6.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d60.get("link", "") or "")]
-                
-                if lnk != d60.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_6_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_60 = f"r_60_{ano_sel}"
+            chave_link_60 = f"l_60_txt_{ano_sel}"
+            chave_coment_60 = f"coment_6.0_{ano_sel}"
 
             col_r60, col_j60 = st.columns([1, 1])
             with col_r60:
                 lista_opcoes_60 = list(opcoes_60.keys())
                 idx_60 = lista_opcoes_60.index(v_salvo_60) if v_salvo_60 in lista_opcoes_60 else 0
-                
+
                 st.radio(
                     "Status das Vistorias:",
                     options=lista_opcoes_60,
                     index=idx_60,
                     key=chave_radio_60,
-                    on_change=cb_radio_60,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j60:
                 link_60 = st.text_area(
-                    "Relatórios de Vistoria / Evidências (6.0):", 
-                    value=d60.get("link", ""), 
-                    key=f"l_60_txt_{ano_sel}", 
-                    on_change=cb_text_60, 
+                    "Relatórios de Vistoria / Evidências (6.0):",
+                    value=d60.get("link", ""),
+                    key=chave_link_60,
+                    placeholder="Cole os links das evidências ou relatórios de vistoria...",
                     height=165
                 )
                 placeholder_links_60 = st.empty()
-                links_60_visuais = [u[0] for u in re.findall(regex_pure_url, link_60 or "")]
+                links_60_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_60 or "")]
                 if links_60_visuais:
-                    placeholder_links_60.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_60_visuais]))
+                    placeholder_links_60.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_60_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("6.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 6.0", key=f"btn_salvar_6_0_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_60 = st.session_state.get(chave_radio_60, v_salvo_60)
+                pts_60 = opcoes_60.get(val_selecionado_60, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_60, d60.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("6.0", val_selecionado_60, pts_60, link_60, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["6.0"] = {
+                    "valor": val_selecionado_60,
+                    "pontos": pts_60,
+                    "link": link_60,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_60 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d60.get("link", "") or "")]
+
+                if link_60 != d60.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_6_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = True
+
+                st.toast("Quesito 6.0 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_60 = d60.get("pontos", 0.0)
             cor_txt_60 = "#28a745" if pts_atuais_60 == 0.0 and v_salvo_60 != "Selecione..." else ("#dc3545" if pts_atuais_60 < 0.0 else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_60}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 6.0: {pts_atuais_60:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("6.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 6.0
+    # GATILHO DO MODAL 6.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_6_0_{ano_sel}", False):
         modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
