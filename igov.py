@@ -6,6 +6,8 @@ from io import BytesIO
 from datetime import datetime, date
 import psycopg2
 from psycopg2.extras import RealDictCursor
+# Exemplo se as funções de banco estiverem num arquivo separado chamado database.py:
+from database import get_all_years_data, get_connection
 import streamlit as st
 
 # =============================================================================
