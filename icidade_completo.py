@@ -5656,87 +5656,97 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 12.1 • REGULAMENTAÇÃO DE APP (100% INDEPENDENTE)
+    # QUESITO 12.1 • REGULAMENTAÇÃO DE APP
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_12_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 12.1 - Regulamentação do Transporte por Aplicativo", expanded=True):
             st.subheader("12.1 • Regulamentação de App")
             st.write("**O Município regulamentou o transporte remunerado privado individual?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 12.1' para registrar.*")
+
             opts121 = {
                 "Selecione...": 0.0,
                 "Sim (00 pts)": 0.0,
                 "Não (-50 pts)": -50.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d121 = res_data.get("12.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d121 is None: d121 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d121 = res_data.get("12.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_121 = d121.get("valor", "Selecione...")
-            chave_radio_121 = f"r_121_{v_salvo_121}_{ano_sel}"
 
-            def cb_radio_121():
-                val = st.session_state[chave_radio_121]
-                pts = opts121.get(val, 0.0)
-                lnk = st.session_state.get(f"l_121_txt_{ano_sel}", d121.get("link", ""))
-                
-                save_resp("12.1", val, pts, lnk)
-                res_data["12.1"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_121():
-                lnk = st.session_state[f"l_121_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_121, v_salvo_121)
-                pts = opts121.get(val, 0.0)
-                
-                save_resp("12.1", val, pts, lnk)
-                res_data["12.1"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d121.get("link", "") or "")]
-                
-                if lnk != d121.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_12_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_12_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_121 = f"r_121_{ano_sel}"
+            chave_link_121 = f"l_121_txt_{ano_sel}"
+            chave_coment_121 = f"coment_12.1_{ano_sel}"
 
             col_r121, col_j121 = st.columns([1, 1])
             with col_r121:
                 lista_opcoes_121 = list(opts121.keys())
                 idx_121 = lista_opcoes_121.index(v_salvo_121) if v_salvo_121 in lista_opcoes_121 else 0
-                
+
                 st.radio(
                     "Regulamentado?",
                     options=lista_opcoes_121,
                     index=idx_121,
                     key=chave_radio_121,
-                    on_change=cb_radio_121,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j121:
                 link_121 = st.text_area(
-                    "Evidência (Lei/Decreto) (12.1):", 
-                    value=d121.get("link", ""), 
-                    key=f"l_121_txt_{ano_sel}", 
-                    on_change=cb_text_121, 
+                    "Evidência (Lei/Decreto) (12.1):",
+                    value=d121.get("link", ""),
+                    key=chave_link_121,
                     placeholder="Ex: Link da Lei Municipal, Decreto Regulamentador ou publicação no Diário Oficial...",
                     height=110
                 )
                 placeholder_links_121 = st.empty()
-                links_121_visuais = [u[0] for u in re.findall(regex_pure_url, link_121 or "")]
+                links_121_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_121 or "")]
                 if links_121_visuais:
-                    placeholder_links_121.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_121_visuais]))
+                    placeholder_links_121.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_121_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("12.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 12.1", key=f"btn_salvar_12_1_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_121 = st.session_state.get(chave_radio_121, v_salvo_121)
+                pts_121 = opts121.get(val_selecionado_121, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_121, d121.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("12.1", val_selecionado_121, pts_121, link_121, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["12.1"] = {
+                    "valor": val_selecionado_121,
+                    "pontos": pts_121,
+                    "link": link_121,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_121 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d121.get("link", "") or "")]
+
+                if link_121 != d121.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_12_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_12_1_{ano_sel}"] = True
+
+                st.toast("Quesito 12.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_121 = d121.get("pontos", 0.0)
             cor_txt_121 = "#dc3545" if pts_atuais_121 < 0.0 else ("#28a745" if v_salvo_121 == "Sim (00 pts)" else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_121}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 12.1: {pts_atuais_121:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("12.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 12.1
+    # GATILHO DO MODAL 12.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_12_1_{ano_sel}", False):
         modal_aviso_link("12.1", st.session_state.get(f"links_pendentes_12_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_12_1_{ano_sel}"] = False
