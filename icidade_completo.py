@@ -876,7 +876,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
     # -------------------------------------------------------------------------
     elements.append(Spacer(1, 10))
 
-    anos_serie = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    anos_serie = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
     valores_serie = []
     for a in anos_serie:
         if a == ano_atual: valores_serie.append(nota_atual)
@@ -950,7 +950,7 @@ def confirmar_zerar_dialog(ano):
 
 def render_sidebar():
     st.sidebar.title("🛠️ Painel de Controle")
-    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
     ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
 
     res_data = load_respostas(ano_sel)
