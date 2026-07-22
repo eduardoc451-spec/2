@@ -5803,6 +5803,77 @@ def mostrar_formulario_cidade():
             # Exibição do status visual do impacto de pontuação
             st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 12.1.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
 
+    # =============================================================================
+    # QUESITO 12.1.2 • ENDEREÇO ELETRÔNICO DA REGULAMENTAÇÃO
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_12_1_2_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 12.1.2 - Endereço Eletrônico da Norma", expanded=True):
+            st.subheader("12.1.2 • Endereço Eletrônico")
+            st.write("Informe a página eletrônica (link na internet) do instrumento:")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 12.1.2' para registrar.*")
+
+            # Recupera o estado salvo no dicionário de dados
+            d1212 = res_data.get("12.1.2") or {"valor": "Link fornecido", "pontos": 0.0, "link": "", "comentario": ""}
+
+            # Chaves fixas para os componentes do Streamlit
+            chave_lnk_1212 = f"q1212_lnk_{ano_sel}"
+            chave_coment_1212 = f"coment_12.1.2_{ano_sel}"
+
+            link_1212 = st.text_input(
+                "URL da norma:",
+                value=d1212.get("link", ""),
+                key=chave_lnk_1212,
+                placeholder="https://..."
+            )
+
+            placeholder_links_1212 = st.empty()
+            links_1212_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_1212 or "")]
+            if links_1212_visuais:
+                placeholder_links_1212.markdown(f"🔗 **Link Ativo:** [{links_1212_visuais[0]}]({links_1212_visuais[0]})")
+
+            # Renderiza o bloco de comentários
+            bloco_comentarios("12.1.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 12.1.2", key=f"btn_salvar_12_1_2_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                lnk_inserido_1212 = st.session_state.get(chave_lnk_1212, d1212.get("link", "")).strip()
+                val_1212 = "Link fornecido"
+                coment_1212 = st.session_state.get(chave_coment_1212, d1212.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("12.1.2", val_1212, 0.0, lnk_inserido_1212, coment_1212)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["12.1.2"] = {
+                    "valor": val_1212,
+                    "pontos": 0.0,
+                    "link": lnk_inserido_1212,
+                    "comentario": coment_1212
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, lnk_inserido_1212 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d1212.get("link", "") or "")]
+
+                if lnk_inserido_1212 != d1212.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_12_1_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = True
+
+                st.toast("Quesito 12.1.2 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 12.1.2: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 12.1.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_12_1_2_{ano_sel}", False):
+        modal_aviso_link("12.1.2", st.session_state.get(f"links_pendentes_12_1_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 12.1.3 • FISCALIZAÇÃO DO SERVIÇO APP (100% INDEPENDENTE)
