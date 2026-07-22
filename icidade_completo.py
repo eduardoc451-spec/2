@@ -6457,90 +6457,99 @@ def mostrar_formulario_cidade():
     # =============================================================================
     # QUESITO 14.0 • ACESSIBILIDADE EM CALÇAMENTOS PÚBLICOS (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_14_0_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 14.0 - Adequação de Calçamentos Públicos para Acessibilidade", expanded=True):
             st.subheader("14.0 • Acessibilidade")
             st.write("**O Município adequou os calçamentos públicos para acessibilidade (PcD e restrição de mobilidade)?**")
-            st.caption("ℹ *Nota: Entorno de prédios públicos e locais de grande circulação. Salvamento automático via callbacks.*")
-            
+            st.caption("ℹ *Nota: Entorno de prédios públicos e locais de grande circulação. Preencha os campos abaixo e clique no botão 'Salvar Quesito 14.0' para registrar.*")
+
             opts140 = {
                 "Selecione...": 0.0,
                 "Sim, integralmente - Todos os calçamentos públicos (00 pts)": 0.0,
                 "Sim, parcialmente - Em parte dos calçamentos públicos (-10 pts)": -10.0,
                 "Não possui acessibilidade em calçamentos públicos (-50 pts)": -50.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos com o padrão original do formulário
-            d140 = res_data.get("14.0", {"valor": "Não possui acessibilidade em calçamentos públicos (-50 pts)", "pontos": -50.0, "link": ""})
-            if d140 is None: d140 = {"valor": "Não possui acessibilidade em calçamentos públicos (-50 pts)", "pontos": -50.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d140 = res_data.get("14.0") or {"valor": "Não possui acessibilidade em calçamentos públicos (-50 pts)", "pontos": -50.0, "link": "", "comentario": ""}
             v_salvo_140 = d140.get("valor", "Não possui acessibilidade em calçamentos públicos (-50 pts)")
-            chave_radio_140 = f"r_140_{v_salvo_140}_{ano_sel}"
 
-            def cb_radio_140():
-                val = st.session_state[chave_radio_140]
-                pts = float(opts140.get(val, -50.0))
-                lnk = st.session_state.get(f"l_140_txt_{ano_sel}", d140.get("link", ""))
-                
-                save_resp("14.0", val, pts, lnk)
-                res_data["14.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_140():
-                lnk = st.session_state[f"l_140_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_140, v_salvo_140)
-                pts = float(opts140.get(val, -50.0))
-                
-                save_resp("14.0", val, pts, lnk)
-                res_data["14.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d140.get("link", "") or "")]
-                
-                if lnk != d140.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_14_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_140 = f"r_140_{ano_sel}"
+            chave_link_140 = f"l_140_txt_{ano_sel}"
+            chave_coment_140 = f"coment_14.0_{ano_sel}"
 
             col_r140, col_j140 = st.columns([1, 1])
             with col_r140:
                 lista_opcoes_140 = list(opts140.keys())
                 idx_140 = lista_opcoes_140.index(v_salvo_140) if v_salvo_140 in lista_opcoes_140 else 3
-                
+
                 st.radio(
                     "Status da acessibilidade:",
                     options=lista_opcoes_140,
                     index=idx_140,
                     key=chave_radio_140,
-                    on_change=cb_radio_140,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j140:
                 link_140 = st.text_area(
-                    "Locais adequados / Fotos / Links (14.0):", 
-                    value=d140.get("link", ""), 
-                    key=f"l_140_txt_{ano_sel}", 
-                    on_change=cb_text_140, 
+                    "Locais adequados / Fotos / Links (14.0):",
+                    value=d140.get("link", ""),
+                    key=chave_link_140,
                     placeholder="Ex: Mapeamento de rotas acessíveis, relatórios fotográficos de rampas e pisos podotáteis, links de portarias de obras...",
                     height=130
                 )
                 placeholder_links_140 = st.empty()
-                links_140_visuais = [u[0] for u in re.findall(regex_pure_url, link_140 or "")]
+                links_140_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_140 or "")]
                 if links_140_visuais:
-                    placeholder_links_140.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_140_visuais]))
+                    placeholder_links_140.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_140_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("14.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 14.0", key=f"btn_salvar_14_0_{ano_sel}", type="primary"):
+                # 1. Coleta os valores selecionados nos campos
+                val_selecionado_140 = st.session_state.get(chave_radio_140, v_salvo_140)
+                pts_140 = float(opts140.get(val_selecionado_140, -50.0))
+                comentario_para_salvar = st.session_state.get(chave_coment_140, d140.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("14.0", val_selecionado_140, pts_140, link_140, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["14.0"] = {
+                    "valor": val_selecionado_140,
+                    "pontos": pts_140,
+                    "link": link_140,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_140 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d140.get("link", "") or "")]
+
+                if link_140 != d140.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_14_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = True
+
+                st.toast("Quesito 14.0 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_140 = d140.get("pontos", -50.0)
             cor_txt_140 = "#dc3545" if pts_atuais_140 == -50.0 else ("#28a745" if v_salvo_140.startswith("Sim, integralmente") else "#ffc107")
             st.markdown(f"<span style='color:{cor_txt_140}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 14.0: {pts_atuais_140:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("14.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 14.0
+    # GATILHO DO MODAL 14.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_14_0_{ano_sel}", False):
         modal_aviso_link("14.0", st.session_state.get(f"links_pendentes_14_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = False
-
     # =============================================================================
     # QUESITO 14.1 • RECURSOS DE ACESSIBILIDADE OFERECIDOS (100% INDEPENDENTE)
     # =============================================================================
