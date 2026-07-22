@@ -1106,12 +1106,17 @@ def render_graficos(res_data_atual, ano_sel):
     st.plotly_chart(grafico_evolucao_categorias(all_data), use_container_width=True)
     st.plotly_chart(grafico_quesitos_barra(res_data_atual, ano_sel), use_container_width=True)
 
+import re
+import streamlit as st
+
 # =============================================================================
 # 6. FORMULÁRIO PRINCIPAL (I-GOV TI)
 # =============================================================================
 
-def mostrar_formulario_gov():  # <-- NOME ATUALIZADO PARA COMPATIBILIDADE COM O MAIN.PY
-    # Caso render_sidebar() retorne None por algum motivo
+def mostrar_formulario_gov():
+    # -------------------------------------------------------------------------
+    # RECUPERAÇÃO DE DADOS DA SIDEBAR
+    # -------------------------------------------------------------------------
     dados_sidebar = render_sidebar()
     
     if dados_sidebar and len(dados_sidebar) == 3:
@@ -1121,6 +1126,9 @@ def mostrar_formulario_gov():  # <-- NOME ATUALIZADO PARA COMPATIBILIDADE COM O 
 
     st.title(f"💻 Governance & TI (i-Gov TI) - {ano_sel}")
 
+    # Regex para identificação e validação de URLs
+    REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
+
     # -------------------------------------------------------------------------
     # ABAS PRINCIPAIS
     # -------------------------------------------------------------------------
@@ -1128,93 +1136,118 @@ def mostrar_formulario_gov():  # <-- NOME ATUALIZADO PARA COMPATIBILIDADE COM O 
 
     with aba_questionario:
         st.info("Preencha os quesitos de Governança e Tecnologia da Informação abaixo.")
-        
-        # Exemplo de chamadas utilizando a função otimizada de renderização:
-        # renderizar_questao("1.0", res_data)
-        # renderizar_questao("2.0", res_data)
 
-    with aba_graficos:
-        render_graficos(res_data, ano_sel)
-        
         # =============================================================================
-        # QUESITO 1.0 • SETOR DE TIC (100% INDEPENDENTE COM 8 ESPAÇOS DE INDENTAÇÃO)
+        # QUESITO 1.0 • SETOR DE TIC (MODELO COMPLETO i-Cidade)
         # =============================================================================
-        regex_pure_url = r'((https?://[^\s<>"]+))'
-
-        with st.container(key=f"container_bloco_compdec_1_0_final_{ano_sel}", border=True):
-            with st.expander(f"📌 Quesito 1.0 - Setor de Tecnologia da Informação e Comunicação", expanded=True):
+        with st.container(key=f"container_bloco_igov_1_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.0 - Setor de Tecnologia da Informação e Comunicação", expanded=True):
                 st.subheader("1.0 • Setor de TIC")
-                st.write("**A Prefeitura possui uma área ou setor que cuida de Tecnologia da Informação e Comunicação (TIC)?**")
-                st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-                
-                opcoes10 = ["Selecione...", "Sim – 30", "Não – 00"]
-                
-                # Recupera o estado salvo no dicionário de dados históricos
-                d10 = res_data.get("1.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-                if d10 is None: d10 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-                
+                st.write(
+                    "**A Prefeitura possui uma área ou setor responsável por cuidar da "
+                    "Tecnologia da Informação e Comunicação (TIC)?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.0' para registrar.*")
+
+                # Dicionário de opções e pontuação do i-Gov TI
+                opcoes_10 = {
+                    "Selecione...": 0.0,
+                    "Sim (30 pts)": 30.0,
+                    "Não (00 pts)": 0.0
+                }
+
+                # Recuperação do estado salvo no banco/dicionário
+                d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
                 v_salvo_10 = d10.get("valor", "Selecione...")
-                chave_radio_10 = f"r_10_{v_salvo_10}_{ano_sel}"
 
-                def cb_radio_10():
-                    val = st.session_state[chave_radio_10]
-                    pts = 30.0 if "Sim" in val else 0.0
-                    lnk = st.session_state.get(f"l_10_txt_{ano_sel}", d10.get("link", ""))
-                    
-                    save_resp("1.0", val, pts, lnk)
-                    res_data["1.0"] = {"valor": val, "pontos": pts, "link": lnk}
+                # Definição das chaves únicas do Streamlit
+                chave_radio_10 = f"r_10_{ano_sel}"
+                chave_link_10 = f"l_10_txt_{ano_sel}"
+                chave_coment_10 = f"coment_1.0_{ano_sel}"
 
-                def cb_text_10():
-                    lnk = st.session_state[f"l_10_txt_{ano_sel}"]
-                    val = st.session_state.get(chave_radio_10, v_salvo_10)
-                    pts = 30.0 if "Sim" in val else 0.0
-                    
-                    save_resp("1.0", val, pts, lnk)
-                    res_data["1.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                    
-                    links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                    links_antigos = [u[0] for u in re.findall(regex_pure_url, d10.get("link", "") or "")]
-                    
-                    if lnk != d10.get("link", "") and links_atuais:
-                        if links_atuais != links_antigos:
-                            st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
-                            st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+                c10_1, c10_2 = st.columns([1, 1])
+                
+                with c10_1:
+                    lista_opcoes_10 = list(opcoes_10.keys())
+                    idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
 
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    idx10 = opcoes10.index(v_salvo_10) if v_salvo_10 in opcoes10 else 0
-                    st.radio(
-                        "Selecione 1.0:", 
-                        options=opcoes10, 
-                        index=idx10, 
+                    val_radio_10 = st.radio(
+                        "Selecione a situação do setor de TIC:",
+                        options=lista_opcoes_10,
+                        index=idx_10,
                         key=chave_radio_10,
-                        on_change=cb_radio_10,
                         label_visibility="collapsed"
                     )
-                    
-                with col2:
+
+                with c10_2:
                     link_10 = st.text_area(
-                        "Link/Evidência (1.0):", 
-                        value=d10.get("link", ""), 
-                        key=f"l_10_txt_{ano_sel}", 
-                        on_change=cb_text_10, 
-                        placeholder="Insira o link da lei de estrutura administrativa, organograma oficial ou portaria de nomeação da equipe de TIC...",
+                        "Link de Evidência / Lei de Criacao / Organograma (1.0):",
+                        value=d10.get("link", ""),
+                        key=chave_link_10,
+                        placeholder="Insira o link da lei de estrutura administrativa, organograma oficial ou portaria da equipe de TIC...",
                         height=100
                     )
+                    
+                    # Exibição dinâmica dos links ativos digitados
                     placeholder_links_10 = st.empty()
-                    links_10_visuais = [u[0] for u in re.findall(regex_pure_url, link_10 or "")]
+                    links_10_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
                     if links_10_visuais:
-                        placeholder_links_10.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
+                        placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-                pts_atuais_10 = d10.get("pontos", 0.0)
-                cor_txt_10 = "#28a745" if pts_atuais_10 == 30.0 else "#6c757d"
-                st.markdown(f"<span style='color:{cor_txt_10}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>", unsafe_allow_html=True)
+                # Renderiza o bloco padrão de comentários
                 bloco_comentarios("1.0", res_data, ano_sel)
 
-        # GATILHO DO MODAL 1.0
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
+                    pts_10 = opcoes_10.get(val_radio_10, 0.0)
+                    
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+                    
+                    # Salva no banco/backend através da função save_resp
+                    save_resp("1.0", val_radio_10, pts_10, link_10, comentario_para_salvar)
+                    
+                    # Atualiza a memória local res_data
+                    res_data["1.0"] = {
+                        "valor": val_radio_10, 
+                        "pontos": pts_10, 
+                        "link": link_10, 
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de links para modal
+                    links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
+                    links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
+
+                    if link_10 != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+
+                    st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                    
+                    # Atualiza a página e recarrega os painéis/gráficos
+                    st.rerun()
+
+                # Exibição visual da pontuação obtida
+                pts_atuais_10 = d10.get("pontos", 0.0)
+                cor_txt_10 = "#28a745" if pts_atuais_10 == 30.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
+                st.markdown(
+                    f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # -------------------------------------------------------------------------
+        # MODAL DE VERIFICAÇÃO DE LINKS DE EVIDÊNCIA (FORA DO CONTAINER)
+        # -------------------------------------------------------------------------
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
             modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
+
+        # Exposição da variável r10 para ser consultada em quesitos dependentes (Ex: 1.1, 1.2)
+        r10 = v_salvo_10
 
         # =============================================================================
         # QUESITO 1.1 • QUANTIDADE DA EQUIPE DE TIC (100% INDEPENDENTE VIA CALLBACKS)
