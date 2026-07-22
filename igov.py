@@ -1135,13 +1135,12 @@ def mostrar_formulario_gov():
                 }
 
                 # Recuperação do estado salvo no banco/dicionário
-                d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
                 v_salvo_10 = d10.get("valor", "Selecione...")
 
                 # Definição das chaves únicas do Streamlit
                 chave_radio_10 = f"r_10_{ano_sel}"
                 chave_link_10 = f"l_10_txt_{ano_sel}"
-                chave_coment_10 = f"coment_1.0_{ano_sel}"
 
                 c10_1, c10_2 = st.columns([1, 1])
                 
@@ -1168,12 +1167,12 @@ def mostrar_formulario_gov():
                     
                     # Exibição dinâmica dos links ativos digitados
                     placeholder_links_10 = st.empty()
-                    links_10_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
+                    links_10_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_10 or "")]
                     if links_10_visuais:
                         placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-                # Renderiza o bloco padrão de comentários
-                bloco_comentarios("1.0", res_data, ano_sel)
+                # Renderiza o bloco padrão de comentários internos (passando o histórico JSONB)
+                bloco_comentarios("1.0", res_data)
 
                 # -----------------------------------------------------------------
                 # BOTÃO DE SALVAMENTO MANUAL
@@ -1181,32 +1180,39 @@ def mostrar_formulario_gov():
                 if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                     pts_10 = opcoes_10.get(val_radio_10, 0.0)
                     
-                    # Captura o comentário atual do session_state
-                    comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+                    # Recupera o histórico de comentários atual do quesito
+                    comentarios_atuais = d10.get("comentarios", [])
                     
-                    # 1. Salva no banco passando O COMENTÁRIO
-                    salvar_resposta(ano_sel, "1.0", val_radio_10, pts_10, link_10, comentario_para_salvar)
+                    # 1. Salva no banco PostgreSQL / Neon
+                    salvar_resposta(
+                        ano=ano_sel, 
+                        qid="1.0", 
+                        valor=val_radio_10, 
+                        pontos=pts_10, 
+                        link=link_10, 
+                        comentarios=comentarios_atuais
+                    )
                     
                     # 2. Atualiza a memória local res_data e a chave global do ano no session_state
                     res_data["1.0"] = {
                         "valor": val_radio_10, 
                         "pontos": pts_10, 
                         "link": link_10, 
-                        "comentario": comentario_para_salvar
+                        "comentarios": comentarios_atuais
                     }
                     st.session_state[f"respostas_igov_{ano_sel}"] = res_data
 
-                    # 3. Validação de links para acionamento do modal
-                    links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
-                    links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
+                    # 3. Validação de links para acionamento do modal de evidências
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_10 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
 
                     if link_10 != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
                         st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
-                    st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                    st.toast("Resposta do Quesito 1.0 salva com sucesso!", icon="✅")
                     
-                    # 4. Recarrega a página imediatamente
+                    # 4. Recarrega a página para atualizar os indicadores da tela
                     st.rerun()
 
                 # Exibição visual da pontuação obtida
@@ -1222,7 +1228,8 @@ def mostrar_formulario_gov():
         # MODAL DE VERIFICAÇÃO DE LINKS DE EVIDÊNCIA (FORA DO CONTAINER)
         # -------------------------------------------------------------------------
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-            modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
         # Exposição da variável r10 para ser consultada em quesitos dependentes (Ex: 1.1, 1.2)
