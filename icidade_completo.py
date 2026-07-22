@@ -300,6 +300,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
     key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
+    key_radio = f"rad_status_{id_chave}_{ano_sel}"
     
     if key_estado_limpar not in st.session_state:
         st.session_state[key_estado_limpar] = False
@@ -323,10 +324,11 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             options=opcoes_status,
             index=idx_status_atual,
             horizontal=True,
-            key=f"rad_status_{id_chave}_{ano_sel}"
+            key=key_radio
         )
         
-        if novo_status_clicado != status_global:
+        # CORREÇÃO DO LOOP: Verifica se o valor mudou em relação ao estado gravado no widget (interação do usuário)
+        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
                 "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -382,6 +384,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                         )
                         st.rerun()
         
+        # CORREÇÃO DA LIMPEZA: Aplica a limpeza antes de renderizar a caixa de texto
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
