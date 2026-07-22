@@ -27,7 +27,7 @@ def get_connection():
                 url = st.secrets["database"]["url"]
 
         if url:
-            return psycopg2.connect(url)
+            return psycopg2.connect(url, sslmode="require")
 
         cfg = None
         if "postgres" in st.secrets:
@@ -41,7 +41,8 @@ def get_connection():
                 database=cfg.get("database") or cfg.get("dbname"),
                 user=cfg.get("user") or cfg.get("username"),
                 password=cfg.get("password"),
-                port=cfg.get("port", 5432)
+                port=cfg.get("port", 5432),
+                sslmode="require"
             )
 
         return psycopg2.connect(
@@ -49,11 +50,13 @@ def get_connection():
             database=st.secrets.get("database") or st.secrets.get("dbname"),
             user=st.secrets.get("user") or st.secrets.get("username"),
             password=st.secrets.get("password"),
-            port=st.secrets.get("port", 5432)
+            port=st.secrets.get("port", 5432),
+            sslmode="require"
         )
 
     except Exception as e:
-        st.error(f"Erro ao conectar com o Neon/PostgreSQL: {e}")
+        logging.error(f"Erro ao conectar com o Neon/PostgreSQL: {e}")
+        st.error(f"Erro ao conectar com o banco de dados: {e}")
         raise e
 
 # =============================================================================
@@ -79,7 +82,7 @@ def init_db():
                 """)
             conn.commit()
     except Exception as e:
-        logging.error(f"Erro ao inicializar o banco: {e}")
+        logging.error(f"Erro ao inicializar o banco de dados: {e}")
 
 @st.cache_data(ttl=30)
 def load_respostas(ano: int) -> dict:
@@ -110,6 +113,7 @@ def load_respostas(ano: int) -> dict:
                     }
                 return res
     except Exception as e:
+        logging.error(f"Erro ao carregar dados do i-Gov TI: {e}")
         st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
         return {}
 
@@ -137,6 +141,7 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
         
         st.cache_data.clear()
     except Exception as e:
+        logging.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
 
 def save_resp(qid, valor, pontos, link="", comentarios=None, ano=None):
@@ -147,50 +152,6 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, ano=None):
 # =============================================================================
 # COMPONENTES DE INTERFACE
 # =============================================================================
-def renderizar_questao(qid, res_data):
-    dados_q = res_data.get(qid, {})
-    val_existente = dados_q.get("valor", "")
-    pts_existente = float(dados_q.get("pontos", 0.0))
-    link_existente = dados_q.get("link", "")
-    
-    with st.container(border=True):
-        st.markdown(f"#### Quesito: `{qid}`")
-        
-        col_txt, col_meta = st.columns([3, 1])
-        with col_txt:
-            novo_valor = st.text_area(
-                "Resposta / Evidência:", 
-                value=val_existente, 
-                key=f"txt_val_{qid}",
-                height=100
-            )
-            novo_link = st.text_input(
-                "Link da Evidência (opcional):", 
-                value=link_existente, 
-                key=f"txt_link_{qid}"
-            )
-
-        with col_meta:
-            novos_pontos = st.number_input(
-                "Pontuação:", 
-                value=pts_existente, 
-                key=f"num_pts_{qid}"
-            )
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
-                comentarios_atuais = dados_q.get("comentarios", [])
-                save_resp(
-                    qid=qid, 
-                    valor=novo_valor, 
-                    pontos=novos_pontos, 
-                    link=novo_link,
-                    comentarios=comentarios_atuais
-                )
-                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
-                st.rerun()
-
-        bloco_comentarios(qid, res_data)
-
 def bloco_comentarios(questao_id, res_data, sufixo=None):
     ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
@@ -214,7 +175,6 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
         opcoes_status = ["Resolvido", "Pendente"]
         idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
         
-        # Radio sem callback direto para evitar crash de session_state
         novo_status = st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
@@ -300,14 +260,57 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 )
                 st.rerun()
 
+def renderizar_questao(qid, res_data):
+    dados_q = res_data.get(qid, {})
+    val_existente = dados_q.get("valor", "")
+    pts_existente = float(dados_q.get("pontos", 0.0))
+    link_existente = dados_q.get("link", "")
+    
+    with st.container(border=True):
+        st.markdown(f"#### Quesito: `{qid}`")
+        
+        col_txt, col_meta = st.columns([3, 1])
+        with col_txt:
+            novo_valor = st.text_area(
+                "Resposta / Evidência:", 
+                value=val_existente, 
+                key=f"txt_val_{qid}",
+                height=100
+            )
+            novo_link = st.text_input(
+                "Link da Evidência (opcional):", 
+                value=link_existente, 
+                key=f"txt_link_{qid}"
+            )
+
+        with col_meta:
+            novos_pontos = st.number_input(
+                "Pontuação:", 
+                value=pts_existente, 
+                key=f"num_pts_{qid}"
+            )
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                comentarios_atuais = dados_q.get("comentarios", [])
+                save_resp(
+                    qid=qid, 
+                    valor=novo_valor, 
+                    pontos=novos_pontos, 
+                    link=novo_link,
+                    comentarios=comentarios_atuais
+                )
+                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
+                st.rerun()
+
+        bloco_comentarios(qid, res_data)
+
 # =============================================================================
-# FUNÇÃO PRINCIPAL DA PÁGINA (CHAMADA NO main.py)
+# FUNÇÃO PRINCIPAL DA PÁGINA
 # =============================================================================
 def mostrar_formulario_gov():
-    """Função principal chamada no main.py na linha 381."""
+    """Função principal para exibição e gerenciamento do i-Gov TI."""
     init_db()
     
-    # Garante a existência da variável no session_state
     if "ano_referencia_global" not in st.session_state:
         st.session_state["ano_referencia_global"] = datetime.now().year
         
@@ -316,10 +319,10 @@ def mostrar_formulario_gov():
     
     st.title("Formulário i-Gov TI")
     
-    # Exemplo de renderização dos campos de um formulário de questões
-    qids = ["1.0", "1.1", "1.2", "2.0", "3.0"] # Substitua com sua lista de QIDs ou categorias
+    qids = ["1.0", "1.1", "1.2", "2.0", "3.0"]
     for qid in qids:
         renderizar_questao(qid, res_data)
+        
 import os
 from io import BytesIO
 from reportlab.lib import colors
