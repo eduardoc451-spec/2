@@ -2957,93 +2957,103 @@ def mostrar_formulario_cidade():
         modal_aviso_link("5.1.2.1", st.session_state.get(f"links_pendentes_5_1_2_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_1_2_1_{ano_sel}"] = False
         
+   # =============================================================================
+    # QUESITO 5.2 • INFORMAÇÃO À POPULAÇÃO SOBRE AMEAÇAS
     # =============================================================================
-    # QUESITO 5.2 • INFORMAÇÃO À POPULAÇÃO SOBRE AMEAÇAS (100% INDEPENDENTE)
-    # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_5_2_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 5.2 - Informação à População sobre Ameaças", expanded=True):
             st.subheader("5.2 • Informação à População")
             st.write("**A população foi informada sobre todas as ameaças identificadas pelo município?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Mapeamento oficial de opções e pontuações (incluindo pontuação negativa flutuante)
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 5.2' para registrar.*")
+
+            # Mapeamento oficial de opções e pontuações
             opcoes_52 = {
                 "Selecione...": 0.0,
                 "Sim (00 pts)": 0.0,
                 "Parcialmente (00 pts)": 0.0,
                 "Não (-50 pts)": -50.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d52 = res_data.get("5.2", {"valor": "Selecione...", "pontos": -50.0, "link": ""})
-            if d52 is None: d52 = {"valor": "Selecione...", "pontos": -50.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d52 = res_data.get("5.2") or {"valor": "Selecione...", "pontos": -50.0, "link": "", "comentario": ""}
             v_salvo_52 = d52.get("valor", "Selecione...")
-            chave_radio_52 = f"r_52_{v_salvo_52}_{ano_sel}"
 
-            def cb_radio_52():
-                val = st.session_state[chave_radio_52]
-                pts = opcoes_52.get(val, 0.0)
-                lnk = st.session_state.get(f"l_52_txt_{ano_sel}", d52.get("link", ""))
-                
-                save_resp("5.2", val, pts, lnk)
-                res_data["5.2"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_52():
-                lnk = st.session_state[f"l_52_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_52, v_salvo_52)
-                pts = opcoes_52.get(val, 0.0)
-                
-                save_resp("5.2", val, pts, lnk)
-                res_data["5.2"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d52.get("link", "") or "")]
-                
-                if lnk != d52.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_5_2_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_52 = f"r_52_{ano_sel}"
+            chave_link_52 = f"l_52_txt_{ano_sel}"
+            chave_coment_52 = f"coment_5.2_{ano_sel}"  # Chave padrão utilizada pela função bloco_comentarios
 
             col_r52, col_j52 = st.columns([1, 1])
             with col_r52:
                 lista_opcoes_52 = list(opcoes_52.keys())
                 idx_52 = lista_opcoes_52.index(v_salvo_52) if v_salvo_52 in lista_opcoes_52 else 0
-                
+
                 st.radio(
                     "Informação à população:",
                     options=lista_opcoes_52,
                     index=idx_52,
                     key=chave_radio_52,
-                    on_change=cb_radio_52,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j52:
                 link_52 = st.text_area(
-                    "Meios de comunicação utilizados / Evidência (5.2):", 
-                    value=d52.get("link", ""), 
-                    key=f"l_52_txt_{ano_sel}", 
-                    on_change=cb_text_52, 
+                    "Meios de comunicação utilizados / Evidência (5.2):",
+                    value=d52.get("link", ""),
+                    key=chave_link_52,
+                    placeholder="Cole os links de matérias, boletins oficiais, campanhas ou redes sociais...",
                     height=135
                 )
                 placeholder_links_52 = st.empty()
-                links_52_visuais = [u[0] for u in re.findall(regex_pure_url, link_52 or "")]
+                links_52_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_52 or "")]
                 if links_52_visuais:
-                    placeholder_links_52.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_52_visuais]))
+                    placeholder_links_52.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_52_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("5.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 5.2", key=f"btn_salvar_5_2_{ano_sel}", type="primary"):
+                # 1. Coleta os dados selecionados nos inputs
+                val_selecionado_52 = st.session_state.get(chave_radio_52, v_salvo_52)
+                pts_52 = opcoes_52.get(val_selecionado_52, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_52, d52.get("comentario", ""))
+
+                # 2. Persiste no banco de dados / backend
+                save_resp("5.2", val_selecionado_52, pts_52, link_52, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["5.2"] = {
+                    "valor": val_selecionado_52,
+                    "pontos": pts_52,
+                    "link": link_52,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e comparação de links para acionar o modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_52 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d52.get("link", "") or "")]
+
+                if link_52 != d52.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_5_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = True
+
+                st.toast("Quesito 5.2 salvo com sucesso!", icon="✅")
+
+                # 5. Atualiza a interface
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_52 = d52.get("pontos", 0.0)
             cor_txt_52 = "#28a745" if pts_atuais_52 == 0.0 and v_salvo_52 != "Selecione..." else ("#dc3545" if pts_atuais_52 < 0.0 else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_52}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 5.2: {pts_atuais_52:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("5.2", res_data, ano_sel)
 
-    # GATILHO DO MODAL 5.2
+    # GATILHO DO MODAL 5.2 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_5_2_{ano_sel}", False):
         modal_aviso_link("5.2", st.session_state.get(f"links_pendentes_5_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = False
-
 # =============================================================================
     # QUESITO 6.0 • VISTORIAS EM EDIFICAÇÕES VULNERÁVEIS (100% INDEPENDENTE)
     # =============================================================================
