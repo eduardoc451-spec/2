@@ -3250,17 +3250,15 @@ def mostrar_formulario_cidade():
         modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = False
 
-  # =============================================================================
-    # QUESITO 7.1 • ABRANGÊNCIA DO PLANCON POR AMEAÇA (100% INDEPENDENTE)
+     # =============================================================================
+    # QUESITO 7.1 • ABRANGÊNCIA DO PLANCON POR AMEAÇA
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_7_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 7.1 - Elaboração de PLANCON por Ameaça", expanded=True):
             st.subheader("7.1 • Especificidade do PLANCON")
             st.write("**Foi elaborado um PLANCON específico para cada ameaça identificada?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 7.1' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações progressivas
             opcoes_71 = {
                 "Selecione...": 0.0,
@@ -3268,74 +3266,87 @@ def mostrar_formulario_cidade():
                 "Sim, parte das ameaças possuem PLANCON diferentes (03 pts)": 3.0,
                 "Existe apenas um PLANCON que abrange todas as ameaças (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d71 = res_data.get("7.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d71 is None: d71 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d71 = res_data.get("7.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_71 = d71.get("valor", "Selecione...")
-            chave_radio_71 = f"r_71_{v_salvo_71}_{ano_sel}"
 
-            def cb_radio_71():
-                val = st.session_state[chave_radio_71]
-                pts = opcoes_71.get(val, 0.0)
-                lnk = st.session_state.get(f"l_71_txt_{ano_sel}", d71.get("link", ""))
-                
-                save_resp("7.1", val, pts, lnk)
-                res_data["7.1"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_71():
-                lnk = st.session_state[f"l_71_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_71, v_salvo_71)
-                pts = opcoes_71.get(val, 0.0)
-                
-                save_resp("7.1", val, pts, lnk)
-                res_data["7.1"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d71.get("link", "") or "")]
-                
-                if lnk != d71.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_7_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_71 = f"r_71_{ano_sel}"
+            chave_link_71 = f"l_71_txt_{ano_sel}"
+            chave_coment_71 = f"coment_7.1_{ano_sel}"
 
             col_r71, col_j71 = st.columns([1, 1])
             with col_r71:
                 lista_opcoes_71 = list(opcoes_71.keys())
                 idx_71 = lista_opcoes_71.index(v_salvo_71) if v_salvo_71 in lista_opcoes_71 else 0
-                
+
                 st.radio(
                     "Abrangência do PLANCON:",
                     options=lista_opcoes_71,
                     index=idx_71,
                     key=chave_radio_71,
-                    on_change=cb_radio_71,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j71:
                 link_71 = st.text_area(
-                    "Evidências/Links dos planos específicos (7.1):", 
-                    value=d71.get("link", ""), 
-                    key=f"l_71_txt_{ano_sel}", 
-                    on_change=cb_text_71, 
+                    "Evidências/Links dos planos específicos (7.1):",
+                    value=d71.get("link", ""),
+                    key=chave_link_71,
+                    placeholder="Cole os links dos planos específicos por ameaça...",
                     height=135
                 )
                 placeholder_links_71 = st.empty()
-                links_71_visuais = [u[0] for u in re.findall(regex_pure_url, link_71 or "")]
+                links_71_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_71 or "")]
                 if links_71_visuais:
-                    placeholder_links_71.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_71_visuais]))
+                    placeholder_links_71.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_71_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("7.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 7.1", key=f"btn_salvar_7_1_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_71 = st.session_state.get(chave_radio_71, v_salvo_71)
+                pts_71 = opcoes_71.get(val_selecionado_71, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_71, d71.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("7.1", val_selecionado_71, pts_71, link_71, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["7.1"] = {
+                    "valor": val_selecionado_71,
+                    "pontos": pts_71,
+                    "link": link_71,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_71 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d71.get("link", "") or "")]
+
+                if link_71 != d71.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = True
+
+                st.toast("Quesito 7.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_71 = d71.get("pontos", 0.0)
             cor_txt_71 = "#28a745" if pts_atuais_71 > 0.0 else ("#dc3545" if v_salvo_71 == "Existe apenas um PLANCON que abrange todas as ameaças (00 pts)" else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_71}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.1: +{pts_atuais_71:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("7.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 7.1
+    # GATILHO DO MODAL 7.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_7_1_{ano_sel}", False):
         modal_aviso_link("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False
+        st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False 
 
     # =============================================================================
     # QUESITO 7.2 • EXERCÍCIOS SIMULADOS DO PLANCON (100% INDEPENDENTE)
