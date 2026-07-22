@@ -1218,18 +1218,19 @@ def mostrar_formulario_gov():
                     # Captura o comentário atual do session_state
                     comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
                     
-                    # Salva no banco/backend através da função save_resp
-                    salvar_resposta(ano_sel, "1.0", val_radio_10, pts_10, link_10)
+                    # 1. Salva no banco passando O COMENTÁRIO
+                    salvar_resposta(ano_sel, "1.0", val_radio_10, pts_10, link_10, comentario_para_salvar)
                     
-                    # Atualiza a memória local res_data
+                    # 2. Atualiza a memória local res_data e a chave global do ano no session_state
                     res_data["1.0"] = {
                         "valor": val_radio_10, 
                         "pontos": pts_10, 
                         "link": link_10, 
                         "comentario": comentario_para_salvar
                     }
+                    st.session_state[f"respostas_igov_{ano_sel}"] = res_data
 
-                    # Validação de links para modal
+                    # 3. Validação de links para acionamento do modal
                     links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
                     links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
 
@@ -1239,7 +1240,7 @@ def mostrar_formulario_gov():
 
                     st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
                     
-                    # Atualiza a página e recarrega os painéis/gráficos
+                    # 4. Recarrega a página imediatamente
                     st.rerun()
 
                 # Exibição visual da pontuação obtida
