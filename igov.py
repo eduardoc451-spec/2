@@ -1,18 +1,25 @@
+import os
+import re
+import json
+import logging
+from io import BytesIO
+from datetime import datetime, date
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import streamlit as st
 
+# =============================================================================
+# CONEXÃO COM O BANCO DE DADOS
+# =============================================================================
 def get_connection():
     """Conecta ao banco PostgreSQL/Neon testando dinamicamente as estruturas do Secrets."""
     try:
-        # 1. Tenta buscar uma URL de conexão direta (vários nomes comuns)
         url = None
         for key in ["postgres_url", "DATABASE_URL", "POSTGRES_URL", "neon_url", "db_url"]:
             if key in st.secrets:
                 url = st.secrets[key]
                 break
         
-        # Se encontrou dentro do bloco "postgres" ou "database"
         if not url:
             if "postgres" in st.secrets and "url" in st.secrets["postgres"]:
                 url = st.secrets["postgres"]["url"]
@@ -22,7 +29,6 @@ def get_connection():
         if url:
             return psycopg2.connect(url)
 
-        # 2. Se não encontrou URL, tenta parâmetros individuais no bloco 'postgres' ou 'database'
         cfg = None
         if "postgres" in st.secrets:
             cfg = st.secrets["postgres"]
@@ -38,7 +44,6 @@ def get_connection():
                 port=cfg.get("port", 5432)
             )
 
-        # 3. Tenta pegar os parâmetros direto na raiz do Secrets (host, user, password soltos)
         return psycopg2.connect(
             host=st.secrets.get("host"),
             database=st.secrets.get("database") or st.secrets.get("dbname"),
@@ -57,11 +62,11 @@ def get_connection():
 CATEGORIAS_MAP = {
     "infraestrutura": {"label": "Infraestrutura e Setor", "qids": ["1.0", "1.1", "1.2", "1.3", "1.3.1", "1.4", "1.4.1", "1.4.2"]},
     "planejamento":   {"label": "Planejamento (PDTIC)", "qids": ["2.0", "2.1", "2.2", "2.3"]},
-    "seguranca":       {"label": "Segurança da Informação", "qids": ["3.0", "3.1", "3.1.1", "3.1.1.1", "3.2", "3.2.1", "3.3", "3.4", "3.5", "3.6", "3.6.1"]},
-    "transparencia":   {"label": "Transparência e LAI", "qids": ["4.0", "4.1", "4.2", "6.0", "6.1", "6.2", "6.3", "6.4", "7.0", "7.1", "7.2", "7.3"]},
-    "gov_digital":     {"label": "Governo Digital", "qids": ["5.0", "5.1", "5.2", "5.3", "9.0", "9.1", "9.2"]},
-    "sistemas":        {"label": "Sistemas de Gestão", "qids": ["8.0", "8.1", "8.2", "8.2.1", "8.2.2", "8.3", "8.4"]},
-    "lgpd":            {"label": "LGPD", "qids": ["10.0", "10.1", "10.2", "10.3", "10.4", "10.5", "10.5.1", "11.0", "11.1"]},
+    "seguranca":      {"label": "Segurança da Informação", "qids": ["3.0", "3.1", "3.1.1", "3.1.1.1", "3.2", "3.2.1", "3.3", "3.4", "3.5", "3.6", "3.6.1"]},
+    "transparencia":  {"label": "Transparência e LAI", "qids": ["4.0", "4.1", "4.2", "6.0", "6.1", "6.2", "6.3", "6.4", "7.0", "7.1", "7.2", "7.3"]},
+    "gov_digital":    {"label": "Governo Digital", "qids": ["5.0", "5.1", "5.2", "5.3", "9.0", "9.1", "9.2"]},
+    "sistemas":       {"label": "Sistemas de Gestão", "qids": ["8.0", "8.1", "8.2", "8.2.1", "8.2.2", "8.3", "8.4"]},
+    "lgpd":           {"label": "LGPD", "qids": ["10.0", "10.1", "10.2", "10.3", "10.4", "10.5", "10.5.1", "11.0", "11.1"]},
 }
 
 PONTUACOES_MAX = {
@@ -75,152 +80,13 @@ PONTUACOES_MAX = {
 FAIXA_CORES = {"C": "#ef4444", "C+": "#f97316", "B": "#eab308", "B+": "#22c55e", "A": "#16a34a"}
 
 # =============================================================================
-# MODAL DE AVISO AUTOMÁTICO (CORRIGIDO PARA LINKS CLICÁVEIS)
+# OPERAÇÕES NO BANCO DE DADOS (UNIFICADAS)
 # =============================================================================
-@st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados):
-    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    
-    for lk in links_encontrados:
-        # CORREÇÃO: Removeu as crases e transformou em um link Markdown real e clicável
-        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
-        
-    st.markdown("""
-    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
-    
-    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
-    """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
-        st.rerun()
-
-# =============================================================================
-# 1. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL - PADRÃO ICIDADE)
-# =============================================================================
-
 def init_db():
-    """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir."""
+    """Inicializa a tabela respostas garantindo compatibilidade de chave e colunas."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS respostas (
-                        id VARCHAR(50) NOT NULL,
-                        ano INTEGER NOT NULL,
-                        valor TEXT,
-                        pontos DOUBLE PRECISION DEFAULT 0,
-                        link TEXT,
-                        comentarios JSONB DEFAULT '[]'::jsonb,
-                        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (id, ano)
-                    );
-                """)
-            conn.commit()
-    except Exception as e:
-        logging.error(f"Erro ao inicializar o banco: {e}")
-        raise e
-
-
-@st.cache_data(ttl=60)
-def load_respostas(ano: int) -> dict:
-    """Busca do banco de dados todas as respostas relativas a um ano específico."""
-    respostas = {}
-    try:
-        with get_connection() as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
-                    (ano,)
-                )
-                rows = cursor.fetchall()
-                for row in rows:
-                    comentarios = row["comentarios"] or []
-                    if isinstance(comentarios, str):
-                        try:
-                            comentarios = json.loads(comentarios)
-                        except Exception:
-                            comentarios = []
-                            
-                    respostas[row["id"]] = {
-                        "valor": row["valor"] or "",
-                        "pontos": float(row["pontos"]) if row["pontos"] is not None else 0.0,
-                        "link": row["link"] or "",
-                        "comentarios": comentarios
-                    }
-    except Exception as e:
-        logging.error(f"Erro ao carregar respostas do ano {ano}: {e}")
-    return respostas
-
-
-def save_resp(qid, valor, pontos, link="", comentarios=None):
-    """Salva/Atualiza a resposta no Neon e atualiza a interface."""
-    ano_sel = st.session_state.get("ano_referencia_global")
-    if not ano_sel:
-        st.warning("Nenhum ano de referência selecionado!")
-        return
-
-    if comentarios is None:
-        dados_atuais = load_respostas(ano_sel)
-        comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
-
-    comentarios_json = json.dumps(comentarios, ensure_ascii=False)
-    timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("""
-                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
-                    ON CONFLICT (id, ano) DO UPDATE SET
-                        valor = EXCLUDED.valor,
-                        pontos = EXCLUDED.pontos,
-                        link = EXCLUDED.link,
-                        comentarios = EXCLUDED.comentarios,
-                        atualizado_em = EXCLUDED.atualizado_em;
-                """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
-            conn.commit()
-        
-        st.cache_data.clear()
-    except Exception as e:
-        st.error(f"Erro ao salvar {qid}: {e}")
-
-# Alias para garantir compatibilidade caso alguma parte chame salvar_resposta
-def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
-    save_resp(qid, valor, pontos, link, comentarios)
-
-# =============================================================================
-# 2. MODAL DE AVISO AUTOMÁTICO
-# =============================================================================
-@st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados):
-    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    for lk in links_encontrados:
-        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
-        
-    st.markdown("""
-    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
-    
-    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
-    """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
-        st.rerun()
-
-import json
-import logging
-from datetime import datetime, date
-import streamlit as st
-
-# =============================================================================
-# 3. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL)
-# =============================================================================
-
-def init_db():
-    """Inicializa a tabela respostas de forma limpa sem estourar erro de CONSTRAINT."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                # 1. Cria a tabela (se não existir)
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS respostas (
                         dimensao VARCHAR(20) DEFAULT 'igov',
@@ -240,18 +106,18 @@ def init_db():
         logging.error(f"Erro ao inicializar o banco: {e}")
 
 @st.cache_data(ttl=60)
-def load_respostas(ano):
+def load_respostas(ano: int) -> dict:
+    """Carrega todas as respostas do ano e dimensão especificados."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s AND dimensao = 'igov'", 
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s AND (dimensao = 'igov' OR dimensao IS NULL)", 
                     (ano,)
                 )
                 rows = cursor.fetchall()
                 res = {}
                 for row in rows:
-                    # Garantir que comentarios venha como lista/objeto Python
                     com_data = row[4]
                     if isinstance(com_data, str):
                         try:
@@ -262,9 +128,9 @@ def load_respostas(ano):
                         com_data = []
 
                     res[row[0]] = {
-                        "valor": row[1],
+                        "valor": row[1] or "",
                         "pontos": float(row[2]) if row[2] is not None else 0.0,
-                        "link": row[3],
+                        "link": row[3] or "",
                         "comentarios": com_data
                     }
                 return res
@@ -273,19 +139,18 @@ def load_respostas(ano):
         return {}
 
 def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
-    try:
-        # Trata o campo comentarios para o formato JSON correto exigido pelo PostgreSQL (JSONB)
-        if comentarios is None:
-            comentarios = []
-        
-        # Converte lista/dict Python para string JSON formatada
-        comentarios_json = json.dumps(comentarios, ensure_ascii=False)
+    """Salva/Atualiza a resposta no banco de dados com UPSERT correto."""
+    if comentarios is None:
+        comentarios = []
+    
+    comentarios_json = json.dumps(comentarios, ensure_ascii=False)
 
+    try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas (dimensao, ano, id, valor, pontos, link, comentarios)
-                    VALUES ('igov', %s, %s, %s, %s, %s, %s::jsonb)
+                    INSERT INTO respostas (dimensao, ano, id, valor, pontos, link, comentarios, atualizado_em)
+                    VALUES ('igov', %s, %s, %s, %s, %s, %s::jsonb, CURRENT_TIMESTAMP)
                     ON CONFLICT (dimensao, ano, id) 
                     DO UPDATE SET 
                         valor = EXCLUDED.valor, 
@@ -293,51 +158,85 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
                         link = EXCLUDED.link,
                         comentarios = EXCLUDED.comentarios,
                         atualizado_em = CURRENT_TIMESTAMP;
-                """, (ano, qid, valor, pontos, link, comentarios_json))
-            conn.commit()  # <-- Salva a alteração no Neon
-            
+                """, (ano, qid, str(valor), float(pontos), str(link), comentarios_json))
+            conn.commit()
+        
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
 
-# ALIAS / ALIAS DE COMPATIBILIDADE PARA MANTER COMPATÍVEL COM SAVE_RESP
 def save_resp(qid, valor, pontos, link="", comentarios=None, ano=None):
-    """Função wrapper para evitar erros de NameError ao chamar save_resp em subcomponentes."""
+    """Função wrapper para salvar no banco utilizando o ano global selecionado."""
     if ano is None:
         ano = st.session_state.get("ano_referencia_global", date.today().year)
     salvar_resposta(ano, qid, valor, pontos, link, comentarios)
 
-@st.cache_data(ttl=60)
-def get_all_years_data():
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT ano, id, valor, pontos, link, comentarios FROM respostas WHERE dimensao = 'igov'"
-                )
-                rows = cursor.fetchall()
-                all_data = {}
-                for row in rows:
-                    ano, qid, valor, pontos, link, comentarios = row
-                    if ano not in all_data:
-                        all_data[ano] = {}
-                    
-                    if isinstance(comentarios, str):
-                        try:
-                            comentarios = json.loads(comentarios)
-                        except Exception:
-                            comentarios = []
+# =============================================================================
+# MODAL DE AVISO AUTOMÁTICO
+# =============================================================================
+@st.dialog("⚠️ Atenção! Evidência em Link Externo")
+def modal_aviso_link(qid, links_encontrados):
+    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    for lk in links_encontrados:
+        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
+        
+    st.markdown("""
+    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
+    
+    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
+    """)
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
+        st.rerun()
 
-                    all_data[ano][qid] = {
-                        "valor": valor,
-                        "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link,
-                        "comentarios": comentarios or []
-                    }
-                return all_data
-    except Exception as e:
-        st.error(f"Erro ao carregar histórico do i-Gov TI: {e}")
-        return {}
+# =============================================================================
+# COMPONENTES DE INTERFACE
+# =============================================================================
+def renderizar_questao(qid, res_data):
+    """Renderiza os campos do quesito e atualiza a pontuação no painel."""
+    dados_q = res_data.get(qid, {})
+    val_existente = dados_q.get("valor", "")
+    pts_existente = float(dados_q.get("pontos", 0.0))
+    link_existente = dados_q.get("link", "")
+    
+    with st.container(border=True):
+        st.markdown(f"#### Quesito: `{qid}`")
+        
+        col_txt, col_meta = st.columns([3, 1])
+        with col_txt:
+            novo_valor = st.text_area(
+                "Resposta / Evidência:", 
+                value=val_existente, 
+                key=f"txt_val_{qid}",
+                height=100
+            )
+            novo_link = st.text_input(
+                "Link da Evidência (opcional):", 
+                value=link_existente, 
+                key=f"txt_link_{qid}"
+            )
+
+        with col_meta:
+            novos_pontos = st.number_input(
+                "Pontuação:", 
+                value=pts_existente, 
+                key=f"num_pts_{qid}"
+            )
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
+                save_resp(
+                    qid=qid, 
+                    valor=novo_valor, 
+                    pontos=novos_pontos, 
+                    link=novo_link
+                )
+                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
+                if links:
+                    modal_aviso_link(qid, links)
+                else:
+                    st.rerun()  # Recarrega a interface para atualizar a pontuação no painel
+
+        bloco_comentarios(qid, res_data)
 # =============================================================================
 # 4. COMPONENTES DE INTERFACE
 # =============================================================================
