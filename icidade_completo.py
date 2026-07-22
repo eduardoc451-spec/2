@@ -2851,23 +2851,19 @@ def mostrar_formulario_cidade():
         modal_aviso_link("5.1.2", st.session_state.get(f"links_pendentes_5_1_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_1_2_{ano_sel}"] = False
         
-   # =============================================================================
-    # QUESITO 5.1.2.1 • MECANISMOS CONTRA NOVAS OCUPAÇÕES (100% INDEPENDENTE)
+  # =============================================================================
+    # QUESITO 5.1.2.1 • MECANISMOS CONTRA NOVAS OCUPAÇÕES
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_5_1_2_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 5.1.2.1 - Mecanismos para Vedar Novas Ocupações", expanded=True):
+        with st.expander("📌 Quesito 5.1.2.1 - Mecanismos para Vedar Novas Ocupações", expanded=True):
             st.subheader("5.1.2.1 • Mecanismos de Vedação")
             st.write("**Assinale os mecanismos para vedar novas ocupações nas áreas de riscos:**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 5.1.2.1' para registrar.*")
+
             # Recupera o estado salvo no dicionário de dados
-            d5121 = res_data.get("5.1.2.1", {"valor": "[]", "pontos": 0.0, "link": ""})
-            if d5121 is None: d5121 = {"valor": "[]", "pontos": 0.0, "link": ""}
-            
+            d5121 = res_data.get("5.1.2.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
             valor_salvo_5121 = d5121.get("valor", "[]")
-            
+
             mecanismos = [
                 "Aplicação de sanções monetárias (multas)", 
                 "Monitoramento (fiscalização)",
@@ -2877,70 +2873,90 @@ def mostrar_formulario_cidade():
                 "Outros"
             ]
 
-            def cb_checkbox_5121():
-                # Coleta as opções marcadas em tempo real usando o session_state
-                selecionados_5121 = []
-                for mec in mecanismos:
-                    mec_id = mec.replace(" ", "_").replace("(", "").replace(")", "").lower()
-                    if st.session_state.get(f"chk5121_{mec_id}_{ano_sel}", False):
-                        selecionados_5121.append(mec)
-                
-                pts = 0.0  # Quesito estrutural / informativo
-                lnk = st.session_state.get(f"l_5121_txt_{ano_sel}", d5121.get("link", ""))
-                val_str = str(selecionados_5121)
-                
-                save_resp("5.1.2.1", val_str, pts, lnk)
-                res_data["5.1.2.1"] = {"valor": val_str, "pontos": pts, "link": lnk}
-
-            def cb_text_5121():
-                lnk = st.session_state[f"l_5121_txt_{ano_sel}"]
-                
-                # Reconstrói a lista para consistência e integridade da persistência do texto
-                selecionados_5121 = []
-                for mec in mecanismos:
-                    mec_id = mec.replace(" ", "_").replace("(", "").replace(")", "").lower()
-                    if st.session_state.get(f"chk5121_{mec_id}_{ano_sel}", mec in valor_salvo_5121):
-                        selecionados_5121.append(mec)
-                        
-                val_str = str(selecionados_5121)
-                save_resp("5.1.2.1", val_str, 0.0, lnk)
-                res_data["5.1.2.1"] = {"valor": val_str, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d5121.get("link", "") or "")]
-                
-                if lnk != d5121.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_5_1_2_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_5_1_2_1_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_link_5121 = f"l_5121_txt_{ano_sel}"
+            chave_coment_5121 = f"coment_5.1.2.1_{ano_sel}"  # Chave padrão da função bloco_comentarios
 
             col_c5121, col_j5121 = st.columns([1, 1])
             with col_c5121:
-                # Renderização assíncrona baseada nos checkboxes mapeados individualmente
+                # Renderização dos checkboxes mapeados com base no estado salvo
                 for mec in mecanismos:
                     mec_id = mec.replace(" ", "_").replace("(", "").replace(")", "").lower()
                     st.checkbox(
                         mec,
                         value=mec in valor_salvo_5121,
-                        key=f"chk5121_{mec_id}_{ano_sel}",
-                        on_change=cb_checkbox_5121
+                        key=f"chk5121_{mec_id}_{ano_sel}"
                     )
-                
-            with col_j5121:
-                link_5121 = st.text_area("Evidências dos Mecanismos (5.1.2.1):", value=d5121.get("link", ""), key=f"l_5121_txt_{ano_sel}", on_change=cb_text_5121, height=185)
-                placeholder_links_5121 = st.empty()
-                links_5121_visuais = [u[0] for u in re.findall(regex_pure_url, link_5121 or "")]
-                if links_5121_visuais:
-                    placeholder_links_5121.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_5121_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 5.1.2.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            with col_j5121:
+                link_5121 = st.text_area(
+                    "Evidências dos Mecanismos (5.1.2.1):",
+                    value=d5121.get("link", ""),
+                    key=chave_link_5121,
+                    placeholder="Cole os links de atos normativos, relatórios fiscais ou comprovantes...",
+                    height=185
+                )
+                placeholder_links_5121 = st.empty()
+                links_5121_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_5121 or "")]
+                if links_5121_visuais:
+                    placeholder_links_5121.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_5121_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("5.1.2.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 5.1.2.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 5.1.2.1", key=f"btn_salvar_5_1_2_1_{ano_sel}", type="primary"):
+                # 1. Coleta as opções marcadas no momento do clique
+                selecionados_5121 = []
+                for mec in mecanismos:
+                    mec_id = mec.replace(" ", "_").replace("(", "").replace(")", "").lower()
+                    if st.session_state.get(f"chk5121_{mec_id}_{ano_sel}", False):
+                        selecionados_5121.append(mec)
+
+                val_str_5121 = str(selecionados_5121)
+                pts_5121 = 0.0  # Quesito estritamente informativo
+
+                # 2. Captura o comentário do session_state
+                comentario_para_salvar = st.session_state.get(chave_coment_5121, d5121.get("comentario", ""))
+
+                # 3. Persiste no banco de dados / backend
+                save_resp("5.1.2.1", val_str_5121, pts_5121, link_5121, comentario_para_salvar)
+
+                # 4. Atualiza o dicionário local res_data
+                res_data["5.1.2.1"] = {
+                    "valor": val_str_5121,
+                    "pontos": pts_5121,
+                    "link": link_5121,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 5. Processamento e validação de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_5121 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d5121.get("link", "") or "")]
+
+                if link_5121 != d5121.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_5_1_2_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_5_1_2_1_{ano_sel}"] = True
+
+                st.toast("Opções e comentários do Quesito 5.1.2.1 salvos com sucesso!", icon="✅")
+
+                # 6. Força a atualização da interface
+                st.rerun()
+
+            # Exibição da pontuação informativa
+            st.markdown(
+                "<span style='color:#28a745; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 5.1.2.1: 0.0 pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 5.1.2.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_5_1_2_1_{ano_sel}", False):
         modal_aviso_link("5.1.2.1", st.session_state.get(f"links_pendentes_5_1_2_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_1_2_1_{ano_sel}"] = False
-
+        
     # =============================================================================
     # QUESITO 5.2 • INFORMAÇÃO À POPULAÇÃO SOBRE AMEAÇAS (100% INDEPENDENTE)
     # =============================================================================
