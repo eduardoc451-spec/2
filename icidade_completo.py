@@ -5752,74 +5752,56 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_12_1_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITOS 12.1.1 e 12.1.2 • DETALHES DA REGULAMENTAÇÃO (100% INDEPENDENTE)
+    # QUESITO 12.1.1 • IDENTIFICAÇÃO DA REGULAMENTAÇÃO
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
+    with st.container(key=f"container_bloco_compdec_12_1_1_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 12.1.1 - Identificação do Instrumento Normativo", expanded=True):
+            st.subheader("12.1.1 • Identificação")
+            st.write("Informe o Instrumento normativo, Número e Data da publicação:")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 12.1.1' para registrar.*")
 
-    with st.container(key=f"container_bloco_compdec_12_1_detalhes_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesitos 12.1.1 e 12.1.2 - Dados do Instrumento Normativo", expanded=True):
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado.*")
-            
-            # Recuperação e sanitização dos estados históricos
-            d1211 = res_data.get("12.1.1", {"valor": "", "pontos": 0.0, "link": ""})
-            if d1211 is None: d1211 = {"valor": "", "pontos": 0.0, "link": ""}
-            
-            d1212 = res_data.get("12.1.2", {"valor": "Link fornecido", "pontos": 0.0, "link": ""})
-            if d1212 is None: d1212 = {"valor": "Link fornecido", "pontos": 0.0, "link": ""}
+            # Recupera o estado salvo no dicionário de dados
+            d1211 = res_data.get("12.1.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
 
-            def cb_text_1211():
-                val = st.session_state[f"q1211_val_{ano_sel}"]
-                save_resp("12.1.1", val, 0.0, "")
-                res_data["12.1.1"] = {"valor": val, "pontos": 0.0, "link": ""}
+            # Chaves fixas para os componentes do Streamlit
+            chave_val_1211 = f"q1211_val_{ano_sel}"
+            chave_coment_1211 = f"coment_12.1.1_{ano_sel}"
 
-            def cb_text_1212():
-                lnk = st.session_state[f"q1212_lnk_{ano_sel}"]
-                val = "Link fornecido"
-                
-                save_resp("12.1.2", val, 0.0, lnk)
-                res_data["12.1.2"] = {"valor": val, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d1212.get("link", "") or "")]
-                
-                if lnk != d1212.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_12_1_2_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = True
+            val_input_1211 = st.text_input(
+                f"Ex: Lei 123 de 01/01/{ano_sel}",
+                value=d1211.get("valor", ""),
+                key=chave_val_1211
+            )
 
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                st.subheader("12.1.1 • Identificação")
-                st.write("Informe o Instrumento normativo, Número e Data da publicação:")
-                st.text_input(
-                    f"Ex: Lei 123 de 01/01/{ano_sel}",
-                    value=d1211.get("valor", ""),
-                    key=f"q1211_val_{ano_sel}",
-                    on_change=cb_text_1211
-                )
-                bloco_comentarios("12.1.1", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("12.1.1", res_data, ano_sel)
 
-            with col2:
-                st.subheader("12.1.2 • Endereço Eletrônico")
-                st.write("Informe a página eletrônica (link na internet) do instrumento:")
-                link_1212 = st.text_input(
-                    "URL da norma:",
-                    value=d1212.get("link", ""),
-                    key=f"q1212_lnk_{ano_sel}",
-                    on_change=cb_text_1212,
-                    placeholder="https://..."
-                )
-                
-                placeholder_links_1212 = st.empty()
-                links_1212_visuais = [u[0] for u in re.findall(regex_pure_url, link_1212 or "")]
-                if links_1212_visuais:
-                    placeholder_links_1212.markdown(f"🔗 **Link Ativo:** [{links_1212_visuais[0]}]({links_1212_visuais[0]})")
-                bloco_comentarios("12.1.2", res_data, ano_sel)
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 12.1.1", key=f"btn_salvar_12_1_1_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                texto_1211 = st.session_state.get(chave_val_1211, d1211.get("valor", "")).strip()
+                coment_1211 = st.session_state.get(chave_coment_1211, d1211.get("comentario", ""))
 
-    # GATILHO DO MODAL 12.1.2
-    if st.session_state.get(f"gatilho_modal_12_1_2_{ano_sel}", False):
-        modal_aviso_link("12.1.2", st.session_state.get(f"links_pendentes_12_1_2_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = False
+                # 2. Persiste no backend / banco de dados
+                save_resp("12.1.1", texto_1211, 0.0, "", coment_1211)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["12.1.1"] = {
+                    "valor": texto_1211,
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentario": coment_1211
+                }
+
+                st.toast("Quesito 12.1.1 salvo com sucesso!", icon="✅")
+
+                # 4. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 12.1.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
 
 
     # =============================================================================
