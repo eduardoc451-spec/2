@@ -1144,7 +1144,7 @@ def render_graficos(res_data_atual, ano_sel):
 # 6. FORMULÁRIO PRINCIPAL (I-GOV TI)
 # =============================================================================
 
-def mostrar_formulario_igov_ti():
+def mostrar_formulario_gov():  # <-- NOME ATUALIZADO PARA COMPATIBILIDADE COM O MAIN.PY
     # Caso render_sidebar() retorne None por algum motivo
     dados_sidebar = render_sidebar()
     
@@ -1163,7 +1163,7 @@ def mostrar_formulario_igov_ti():
     with aba_questionario:
         st.info("Preencha os quesitos de Governança e Tecnologia da Informação abaixo.")
         
-        # Exemplo de chamadas utilizando a função otimizada de renderização/salvamento:
+        # Exemplo de chamadas utilizando a função otimizada de renderização:
         # renderizar_questao("1.0", res_data)
         # renderizar_questao("2.0", res_data)
 
