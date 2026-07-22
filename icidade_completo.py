@@ -3742,22 +3742,18 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_7_4_{ano_sel}"] = False
         
    # =============================================================================
-    # QUESITO 7.4.1 • TIPOS DE SISTEMAS DE ALARME (100% INDEPENDENTE)
+    # QUESITO 7.4.1 • TIPOS DE SISTEMAS DE ALARME
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_7_4_1_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 7.4.1 - Tipos de Sinais ou Alarmes Utilizados", expanded=True):
             st.subheader("7.4.1 • Tipos de Alarme")
             st.write("**Assinale os tipos de sinal, dispositivo ou sistema de alarme utilizado:**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d741 = res_data.get("7.4.1", {"valor": "[]", "pontos": 0.0, "link": ""})
-            if d741 is None: d741 = {"valor": "[]", "pontos": 0.0, "link": ""}
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 7.4.1' para registrar.*")
+
+            # Recupera o estado salvo no dicionário de dados
+            d741 = res_data.get("7.4.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
             valor_salvo_741 = d741.get("valor", "[]")
-            
+
             tipos_alarme = [
                 "Sinal sonoro (sirene)",
                 "Sinal luminoso",
@@ -3769,72 +3765,80 @@ def mostrar_formulario_cidade():
                 "Outro"
             ]
 
-            def cb_checkbox_741():
-                # Coleta as opções marcadas em tempo real usando o session_state
-                sel_741 = []
-                for ta in tipos_alarme:
-                    ta_id = ta.replace('(', '').replace(')', '').replace('/', '_').replace(' ', '_').replace(',', '_').lower()
-                    if st.session_state.get(f"chk741_{ta_id}_{ano_sel}", False):
-                        sel_741.append(ta)
-                
-                pts = 0.0  # Quesito informativo / estrutural
-                lnk = st.session_state.get(f"l_741_txt_{ano_sel}", d741.get("link", ""))
-                val_str = str(sel_741)
-                
-                save_resp("7.4.1", val_str, pts, lnk)
-                res_data["7.4.1"] = {"valor": val_str, "pontos": pts, "link": lnk}
-
-            def cb_text_741():
-                lnk = st.session_state[f"l_741_txt_{ano_sel}"]
-                
-                # Reconstrói a lista para consistência e integridade da persistência do texto
-                sel_741 = []
-                for ta in tipos_alarme:
-                    ta_id = ta.replace('(', '').replace(')', '').replace('/', '_').replace(' ', '_').replace(',', '_').lower()
-                    if st.session_state.get(f"chk741_{ta_id}_{ano_sel}", ta in valor_salvo_741):
-                        sel_741.append(ta)
-                        
-                val_str = str(sel_741)
-                save_resp("7.4.1", val_str, 0.0, lnk)
-                res_data["7.4.1"] = {"valor": val_str, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d741.get("link", "") or "")]
-                
-                if lnk != d741.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_7_4_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_7_4_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_link_741 = f"l_741_txt_{ano_sel}"
+            chave_coment_741 = f"coment_7.4.1_{ano_sel}"
 
             col_c741, col_j741 = st.columns([1, 1])
             with col_c741:
-                # Renderização assíncrona baseada nos checkboxes mapeados individualmente
+                # Renderização dos checkboxes baseados nas opções selecionadas salvas
                 for ta in tipos_alarme:
                     ta_id = ta.replace('(', '').replace(')', '').replace('/', '_').replace(' ', '_').replace(',', '_').lower()
                     st.checkbox(
                         ta,
                         value=ta in valor_salvo_741,
-                        key=f"chk741_{ta_id}_{ano_sel}",
-                        on_change=cb_checkbox_741
+                        key=f"chk741_{ta_id}_{ano_sel}"
                     )
-                
+
             with col_j741:
                 link_741 = st.text_area(
-                    "Justificativa / Detalhes (7.4.1):", 
-                    value=d741.get("link", ""), 
-                    key=f"l_741_txt_{ano_sel}", 
-                    on_change=cb_text_741, 
+                    "Justificativa / Detalhes (7.4.1):",
+                    value=d741.get("link", ""),
+                    key=chave_link_741,
+                    placeholder="Detalhamento sobre os tipos de alarme ou insira os links de comprovação...",
                     height=225
                 )
                 placeholder_links_741 = st.empty()
-                links_741_visuais = [u[0] for u in re.findall(regex_pure_url, link_741 or "")]
+                links_741_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_741 or "")]
                 if links_741_visuais:
-                    placeholder_links_741.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_741_visuais]))
+                    placeholder_links_741.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_741_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.4.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("7.4.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 7.4.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 7.4.1", key=f"btn_salvar_7_4_1_{ano_sel}", type="primary"):
+                # 1. Coleta os checkboxes marcados no session_state
+                sel_741 = []
+                for ta in tipos_alarme:
+                    ta_id = ta.replace('(', '').replace(')', '').replace('/', '_').replace(' ', '_').replace(',', '_').lower()
+                    if st.session_state.get(f"chk741_{ta_id}_{ano_sel}", False):
+                        sel_741.append(ta)
+
+                val_str_741 = str(sel_741)
+                pts_741 = 0.0  # Quesito informativo
+                comentario_para_salvar = st.session_state.get(chave_coment_741, d741.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("7.4.1", val_str_741, pts_741, link_741, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["7.4.1"] = {
+                    "valor": val_str_741,
+                    "pontos": pts_741,
+                    "link": link_741,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_741 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d741.get("link", "") or "")]
+
+                if link_741 != d741.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_4_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_4_1_{ano_sel}"] = True
+
+                st.toast("Quesito 7.4.1 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.4.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 7.4.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_7_4_1_{ano_sel}", False):
         modal_aviso_link("7.4.1", st.session_state.get(f"links_pendentes_7_4_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_4_1_{ano_sel}"] = False
