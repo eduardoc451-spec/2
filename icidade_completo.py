@@ -6662,90 +6662,100 @@ def mostrar_formulario_cidade():
     # =============================================================================
     # QUESITO 15.0 • SINALIZAÇÃO VIÁRIA MUNICIPAL (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_15_0_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 15.0 - Condições de Sinalização Vertical e Horizontal", expanded=True):
             st.subheader("15.0 • Sinalização Viária")
             st.write("**As vias públicas pavimentadas estão devidamente sinalizadas (vertical e horizontalmente) de forma a garantir as condições adequadas de segurança na circulação?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 15.0' para registrar.*")
+
             opts150 = {
                 "Selecione...": 0.0,
                 "Sim, integralmente - Todas as vias públicas municipais (50 pts)": 50.0,
                 "Sim, parcialmente - Em parte das vias municipais (10 pts)": 10.0,
                 "Não estão sinalizadas (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d150 = res_data.get("15.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d150 is None: d150 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d150 = res_data.get("15.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_150 = d150.get("valor", "Selecione...")
-            chave_radio_150 = f"r_150_{v_salvo_150}_{ano_sel}"
 
-            def cb_radio_150():
-                val = st.session_state[chave_radio_150]
-                pts = float(opts150.get(val, 0.0))
-                lnk = st.session_state.get(f"l_150_txt_{ano_sel}", d150.get("link", ""))
-                
-                save_resp("15.0", val, pts, lnk)
-                res_data["15.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_150():
-                lnk = st.session_state[f"l_150_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_150, v_salvo_150)
-                pts = float(opts150.get(val, 0.0))
-                
-                save_resp("15.0", val, pts, lnk)
-                res_data["15.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d150.get("link", "") or "")]
-                
-                if lnk != d150.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_15_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_150 = f"r_150_{ano_sel}"
+            chave_link_150 = f"l_150_txt_{ano_sel}"
+            chave_coment_150 = f"coment_15.0_{ano_sel}"
 
             col_r150, col_j150 = st.columns([1, 1])
             with col_r150:
                 lista_opcoes_150 = list(opts150.keys())
                 idx_150 = lista_opcoes_150.index(v_salvo_150) if v_salvo_150 in lista_opcoes_150 else 0
-                
+
                 st.radio(
                     "Status da sinalização:",
                     options=lista_opcoes_150,
                     index=idx_150,
                     key=chave_radio_150,
-                    on_change=cb_radio_150,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j150:
                 link_150 = st.text_area(
-                    f"Evidências da sinalização ({ano_sel}) (15.0):", 
-                    value=d150.get("link", ""), 
-                    key=f"l_150_txt_{ano_sel}", 
-                    on_change=cb_text_150, 
+                    f"Evidências da sinalização ({ano_sel}) (15.0):",
+                    value=d150.get("link", ""),
+                    key=chave_link_150,
                     placeholder="Ex: Planos de sinalização viária, relatórios contratuais de pintura/placas, inventário do setor de trânsito ou links correlatos...",
                     height=130
                 )
                 placeholder_links_150 = st.empty()
-                links_150_visuais = [u[0] for u in re.findall(regex_pure_url, link_150 or "")]
+                links_150_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_150 or "")]
                 if links_150_visuais:
-                    placeholder_links_150.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_150_visuais]))
+                    placeholder_links_150.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_150_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("15.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 15.0", key=f"btn_salvar_15_0_{ano_sel}", type="primary"):
+                # 1. Coleta os valores selecionados nos campos
+                val_selecionado_150 = st.session_state.get(chave_radio_150, v_salvo_150)
+                pts_150 = float(opts150.get(val_selecionado_150, 0.0))
+                comentario_para_salvar = st.session_state.get(chave_coment_150, d150.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("15.0", val_selecionado_150, pts_150, link_150, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["15.0"] = {
+                    "valor": val_selecionado_150,
+                    "pontos": pts_150,
+                    "link": link_150,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_150 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d150.get("link", "") or "")]
+
+                if link_150 != d150.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_15_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = True
+
+                st.toast("Quesito 15.0 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_150 = d150.get("pontos", 0.0)
             cor_txt_150 = "#dc3545" if pts_atuais_150 == 0.0 else ("#28a745" if pts_atuais_150 == 50.0 else "#ffc107")
             st.markdown(f"<span style='color:{cor_txt_150}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 15.0: {pts_atuais_150:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("15.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 15.0
+    # GATILHO DO MODAL 15.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_15_0_{ano_sel}", False):
         modal_aviso_link("15.0", st.session_state.get(f"links_pendentes_15_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = False
-
+        
   # =============================================================================
     # QUESITO 16.0 • MANUTENÇÃO DE VIAS PÚBLICAS (100% INDEPENDENTE)
     # =============================================================================
