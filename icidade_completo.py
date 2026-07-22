@@ -3153,92 +3153,102 @@ def mostrar_formulario_cidade():
         modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
 
+   # =============================================================================
+    # QUESITO 7.0 • PLANCON DE DEFESA CIVIL
     # =============================================================================
-    # QUESITO 7.0 • PLANCON DE DEFESA CIVIL (100% INDEPENDENTE)
-    # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_7_0_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 7.0 - Plano de Contingência Municipal (PLANCON)", expanded=True):
+        with st.expander("📌 Quesito 7.0 - Plano de Contingência Municipal (PLANCON)", expanded=True):
             st.subheader("7.0 • PLANCON")
             st.write("**O Município possui Plano de Contingência Municipal – PLANCON de Defesa Civil?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 7.0' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações
             opcoes_70 = {
                 "Selecione...": 0.0,
                 "Sim (50 pts)": 50.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d70 = res_data.get("7.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d70 is None: d70 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d70 = res_data.get("7.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_70 = d70.get("valor", "Selecione...")
-            chave_radio_70 = f"r_70_{v_salvo_70}_{ano_sel}"
 
-            def cb_radio_70():
-                val = st.session_state[chave_radio_70]
-                pts = opcoes_70.get(val, 0.0)
-                lnk = st.session_state.get(f"l_70_txt_{ano_sel}", d70.get("link", ""))
-                
-                save_resp("7.0", val, pts, lnk)
-                res_data["7.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_70():
-                lnk = st.session_state[f"l_70_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_70, v_salvo_70)
-                pts = opcoes_70.get(val, 0.0)
-                
-                save_resp("7.0", val, pts, lnk)
-                res_data["7.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d70.get("link", "") or "")]
-                
-                if lnk != d70.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_7_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_70 = f"r_70_{ano_sel}"
+            chave_link_70 = f"l_70_txt_{ano_sel}"
+            chave_coment_70 = f"coment_7.0_{ano_sel}"  # Chave padrão utilizada pela função bloco_comentarios
 
             col_r70, col_j70 = st.columns([1, 1])
             with col_r70:
                 lista_opcoes_70 = list(opcoes_70.keys())
                 idx_70 = lista_opcoes_70.index(v_salvo_70) if v_salvo_70 in lista_opcoes_70 else 0
-                
+
                 st.radio(
                     "Possui PLANCON?",
                     options=lista_opcoes_70,
                     index=idx_70,
                     key=chave_radio_70,
-                    on_change=cb_radio_70,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j70:
                 link_70 = st.text_area(
-                    "Link do PLANCON / Decreto (7.0):", 
-                    value=d70.get("link", ""), 
-                    key=f"l_70_txt_{ano_sel}", 
-                    on_change=cb_text_70, 
+                    "Link do PLANCON / Decreto (7.0):",
+                    value=d70.get("link", ""),
+                    key=chave_link_70,
+                    placeholder="Cole os links do PLANCON publicado ou do decreto de homologação...",
                     height=100
                 )
                 placeholder_links_70 = st.empty()
-                links_70_visuais = [u[0] for u in re.findall(regex_pure_url, link_70 or "")]
+                links_70_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_70 or "")]
                 if links_70_visuais:
-                    placeholder_links_70.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_70_visuais]))
+                    placeholder_links_70.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_70_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("7.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 7.0", key=f"btn_salvar_7_0_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_70 = st.session_state.get(chave_radio_70, v_salvo_70)
+                pts_70 = opcoes_70.get(val_selecionado_70, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_70, d70.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("7.0", val_selecionado_70, pts_70, link_70, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["7.0"] = {
+                    "valor": val_selecionado_70,
+                    "pontos": pts_70,
+                    "link": link_70,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_70 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d70.get("link", "") or "")]
+
+                if link_70 != d70.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = True
+
+                st.toast("Quesito 7.0 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_70 = d70.get("pontos", 0.0)
             cor_txt_70 = "#28a745" if pts_atuais_70 == 50.0 else ("#dc3545" if v_salvo_70 != "Selecione..." else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_70}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.0: {pts_atuais_70:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("7.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 7.0
+    # GATILHO DO MODAL 7.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_7_0_{ano_sel}", False):
         modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = False
-
 
   # =============================================================================
     # QUESITO 7.1 • ABRANGÊNCIA DO PLANCON POR AMEAÇA (100% INDEPENDENTE)
