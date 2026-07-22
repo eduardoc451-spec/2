@@ -194,6 +194,7 @@ def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
                 """, (ano, qid, str(valor), float(pontos), str(link), comentarios_json))
             conn.commit()
         
+        # Limpa o cache do Streamlit para forçar a nova leitura do banco
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
@@ -225,7 +226,7 @@ def modal_aviso_link(qid, links_encontrados):
 # COMPONENTES DE INTERFACE
 # =============================================================================
 def renderizar_questao(qid, res_data):
-    """Renderiza os campos do quesito com validações de links e salvamento manual."""
+    """Renderiza os campos do quesito garantindo leitura atualizada e persistência rápida."""
     dados_q = res_data.get(qid, {})
     val_existente = dados_q.get("valor", "")
     pts_existente = float(dados_q.get("pontos", 0.0))
@@ -256,12 +257,16 @@ def renderizar_questao(qid, res_data):
             )
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                # Preserva o histórico de comentários existente ao salvar a questão isoladamente
+                comentarios_atuais = dados_q.get("comentarios", [])
+                
                 links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
                 save_resp(
                     qid=qid, 
                     valor=novo_valor, 
                     pontos=novos_pontos, 
-                    link=novo_link
+                    link=novo_link,
+                    comentarios=comentarios_atuais
                 )
                 st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
                 if links:
@@ -272,7 +277,7 @@ def renderizar_questao(qid, res_data):
         bloco_comentarios(qid, res_data)
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
-    """Renderiza a caixa de diálogo e controle de status do quesito."""
+    """Renderiza a caixa de diálogo e controle de status do quesito sem conflitos de estado."""
     ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
     
@@ -287,6 +292,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
     dados_questao = res_data.get(questao_id, {})
     historico = list(dados_questao.get("comentarios", []))
     
+    # Descobre o último status definido no histórico
     status_global = "Resolvido"
     for com in historico:
         if isinstance(com, dict) and "status_definido" in com:
@@ -298,32 +304,35 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
         opcoes_status = ["Resolvido", "Pendente"]
         idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
         
-        novo_status_clicado = st.radio(
+        # Função interna disparada ao mudar o radio diretamente (sem loops de renderização)
+        def on_status_change():
+            novo_st = st.session_state[key_radio]
+            if novo_st != status_global:
+                log_mudanca = {
+                    "autor": "Sistema / " + usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": f"ℹ️ Alterou o status do quesito para: **{novo_st.upper()}**.",
+                    "status_definido": novo_st
+                }
+                historico.append(log_mudanca)
+                save_resp(
+                    qid=questao_id,
+                    valor=dados_questao.get("valor", ""),
+                    pontos=dados_questao.get("pontos", 0),
+                    link=dados_questao.get("link", ""),
+                    comentarios=historico
+                )
+
+        st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
             index=idx_status_atual,
             horizontal=True,
-            key=key_radio
+            key=key_radio,
+            on_change=on_status_change
         )
-        
-        # Prevenção de loop: atualiza apenas na interação real do usuário
-        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
-            log_mudanca = {
-                "autor": "Sistema / " + usuario_atual,
-                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
-                "status_definido": novo_status_clicado
-            }
-            historico.append(log_mudanca)
-            save_resp(
-                qid=questao_id,
-                valor=dados_questao.get("valor", ""),
-                pontos=dados_questao.get("pontos", 0),
-                link=dados_questao.get("link", ""),
-                comentarios=historico
-            )
-            st.rerun()
 
+        # Exibição do Histórico
         if historico:
             for idx, com in enumerate(historico):
                 if not isinstance(com, dict):
@@ -362,7 +371,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                         )
                         st.rerun()
         
-        # Limpeza do campo de entrada antes da renderização
+        # Limpeza do campo após salvar texto
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
