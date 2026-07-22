@@ -1,10 +1,15 @@
 import re
-import streamlit as st
-import sqlite3
 import json
+import logging
 from io import BytesIO
 from datetime import datetime, date
-from main import get_connection  # <--- Troque 'database' pelo nome do seu arquivo de conexao
+
+import streamlit as st
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+# Importação da conexão definida no seu main.py
+from main import get_connection  
 
 # =============================================================================
 # BIBLIOTECAS PARA O PDF (ReportLab)
@@ -19,7 +24,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 # =============================================================================
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots
+from plotly.subplots import make_subplots  # Corrigido: removido o 'como' do final
 
 # =============================================================================
 # CONSTANTES GLOBAIS
