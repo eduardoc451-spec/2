@@ -6,8 +6,6 @@ from io import BytesIO
 from datetime import datetime, date
 import psycopg2
 from psycopg2.extras import RealDictCursor
-# Exemplo se as funções de banco estiverem num arquivo separado chamado database.py:
-from database import get_all_years_data, get_connection
 import streamlit as st
 
 # =============================================================================
@@ -140,6 +138,39 @@ def load_respostas(ano: int) -> dict:
         st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
         return {}
 
+@st.cache_data(ttl=60)
+def get_all_years_data() -> dict:
+    """Busca do banco de dados todo o histórico de respostas cadastradas para o i-Gov TI."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT ano, id, valor, pontos, link, comentarios FROM respostas WHERE dimensao = 'igov' OR dimensao IS NULL"
+                )
+                rows = cursor.fetchall()
+                all_data = {}
+                for row in rows:
+                    ano, qid, valor, pontos, link, comentarios = row
+                    if ano not in all_data:
+                        all_data[ano] = {}
+                    
+                    if isinstance(comentarios, str):
+                        try:
+                            comentarios = json.loads(comentarios)
+                        except Exception:
+                            comentarios = []
+
+                    all_data[ano][qid] = {
+                        "valor": valor or "",
+                        "pontos": float(pontos) if pontos is not None else 0.0,
+                        "link": link or "",
+                        "comentarios": comentarios or []
+                    }
+                return all_data
+    except Exception as e:
+        st.error(f"Erro ao carregar histórico do i-Gov TI: {e}")
+        return {}
+
 def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
     """Salva/Atualiza a resposta no banco de dados com UPSERT correto."""
     if comentarios is None:
@@ -194,56 +225,6 @@ def modal_aviso_link(qid, links_encontrados):
 # COMPONENTES DE INTERFACE
 # =============================================================================
 def renderizar_questao(qid, res_data):
-    """Renderiza os campos do quesito e atualiza a pontuação no painel."""
-    dados_q = res_data.get(qid, {})
-    val_existente = dados_q.get("valor", "")
-    pts_existente = float(dados_q.get("pontos", 0.0))
-    link_existente = dados_q.get("link", "")
-    
-    with st.container(border=True):
-        st.markdown(f"#### Quesito: `{qid}`")
-        
-        col_txt, col_meta = st.columns([3, 1])
-        with col_txt:
-            novo_valor = st.text_area(
-                "Resposta / Evidência:", 
-                value=val_existente, 
-                key=f"txt_val_{qid}",
-                height=100
-            )
-            novo_link = st.text_input(
-                "Link da Evidência (opcional):", 
-                value=link_existente, 
-                key=f"txt_link_{qid}"
-            )
-
-        with col_meta:
-            novos_pontos = st.number_input(
-                "Pontuação:", 
-                value=pts_existente, 
-                key=f"num_pts_{qid}"
-            )
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
-                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
-                save_resp(
-                    qid=qid, 
-                    valor=novo_valor, 
-                    pontos=novos_pontos, 
-                    link=novo_link
-                )
-                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
-                if links:
-                    modal_aviso_link(qid, links)
-                else:
-                    st.rerun()  # Recarrega a interface para atualizar a pontuação no painel
-
-        bloco_comentarios(qid, res_data)
-# =============================================================================
-# 4. COMPONENTES DE INTERFACE
-# =============================================================================
-
-def renderizar_questao(qid, res_data):
     """Renderiza os campos do quesito com validações de links e salvamento manual."""
     dados_q = res_data.get(qid, {})
     val_existente = dados_q.get("valor", "")
@@ -285,6 +266,8 @@ def renderizar_questao(qid, res_data):
                 st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
                 if links:
                     modal_aviso_link(qid, links)
+                else:
+                    st.rerun()
 
         bloco_comentarios(qid, res_data)
 
@@ -404,7 +387,6 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 )
                 st.session_state[key_estado_limpar] = True
                 st.rerun()
-
 import os
 from io import BytesIO
 from reportlab.lib import colors
