@@ -3644,92 +3644,103 @@ def mostrar_formulario_cidade():
         modal_aviso_link("7.3.1", st.session_state.get(f"links_pendentes_7_3_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_3_1_{ano_sel}"] = False
     # =============================================================================
-    # QUESITO 7.4 • SISTEMA DE ALARME PARA DESASTRES (100% INDEPENDENTE)
+    # QUESITO 7.4 • SISTEMA DE ALARME PARA DESASTRES
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_7_4_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 7.4 - Dispositivo ou Sistema de Alarme", expanded=True):
             st.subheader("7.4 • Sistema de Alarme")
             st.write("**O Município dispõe de sinal, dispositivo ou sistema de alarme para desastres?**")
             st.caption("ℹ *Objetivo: avisar a população sobre o evento que ESTÁ OCORRENDO.*")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 7.4' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações
             opcoes_74 = {
                 "Selecione...": 0.0,
                 "Sim (50 pts)": 50.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d74 = res_data.get("7.4", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d74 is None: d74 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d74 = res_data.get("7.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_74 = d74.get("valor", "Selecione...")
-            chave_radio_74 = f"r_74_{v_salvo_74}_{ano_sel}"
 
-            def cb_radio_74():
-                val = st.session_state[chave_radio_74]
-                pts = opcoes_74.get(val, 0.0)
-                lnk = st.session_state.get(f"l_74_txt_{ano_sel}", d74.get("link", ""))
-                
-                save_resp("7.4", val, pts, lnk)
-                res_data["7.4"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_74():
-                lnk = st.session_state[f"l_74_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_74, v_salvo_74)
-                pts = opcoes_74.get(val, 0.0)
-                
-                save_resp("7.4", val, pts, lnk)
-                res_data["7.4"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d74.get("link", "") or "")]
-                
-                if lnk != d74.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_7_4_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_7_4_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_74 = f"r_74_{ano_sel}"
+            chave_link_74 = f"l_74_txt_{ano_sel}"
+            chave_coment_74 = f"coment_7.4_{ano_sel}"
 
             col_r74, col_j74 = st.columns([1, 1])
             with col_r74:
                 lista_opcoes_74 = list(opcoes_74.keys())
                 idx_74 = lista_opcoes_74.index(v_salvo_74) if v_salvo_74 in lista_opcoes_74 else 0
-                
+
                 st.radio(
                     "Possui sistema de alarme?",
                     options=lista_opcoes_74,
                     index=idx_74,
                     key=chave_radio_74,
-                    on_change=cb_radio_74,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j74:
                 link_74 = st.text_area(
-                    "Evidência do sistema de alarme (7.4):", 
-                    value=d74.get("link", ""), 
-                    key=f"l_74_txt_{ano_sel}", 
-                    on_change=cb_text_74, 
+                    "Evidência do sistema de alarme (7.4):",
+                    value=d74.get("link", ""),
+                    key=chave_link_74,
+                    placeholder="Descreva o sistema de alarme ou insira os links de comprovação...",
                     height=100
                 )
                 placeholder_links_74 = st.empty()
-                links_74_visuais = [u[0] for u in re.findall(regex_pure_url, link_74 or "")]
+                links_74_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_74 or "")]
                 if links_74_visuais:
-                    placeholder_links_74.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_74_visuais]))
+                    placeholder_links_74.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_74_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("7.4", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 7.4", key=f"btn_salvar_7_4_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_74 = st.session_state.get(chave_radio_74, v_salvo_74)
+                pts_74 = opcoes_74.get(val_selecionado_74, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_74, d74.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("7.4", val_selecionado_74, pts_74, link_74, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["7.4"] = {
+                    "valor": val_selecionado_74,
+                    "pontos": pts_74,
+                    "link": link_74,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_74 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d74.get("link", "") or "")]
+
+                if link_74 != d74.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_4_{ano_sel}"] = True
+
+                st.toast("Quesito 7.4 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_74 = d74.get("pontos", 0.0)
             cor_txt_74 = "#28a745" if pts_atuais_74 == 50.0 else ("#dc3545" if v_salvo_74 != "Selecione..." else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_74}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.4: {pts_atuais_74:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("7.4", res_data, ano_sel)
 
-    # GATILHO DO MODAL 7.4
+    # GATILHO DO MODAL 7.4 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_7_4_{ano_sel}", False):
         modal_aviso_link("7.4", st.session_state.get(f"links_pendentes_7_4_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_4_{ano_sel}"] = False
-
+        
    # =============================================================================
     # QUESITO 7.4.1 • TIPOS DE SISTEMAS DE ALARME (100% INDEPENDENTE)
     # =============================================================================
