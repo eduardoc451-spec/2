@@ -6059,11 +6059,10 @@ def mostrar_formulario_cidade():
     if st.session_state.get(f"gatilho_modal_12_1_3_1_{ano_sel}", False):
         modal_aviso_link("12.1.3.1", st.session_state.get(f"links_pendentes_12_1_3_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_12_1_3_1_{ano_sel}"] = False
+
     # =============================================================================
     # QUESITO 13.0 • MOBILIDADE ATIVA (100% INDEPENDENTE)
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_13_0_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 13.0 - Estímulo à Mobilidade Ativa e Não Motorizada", expanded=True):
             # Cálculo dinâmico seguro do ano anterior
@@ -6071,77 +6070,90 @@ def mostrar_formulario_cidade():
 
             st.subheader("13.0 • Mobilidade Ativa")
             st.write(f"**Foram realizadas ações para estimular a adoção/uso dos meios de transporte não motorizados em {ano_anterior}?**")
-            st.caption("ℹ *Ex: Ciclovias, campanhas de incentivo ao uso de bicicletas, calçadas acessíveis ou caminhadas. Salvamento automático via callbacks.*")
-            
+            st.caption("ℹ *Ex: Ciclovias, campanhas de incentivo ao uso de bicicletas, calçadas acessíveis ou caminhadas. Preencha os campos abaixo e clique no botão 'Salvar Quesito 13.0'.*")
+
             opcoes_130 = ["Selecione...", "Sim", "Não"]
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d130 = res_data.get("13.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d130 is None: d130 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d130 = res_data.get("13.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_130 = d130.get("valor", "Selecione...")
-            chave_radio_130 = f"r_130_{v_salvo_130}_{ano_sel}"
 
-            def cb_radio_130():
-                val = st.session_state[chave_radio_130]
-                pts = 0.0  # Quesito diagnóstico/informativo (0.0 pontos)
-                lnk = st.session_state.get(f"l_130_txt_{ano_sel}", d130.get("link", ""))
-                
-                save_resp("13.0", val, pts, lnk)
-                res_data["13.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_130():
-                lnk = st.session_state[f"l_130_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_130, v_salvo_130)
-                
-                save_resp("13.0", val, 0.0, lnk)
-                res_data["13.0"] = {"valor": val, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d130.get("link", "") or "")]
-                
-                if lnk != d130.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_13_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_130 = f"r_130_{ano_sel}"
+            chave_link_130 = f"l_130_txt_{ano_sel}"
+            chave_coment_130 = f"coment_13.0_{ano_sel}"
 
             col_r130, col_j130 = st.columns([1, 1])
             with col_r130:
                 idx_130 = opcoes_130.index(v_salvo_130) if v_salvo_130 in opcoes_130 else 0
-                
+
                 st.radio(
                     "Realizou ações?",
                     options=opcoes_130,
                     index=idx_130,
                     key=chave_radio_130,
-                    on_change=cb_radio_130,
                     label_visibility="collapsed"
                 )
-                
+
                 st.markdown("<div style='padding-top: 5px;'></div>", unsafe_allow_html=True)
                 if v_salvo_130 == "Sim":
                     st.success(f"🚲 Ações de incentivo e infraestrutura de mobilidade ativa registradas para o ano de {ano_anterior}.")
                 elif v_salvo_130 == "Não":
                     st.info(f"ℹ️ Sem registros de ações específicas ou investimentos em transportes não motorizados em {ano_anterior}.")
-                
+
             with col_j130:
                 link_130 = st.text_area(
-                    f"Descrição/Evidências {ano_anterior} (13.0):", 
-                    value=d130.get("link", ""), 
-                    key=f"l_130_txt_{ano_sel}", 
-                    on_change=cb_text_130, 
+                    f"Descrição/Evidências {ano_anterior} (13.0):",
+                    value=d130.get("link", ""),
+                    key=chave_link_130,
                     placeholder="Ex: Link do plano cicloviário, fotos de inauguração de faixas exclusivas, folders de campanhas públicas de conscientização...",
                     height=110
                 )
                 placeholder_links_130 = st.empty()
-                links_130_visuais = [u[0] for u in re.findall(regex_pure_url, link_130 or "")]
+                links_130_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_130 or "")]
                 if links_130_visuais:
-                    placeholder_links_130.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_130_visuais]))
+                    placeholder_links_130.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_130_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 13.0: 0.0 pontos (Diagnóstico Inicial)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("13.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 13.0
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 13.0", key=f"btn_salvar_13_0_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_130 = st.session_state.get(chave_radio_130, v_salvo_130)
+                pts_130 = 0.0  # Quesito diagnóstico / informativo
+                comentario_para_salvar = st.session_state.get(chave_coment_130, d130.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("13.0", val_selecionado_130, pts_130, link_130, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["13.0"] = {
+                    "valor": val_selecionado_130,
+                    "pontos": pts_130,
+                    "link": link_130,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_130 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d130.get("link", "") or "")]
+
+                if link_130 != d130.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = True
+
+                st.toast("Quesito 13.0 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 13.0: 0.0 pontos (Diagnóstico Inicial)</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 13.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_13_0_{ano_sel}", False):
         modal_aviso_link("13.0", st.session_state.get(f"links_pendentes_13_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = False
