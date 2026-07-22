@@ -4,6 +4,7 @@ import sqlite3
 import json
 from io import BytesIO
 from datetime import datetime, date
+from main import get_connection  # <--- Troque 'database' pelo nome do seu arquivo de conexao
 
 # =============================================================================
 # BIBLIOTECAS PARA O PDF (ReportLab)
