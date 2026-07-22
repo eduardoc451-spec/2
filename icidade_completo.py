@@ -1912,22 +1912,15 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 3.1 • AÇÕES REALIZADAS (100% INDEPENDENTE)
+    # QUESITO 3.1 • AÇÕES REALIZADAS
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_3_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 3.1 - Ações Realizadas para Participação da Sociedade", expanded=True):
+        with st.expander("📌 Quesito 3.1 - Ações Realizadas para Participação da Sociedade", expanded=True):
             st.subheader("3.1 • Ações Realizadas")
             st.write("**Assinale quais ações foram realizadas:**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Recupera o estado salvo no dicionário de dados
-            d31 = res_data.get("3.1", {"valor": "[]", "pontos": 0.0, "link": ""})
-            if d31 is None: d31 = {"valor": "[]", "pontos": 0.0, "link": ""}
-            
-            valor_salvo_31 = d31.get("valor", "[]")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.1' para registrar.*")
+
+            # Lista de opções disponíveis para o quesito
             opcoes_31 = [
                 "Workshop / Palestra",
                 "Reunião",
@@ -1938,63 +1931,85 @@ def mostrar_formulario_cidade():
                 "Outros"
             ]
 
-            def cb_checkbox_31():
-                # Coleta dinamicamente todas as opções marcadas na tela usando o session_state
-                selecionados_31 = []
-                for opcao in opcoes_31:
-                    if st.session_state.get(f"chk_31_{opcao}_{ano_sel}", False):
-                        selecionados_31.append(opcao)
-                
-                pts = 0.0  # Quesito informativo/textual, pontuação fixa em 0.0
-                lnk = st.session_state.get(f"l_31_txt_{ano_sel}", d31.get("link", ""))
-                val_str = str(selecionados_31)
-                
-                save_resp("3.1", val_str, pts, lnk)
-                res_data["3.1"] = {"valor": val_str, "pontos": pts, "link": lnk}
+            # Estado inicial / persistente
+            d31 = res_data.get("3.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+            valor_salvo_31 = d31.get("valor", "[]")
 
-            def cb_text_31():
-                lnk = st.session_state[f"l_31_txt_{ano_sel}"]
-                
-                # Reconstrói os selecionados para persistência correta do estado do texto
-                selecionados_31 = []
-                for opcao in opcoes_31:
-                    if st.session_state.get(f"chk_31_{opcao}_{ano_sel}", opcao in valor_salvo_31):
-                        selecionados_31.append(opcao)
-                        
-                val_str = str(selecionados_31)
-                save_resp("3.1", val_str, 0.0, lnk)
-                res_data["3.1"] = {"valor": val_str, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d31.get("link", "") or "")]
-                
-                if lnk != d31.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_link_31 = f"l_31_txt_{ano_sel}"
+            chave_coment_31 = f"coment_3.1_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             c31_1, c31_2 = st.columns([1, 1])
             with c31_1:
-                # Renderiza cada checkbox mapeado com sua respectiva chave e callback assíncrono
+                # Dicionário dinâmico para capturar as seleções diretamente da interface
+                checks_31 = {}
                 for opcao in opcoes_31:
-                    st.checkbox(
+                    checks_31[opcao] = st.checkbox(
                         opcao,
                         value=opcao in valor_salvo_31,
-                        key=f"chk_31_{opcao}_{ano_sel}",
-                        on_change=cb_checkbox_31
+                        key=f"chk_31_{opcao}_{ano_sel}"
                     )
-                
-            with c31_2:
-                link_31 = st.text_area("Evidências das ações (3.1):", value=d31.get("link", ""), key=f"l_31_txt_{ano_sel}", on_change=cb_text_31, height=210)
-                placeholder_links_31 = st.empty()
-                links_31_visuais = [u[0] for u in re.findall(regex_pure_url, link_31 or "")]
-                if links_31_visuais:
-                    placeholder_links_31.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_31_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 3.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            with c31_2:
+                link_31 = st.text_area(
+                    "Evidências das ações (3.1):",
+                    value=d31.get("link", ""),
+                    key=chave_link_31,
+                    height=210,
+                    placeholder="Cole os links das evidências aqui..."
+                )
+                placeholder_links_31 = st.empty()
+                links_31_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_31 or "")]
+                if links_31_visuais:
+                    placeholder_links_31.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_31_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("3.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 3.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.1", key=f"btn_salvar_3_1_{ano_sel}", type="primary"):
+                # Coleta todas as opções marcadas
+                selecionados_31 = [op for op, marcou in checks_31.items() if marcou]
+                val_str_31 = str(selecionados_31)
+                pts_31 = 0.0  # Quesito informativo/textual, pontuação fixa em 0.0
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_31, d31.get("comentario", ""))
+
+                # 2. Salva no banco/backend
+                save_resp("3.1", val_str_31, pts_31, link_31, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["3.1"] = {
+                    "valor": val_str_31,
+                    "pontos": pts_31,
+                    "link": link_31,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_31 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d31.get("link", "") or "")]
+
+                if link_31 != d31.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 3.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            st.markdown(
+                "<span style='color:#28a745; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 3.1: 0.0 pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
         modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
