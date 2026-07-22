@@ -1806,81 +1806,107 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = False
     
     # =============================================================================
-    # QUESITO 3.0 • PARTICIPAÇÃO DA SOCIEDADE CIVIL (100% INDEPENDENTE)
+    # QUESITO 3.0 • PARTICIPAÇÃO DA SOCIEDADE CIVIL
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_3_0_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 3.0 - Participação da Sociedade Civil e Entidades", expanded=True):
+        with st.expander("📌 Quesito 3.0 - Participação da Sociedade Civil e Entidades", expanded=True):
             st.subheader("3.0 • Sociedade Civil e Entidades")
-            st.write("**O Município realiza ações para estabelecer a participação de entidades privadas, associações de voluntários, clubes de serviços, organizações não governamentais e associações de classe e comunitárias nas ações de proteção e defesa civil?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.write(
+                "**O Município realiza ações para estabelecer a participação de entidades privadas, "
+                "associações de voluntários, clubes de serviços, organizações não governamentais e "
+                "associações de classe e comunitárias nas ações de proteção e defesa civil?**"
+            )
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.0' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações do quesito 3.0
             opcoes_30 = {
                 "Selecione...": 0.0,
                 "Sim – 10 pts": 10.0,
                 "Não – 00 pts": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados
-            d30 = res_data.get("3.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d30 is None: d30 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Estado inicial / persistente
+            d30 = res_data.get("3.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_30 = d30.get("valor", "Selecione...")
-            chave_radio_30 = f"r_30_{v_salvo_30}_{ano_sel}"
 
-            def cb_radio_30():
-                val = st.session_state[chave_radio_30]
-                pts = opcoes_30.get(val, 0.0)
-                lnk = st.session_state.get(f"l_30_txt_{ano_sel}", d30.get("link", ""))
-                
-                save_resp("3.0", val, pts, lnk)
-                res_data["3.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_30():
-                lnk = st.session_state[f"l_30_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_30, v_salvo_30)
-                pts = opcoes_30.get(val, 0.0)
-                
-                save_resp("3.0", val, pts, lnk)
-                res_data["3.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d30.get("link", "") or "")]
-                
-                if lnk != d30.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_3_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_radio_30 = f"r_30_{ano_sel}"
+            chave_link_30 = f"l_30_txt_{ano_sel}"
+            chave_coment_30 = f"coment_3.0_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             c30_1, c30_2 = st.columns([1, 1])
             with c30_1:
                 lista_opcoes_30 = list(opcoes_30.keys())
                 idx_30 = lista_opcoes_30.index(v_salvo_30) if v_salvo_30 in lista_opcoes_30 else 0
-                
-                st.radio(
+
+                val_radio_30 = st.radio(
                     "Escolha 3.0:",
                     options=lista_opcoes_30,
                     index=idx_30,
                     key=chave_radio_30,
-                    on_change=cb_radio_30,
                     label_visibility="collapsed"
                 )
-                
-            with c30_2:
-                link_30 = st.text_area("Evidência 3.0:", value=d30.get("link", ""), key=f"l_30_txt_{ano_sel}", on_change=cb_text_30, height=100)
-                placeholder_links_30 = st.empty()
-                links_30_visuais = [u[0] for u in re.findall(regex_pure_url, link_30 or "")]
-                if links_30_visuais:
-                    placeholder_links_30.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_30_visuais]))
 
-            pts_atuais_30 = d30.get("pontos", 0.0)
-            cor_txt_30 = "#28a745" if pts_atuais_30 == 10.0 else ("#dc3545" if v_salvo_30 != "Selecione..." else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_30}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 3.0: {pts_atuais_30:.1f} pontos</span>", unsafe_allow_html=True)
+            with c30_2:
+                link_30 = st.text_area(
+                    "Evidência 3.0:",
+                    value=d30.get("link", ""),
+                    key=chave_link_30,
+                    height=100,
+                    placeholder="Cole o link de comprovantes ou atas aqui..."
+                )
+                placeholder_links_30 = st.empty()
+                links_30_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_30 or "")]
+                if links_30_visuais:
+                    placeholder_links_30.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_30_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("3.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 3.0
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.0", key=f"btn_salvar_3_0_{ano_sel}", type="primary"):
+                # Cálculo da pontuação
+                pts_30 = opcoes_30.get(val_radio_30, 0.0)
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_30, d30.get("comentario", ""))
+
+                # 2. Salva no banco/backend
+                save_resp("3.0", val_radio_30, pts_30, link_30, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["3.0"] = {
+                    "valor": val_radio_30,
+                    "pontos": pts_30,
+                    "link": link_30,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_30 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d30.get("link", "") or "")]
+
+                if link_30 != d30.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 3.0 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_30 = d30.get("pontos", 0.0)
+            cor_txt_30 = "#28a745" if pts_atuais_30 == 10.0 else ("#dc3545" if v_salvo_30 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_30}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.0: {pts_atuais_30:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_3_0_{ano_sel}", False):
         modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
