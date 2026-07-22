@@ -3941,16 +3941,14 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_7_5_{ano_sel}"] = False
         
 # =============================================================================
-    # QUESITO 7.6 • FORNECEDORES DE AJUDA HUMANITÁRIA (100% INDEPENDENTE)
+    # QUESITO 7.6 • FORNECEDORES DE AJUDA HUMANITÁRIA
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_7_6_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 7.6 - Cadastro de Fornecedores de Ajuda Humanitária", expanded=True):
             st.subheader("7.6 • Lista de Fornecedores")
             st.write("**O Município possui cadastro da lista de fornecedores para coleta e distribuição de suprimentos de ajuda humanitária para o caso de desastre?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 7.6' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações progressivas
             opcoes_76 = {
                 "Selecione...": 0.0,
@@ -3958,71 +3956,84 @@ def mostrar_formulario_cidade():
                 "Sim, mas não está atualizado (03 pts)": 3.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d76 = res_data.get("7.6", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d76 is None: d76 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d76 = res_data.get("7.6") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_76 = d76.get("valor", "Selecione...")
-            chave_radio_76 = f"r_76_{v_salvo_76}_{ano_sel}"
 
-            def cb_radio_76():
-                val = st.session_state[chave_radio_76]
-                pts = opcoes_76.get(val, 0.0)
-                lnk = st.session_state.get(f"l_76_txt_{ano_sel}", d76.get("link", ""))
-                
-                save_resp("7.6", val, pts, lnk)
-                res_data["7.6"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_76():
-                lnk = st.session_state[f"l_76_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_76, v_salvo_76)
-                pts = opcoes_76.get(val, 0.0)
-                
-                save_resp("7.6", val, pts, lnk)
-                res_data["7.6"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d76.get("link", "") or "")]
-                
-                if lnk != d76.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_7_6_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_7_6_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_76 = f"r_76_{ano_sel}"
+            chave_link_76 = f"l_76_txt_{ano_sel}"
+            chave_coment_76 = f"coment_7.6_{ano_sel}"
 
             col_r76, col_j76 = st.columns([1, 1])
             with col_r76:
                 lista_opcoes_76 = list(opcoes_76.keys())
                 idx_76 = lista_opcoes_76.index(v_salvo_76) if v_salvo_76 in lista_opcoes_76 else 0
-                
+
                 st.radio(
                     "Lista de Fornecedores:",
                     options=lista_opcoes_76,
                     index=idx_76,
                     key=chave_radio_76,
-                    on_change=cb_radio_76,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j76:
                 link_76 = st.text_area(
-                    "Evidência da lista/cadastro (7.6):", 
-                    value=d76.get("link", ""), 
-                    key=f"l_76_txt_{ano_sel}", 
-                    on_change=cb_text_76, 
+                    "Evidência da lista/cadastro (7.6):",
+                    value=d76.get("link", ""),
+                    key=chave_link_76,
+                    placeholder="Descreva as evidências ou insira os links de comprovação do cadastro de fornecedores...",
                     height=135
                 )
                 placeholder_links_76 = st.empty()
-                links_76_visuais = [u[0] for u in re.findall(regex_pure_url, link_76 or "")]
+                links_76_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_76 or "")]
                 if links_76_visuais:
-                    placeholder_links_76.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_76_visuais]))
+                    placeholder_links_76.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_76_visuais]))
 
+            # Renderiza o bloco de comentários
+            bloco_comentarios("7.6", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 7.6", key=f"btn_salvar_7_6_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_76 = st.session_state.get(chave_radio_76, v_salvo_76)
+                pts_76 = opcoes_76.get(val_selecionado_76, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_76, d76.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("7.6", val_selecionado_76, pts_76, link_76, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["7.6"] = {
+                    "valor": val_selecionado_76,
+                    "pontos": pts_76,
+                    "link": link_76,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_76 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d76.get("link", "") or "")]
+
+                if link_76 != d76.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_6_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_6_{ano_sel}"] = True
+
+                st.toast("Quesito 7.6 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
             pts_atuais_76 = d76.get("pontos", 0.0)
             cor_txt_76 = "#28a745" if pts_atuais_76 > 0.0 else ("#dc3545" if v_salvo_76 == "Não (00 pts)" else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_76}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.6: +{pts_atuais_76:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("7.6", res_data, ano_sel)
 
-    # GATILHO DO MODAL 7.6
+    # GATILHO DO MODAL 7.6 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_7_6_{ano_sel}", False):
         modal_aviso_link("7.6", st.session_state.get(f"links_pendentes_7_6_{ano_sel}", []))
         st.session_state[f"gatilho_modal_7_6_{ano_sel}"] = False
