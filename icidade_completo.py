@@ -2232,22 +2232,18 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 4.1 • AMEAÇAS IDENTIFICADAS NA CARTA GEOTÉCNICA (100% INDEPENDENTE)
+    # QUESITO 4.1 • AMEAÇAS IDENTIFICADAS NA CARTA GEOTÉCNICA
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_4_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 4.1 - Ameaças Potenciais da Carta Geotécnica", expanded=True):
+        with st.expander("📌 Quesito 4.1 - Ameaças Potenciais da Carta Geotécnica", expanded=True):
             st.subheader("4.1 • Ameaças Potenciais")
             st.write("**Assinale quais os tipos de ameaças potenciais identificadas na Carta Geotécnica:**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 4.1' para registrar.*")
+
             # Recupera o estado salvo no dicionário de dados
-            d41 = res_data.get("4.1", {"valor": "[]", "pontos": 0.0, "link": ""})
-            if d41 is None: d41 = {"valor": "[]", "pontos": 0.0, "link": ""}
-            
+            d41 = res_data.get("4.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
             valor_salvo_41 = d41.get("valor", "[]")
-            
+
             ameacas_cobrade = [
                 "Riscos Geológicos", 
                 "Riscos Hidrológicos", 
@@ -2257,63 +2253,84 @@ def mostrar_formulario_cidade():
                 "Riscos Tecnológicos"
             ]
 
-            def cb_checkbox_41():
-                # Coleta as opções marcadas dinamicamente usando as chaves de estado do session_state
-                selecionados_41 = []
-                for ameaca in ameacas_cobrade:
-                    if st.session_state.get(f"chk_41_{ameaca}_{ano_sel}", False):
-                        selecionados_41.append(ameaca)
-                
-                pts = 0.0  # Quesito estrutural/informativo
-                lnk = st.session_state.get(f"l_41_txt_{ano_sel}", d41.get("link", ""))
-                val_str = str(selecionados_41)
-                
-                save_resp("4.1", val_str, pts, lnk)
-                res_data["4.1"] = {"valor": val_str, "pontos": pts, "link": lnk}
-
-            def cb_text_41():
-                lnk = st.session_state[f"l_41_txt_{ano_sel}"]
-                
-                # Reconstrói a lista para garantir a integridade textual no dicionário local
-                selecionados_41 = []
-                for ameaca in ameacas_cobrade:
-                    if st.session_state.get(f"chk_41_{ameaca}_{ano_sel}", ameaca in valor_salvo_41):
-                        selecionados_41.append(ameaca)
-                        
-                val_str = str(selecionados_41)
-                save_resp("4.1", val_str, 0.0, lnk)
-                res_data["4.1"] = {"valor": val_str, "pontos": 0.0, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d41.get("link", "") or "")]
-                
-                if lnk != d41.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_4_1_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = True
+            # Chaves fixas para os componentes
+            chave_link_41 = f"l_41_txt_{ano_sel}"
+            chave_coment_41 = f"coment_4.1_{ano_sel}"  # Chave padrão da função bloco_comentarios
 
             col_c41, col_j41 = st.columns([1, 1])
+            
             with col_c41:
-                # Renderização assíncrona baseada nos checkboxes individuais mapeados
+                # Exibe os checkboxes usando o estado salvo anteriormente
                 for ameaca in ameacas_cobrade:
                     st.checkbox(
                         ameaca,
                         value=ameaca in valor_salvo_41,
-                        key=f"chk_41_{ameaca}_{ano_sel}",
-                        on_change=cb_checkbox_41
+                        key=f"chk_41_{ameaca}_{ano_sel}"
                     )
-                
-            with col_j41:
-                link_41 = st.text_area("Justificativa (4.1):", value=d41.get("link", ""), key=f"l_41_txt_{ano_sel}", on_change=cb_text_41, height=185)
-                placeholder_links_41 = st.empty()
-                links_41_visuais = [u[0] for u in re.findall(regex_pure_url, link_41 or "")]
-                if links_41_visuais:
-                    placeholder_links_41.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_41_visuais]))
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 4.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            with col_j41:
+                link_41 = st.text_area(
+                    "Evidência / Justificativa (4.1):",
+                    value=d41.get("link", ""),
+                    key=chave_link_41,
+                    height=185,
+                    placeholder="Cole os links de evidência ou observações aqui..."
+                )
+                placeholder_links_41 = st.empty()
+                links_41_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_41 or "")]
+                if links_41_visuais:
+                    placeholder_links_41.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_41_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("4.1", res_data, ano_sel)
 
-    # GATILHO DO MODAL 4.1
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 4.1", key=f"btn_salvar_4_1_{ano_sel}", type="primary"):
+                # 1. Coleta os checkboxes marcados no momento do clique
+                selecionados_41 = [
+                    ameaca for ameaca in ameacas_cobrade
+                    if st.session_state.get(f"chk_41_{ameaca}_{ano_sel}", False)
+                ]
+                val_str_41 = str(selecionados_41)
+                pts_41 = 0.0  # Quesito estritamente informativo
+
+                # 2. Captura o comentário atual do session_state
+                comentario_para_salvar = st.session_state.get(chave_coment_41, d41.get("comentario", ""))
+
+                # 3. Persiste no banco de dados / backend
+                save_resp("4.1", val_str_41, pts_41, link_41, comentario_para_salvar)
+
+                # 4. Atualiza o estado local res_data
+                res_data["4.1"] = {
+                    "valor": val_str_41,
+                    "pontos": pts_41,
+                    "link": link_41,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 5. Processamento e validação de links para disparo de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_41 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d41.get("link", "") or "")]
+
+                if link_41 != d41.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_4_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = True
+
+                st.toast("Opções e comentários do Quesito 4.1 salvos com sucesso!", icon="✅")
+
+                # 6. Força o recarregamento da interface
+                st.rerun()
+
+            # Exibição de pontuação informativa
+            st.markdown(
+                "<span style='color:#28a745; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 4.1: 0.0 pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 4.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_4_1_{ano_sel}", False):
         modal_aviso_link("4.1", st.session_state.get(f"links_pendentes_4_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = False
