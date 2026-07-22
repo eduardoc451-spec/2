@@ -2336,82 +2336,104 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 4.2 • CARTA GEOTÉCNICA NO PLANO DIRETOR (100% INDEPENDENTE)
+    # QUESITO 4.2 • CARTA GEOTÉCNICA NO PLANO DIRETOR
     # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_4_2_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 4.2 - Carta Geotécnica no Plano Diretor", expanded=True):
+        with st.expander("📌 Quesito 4.2 - Carta Geotécnica no Plano Diretor", expanded=True):
             st.subheader("4.2 • Plano Diretor")
             st.write("**A Carta Geotécnica de Suscetibilidade, Aptidão à Urbanização e Risco consta no Plano Diretor?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
-            # Mapeamento oficial de opções e pontuações (incluindo pontuação negativa)
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 4.2' para registrar.*")
+
+            # Mapeamento oficial de opções e pontuações
             opcoes_42 = {
                 "Selecione...": 0.0,
                 "Sim (00 pts)": 0.0,
                 "Não (-50 pts)": -50.0,
                 "Não se aplica o Plano Diretor (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados
-            d42 = res_data.get("4.2", {"valor": "Selecione...", "pontos": -50.0, "link": ""})
-            if d42 is None: d42 = {"valor": "Selecione...", "pontos": -50.0, "link": ""}
-            
+
+            # Estado inicial / persistente
+            d42 = res_data.get("4.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_42 = d42.get("valor", "Selecione...")
-            chave_radio_42 = f"r_42_{v_salvo_42}_{ano_sel}"
 
-            def cb_radio_42():
-                val = st.session_state[chave_radio_42]
-                pts = opcoes_42.get(val, 0.0)
-                lnk = st.session_state.get(f"l_42_txt_{ano_sel}", d42.get("link", ""))
-                
-                save_resp("4.2", val, pts, lnk)
-                res_data["4.2"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_42():
-                lnk = st.session_state[f"l_42_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_42, v_salvo_42)
-                pts = opcoes_42.get(val, 0.0)
-                
-                save_resp("4.2", val, pts, lnk)
-                res_data["4.2"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d42.get("link", "") or "")]
-                
-                if lnk != d42.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_4_2_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = True
+            # Chaves fixas por componente e ano
+            chave_radio_42 = f"r_42_{ano_sel}"
+            chave_link_42 = f"l_42_txt_{ano_sel}"
+            chave_coment_42 = f"coment_4.2_{ano_sel}"  # Chave padrão utilizada pela função bloco_comentarios
 
             col_r42, col_j42 = st.columns([1, 1])
             with col_r42:
                 lista_opcoes_42 = list(opcoes_42.keys())
                 idx_42 = lista_opcoes_42.index(v_salvo_42) if v_salvo_42 in lista_opcoes_42 else 0
-                
-                st.radio(
+
+                val_radio_42 = st.radio(
                     "Situação:",
                     options=lista_opcoes_42,
                     index=idx_42,
                     key=chave_radio_42,
-                    on_change=cb_radio_42,
                     label_visibility="collapsed"
                 )
-                
-            with col_j42:
-                link_42 = st.text_area("Evidência (4.2):", value=d42.get("link", ""), key=f"l_42_txt_{ano_sel}", on_change=cb_text_42, height=135)
-                placeholder_links_42 = st.empty()
-                links_42_visuais = [u[0] for u in re.findall(regex_pure_url, link_42 or "")]
-                if links_42_visuais:
-                    placeholder_links_42.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_42_visuais]))
 
-            pts_atuais_42 = d42.get("pontos", 0.0)
-            cor_txt_42 = "#28a745" if pts_atuais_42 == 0.0 and v_salvo_42 != "Selecione..." else ("#dc3545" if pts_atuais_42 < 0.0 else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_42}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 4.2: {pts_atuais_42:.1f} pontos</span>", unsafe_allow_html=True)
+            with col_j42:
+                link_42 = st.text_area(
+                    "Evidência (4.2):",
+                    value=d42.get("link", ""),
+                    key=chave_link_42,
+                    height=135,
+                    placeholder="Cole o link do documento, lei do Plano Diretor ou comprovante aqui..."
+                )
+                placeholder_links_42 = st.empty()
+                links_42_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_42 or "")]
+                if links_42_visuais:
+                    placeholder_links_42.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_42_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
             bloco_comentarios("4.2", res_data, ano_sel)
 
-    # GATILHO DO MODAL 4.2
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 4.2", key=f"btn_salvar_4_2_{ano_sel}", type="primary"):
+                # Cálculo da pontuação com base no dicionário de opções
+                pts_42 = opcoes_42.get(val_radio_42, 0.0)
+
+                # 1. Captura o comentário atual do session_state
+                comentario_para_salvar = st.session_state.get(chave_coment_42, d42.get("comentario", ""))
+
+                # 2. Salva no banco de dados / backend
+                save_resp("4.2", val_radio_42, pts_42, link_42, comentario_para_salvar)
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["4.2"] = {
+                    "valor": val_radio_42,
+                    "pontos": pts_42,
+                    "link": link_42,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Processamento e validação de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_42 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d42.get("link", "") or "")]
+
+                if link_42 != d42.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_4_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 4.2 salvos com sucesso!", icon="✅")
+
+                # 5. Força o recarregamento da interface para atualizar métricas globais
+                st.rerun()
+
+            # Exibição do impacto da pontuação
+            pts_atuais_42 = d42.get("pontos", 0.0)
+            cor_txt_42 = "#28a745" if pts_atuais_42 == 0.0 and v_salvo_42 != "Selecione..." else ("#dc3545" if pts_atuais_42 < 0.0 else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_42}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 4.2: {pts_atuais_42:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 4.2 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_4_2_{ano_sel}", False):
         modal_aviso_link("4.2", st.session_state.get(f"links_pendentes_4_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = False
