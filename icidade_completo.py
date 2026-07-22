@@ -4105,89 +4105,99 @@ def mostrar_formulario_cidade():
             st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.7: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
 
 
+   # =============================================================================
+    # QUESITO 8.0 • CANAL DE ATENDIMENTO DE EMERGÊNCIA
     # =============================================================================
-    # QUESITO 8.0 • CANAL DE ATENDIMENTO DE EMERGÊNCIA (100% INDEPENDENTE)
-    # =============================================================================
-    regex_pure_url = r'((https?://[^\s<>"]+))'
-
     with st.container(key=f"container_bloco_compdec_8_0_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 8.0 - Canal de Atendimento de Emergência", expanded=True):
             st.subheader("8.0 • Canal de Emergência")
             st.write("**O Município possui um canal de atendimento de emergência à população para registro de ocorrências de desastres?**")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-            
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.0' para registrar.*")
+
             # Mapeamento oficial de opções e pontuações
             opcoes_80 = {
                 "Selecione...": 0.0,
                 "Sim (50 pts)": 50.0,
                 "Não (00 pts)": 0.0
             }
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d80 = res_data.get("8.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d80 is None: d80 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-            
+
+            # Recupera o estado salvo no dicionário de dados
+            d80 = res_data.get("8.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_80 = d80.get("valor", "Selecione...")
-            chave_radio_80 = f"r_80_{v_salvo_80}_{ano_sel}"
 
-            def cb_radio_80():
-                val = st.session_state[chave_radio_80]
-                pts = opcoes_80.get(val, 0.0)
-                lnk = st.session_state.get(f"l_80_txt_{ano_sel}", d80.get("link", ""))
-                
-                save_resp("8.0", val, pts, lnk)
-                res_data["8.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-            def cb_text_80():
-                lnk = st.session_state[f"l_80_txt_{ano_sel}"]
-                val = st.session_state.get(chave_radio_80, v_salvo_80)
-                pts = opcoes_80.get(val, 0.0)
-                
-                save_resp("8.0", val, pts, lnk)
-                res_data["8.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, d80.get("link", "") or "")]
-                
-                if lnk != d80.get("link", "") and links_atuais:
-                    if links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_8_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = True
+            # Chaves fixas para os componentes do Streamlit
+            chave_radio_80 = f"r_80_{ano_sel}"
+            chave_link_80 = f"l_80_txt_{ano_sel}"
+            chave_coment_80 = f"coment_8.0_{ano_sel}"
 
             col_r80, col_j80 = st.columns([1, 1])
             with col_r80:
                 lista_opcoes_80 = list(opcoes_80.keys())
                 idx_80 = lista_opcoes_80.index(v_salvo_80) if v_salvo_80 in lista_opcoes_80 else 0
-                
+
                 st.radio(
                     "Possui canal de emergência?",
                     options=lista_opcoes_80,
                     index=idx_80,
                     key=chave_radio_80,
-                    on_change=cb_radio_80,
                     label_visibility="collapsed"
                 )
-                
+
             with col_j80:
                 link_80 = st.text_area(
-                    "Descrição/Evidência do Canal (8.0):", 
-                    value=d80.get("link", ""), 
-                    key=f"l_80_txt_{ano_sel}", 
-                    on_change=cb_text_80, 
+                    "Descrição/Evidência do Canal (8.0):",
+                    value=d80.get("link", ""),
+                    key=chave_link_80,
                     placeholder="Ex: Telefone 199, WhatsApp oficial, Site de chamados...",
                     height=100
                 )
                 placeholder_links_80 = st.empty()
-                links_80_visuais = [u[0] for u in re.findall(regex_pure_url, link_80 or "")]
+                links_80_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_80 or "")]
                 if links_80_visuais:
-                    placeholder_links_80.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_80_visuais]))
+                    placeholder_links_80.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_80_visuais]))
 
-            pts_atuais_80 = d80.get("pontos", 0.0)
-            cor_txt_80 = "#28a745" if pts_atuais_80 == 50.0 else ("#dc3545" if v_salvo_80 != "Selecione..." else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_80}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.0: {pts_atuais_80:.1f} pontos</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("8.0", res_data, ano_sel)
 
-    # GATILHO DO MODAL 8.0
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.0", key=f"btn_salvar_8_0_{ano_sel}", type="primary"):
+                # 1. Coleta os dados dos campos do Streamlit
+                val_selecionado_80 = st.session_state.get(chave_radio_80, v_salvo_80)
+                pts_80 = opcoes_80.get(val_selecionado_80, 0.0)
+                comentario_para_salvar = st.session_state.get(chave_coment_80, d80.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("8.0", val_selecionado_80, pts_80, link_80, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["8.0"] = {
+                    "valor": val_selecionado_80,
+                    "pontos": pts_80,
+                    "link": link_80,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação e verificação de alteração de links para disparo do modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_80 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d80.get("link", "") or "")]
+
+                if link_80 != d80.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = True
+
+                st.toast("Quesito 8.0 salvo com sucesso!", icon="✅")
+
+                # 5. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            pts_atuais_80 = d80.get("pontos", 0.0)
+            cor_txt_80 = "#28a745" if pts_atuais_80 == 50.0 else ("#dc3545" if v_salvo_80 != "Selecione..." else "#6c757d")
+            st.markdown(f"<span style='color:{cor_txt_80}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.0: +{pts_atuais_80:.1f} pontos</span>", unsafe_allow_html=True)
+
+    # GATILHO DO MODAL 8.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_8_0_{ano_sel}", False):
         modal_aviso_link("8.0", st.session_state.get(f"links_pendentes_8_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = False
