@@ -4039,29 +4039,22 @@ def mostrar_formulario_cidade():
         st.session_state[f"gatilho_modal_7_6_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 7.7 • DATA DA ÚLTIMA ATUALIZAÇÃO DO PLANCON (100% INDEPENDENTE)
+    # QUESITO 7.7 • DATA DA ÚLTIMA ATUALIZAÇÃO DO PLANCON
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_7_7_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 7.7 - Data da Última Atualização do PLANCON", expanded=True):
             st.subheader("7.7 • Vigência do PLANCON")
             st.write("**Qual a data da última atualização do PLANCON?**")
             st.caption("ℹ *Se não houve atualização, informar a data do início da vigência.*")
-            st.caption("ℹ *Salvamento automático por callbacks nativos de estado.*")
-            
-            # Recupera o estado salvo no dicionário de dados históricos
-            d77 = res_data.get("7.7", {"valor": "", "pontos": 0.0, "link": ""})
-            if d77 is None: d77 = {"valor": "", "pontos": 0.0, "link": ""}
-            
-            valor_salvo_77 = d77.get("valor", "")
-            chave_texto_77 = f"q77_date_txt_{ano_sel}"
+            st.caption("ℹ *Preencha o campo abaixo e clique no botão 'Salvar Quesito 7.7' para registrar.*")
 
-            def cb_text_77():
-                dat_val = st.session_state[chave_texto_77]
-                pts = 0.0  # Quesito cronológico / informativo
-                lnk = d77.get("link", "")
-                
-                save_resp("7.7", dat_val, pts, lnk)
-                res_data["7.7"] = {"valor": dat_val, "pontos": pts, "link": lnk}
+            # Recupera o estado salvo no dicionário de dados
+            d77 = res_data.get("7.7") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+            valor_salvo_77 = d77.get("valor", "")
+
+            # Chaves fixas para os componentes do Streamlit
+            chave_texto_77 = f"q77_date_txt_{ano_sel}"
+            chave_coment_77 = f"coment_7.7_{ano_sel}"
 
             col_r77, col_j77 = st.columns([1, 1])
             with col_r77:
@@ -4069,20 +4062,47 @@ def mostrar_formulario_cidade():
                     "Data de Atualização/Vigência (DD/MM/AAAA):",
                     value=valor_salvo_77,
                     key=chave_texto_77,
-                    placeholder="Ex: 15/05/2024",
-                    on_change=cb_text_77
+                    placeholder="Ex: 15/05/2024"
                 )
-                
+
             with col_j77:
-                # Espaçamento estético para alinhamento horizontal com a coluna de entrada
                 st.markdown("<div style='padding-top: 28px;'></div>", unsafe_allow_html=True)
                 if valor_salvo_77:
                     st.info(f"📅 Data registrada para análise técnica: **{valor_salvo_77}**")
                 else:
                     st.warning("⚠️ Nenhuma data preenchida ainda.")
 
-            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.7: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
+            # Renderiza o bloco de comentários
             bloco_comentarios("7.7", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 7.7", key=f"btn_salvar_7_7_{ano_sel}", type="primary"):
+                # 1. Coleta os dados do campo do Streamlit
+                dat_val_77 = st.session_state.get(chave_texto_77, valor_salvo_77)
+                pts_77 = 0.0  # Quesito cronológico / informativo
+                lnk_77 = d77.get("link", "")
+                comentario_para_salvar = st.session_state.get(chave_coment_77, d77.get("comentario", ""))
+
+                # 2. Persiste no backend / banco de dados
+                save_resp("7.7", dat_val_77, pts_77, lnk_77, comentario_para_salvar)
+
+                # 3. Atualiza a estrutura no dicionário local res_data
+                res_data["7.7"] = {
+                    "valor": dat_val_77,
+                    "pontos": pts_77,
+                    "link": lnk_77,
+                    "comentario": comentario_para_salvar
+                }
+
+                st.toast("Quesito 7.7 salvo com sucesso!", icon="✅")
+
+                # 4. Força a atualização dos componentes na tela
+                st.rerun()
+
+            # Exibição do status visual do impacto de pontuação
+            st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.7: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
 
 
     # =============================================================================
