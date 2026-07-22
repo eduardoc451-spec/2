@@ -60,25 +60,35 @@ PONTUACOES_MAX = {
 FAIXA_CORES = {"C": "#ef4444", "C+": "#f97316", "B": "#eab308", "B+": "#22c55e", "A": "#16a34a"}
 
 # =============================================================================
-# CONEXÃO OTIMIZADA COM O NEON (POSTGRESQL)
+# CONEXÃO OTIMIZADA E SEGURA COM O NEON (POSTGRESQL)
 # =============================================================================
+import os
+import logging
+import psycopg2
+import streamlit as st
 
-@st.cache_resource
-def init_connection_pool():
-    """Cria um pool de conexões reutilizável para o Neon PostgreSQL."""
+def get_db_url():
+    """Recupera e valida a URL de conexão do Neon."""
     db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
     if not db_url:
         st.error("❌ A variável DATABASE_URL do Neon não foi configurada nos Segredos ou Ambiente!")
         st.stop()
-    return pool.SimpleConnectionPool(1, 10, dsn=db_url)
-
-db_pool = init_connection_pool()
+    
+    # Garante suporte a SSL exigido pelo Neon
+    if "sslmode=require" not in db_url:
+        db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
+        
+    return db_url
 
 class get_connection:
-    """Context manager seguro para obter e devolver conexões ao pool sem estourar exceções."""
+    """Context manager seguro para conexões diretas com o Neon."""
     def __enter__(self):
-        self.conn = db_pool.getconn()
-        return self.conn
+        try:
+            self.conn = psycopg2.connect(get_db_url())
+            return self.conn
+        except Exception as e:
+            logging.error(f"Erro ao conectar com o Neon PostgreSQL: {e}")
+            raise e
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if hasattr(self, "conn") and self.conn:
@@ -91,9 +101,11 @@ class get_connection:
             except Exception as e:
                 logging.error(f"Erro no encerramento da transação: {e}")
             finally:
-                # Devolve a conexão ao pool em vez de fechar
-                db_pool.putconn(self.conn)
-
+                # Fecha a conexão após o uso (deixa o pooler do Neon gerenciar no backend)
+                try:
+                    self.conn.close()
+                except Exception:
+                    pass
 # =============================================================================
 # MODAL DE AVISO AUTOMÁTICO
 # =============================================================================
