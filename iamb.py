@@ -106,176 +106,159 @@ def modal_aviso_link(qid, links_encontrados):
         st.rerun()
 
 # =============================================================================
-# 1. FUNÇÕES DE APOIO E BANCO DE DADOS (IEGM - I-AMB)
+# MODAL DE AVISO AUTOMÁTICO
 # =============================================================================
-import sqlite3
-import json
-import datetime
-import re
-import ast
-import streamlit as st
-
-def get_connection():
-    # Conecta no banco de dados isolado e específico do I-AMB
-    return sqlite3.connect("dados_iamb.db", check_same_thread=False)
-
-def init_db():
-    """Cria as tabelas do banco de dados com migração automática e suporte a comentários estruturados em JSON."""
-    with get_connection() as conn:
-        cursor = conn.cursor()
+@st.dialog("⚠️ Atenção! Evidência em Link Externo")
+def modal_aviso_link(qid, links_encontrados):
+    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    for lk in links_encontrados:
+        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
         
-        # 1. Cria a tabela base estruturada
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS respostas (
-                id TEXT NOT NULL,
-                ano INTEGER NOT NULL,
-                valor TEXT,
-                pontos REAL DEFAULT 0,
-                link TEXT,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id, ano)
-            )
-        """)
-        
-        # 2. PRAGMA para checar quais colunas realmente existem no arquivo físico do banco do I-AMB
-        cursor.execute("PRAGMA table_info(respostas)")
-        colunas_existentes = [row[1] for row in cursor.fetchall()]
-        
-        # 3. Força a migração da coluna de comentários em JSON se não existir
-        if "comentarios" not in colunas_existentes:
-            try:
-                cursor.execute("ALTER TABLE respostas ADD COLUMN comentarios TEXT")
-            except sqlite3.OperationalError:
-                pass
-                
-        # 4. Garante que a coluna 'atualizado_em' esteja com o nome perfeito
-        if "atualizado_em" not in colunas_existentes:
-            try:
-                cursor.execute("ALTER TABLE respostas ADD COLUMN atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-            except sqlite3.OperationalError:
-                pass
-                
-        # 5. Garante a coluna criado_em
-        if "criado_em" not in colunas_existentes:
-            try:
-                cursor.execute("ALTER TABLE respostas ADD COLUMN criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-            except sqlite3.OperationalError:
-                pass
-                
-        conn.commit()
+    st.markdown("""
+    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
+    
+    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
+    """)
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
+        st.rerun()
 
-def load_respostas(ano):
-    dados_ano = {}
-    try:
-        with get_connection() as conn:
-            cursor = conn.execute(
-                "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = ?", (ano,)
-            )
-            for row in cursor.fetchall():
-                comentarios_lista = []
-                if row[4]:
-                    try:
-                        comentarios_lista = json.loads(row[4])
-                    except Exception:
-                        comentarios_lista = []
-                        
-                dados_ano[row[0]] = {
-                    "valor": row[1], 
-                    "pontos": row[2], 
-                    "link": row[3],
-                    "comentarios": comentarios_lista
-                }
-    except Exception:
-        pass
-    return dados_ano
+# =============================================================================
+# 1. GESTÃO DE ESTADO E PERSISTÊNCIA EM MEMÓRIA (st.session_state)
+# =============================================================================
+
+def get_ano_atual() -> int:
+    """Recupera o ano de referência ativo no aplicativo."""
+    return int(st.session_state.get("ano_referencia_igov") or st.session_state.get("ano_referencia_global") or 2024)
+
+def load_respostas(ano: int = None) -> dict:
+    """Carrega as respostas armazenadas no session_state para o ano especificado."""
+    if ano is None:
+        ano = get_ano_atual()
+    
+    key_ano = f"respostas_igov_{ano}"
+    if key_ano not in st.session_state:
+        st.session_state[key_ano] = {}
+    
+    return st.session_state[key_ano]
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
-    ano_sel = st.session_state.get("ano_referencia_global")
-    if not ano_sel:
-        return
+    """Salva/Atualiza as respostas diretamente no st.session_state do iGov."""
+    ano_int = get_ano_atual()
+    key_ano = f"respostas_igov_{ano_int}"
     
-    comentarios_json = None
-    if comentarios is not None:
-        comentarios_json = json.dumps(comentarios, ensure_ascii=False)
-    else:
-        dados_atuais = load_respostas(ano_sel)
-        if qid in dados_atuais:
-            comentarios_json = json.dumps(dados_atuais[qid].get("comentarios", []), ensure_ascii=False)
+    if key_ano not in st.session_state:
+        st.session_state[key_ano] = {}
 
-    try:
-        timestamp_atual = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    except AttributeError:
-        import datetime as dt_modulo
-        timestamp_atual = dt_modulo.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if comentarios is None:
+        dados_atuais = st.session_state[key_ano].get(str(qid), {})
+        comentarios = dados_atuais.get("comentarios", [])
 
-    try:
-        with get_connection() as conn:
-            conn.execute("""
-                INSERT OR REPLACE INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
-            conn.commit()
-    except sqlite3.OperationalError as e:
-        if "no column named atualizado_em" in str(e):
-            try:
-                with get_connection() as conn:
-                    conn.execute("ALTER TABLE respostas ADD COLUMN atualizado_em TEXT")
-                    conn.commit()
-                save_resp(qid, valor, pontos, link, comentarios)
-            except Exception as ex:
-                st.error(f"Erro crítico ao tentar corrigir estrutura: {ex}")
-        else:
-            st.error(f"Erro operacional no banco do I-AMB: {e}")
-    except Exception as e:
-        st.error(f"Erro ao salvar {qid}: {e}")
+    st.session_state[key_ano][str(qid)] = {
+        "valor": str(valor),
+        "pontos": float(pontos),
+        "link": str(link),
+        "comentarios": comentarios,
+        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+# =============================================================================
+# 2. COMPONENTE PARA RENDERIZAR E SALVAR QUESTÕES
+# =============================================================================
+
+def renderizar_questao(qid, res_data):
+    """Renderiza a questão com botão de salvamento manual."""
+    dados_q = res_data.get(qid, {})
+    
+    val_existente = dados_q.get("valor", "")
+    pts_existente = float(dados_q.get("pontos", 0.0))
+    link_existente = dados_q.get("link", "")
+    
+    with st.container(border=True):
+        st.markdown(f"#### Quesito: `{qid}`")
+        
+        col_txt, col_meta = st.columns([3, 1])
+        
+        with col_txt:
+            novo_valor = st.text_area(
+                "Resposta / Evidência:", 
+                value=val_existente, 
+                key=f"txt_val_{qid}",
+                height=100
+            )
+            novo_link = st.text_input(
+                "Link da Evidência (opcional):", 
+                value=link_existente, 
+                key=f"txt_link_{qid}"
+            )
+
+        with col_meta:
+            novos_pontos = st.number_input(
+                "Pontuação:", 
+                value=pts_existente, 
+                key=f"num_pts_{qid}"
+            )
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
+                
+                save_resp(
+                    qid=qid, 
+                    valor=novo_valor, 
+                    pontos=novos_pontos, 
+                    link=novo_link
+                )
+                
+                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
+                
+                if links and "modal_aviso_link" in globals():
+                    modal_aviso_link(qid, links)
+
+        # Diálogo Interno (Comentários)
+        bloco_comentarios(qid, res_data)
+
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
-    """
-    Gera o diálogo interno avançado com histórico retrátil, status em realtime
-    e controle individual de remoção por lixeira para o módulo I-AMB.
-    """
-    ano_sel = st.session_state.get("ano_referencia_global", datetime.date.today().year)
+    """Gera o diálogo interno avançado com histórico e status."""
+    ano_sel = get_ano_atual()
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
     
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
     key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
+    key_radio = f"rad_status_{id_chave}_{ano_sel}"
     
     if key_estado_limpar not in st.session_state:
         st.session_state[key_estado_limpar] = False
         
-    st.markdown("---")
-    
     dados_questao = res_data.get(questao_id, {})
-    historico = dados_questao.get("comentarios", [])
+    historico = list(dados_questao.get("comentarios", []))
     
     status_global = "Resolvido"
     for com in historico:
-        if "status_definido" in com:
+        if isinstance(com, dict) and "status_definido" in com:
             status_global = com["status_definido"]
             
     badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
     
     with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
-        
-        st.markdown("<b style='font-size: 13px;'>Status Atual do Quesito:</b>", unsafe_allow_html=True)
         opcoes_status = ["Resolvido", "Pendente"]
-        idx_status_atual = opcoes_status.index(status_global)
+        idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
         
         novo_status_clicado = st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
             index=idx_status_atual,
             horizontal=True,
-            key=f"rad_status_{id_chave}_{ano_sel}",
-            label_visibility="collapsed"
+            key=key_radio
         )
         
-        if novo_status_clicado != status_global:
+        # Mudança de Status
+        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
-                "data": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
                 "status_definido": novo_status_clicado
             }
@@ -283,218 +266,151 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             save_resp(
                 qid=questao_id,
                 valor=dados_questao.get("valor", ""),
-                pontos=dados_questao.get("pontos", 0.0),
+                pontos=dados_questao.get("pontos", 0),
                 link=dados_questao.get("link", ""),
                 comentarios=historico
             )
             st.rerun()
 
-        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
-
         if historico:
             for idx, com in enumerate(historico):
+                if not isinstance(com, dict):
+                    continue
                 col_balao, col_lixeira = st.columns([11, 1])
                 
                 with col_balao:
-                    if "Sistema /" in com['autor']:
+                    autor = com.get('autor', 'Anônimo')
+                    data_com = com.get('data', '')
+                    texto_com = com.get('texto', '')
+                    
+                    if "Sistema /" in autor:
                         st.markdown(
-                            f"""
-                            <div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
-                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{com['autor']} - {com['data']}</span>
-                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057; font-style: italic;">{com['texto']}</p>
-                            </div>
-                            """, 
-                            unsafe_allow_html=True
+                            f"""<div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
+                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{autor} - {data_com}</span>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
                         )
                     else:
                         st.markdown(
-                            f"""
-                            <div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e88e5;">
-                                <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">{com['autor']}</span> 
-                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{com['data']}</span>
-                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{com['texto']}</p>
-                            </div>
-                            """, 
-                            unsafe_allow_html=True
+                            f"""<div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e88e5;">
+                                <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">{autor}</span> 
+                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{data_com}</span>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
                         )
                 
                 with col_lixeira:
-                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                    if st.button("🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}", help="Excluir este comentário"):
+                    if st.button("🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}"):
                         historico.pop(idx)
                         save_resp(
                             qid=questao_id,
                             valor=dados_questao.get("valor", ""),
-                            pontos=dados_questao.get("pontos", 0.0),
+                            pontos=dados_questao.get("pontos", 0),
                             link=dados_questao.get("link", ""),
                             comentarios=historico
                         )
                         st.rerun()
-                        
-            st.markdown("<br>", unsafe_allow_html=True)
-        else:
-            st.markdown("<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>", unsafe_allow_html=True)
-            
-        st.markdown("<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>", unsafe_allow_html=True)
         
+        # Limpeza do campo de entrada
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
             
-        novo_texto = st.text_area("Digite sua mensagem:", key=key_texto, height=80, label_visibility="collapsed")
+        novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
         
-        col_btn1, _ = st.columns([1, 3])
-        with col_btn1:
-            if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
-                if novo_texto.strip():
-                    nova_mensagem = {
-                        "autor": usuario_atual,
-                        "data": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "texto": novo_texto.strip(),
-                        "status_definido": status_global
-                    }
-                    historico.append(nova_mensagem)
-                    save_resp(
-                        qid=questao_id, 
-                        valor=dados_questao.get("valor", ""), 
-                        pontos=dados_questao.get("pontos", 0.0), 
-                        link=dados_questao.get("link", ""),
-                        comentarios=historico
-                    )
-                    st.session_state[key_estado_limpar] = True
-                    st.rerun()
+        if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
+            if novo_texto.strip():
+                nova_mensagem = {
+                    "autor": usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": novo_texto.strip(),
+                    "status_definido": status_global
+                }
+                historico.append(nova_mensagem)
+                save_resp(
+                    qid=questao_id, 
+                    valor=dados_questao.get("valor", ""), 
+                    pontos=dados_questao.get("pontos", 0), 
+                    link=dados_questao.get("link", ""),
+                    comentarios=historico
+                )
+                st.session_state[key_estado_limpar] = True
+                st.rerun()
+
+# =============================================================================
+# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO
+# =============================================================================
 
 def get_all_years_data():
+    """Varre a sessão procurando por chaves do tipo respostas_igov_<ano>."""
     all_data = {}
-    with get_connection() as conn:
-        cursor = conn.execute(
-            "SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC"
-        )
-        for row in cursor.fetchall():
-            qid, ano, valor, pontos, link, comentarios_raw = row
-            
-            comentarios_lista = []
-            if comentarios_raw:
-                try:
-                    comentarios_lista = json.loads(comentarios_raw)
-                except Exception:
-                    comentarios_lista = []
-                    
-            if ano not in all_data:
-                all_data[ano] = {}
-            all_data[ano][qid] = {
-                "valor": valor, 
-                "pontos": pontos, 
-                "link": link, 
-                "comentarios": comentarios_lista
-            }
+    prefixo = "respostas_igov_"
+    
+    for key in list(st.session_state.keys()):
+        if key.startswith(prefixo):
+            try:
+                ano = int(key.replace(prefixo, ""))
+                all_data[ano] = st.session_state[key]
+            except ValueError:
+                continue
+                
     return all_data
 
-# =============================================================================
-# 2. INTERFACE E FORMULÁRIO (SIDEBAR E ESTRUTURA GLOBAL)
-# =============================================================================
 
-def render_sidebar():
-    st.sidebar.title("🌿 Painel i-AMB")
-    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
-    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
-    
-    # Carrega dados do banco do ano selecionado
-    res_data = load_respostas(ano_sel)
-    
-    # Soma os pontos de forma segura ignorando comentários
-    total_pts = sum(float(item.get("pontos", 0)) for k, item in res_data.items() if not k.startswith("COM_"))
-    total_pts = round(total_pts, 1)
-    
-    # 1. Nova Lógica de Faixas do i-AMB (Definição dos Limites)
-    if total_pts <= 500: 
-        faixa, cor = "C", "red"
-    elif total_pts <= 599: 
-        faixa, cor = "C+", "orange"
-    elif total_pts <= 749: 
-        faixa, cor = "B", "#d4d400"
-    elif total_pts <= 899: 
-        faixa, cor = "B+", "lightgreen"
-    else: 
-        faixa, cor = "A", "green"
+def analyze_performance(res_data):
+    """Mapeia os pontos fortes e fragilidades do ano atual no iGov usando o dicionário TETOS_VALIDOS."""
+    pontos_fortes = []
+    criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
+    criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
 
-    # 2. Regra Especial A2: Rebaixar 1 Faixa se condições inadequadas
-    rebaixar = res_data.get("A2", {}).get("valor") == "Condições inadequadas"
-    
-    if rebaixar:
-        if faixa == "A": 
-            faixa, cor = "B+", "lightgreen"
-        elif faixa == "B+": 
-            faixa, cor = "B", "#d4d400"
-        elif faixa == "B": 
-            faixa, cor = "C+", "orange"
-        elif faixa == "C+": 
-            faixa, cor = "C", "red"
+    # Dicionário de tetos máximos por quesito
+    TETOS_VALIDOS = {
+        "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
+        "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
+        "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
+        "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
+        "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
+    }
 
-    # 3. Exibição das Métricas na Interface Lateral
-    st.sidebar.metric("Pontuação Total", f"{total_pts:.1f} pts")
-    st.sidebar.markdown(f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>", unsafe_allow_html=True)
-    
-    # Exibe o alerta caso a regra de rebaixamento tenha sido disparada
-    if rebaixar:
-        st.sidebar.warning("⚠️ Faixa rebaixada devido ao IQR (A2)")
-        
-    # -------------------------------------------------------------------------
-    # 🔥 BOTÃO DE DOWNLOAD DO RELATÓRIO PDF INTEGRADO (COM HISTÓRICO TRATADO)
-    # -------------------------------------------------------------------------
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📄 Relatórios")
-    
-    # 1. Busca os dados brutos de todos os anos no banco de dados para a série histórica
-    try:
-        dados_historicos_brutos = get_all_years_data()
-    except Exception:
-        dados_historicos_brutos = {}
-        
-    # 2. TRATAMENTO CRÍTICO: Garante que as chaves dos anos sejam inteiros
-    historico_tratado = {}
-    if isinstance(dados_historicos_brutos, dict):
-        for ano_chave, valor_ano in dados_historicos_brutos.items():
-            try:
-                ano_int = int(str(ano_chave).strip()[:4])
-                historico_tratado[ano_int] = valor_ano
-            except (ValueError, TypeError):
-                continue
+    def classificar_relevancia(impacto):
+        abs_impacto = abs(impacto)
+        if abs_impacto >= 16:
+            return "Alta"
+        elif 6 <= abs_impacto <= 15:
+            return "Média"
+        else:
+            return "Baixa"
 
-    # 3. Alimenta o session_state como garantia extra para o componente do gráfico
-    st.session_state.all_data = historico_tratado
+    for qid, info in res_data.items():
+        # Ignora campos de comentários ou quesitos fora do mapeamento
+        if qid.startswith("COM_") or qid not in TETOS_VALIDOS:
+            continue
 
-    # 4. Gera o relatório passando o dicionário histórico tratado e captura o buffer do PDF
-    try:
-        pdf_buffer = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, historico_tratado)
-        
-        st.sidebar.download_button(
-            label="📥 Baixar Relatório PDF",
-            data=pdf_buffer.getvalue(),  # Extrai o valor binário correto do BytesIO
-            file_name=f"Relatorio_i-AMB_{ano_sel}.pdf",
-            mime="application/pdf"
-        )
-    except Exception as e:
-        st.sidebar.error(f"Erro ao gerar o PDF: {e}")
-        
-    st.sidebar.markdown("---")
-    
-    # 5. Ação de Reset com Segurança no Banco de Dados e Interface
-    if st.sidebar.button("🔄 Zerar Questionário"):
-        # 1. Limpa o Banco de Dados para o ano selecionado
-        with get_connection() as conn:
-            conn.execute("DELETE FROM respostas WHERE ano = ?", (ano_sel,))
-            conn.commit()
-        
-        # 2. Limpa apenas os widgets da interface
-        prefixos_limpar = ("q", "l", "ext", "COM_")
-        for key in list(st.session_state.keys()):
-            if key.startswith(prefixos_limpar):
-                del st.session_state[key]
-                
-        st.rerun()
-        
-    return total_pts, res_data, ano_sel
+        pontos_atuais = float(info.get("pontos", 0.0))
+        max_pontos = TETOS_VALIDOS[qid]
+
+        if pontos_atuais == max_pontos:
+            pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
+        else:
+            impacto = max_pontos - pontos_atuais
+            relevancia = classificar_relevancia(impacto)
+
+            if pontos_atuais < 0:
+                criticos_negativos[relevancia].append(
+                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
+                )
+            else:
+                criticos_zero[relevancia].append(
+                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
+                )
+
+    # Ordenação dos resultados por pontuação/impacto
+    pontos_fortes.sort(key=lambda x: x[1], reverse=True)
+    for rel in ["Alta", "Média", "Baixa"]:
+        criticos_zero[rel].sort(key=lambda x: x[4], reverse=True)
+        criticos_negativos[rel].sort(key=lambda x: x[4], reverse=True)
+
+    return pontos_fortes, criticos_zero, criticos_negativos
 
 import io
 from io import BytesIO
