@@ -56,162 +56,254 @@ PONTUACOES_MAX = {
 FAIXA_CORES = {"C": "#ef4444", "C+": "#f97316", "B": "#eab308", "B+": "#22c55e", "A": "#16a34a"}
 
 # =============================================================================
-# CONEXÃO COM O BANCO DE DADOS
+# CONEXÃO OTIMIZADA E SEGURA COM O NEON (POSTGRESQL)
 # =============================================================================
-def get_connection():
-    """Conecta ao banco PostgreSQL/Neon testando dinamicamente as estruturas do Secrets."""
-    try:
-        url = None
-        for key in ["postgres_url", "DATABASE_URL", "POSTGRES_URL", "neon_url", "db_url"]:
-            if key in st.secrets:
-                url = st.secrets[key]
-                break
+
+def get_db_url():
+    """Recupera, higieniza e valida a URL de conexão do Neon."""
+    db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
+    if not db_url:
+        st.error("❌ A variável DATABASE_URL do Neon não foi configurada nos Segredos do Streamlit!")
+        st.stop()
+    
+    # 1. Remove o parâmetro channel_binding que provoca erros no psycopg2
+    if "channel_binding=" in db_url:
+        db_url = db_url.split("&channel_binding=")[0].split("?channel_binding=")[0]
+    
+    # 2. Garante o parâmetro de criptografia SSL exigido pelo Neon
+    if "sslmode=require" not in db_url:
+        db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
         
-        if not url:
-            if "postgres" in st.secrets and "url" in st.secrets["postgres"]:
-                url = st.secrets["postgres"]["url"]
-            elif "database" in st.secrets and "url" in st.secrets["database"]:
-                url = st.secrets["database"]["url"]
+    return db_url
 
-        if url:
-            return psycopg2.connect(url, sslmode="require")
+class get_connection:
+    """Context manager seguro para conexões diretas e gerenciadas com o Neon."""
+    def __enter__(self):
+        try:
+            self.conn = psycopg2.connect(get_db_url())
+            return self.conn
+        except Exception as e:
+            logging.error(f"Erro ao conectar com o Neon PostgreSQL: {e}")
+            raise e
 
-        cfg = None
-        if "postgres" in st.secrets:
-            cfg = st.secrets["postgres"]
-        elif "database" in st.secrets:
-            cfg = st.secrets["database"]
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if hasattr(self, "conn") and self.conn:
+            try:
+                if getattr(self.conn, "closed", 0) == 0:
+                    if exc_type:
+                        self.conn.rollback()
+                    else:
+                        self.conn.commit()
+            except Exception as e:
+                logging.error(f"Erro no encerramento da transação: {e}")
+            finally:
+                # Fecha a conexão após o uso (deixa o pooler do Neon gerenciar no servidor)
+                try:
+                    self.conn.close()
+                except Exception:
+                    pass
+
+# =============================================================================
+# MODAL DE AVISO AUTOMÁTICO
+# =============================================================================
+@st.dialog("⚠️ Atenção! Evidência em Link Externo")
+def modal_aviso_link(qid, links_encontrados):
+    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    for lk in links_encontrados:
+        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
         
-        if cfg:
-            return psycopg2.connect(
-                host=cfg.get("host"),
-                database=cfg.get("database") or cfg.get("dbname"),
-                user=cfg.get("user") or cfg.get("username"),
-                password=cfg.get("password"),
-                port=cfg.get("port", 5432),
-                sslmode="require"
-            )
-
-        return psycopg2.connect(
-            host=st.secrets.get("host"),
-            database=st.secrets.get("database") or st.secrets.get("dbname"),
-            user=st.secrets.get("user") or st.secrets.get("username"),
-            password=st.secrets.get("password"),
-            port=st.secrets.get("port", 5432),
-            sslmode="require"
-        )
-
-    except Exception as e:
-        logging.error(f"Erro ao conectar com o Neon/PostgreSQL: {e}")
-        st.error(f"Erro ao conectar com o banco de dados: {e}")
-        raise e
+    st.markdown("""
+    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
+    
+    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
+    """)
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
+        st.rerun()
+# =============================================================================
+# MODAL DE AVISO AUTOMÁTICO
+# =============================================================================
+@st.dialog("⚠️ Atenção! Evidência em Link Externo")
+def modal_aviso_link(qid, links_encontrados):
+    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    for lk in links_encontrados:
+        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
+        
+    st.markdown("""
+    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
+    
+    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
+    """)
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
+        st.rerun()
 
 # =============================================================================
-# OPERAÇÕES NO BANCO DE DADOS
+# 1. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL)
 # =============================================================================
+
 def init_db():
+    """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS respostas (
-                        dimensao VARCHAR(20) DEFAULT 'igov',
-                        ano INTEGER NOT NULL,
                         id VARCHAR(50) NOT NULL,
+                        ano INTEGER NOT NULL,
                         valor TEXT,
                         pontos DOUBLE PRECISION DEFAULT 0,
                         link TEXT,
                         comentarios JSONB DEFAULT '[]'::jsonb,
                         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (dimensao, ano, id)
+                        PRIMARY KEY (id, ano)
                     );
                 """)
             conn.commit()
     except Exception as e:
-        logging.error(f"Erro ao inicializar o banco de dados: {e}")
+        logging.error(f"Erro ao inicializar o banco: {e}")
+        raise e
 
-@st.cache_data(ttl=30)
+
+@st.cache_data(ttl=60)
 def load_respostas(ano: int) -> dict:
+    """Busca do banco de dados todas as respostas relativas a um ano específico."""
+    respostas = {}
     try:
         with get_connection() as conn:
-            with conn.cursor() as cursor:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s AND (dimensao = 'igov' OR dimensao IS NULL)", 
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
                     (ano,)
                 )
                 rows = cursor.fetchall()
-                res = {}
                 for row in rows:
-                    com_data = row[4]
-                    if isinstance(com_data, str):
+                    comentarios = row["comentarios"] or []
+                    if isinstance(comentarios, str):
                         try:
-                            com_data = json.loads(com_data)
+                            comentarios = json.loads(comentarios)
                         except Exception:
-                            com_data = []
-                    elif com_data is None:
-                        com_data = []
-
-                    res[row[0]] = {
-                        "valor": row[1] or "",
-                        "pontos": float(row[2]) if row[2] is not None else 0.0,
-                        "link": row[3] or "",
-                        "comentarios": com_data
+                            comentarios = []
+                            
+                    respostas[row["id"]] = {
+                        "valor": row["valor"] or "",
+                        "pontos": row["pontos"] or 0.0,
+                        "link": row["link"] or "",
+                        "comentarios": comentarios
                     }
-                return res
     except Exception as e:
-        logging.error(f"Erro ao carregar dados do i-Gov TI: {e}")
-        st.error(f"Erro ao carregar dados do i-Gov TI: {e}")
-        return {}
+        logging.error(f"Erro ao carregar respostas do ano {ano}: {e}")
+    return respostas
 
-def salvar_resposta(ano, qid, valor, pontos, link="", comentarios=None):
+
+def save_resp(qid, valor, pontos, link, comentarios=None):
+    """Salva/Atualiza a resposta no Neon e atualiza a interface."""
+    ano_sel = st.session_state.get("ano_referencia_global")
+    if not ano_sel:
+        st.warning("Nenhum ano de referência selecionado!")
+        return
+
+    # Se comentários não forem fornecidos, busca do banco/cache para não sobrescrever com vazio
     if comentarios is None:
-        comentarios = []
-    
+        dados_atuais = load_respostas(ano_sel)
+        comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
+
     comentarios_json = json.dumps(comentarios, ensure_ascii=False)
+    timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas (dimensao, ano, id, valor, pontos, link, comentarios, atualizado_em)
-                    VALUES ('igov', %s, %s, %s, %s, %s, %s::jsonb, CURRENT_TIMESTAMP)
-                    ON CONFLICT (dimensao, ano, id) 
-                    DO UPDATE SET 
-                        valor = EXCLUDED.valor, 
-                        pontos = EXCLUDED.pontos, 
+                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
+                    ON CONFLICT (id, ano) DO UPDATE SET
+                        valor = EXCLUDED.valor,
+                        pontos = EXCLUDED.pontos,
                         link = EXCLUDED.link,
                         comentarios = EXCLUDED.comentarios,
-                        atualizado_em = CURRENT_TIMESTAMP;
-                """, (int(ano), str(qid), str(valor), float(pontos), str(link), comentarios_json))
+                        atualizado_em = EXCLUDED.atualizado_em;
+                """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
             conn.commit()
         
+        # Limpa o cache para que `load_respostas` e `get_all_years_data` tragam dados novos
         st.cache_data.clear()
     except Exception as e:
-        logging.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
-        st.error(f"Erro ao salvar resposta no i-Gov TI: {e}")
-
-
-def save_resp(qid, valor, pontos, link="", comentarios=None, ano=None):
-    if ano is None:
-        ano = st.session_state.get("ano_referencia_global", date.today().year)
-    salvar_resposta(ano, qid, valor, pontos, link, comentarios)
+        st.error(f"Erro ao salvar {qid}: {e}")
 
 # =============================================================================
-# COMPONENTES DE INTERFACE
+# 2. COMPONENTE OTIMIZADO PARA RENDERIZAR E SALVAR QUESTÕES
 # =============================================================================
+
+def renderizar_questao(qid, res_data):
+    """Renderiza a questão de forma performática com botão manual de salvamento."""
+    dados_q = res_data.get(qid, {})
+    
+    val_existente = dados_q.get("valor", "")
+    pts_existente = float(dados_q.get("pontos", 0.0))
+    link_existente = dados_q.get("link", "")
+    
+    with st.container(border=True):
+        st.markdown(f"#### Quesito: `{qid}`")
+        
+        col_txt, col_meta = st.columns([3, 1])
+        
+        with col_txt:
+            novo_valor = st.text_area(
+                "Resposta / Evidência:", 
+                value=val_existente, 
+                key=f"txt_val_{qid}",
+                height=100
+            )
+            novo_link = st.text_input(
+                "Link da Evidência (opcional):", 
+                value=link_existente, 
+                key=f"txt_link_{qid}"
+            )
+
+        with col_meta:
+            novos_pontos = st.number_input(
+                "Pontuação:", 
+                value=pts_existente, 
+                key=f"num_pts_{qid}"
+            )
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
+                
+                save_resp(
+                    qid=qid, 
+                    valor=novo_valor, 
+                    pontos=novos_pontos, 
+                    link=novo_link
+                )
+                
+                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
+                
+                if links and "modal_aviso_link" in globals():
+                    modal_aviso_link(qid, links)
+
+        # Diálogo Interno (Comentários)
+        bloco_comentarios(qid, res_data)
+
+
 def bloco_comentarios(questao_id, res_data, sufixo=None):
+    """Gera o diálogo interno avançado com histórico e status."""
     ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
     
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
+    key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
     key_radio = f"rad_status_{id_chave}_{ano_sel}"
     
+    if key_estado_limpar not in st.session_state:
+        st.session_state[key_estado_limpar] = False
+        
     dados_questao = res_data.get(questao_id, {})
     historico = list(dados_questao.get("comentarios", []))
     
-    # Determina o último status registrado
     status_global = "Resolvido"
     for com in historico:
         if isinstance(com, dict) and "status_definido" in com:
@@ -223,7 +315,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
         opcoes_status = ["Resolvido", "Pendente"]
         idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
         
-        novo_status = st.radio(
+        novo_status_clicado = st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
             index=idx_status_atual,
@@ -231,13 +323,13 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             key=key_radio
         )
         
-        # Se alterado manualmente, insere no histórico e salva
-        if novo_status != status_global:
+        # CORREÇÃO DO LOOP: Verifica se o valor mudou em relação ao estado gravado no widget (interação do usuário)
+        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
                 "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status.upper()}**.",
-                "status_definido": novo_status
+                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
+                "status_definido": novo_status_clicado
             }
             historico.append(log_mudanca)
             save_resp(
@@ -249,12 +341,12 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             )
             st.rerun()
 
-        # Exibição do Histórico
         if historico:
             for idx, com in enumerate(historico):
                 if not isinstance(com, dict):
                     continue
                 col_balao, col_lixeira = st.columns([11, 1])
+                
                 with col_balao:
                     autor = com.get('autor', 'Anônimo')
                     data_com = com.get('data', '')
@@ -288,6 +380,11 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                         )
                         st.rerun()
         
+        # CORREÇÃO DA LIMPEZA: Aplica a limpeza antes de renderizar a caixa de texto
+        if st.session_state[key_estado_limpar]:
+            st.session_state[key_texto] = ""
+            st.session_state[key_estado_limpar] = False
+            
         novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
         
         if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
@@ -306,70 +403,49 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                     link=dados_questao.get("link", ""),
                     comentarios=historico
                 )
+                st.session_state[key_estado_limpar] = True
                 st.rerun()
 
-def renderizar_questao(qid, res_data):
-    dados_q = res_data.get(qid, {})
-    val_existente = dados_q.get("valor", "")
-    pts_existente = float(dados_q.get("pontos", 0.0))
-    link_existente = dados_q.get("link", "")
-    
-    with st.container(border=True):
-        st.markdown(f"#### Quesito: `{qid}`")
-        
-        col_txt, col_meta = st.columns([3, 1])
-        with col_txt:
-            novo_valor = st.text_area(
-                "Resposta / Evidência:", 
-                value=val_existente, 
-                key=f"txt_val_{qid}",
-                height=100
-            )
-            novo_link = st.text_input(
-                "Link da Evidência (opcional):", 
-                value=link_existente, 
-                key=f"txt_link_{qid}"
-            )
-
-        with col_meta:
-            novos_pontos = st.number_input(
-                "Pontuação:", 
-                value=pts_existente, 
-                key=f"num_pts_{qid}"
-            )
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
-                comentarios_atuais = dados_q.get("comentarios", [])
-                save_resp(
-                    qid=qid, 
-                    valor=novo_valor, 
-                    pontos=novos_pontos, 
-                    link=novo_link,
-                    comentarios=comentarios_atuais
-                )
-                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
-                st.rerun()
-
-        bloco_comentarios(qid, res_data)
-
 # =============================================================================
-# FUNÇÃO PRINCIPAL DA PÁGINA
+# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO
 # =============================================================================
-def mostrar_formulario_gov():
-    """Função principal para exibição e gerenciamento do i-Gov TI."""
-    init_db()
-    
-    if "ano_referencia_global" not in st.session_state:
-        st.session_state["ano_referencia_global"] = datetime.now().year
-        
-    ano = st.session_state["ano_referencia_global"]
-    res_data = load_respostas(ano)
-    
-    st.title("Formulário i-Gov TI")
-    
-    qids = ["1.0", "1.1", "1.2", "2.0", "3.0"]
-    for qid in qids:
-        renderizar_questao(qid, res_data)
+
+@st.cache_data(ttl=60)
+def get_all_years_data():
+    """Retorna todos os registros agrupados por ano."""
+    all_data = {}
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC")
+                rows = cursor.fetchall()
+                for row in rows:
+                    qid, ano = row["id"], row["ano"]
+                    comentarios = row["comentarios"] or []
+                    if isinstance(comentarios, str):
+                        try:
+                            comentarios = json.loads(comentarios)
+                        except Exception:
+                            comentarios = []
+
+                    if ano not in all_data:
+                        all_data[ano] = {}
+                    all_data[ano][qid] = {
+                        "valor": row["valor"] or "", 
+                        "pontos": row["pontos"] or 0.0, 
+                        "link": row["link"] or "", 
+                        "comentarios": comentarios
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao buscar dados históricos: {e}")
+    return all_data
+
+
+def analyze_performance(res_data):
+    """Mapeia os pontos fortes e fragilidades do ano atual."""
+    pontos_fortes = []
+    criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
+    criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
 
 # =============================================================================
 # DICIONÁRIO DE PONTUAÇÕES MÁXIMAS DO I-GOV TI
