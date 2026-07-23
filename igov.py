@@ -6129,7 +6129,7 @@ def mostrar_formulario_igov():
             modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = False
 
-# =============================================================================
+    # =============================================================================
     # QUESITO 8.4 • CONTROLE DE ACESSO À INFORMAÇÃO (MODELO PADRONIZADO iGov)
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_8_4_final_{ano_sel}", border=True):
@@ -6284,3 +6284,88 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("8.4", st.session_state.get(f"links_pendentes_8_4_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_4_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 9.0 • SERVIÇOS ONLINE (PADRONIZADO E CORRIGIDO - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_serv_9_0_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 9.0 - Serviços Oferecidos de Forma Online", expanded=True):
+            st.subheader("9.0 • Serviços Online")
+            st.write("**A Prefeitura ofereceu serviços de forma online?**")
+            st.caption("ℹ *Exemplos: Emissão de certidões, alvarás, portal do contribuinte, etc.*")
+
+            opc90 = {
+                "Selecione...": 0.0,
+                "Sim – 40": 40.0,
+                "Não – 00": 0.0
+            }
+            lista90 = list(opc90.keys())
+
+            d90 = res_data.get("9.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
+            if d90 is None:
+                d90 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
+
+            # CORREÇÃO ESSENCIAL: Converte valores puros ou parciais vindos do banco para o padrão visual
+            v_salvo_90 = d90.get("valor", "Selecione...")
+            if v_salvo_90 == "Sim":
+                v_salvo_90 = "Sim – 40"
+            elif v_salvo_90 == "Não":
+                v_salvo_90 = "Não – 00"
+            elif v_salvo_90 not in lista90:
+                v_salvo_90 = "Selecione..."
+
+            evidencia_90_salva = d90.get("link", "")
+            chave_radio_90 = f"r_90_select_{ano_sel}"
+            chave_link_90 = f"l_90_txt_area_{ano_sel}"
+
+            def cb_processa_e_salva_90():
+                lnk_val = st.session_state.get(chave_link_90, evidencia_90_salva).strip()
+                val_salvar = st.session_state.get(chave_radio_90, v_salvo_90)
+                pts_90 = float(opc90.get(val_salvar, 0.0))
+
+                save_resp("9.0", val_salvar, pts_90, lnk_val)
+                res_data["9.0"] = {"valor": val_salvar, "pontos": pts_90, "link": lnk_val}
+
+                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk_val or "")]
+                links_antigos = [u[0] for u in re.findall(regex_pure_url, evidencia_90_salva or "")]
+                if lnk_val != evidencia_90_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_9_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx90 = lista90.index(v_salvo_90) if v_salvo_90 in lista90 else 0
+                st.radio(
+                    "Selecione uma opção:",
+                    options=lista90,
+                    index=idx90,
+                    key=chave_radio_90,
+                    on_change=cb_processa_e_salva_90
+                )
+
+            with col2:
+                link_90 = st.text_area(
+                    "Link/Evidência (9.0):",
+                    value=evidencia_90_salva,
+                    key=chave_link_90,
+                    on_change=cb_processa_e_salva_90,
+                    placeholder="Insira o link principal que comprova o portal de serviços...",
+                    height=110
+                )
+                placeholder_links_90 = st.empty()
+                links_90_visuais = [u[0] for u in re.findall(regex_pure_url, link_90 or "")]
+                if links_90_visuais:
+                    placeholder_links_90.markdown(f"**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_90_visuais]))
+
+            # Lógica reativa que lê direto do st.session_state
+            v_atual_90 = st.session_state.get(chave_radio_90, v_salvo_90)
+            pts_atuais_90 = float(opc90.get(v_atual_90, 0.0))
+
+            cor_txt_90 = "#28a745" if pts_atuais_90 == 40.0 else "#6c757d"
+            st.markdown(f"<span style='color:{cor_txt_90}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 9.0: +{pts_atuais_90:.1f} pontos</span>", unsafe_allow_html=True)
+            bloco_comentarios("9.0", res_data, ano_sel)
+
+    if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
