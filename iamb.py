@@ -4768,3 +4768,128 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.4.1", st.session_state.get(f"links_pendentes_7_4_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_4_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 7.4.2 • DATA DE UNIVERSALIZAÇÃO DO ESGOTO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_4_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.4.2 - Prazo Limite do Marco Regulatório de Esgoto", expanded=True):
+                st.subheader("7.4.2 • Data Limite de Universalização de Esgoto")
+                st.write("**Qual a data prevista para universalização da coleta de esgoto no município?**")
+                st.caption("ℹ *Caso já tenha sido universalizado por completo, configure a data regulamentar padrão **01/01/2001**.*")
+
+                # Recupera os dados salvos no banco
+                d742 = res_data.get("7.4.2") or {"valor": "31/12/2033", "pontos": 0.0, "link": "", "comentario": ""}
+
+                # Decomposição da data salva com tratamento de erro
+                raw_val_742 = d742.get("valor", "31/12/2033")
+                try:
+                    dia_salvo, mes_salvo, ano_salvo = map(int, str(raw_val_742).split("/"))
+                except Exception:
+                    dia_salvo, mes_salvo, ano_salvo = 31, 12, 2033
+
+                evidencia_742_salva = d742.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_d = f"q742_d_num_{ano_sel}"
+                chave_m = f"q742_m_num_{ano_sel}"
+                chave_a = f"q742_a_num_{ano_sel}"
+                chave_link_742 = f"l_742_txt_area_{ano_sel}"
+                chave_coment_742 = f"coment_7.4.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    c_dia, c_mes, c_ano = st.columns(3)
+                    with c_dia:
+                        num_d = st.number_input("Dia", min_value=1, max_value=31, value=dia_salvo, key=chave_d)
+                    with c_mes:
+                        num_m = st.number_input("Mês", min_value=1, max_value=12, value=mes_salvo, key=chave_m)
+                    with c_ano:
+                        num_a = st.number_input("Ano", min_value=2000, max_value=2100, value=ano_salvo, key=chave_a)
+
+                    # Regra federal de penalização do Marco Legal do Saneamento (31/12/2033)
+                    if num_a > 2033 or (num_a == 2033 and num_m == 12 and num_d > 31) or (num_a == 2033 and num_m > 12):
+                        fb_pts_742 = -5.0
+                    else:
+                        fb_pts_742 = 0.0
+
+                    st.metric(label="Penalização por Atraso", value=f"{fb_pts_742:.1f} pts")
+
+                with col2:
+                    link_742 = st.text_area(
+                        "Link/Evidência (7.4.2):",
+                        value=evidencia_742_salva,
+                        key=chave_link_742,
+                        placeholder="Seção contendo o planejamento cronológico de obras e metas de universalização de esgoto...",
+                        height=140
+                    )
+                    placeholder_links_742 = st.empty()
+                    links_742_visuais = re.findall(REGEX_PURE_URL, link_742 or "")
+                    if links_742_visuais:
+                        placeholder_links_742.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_742_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.4.2
+                bloco_comentarios("7.4.2", res_data, ano_sel)
+
+                # Feedback visual reativo
+                cor_txt_742 = "#28a745" if fb_pts_742 == 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_742}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.4.2: {fb_pts_742:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.4.2", key=f"btn_salvar_7_4_2_{ano_sel}", type="primary"):
+                    lnk_val = link_742.strip()
+                    d_v = st.session_state.get(chave_d, num_d)
+                    m_v = st.session_state.get(chave_m, num_m)
+                    a_v = st.session_state.get(chave_a, num_a)
+
+                    # Cálculo final da pontuação
+                    if a_v > 2033 or (a_v == 2033 and m_v == 12 and d_v > 31) or (a_v == 2033 and m_v > 12):
+                        pts_calculados = -5.0
+                    else:
+                        pts_calculados = 0.0
+
+                    val_salvar = f"{d_v:02d}/{m_v:02d}/{a_v}"
+                    comentario_para_salvar = st.session_state.get(chave_coment_742, d742.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.4.2",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["7.4.2"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_742_salva or "")]
+
+                    if lnk_val != evidencia_742_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_4_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_4_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.4.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.4.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_4_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.4.2", st.session_state.get(f"links_pendentes_7_4_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_4_2_{ano_sel}"] = False
