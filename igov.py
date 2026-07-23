@@ -3272,3 +3272,140 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.2", st.session_state.get(f"links_pendentes_3_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_2_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 3.2.1 • NORMAS ISO APLICADAS (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    import ast
+
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_2_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.2.1 - Normas da Família ISO/IEC 27000 Utilizadas", expanded=True):
+            st.subheader("3.2.1 • Normas Utilizadas e Fiscalização")
+            st.write("**As secretarias setoriais realizaram a fiscalização das áreas de risco? Informe quais normas da família ISO/IEC 27000 são utilizadas nos processos de segurança no uso de TIC:**")
+            st.caption("ℹ *Selecione as opções aplicáveis, preencha o link de evidência e clique no botão 'Salvar Quesito 3.2.1'.*")
+
+            normas_iso = {
+                "ISO/IEC 27000 – 1,5": 1.5,
+                "ISO/IEC 27001 – 1,5": 1.5,
+                "ISO/IEC 27002 – 1,5": 1.5,
+                "ISO/IEC 27003 – 1,5": 1.5,
+                "ISO/IEC 27004 – 02": 2.0,
+                "ISO/IEC 27005 – 02": 2.0
+            }
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d321 = res_data.get("3.2.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            raw_v321 = d321.get("valor", "[]")
+            if not isinstance(raw_v321, str) or not raw_v321.startswith("["):
+                raw_v321 = "[]"
+
+            try:
+                lista_salva_321 = ast.literal_eval(raw_v321)
+            except (ValueError, SyntaxError):
+                lista_salva_321 = []
+
+            evidencia_321_salva = d321.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_link_321 = f"l_321_txt_area_{ano_sel}"
+            chave_coment_321 = f"coment_3.2.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                # Renderiza checkboxes independentes para cada norma
+                for norma, pts in normas_iso.items():
+                    slug_norma = norma.split(" – ")[0].replace("/", "_").replace(" ", "_").lower()
+                    st.checkbox(
+                        norma,
+                        value=norma in lista_salva_321,
+                        key=f"chk_321_{slug_norma}_{ano_sel}"
+                    )
+
+            with col2:
+                link_321 = st.text_area(
+                    "Link/Evidência das normas e fiscalizações (3.2.1):",
+                    value=evidencia_321_salva,
+                    key=chave_link_321,
+                    placeholder="Insira os links comprobatórios dos atos, portarias ou relatórios de fiscalização baseados nas ISOs...",
+                    height=140
+                )
+
+                placeholder_links_321 = st.empty()
+                links_321_visuais = re.findall(regex_pure_url, link_321 or "")
+                if links_321_visuais:
+                    placeholder_links_321.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_321_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.2.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.2.1", key=f"btn_salvar_3_2_1_{ano_sel}", type="primary"):
+                sel321 = []
+                pts321 = 0.0
+
+                # Captura os estados atuais das seleções de normas
+                for norma, pts in normas_iso.items():
+                    slug_norma = norma.split(" – ")[0].replace("/", "_").replace(" ", "_").lower()
+                    if st.session_state.get(f"chk_321_{slug_norma}_{ano_sel}", False):
+                        sel321.append(norma)
+                        pts321 += pts
+
+                val_str = str(sel321)
+                lnk_val = link_321.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_321, d321.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.2.1",
+                    valor=val_str,
+                    pontos=pts321,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.2.1"] = {
+                    "valor": val_str,
+                    "pontos": pts321,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_321_salva or "")
+
+                if lnk_val != evidencia_321_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_2_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_2_1_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.2.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_321 = d321.get("pontos", 0.0)
+            cor_txt_321 = "#28a745" if pts_atuais_321 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_321}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.2.1: +{pts_atuais_321:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.2.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_2_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.2.1", st.session_state.get(f"links_pendentes_3_2_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_2_1_{ano_sel}"] = False
