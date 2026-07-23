@@ -5573,7 +5573,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("7.7.1", st.session_state.get(f"links_pendentes_7_7_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_7_1_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 7.8 • CRONOGRAMA DE METAS (Padrão iGov)
         # =============================================================================
         with st.container(key=f"container_bloco_saneamento_7_8_{ano_sel}", border=True):
@@ -5678,4 +5678,116 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.8", st.session_state.get(f"links_pendentes_7_8_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_8_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 7.8.1 • CUMPRIMENTO DOS PRAZOS ESTIPULADOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_8_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.8.1 - Grau de Adimplemento das Metas e Prazos", expanded=True):
+                st.subheader("7.8.1 • Cumprimento dos Prazos Estipulados")
+                st.write("**As metas do Plano relacionadas ao abastecimento de água potável e esgotamento sanitário estão sendo cumpridas no prazo estipulado?**")
+
+                opts781 = {
+                    "Selecione...": 0.0,
+                    "Todas as metas foram cumpridas dentro do prazo – 50": 50.0,
+                    "A maior parte das metas foram cumpridas dentro do prazo – 30": 30.0,
+                    "A menor parte das metas foram cumpridas dentro do prazo – 10": 10.0,
+                    "As metas não foram cumpridas dentro do prazo – 00": 0.0
+                }
+                lista_opts781 = list(opts781.keys())
+
+                # Recupera os dados salvos do banco
+                d781 = res_data.get("7.8.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_781 = d781.get("valor", "Selecione...")
+                if v_salvo_781 not in lista_opts781:
+                    v_salvo_781 = "Selecione..."
+
+                evidencia_781_salva = d781.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_781 = f"r_781_select_{ano_sel}"
+                chave_link_781 = f"l_781_txt_area_{ano_sel}"
+                chave_coment_781 = f"coment_7.8.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    idx_salvo781 = lista_opts781.index(v_salvo_781)
+                    st.radio(
+                        "Selecione uma opção (7.8.1):",
+                        options=lista_opts781,
+                        index=idx_salvo781,
+                        key=chave_radio_781
+                    )
+
+                with col2:
+                    link_781 = st.text_area(
+                        "Link/Evidência (7.8.1):",
+                        value=evidencia_781_salva,
+                        key=chave_link_781,
+                        placeholder="Relatórios de auditoria da agência reguladora local ou balanço de metas...",
+                        height=130
+                    )
+                    placeholder_links_781 = st.empty()
+                    links_781_visuais = re.findall(REGEX_PURE_URL, link_781 or "")
+                    if links_781_visuais:
+                        placeholder_links_781.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_781_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.8.1
+                bloco_comentarios("7.8.1", res_data, ano_sel)
+
+                # Feedback visual reativo da pontuação
+                pts_salvos_781 = float(d781.get("pontos", 0.0))
+                cor_txt_781 = "#28a745" if pts_salvos_781 > 10 else ("#6c757d" if v_salvo_781 == "Selecione..." else "#dc3545")
+                st.markdown(
+                    f"<span style='color:{cor_txt_781}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.8.1: +{pts_salvos_781:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.8.1", key=f"btn_salvar_7_8_1_{ano_sel}", type="primary"):
+                    lnk_val = link_781.strip()
+                    val_salvar = st.session_state.get(chave_radio_781, v_salvo_781)
+                    pts_calculados = opts781.get(val_salvar, 0.0)
+                    comentario_para_salvar = st.session_state.get(chave_coment_781, d781.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.8.1",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["7.8.1"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_781_salva or "")]
+
+                    if lnk_val != evidencia_781_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_8_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_8_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.8.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.8.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_8_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.8.1", st.session_state.get(f"links_pendentes_7_8_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_8_1_{ano_sel}"] = False
 
