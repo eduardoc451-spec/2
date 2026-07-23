@@ -7527,3 +7527,104 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.4.4", st.session_state.get(f"links_pendentes_8_4_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_4_4_{ano_sel}"] = False
 
+# =============================================================================
+        # QUESITO 9.0 • COLETA SELETIVA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q9_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 9.0 - Coleta Seletiva", expanded=True):
+                st.subheader("9.0 • Coleta Seletiva")
+                st.write("**A prefeitura municipal realiza a coleta seletiva de resíduos sólidos?**")
+
+                # Recupera os dados salvos no banco
+                d90 = res_data.get("9.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc90 = ["Selecione...", "Sim", "Não"]
+                v_salvo_90 = d90.get("valor", "Selecione...")
+                if v_salvo_90 not in opc90:
+                    v_salvo_90 = "Selecione..."
+                evidencia_90_salva = d90.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_90 = f"r90_in_{ano_sel}"
+                chave_link_90 = f"l90_in_{ano_sel}"
+                chave_coment_90 = f"coment_9.0_{ano_sel}"
+
+                c1, c2 = st.columns([1, 1])
+
+                with c1:
+                    resp_90 = st.radio(
+                        "Selecione uma opção (9.0):",
+                        options=opc90,
+                        index=opc90.index(v_salvo_90),
+                        key=chave_radio_90
+                    )
+
+                with c2:
+                    lk90 = st.text_area(
+                        "Link/Evidência (9.0):",
+                        value=evidencia_90_salva,
+                        key=chave_link_90,
+                        placeholder="Inserir link comprobatório...",
+                        height=100
+                    )
+                    placeholder_links_90 = st.empty()
+                    links_90_visuais = re.findall(REGEX_PURE_URL, lk90 or "")
+                    if links_90_visuais:
+                        placeholder_links_90.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_90_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 9.0
+                bloco_comentarios("9.0", res_data, ano_sel)
+
+                # Feedback visual do impacto (Referencial / Neutro)
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto 9.0: +0.0 pts (Referencial)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.0", key=f"btn_salvar_9_0_{ano_sel}", type="primary"):
+                    lnk_val = lk90.strip()
+                    val_sel = resp_90
+                    comentario_para_salvar = st.session_state.get(chave_coment_90, d90.get("comentario", ""))
+
+                    # Quesito referencial: pontuação é sempre 0.0
+                    pts_calculados = 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="9.0",
+                        valor=val_sel,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["9.0"] = {
+                        "valor": val_sel,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_90_salva or "")]
+
+                    if lnk_val != evidencia_90_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 9.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 9.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
+
