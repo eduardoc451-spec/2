@@ -4555,3 +4555,121 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 6.1 • FERRAMENTA DE PESQUISA INTERNA (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_6_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 6.1 - Ferramenta de Pesquisa/Busca Interna de Conteúdo", expanded=True):
+            st.subheader("6.1 • Ferramenta de Pesquisa")
+            st.write("**O site eletrônico da prefeitura continha ferramenta de pesquisa/busca interna de conteúdo? Não considerar a opção de busca do próprio browser (Ctrl + F)**")
+            st.caption("ℹ *Selecione a opção, insira a evidência e clique no botão 'Salvar Quesito 6.1'.*")
+
+            opc61 = {
+                "Selecione...": 0.0,
+                "Sim, para todo o conteúdo – 20": 20.0,
+                "Sim, para a maior parte do conteúdo – 10": 10.0,
+                "Sim, para a menor parte do conteúdo – 05": 5.0,
+                "Não – 00": 0.0
+            }
+            lista61 = list(opc61.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d61 = res_data.get("6.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_61 = d61.get("valor", "Selecione...")
+            evidencia_61_salva = d61.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_61 = f"r_61_select_{ano_sel}"
+            chave_link_61 = f"l_61_txt_area_{ano_sel}"
+            chave_coment_61 = f"coment_6.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx61 = lista61.index(v_salvo_61) if v_salvo_61 in lista61 else 0
+                st.radio(
+                    "Selecione a abrangência do mecanismo de busca:",
+                    options=lista61,
+                    index=idx61,
+                    key=chave_radio_61
+                )
+
+            with col2:
+                link_61 = st.text_area(
+                    "Link/Evidência (6.1):",
+                    value=evidencia_61_salva,
+                    key=chave_link_61,
+                    placeholder="Insira a URL contendo a barra de pesquisa ou exemplo de tela de resultados de busca...",
+                    height=110
+                )
+
+                placeholder_links_61 = st.empty()
+                links_61_visuais = re.findall(regex_pure_url, link_61 or "")
+                if links_61_visuais:
+                    placeholder_links_61.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_61_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("6.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 6.1", key=f"btn_salvar_6_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_61, v_salvo_61)
+                pts_61 = float(opc61.get(val_salvar, 0.0))
+                lnk_val = link_61.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_61, d61.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="6.1",
+                    valor=val_salvar,
+                    pontos=pts_61,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["6.1"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_61,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_61_salva or "")
+
+                if lnk_val != evidencia_61_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_6_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 6.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_61 = d61.get("pontos", 0.0)
+            cor_txt_61 = "#28a745" if pts_atuais_61 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_61}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 6.1: +{pts_atuais_61:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 6.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_6_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = False
