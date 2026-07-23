@@ -7165,3 +7165,132 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.4.2.1", st.session_state.get(f"links_pendentes_8_4_2_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_4_2_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.4.3 • CUMPRIMENTO DE METAS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q8_4_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.4.3 - Cumprimento de Metas", expanded=True):
+                st.subheader("8.4.3 • Cumprimento de Metas")
+                st.write("**As metas do Plano Municipal ou Regional de Gestão Integrada de Resíduos Sólidos estão sendo cumpridas no prazo estipulado?**")
+
+                opc843 = [
+                    "Selecione...",
+                    "Todas as metas foram cumpridas dentro do prazo – 50",
+                    "A maior parte das metas foram cumpridas dentro do prazo – 30",
+                    "A menor parte das metas foram cumpridas dentro do prazo – 10",
+                    "As metas não foram cumpridas dentro do prazo – 00"
+                ]
+
+                # Recupera os dados salvos do banco
+                d843 = res_data.get("8.4.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_843 = d843.get("valor", "Selecione...")
+                if v_salvo_843 not in opc843:
+                    v_salvo_843 = "Selecione..."
+
+                evidencia_843_salva = d843.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_843 = f"r843_in_{ano_sel}"
+                chave_link_843 = f"l843_in_{ano_sel}"
+                chave_coment_843 = f"coment_8.4.3_{ano_sel}"
+
+                c1, c2 = st.columns([1, 1])
+
+                with c1:
+                    val_selecionado = st.radio(
+                        "Selecione uma opção (8.4.3):",
+                        options=opc843,
+                        index=opc843.index(v_salvo_843),
+                        key=chave_radio_843
+                    )
+
+                    # Cálculo dinâmico para exibição da métrica
+                    pts_calculados = 0.0
+                    if "Todas" in val_selecionado:
+                        pts_calculados = 50.0
+                    elif "maior parte" in val_selecionado:
+                        pts_calculados = 30.0
+                    elif "menor parte" in val_selecionado:
+                        pts_calculados = 10.0
+
+                    st.metric(label="Pontuação do Quesito", value=f"{pts_calculados:.1f} pts")
+
+                with c2:
+                    link_843 = st.text_area(
+                        "Link/Evidência (8.4.3):",
+                        value=evidencia_843_salva,
+                        key=chave_link_843,
+                        placeholder="Inserir links de relatórios de monitoramento, decretos ou documentos de acompanhamento de metas...",
+                        height=140
+                    )
+                    placeholder_links_843 = st.empty()
+                    links_843_visuais = re.findall(REGEX_PURE_URL, link_843 or "")
+                    if links_843_visuais:
+                        placeholder_links_843.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_843_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 8.4.3
+                bloco_comentarios("8.4.3", res_data, ano_sel)
+
+                # Feedback visual de impacto de pontuação
+                cor_impacto = "#28a745" if pts_calculados > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.4.3: +{pts_calculados:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.4.3", key=f"btn_salvar_8_4_3_{ano_sel}", type="primary"):
+                    lnk_val = link_843.strip()
+                    val_salvar = st.session_state.get(chave_radio_843, v_salvo_843)
+
+                    # Re-calcula os pontos para persistência segura
+                    pts_salvar = 0.0
+                    if "Todas" in val_salvar:
+                        pts_salvar = 50.0
+                    elif "maior parte" in val_salvar:
+                        pts_salvar = 30.0
+                    elif "menor parte" in val_salvar:
+                        pts_salvar = 10.0
+
+                    comentario_para_salvar = st.session_state.get(chave_coment_843, d843.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="8.4.3",
+                        valor=val_salvar,
+                        pontos=float(pts_salvar),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["8.4.3"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_salvar),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_843_salva or "")]
+
+                    if lnk_val != evidencia_843_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_4_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_4_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 8.4.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 8.4.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_4_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.4.3", st.session_state.get(f"links_pendentes_8_4_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_4_3_{ano_sel}"] = False
+
