@@ -1279,23 +1279,24 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     return buffer
 import json
 import logging
+import re
 from datetime import datetime
-import streamlit as st
+
 import plotly.graph_objects as go
 from psycopg2.extras import RealDictCursor
-import re  # Necessário para as expressões regulares dos links
+import streamlit as st
 
 # =============================================================================
 # 4. SIDEBAR - iAMB
 # =============================================================================
 
 def zerar_questionario_iamb(ano: int):
-    """Deleta todas as respostas do ano selecionado com modulo = 'iamb'."""
+    """Deleta todas as respostas do ano selecionado na tabela respostas_iamb."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "DELETE FROM respostas WHERE ano = %s AND modulo = 'iamb'",
+                    "DELETE FROM respostas_iamb WHERE ano = %s",
                     (int(ano),)
                 )
             conn.commit()
@@ -1321,13 +1322,12 @@ def confirmar_zerar_dialog(ano):
         if st.button("🔴 Sim, Zerar Tudo", type="primary", use_container_width=True):
             if senha_digitada.strip() == "fidelios":
                 try:
-                    with get_connection() as conn:
-                        with conn.cursor() as cursor:
-                            cursor.execute("DELETE FROM respostas_iamb WHERE ano = %s", (int(ano),))
-                        conn.commit()
+                    zerar_questionario_iamb(ano)
                     
-                    st.cache_data.clear()
-                    st.session_state[f"respostas_iamb_{ano}"] = {}
+                    # Limpa a sessão
+                    key_ano = f"respostas_iamb_{ano}"
+                    st.session_state[key_ano] = {}
+                    
                     st.toast("Respostas do iAMB zeradas com sucesso!", icon="🗑️")
                     st.rerun()
                 except Exception as e:
@@ -1343,17 +1343,24 @@ def confirmar_zerar_dialog(ano):
 def render_sidebar():
     st.sidebar.title("🌱 Painel de Controle - iAMB")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
-    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
+    
+    # Seleção do ano no session_state
+    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_iamb")
 
     res_data = load_respostas(ano_sel)
-    total_pts = sum(item.get("pontos", 0) for item in res_data.values())
+    total_pts = sum(item.get("pontos", 0.0) for item in res_data.values() if isinstance(item, dict))
 
     # Régua de Classificação IEGM / iAMB
-    if total_pts <= 500:    faixa, cor = "C (Inefetivo)",           "red"
-    elif total_pts <= 599: faixa, cor = "C+ (Em Adequação)",      "orange"
-    elif total_pts <= 749: faixa, cor = "B (Efetivo)",             "#d4d400"
-    elif total_pts <= 899: faixa, cor = "B+ (Muito Efetivo)",     "lightgreen"
-    else:                  faixa, cor = "A (Altamente Efetivo)", "green"
+    if total_pts <= 500:
+        faixa, cor = "C (Inefetivo)", "red"
+    elif total_pts <= 599:
+        faixa, cor = "C+ (Em Adequação)", "orange"
+    elif total_pts <= 749:
+        faixa, cor = "B (Efetivo)", "#d4d400"
+    elif total_pts <= 899:
+        faixa, cor = "B+ (Muito Efetivo)", "lightgreen"
+    else:
+        faixa, cor = "A (Altamente Efetivo)", "green"
 
     st.sidebar.metric("Pontuação Total iAMB", f"{total_pts:.1f} pts")
     st.sidebar.markdown(
@@ -1367,12 +1374,18 @@ def render_sidebar():
     
     # Botão de Download direto
     with col1:
+        # Tratamento para verificar se a função gerar_relatorio_pdf existe no escopo
+        pdf_bytes = b""
+        if "gerar_relatorio_pdf" in globals():
+            pdf_bytes = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
+            
         st.download_button(
             label="📄 Baixar PDF",
-            data=gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa),
+            data=pdf_bytes,
             file_name=f"Relatorio_iAMB_{ano_sel}.pdf",
             mime="application/pdf",
-            use_container_width=True
+            use_container_width=True,
+            disabled=(pdf_bytes == b"")
         )
 
     # Botão para abrir o Modal de confirmação
@@ -1387,19 +1400,31 @@ def render_sidebar():
 # =============================================================================
 
 def get_all_years_data_iamb() -> dict:
-    """Busca o histórico de dados de todos os anos para a métrica iAMB."""
+    """Busca o histórico de dados de todos os anos salvos na tabela respostas_iamb e session_state."""
     all_data = {}
+    
+    # 1. Carrega via Banco
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT DISTINCT ano FROM respostas WHERE modulo = 'iamb' ORDER BY ano"
-                )
-                anos = [row[0] for row in cursor.fetchall()]
-                for ano in anos:
-                    all_data[ano] = load_respostas(ano)
+                cursor.execute("SELECT DISTINCT ano FROM respostas_iamb ORDER BY ano")
+                anos_banco = [row[0] for row in cursor.fetchall()]
+                for a in anos_banco:
+                    all_data[a] = load_respostas(a)
     except Exception as e:
-        logging.error(f"Erro ao buscar histórico de anos iAMB: {e}")
+        logging.error(f"Erro ao buscar histórico de anos iAMB no banco: {e}")
+        
+    # 2. Carrega via Session State (para capturar anos ainda não persistidos)
+    prefixo = "respostas_iamb_"
+    for key in st.session_state.keys():
+        if key.startswith(prefixo):
+            try:
+                ano = int(key.replace(prefixo, ""))
+                if ano not in all_data or not all_data[ano]:
+                    all_data[ano] = st.session_state[key]
+            except ValueError:
+                continue
+
     return all_data
 
 
@@ -1419,10 +1444,10 @@ def grafico_pontos_por_ano(all_data):
     
     for ano in anos:
         res = all_data[ano]
-        total = sum(v.get("pontos", 0.0) for k, v in res.items() if not k.startswith("COM_"))
+        total = sum(v.get("pontos", 0.0) for k, v in res.items() if isinstance(v, dict) and not k.startswith("COM_"))
         totais.append(total)
         
-        if total <= 500:   cores.append("#ef4444")  # Vermelho
+        if total <= 500:    cores.append("#ef4444")  # Vermelho
         elif total <= 599: cores.append("#f97316")  # Laranja
         elif total <= 749: cores.append("#eab308")  # Amarelo
         elif total <= 899: cores.append("#84cc16")  # Verde Claro
@@ -1467,16 +1492,20 @@ def render_graficos(res_data_atual, ano_sel):
 # =============================================================================
 
 def mostrar_formulario_iamb():
-    dados_sidebar = render_sidebar()
-    
-    if dados_sidebar and len(dados_sidebar) == 3:
-        total_pts, res_data, ano_sel = dados_sidebar
-    else:
-        total_pts, res_data, ano_sel = 0.0, {}, 2026
+    total_pts, res_data, ano_sel = render_sidebar()
 
     st.title(f"🌿 Gestão Ambiental (iAMB) - {ano_sel}")
 
     aba_quest, aba_graf = st.tabs(["📋 Questionário iAMB", "📊 Gráficos e Evolução"])
+
+    with aba_quest:
+        st.subheader("Formulário de Avaliação")
+        # Itera sobre os quesitos conhecidos do iAMB
+        for qid in PONTUACOES_MAX_IAMB.keys():
+            renderizar_questao(qid, res_data)
+
+    with aba_graf:
+        render_graficos(res_data, ano_sel)
 
     # -------------------------------------------------------------------------
     # ABA 1: QUESTIONÁRIO (Quesitos entram AQUI)
