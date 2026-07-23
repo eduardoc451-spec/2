@@ -6775,3 +6775,104 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("10.0", st.session_state.get(f"links_pendentes_10_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 10.1 • DETALHES DO INSTRUMENTO NORMATIVO (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_lgpd_10_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 10.1 - Dados do Instrumento Normativo", expanded=True):
+            st.subheader("10.1 • Dados da Regulamentação")
+            st.write("**Informe o Instrumento normativo, Número e Data da publicação:**")
+            st.caption("ℹ *Informe os dados do instrumento, preencha a evidência se houver e clique em 'Salvar Quesito 10.1'.*")
+
+            d101 = res_data.get("10.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_101 = d101.get("valor", "")
+            evidencia_101_salva = d101.get("link", "")
+
+            chave_txt_101 = f"t_101_txt_area_{ano_sel}"
+            chave_link_101 = f"l_101_txt_area_{ano_sel}"
+            chave_coment_101 = f"coment_10.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                st.text_area(
+                    "Informe os dados aqui (Tipo, Número e Data):",
+                    value=v_salvo_101,
+                    key=chave_txt_101,
+                    placeholder="Exemplo: Decreto Municipal nº 1.234, publicado em DD/MM/AAAA",
+                    height=110
+                )
+
+            with col2:
+                link_101 = st.text_area(
+                    "Link/Evidência (10.1):",
+                    value=evidencia_101_salva,
+                    key=chave_link_101,
+                    placeholder="Insira o link que comprova o instrumento normativo...",
+                    height=110
+                )
+                placeholder_links_101 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_101 or "")
+                links_101_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_101_visuais:
+                    placeholder_links_101.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_101_visuais]))
+
+            # Renderiza bloco de comentários
+            bloco_comentarios("10.1", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da indicação na tela
+            v_atual_101 = st.session_state.get(chave_txt_101, v_salvo_101)
+            cor_txt_101 = "#28a745" if len(v_atual_101.strip()) > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_txt_101}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 10.1: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 10.1", key=f"btn_salvar_10_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_txt_101, v_salvo_101).strip()
+                lnk_val = link_101.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_101, d101.get("comentario", ""))
+
+                # Gravação no Banco de Dados (0.0 pontos)
+                save_resp(
+                    qid="10.1",
+                    valor=val_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["10.1"] = {
+                    "valor": val_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_101_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_101_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_10_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_10_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 10.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 10.1
+    if st.session_state.get(f"gatilho_modal_10_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("10.1", st.session_state.get(f"links_pendentes_10_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_10_1_{ano_sel}"] = False
