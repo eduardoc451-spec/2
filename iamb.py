@@ -11262,3 +11262,104 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.1", st.session_state.get(f"links_pendentes_14_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 14.2 • LOCALIZAÇÃO DO DESCARTE IRREGULAR (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q14_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 14.2 - Endereço dos Locais", expanded=True):
+                st.subheader("14.2 • Localização do Descarte Irregular")
+                st.write("**Informe o endereço dos locais identificados:**")
+
+                # Recuperação dos dados salvos no banco
+                d142 = res_data.get("14.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_142 = d142.get("valor", "")
+                pts_salvos_142 = float(d142.get("pontos", 0.0))
+                evidencia_142_salva = d142.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_resposta_142 = f"t142_in_{ano_sel}"
+                chave_link_142 = f"l142_in_{ano_sel}"
+                chave_coment_142 = f"coment_14.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    v_input_142 = st.text_area(
+                        "Endereço dos locais (14.2):",
+                        value=v_salvo_142,
+                        key=chave_resposta_142,
+                        placeholder="Informe os endereços, coordenadas ou pontos de referência dos locais...",
+                        height=125
+                    )
+
+                    # Exibição de métrica de impacto salva
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_142:.1f} pts")
+
+                with col2:
+                    lk142 = st.text_area(
+                        "Link/Evidência (14.2):",
+                        value=evidencia_142_salva,
+                        key=chave_link_142,
+                        placeholder="Inserir link com mapeamento, fotos georreferenciadas ou documentos...",
+                        height=125
+                    )
+                    placeholder_links_142 = st.empty()
+                    links_142_visuais = re.findall(REGEX_PURE_URL, lk142 or "")
+                    if links_142_visuais:
+                        placeholder_links_142.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_142_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 14.2
+                bloco_comentarios("14.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>📊 Impacto 14.2: {pts_salvos_142:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 14.2", key=f"btn_salvar_14_2_{ano_sel}", type="primary"):
+                    val_texto_142 = v_input_142.strip()
+                    lnk_val = lk142.strip()
+                    pts_calculados_142 = 0.0
+                    comentario_para_salvar = st.session_state.get(chave_coment_142, d142.get("comentario", ""))
+
+                    # Persistência no banco de dados via save_resp
+                    save_resp(
+                        qid="14.2",
+                        valor=val_texto_142,
+                        pontos=float(pts_calculados_142),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do dicionário em memória
+                    res_data["14.2"] = {
+                        "valor": val_texto_142,
+                        "pontos": float(pts_calculados_142),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_142_salva or "")]
+
+                    if lnk_val != evidencia_142_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 14.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 14.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_14_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.2", st.session_state.get(f"links_pendentes_14_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_2_{ano_sel}"] = False
