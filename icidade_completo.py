@@ -6964,12 +6964,24 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
         modal_aviso_link("C1.1", st.session_state.get(f"links_pendentes_c1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_c1_1_{ano_sel}"] = False
 
-# --- INICIALIZAÇÃO DO SCRIPT ---
+# =============================================================================
+# INICIALIZAÇÃO SEGURA DO MÓDULO (SE EXECUTADO DIRETAMENTE)
+# =============================================================================
+
+# Atalhos de segurança para o main.py encontrar a função principal
+mostrar_formulario_icidade = mostrar_formulario_cidade
+mostrar_formulario_igov = mostrar_formulario_cidade
+
 if __name__ == "__main__":
     try:
         st.set_page_config(page_title="IEGM i-Cidade", layout="wide", page_icon="🏙️")
     except Exception:
         pass
 
-    init_db()
-    mostrar_formulario_cidade()
+    if 'init_db' in globals():
+        init_db()
+
+    if 'mostrar_formulario_cidade' in globals():
+        mostrar_formulario_cidade()
+    else:
+        st.error("❌ A função 'mostrar_formulario_cidade' não foi encontrada. Verifique se a definição 'def mostrar_formulario_cidade():' está no arquivo e sem espaços no início da linha.")
