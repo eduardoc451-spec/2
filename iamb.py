@@ -1507,10 +1507,6 @@ def mostrar_formulario_iamb():
     with aba_graf:
         render_graficos(res_data, ano_sel)
 
-    # -------------------------------------------------------------------------
-    # ABA 1: QUESTIONÁRIO (Quesitos entram AQUI)
-    # -------------------------------------------------------------------------
-    with aba_quest:
-        st.info("Responda às questões da gestão ambiental municipal para calcular o índice iAMB.")
+  
 
         
