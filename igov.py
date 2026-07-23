@@ -2675,3 +2675,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("2.3", st.session_state.get(f"links_pendentes_2_3_{ano_sel}", []))
         st.session_state[f"gatilho_modal_2_3_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 3.0 • POLÍTICA DE SEGURANÇA DA INFORMAÇÃO (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_0_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.0 - Política de Segurança da Informação (POSIC)", expanded=True):
+            st.subheader("3.0 • Política de Segurança da Informação")
+            st.write("**A Prefeitura dispõe de Política de Segurança da informação formalmente instituída e de cumprimento obrigatório?**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 3.0'.*")
+
+            opc30 = {
+                "Selecione...": 0.0,
+                "Sim – 50": 50.0,
+                "Não – 00": 0.0
+            }
+            lista30 = list(opc30.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d30 = res_data.get("3.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_30 = d30.get("valor", "Selecione...")
+            evidencia_30_salva = d30.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_30 = f"r_30_select_{ano_sel}"
+            chave_link_30 = f"l_30_txt_area_{ano_sel}"
+            chave_coment_30 = f"coment_3.0_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx30 = lista30.index(v_salvo_30) if v_salvo_30 in lista30 else 0
+                st.radio(
+                    "Selecione o status da POSIC:",
+                    options=lista30,
+                    index=idx30,
+                    key=chave_radio_30
+                )
+
+            with col2:
+                link_30 = st.text_area(
+                    "Link/Evidência (3.0):",
+                    value=evidencia_30_salva,
+                    key=chave_link_30,
+                    placeholder="Insira o link da publicação do decreto, resolução ou portaria instituindo a POSIC municipal...",
+                    height=90
+                )
+
+                placeholder_links_30 = st.empty()
+                links_30_visuais = re.findall(regex_pure_url, link_30 or "")
+                if links_30_visuais:
+                    placeholder_links_30.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_30_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.0", key=f"btn_salvar_3_0_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_30, v_salvo_30)
+                pts_30 = float(opc30.get(val_salvar, 0.0))
+                lnk_val = link_30.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_30, d30.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.0",
+                    valor=val_salvar,
+                    pontos=pts_30,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.0"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_30,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_30_salva or "")
+
+                if lnk_val != evidencia_30_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.0 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_30 = d30.get("pontos", 0.0)
+            cor_txt_30 = "#28a745" if pts_atuais_30 == 50.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_30}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.0: +{pts_atuais_30:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.0 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
