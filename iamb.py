@@ -2836,7 +2836,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 5.0 • CONTRATO DE PRESTAÇÃO DE SERVIÇO DE PODA E CORTE (MODELO iGov)
         # =============================================================================
         with st.container(key=f"container_bloco_arborizacao_5_0_{ano_sel}", border=True):
@@ -2950,7 +2950,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 5.1 • NÚMERO DO CONTRATO E PRESTADOR DE SERVIÇO (MODELO iGov)
         # =============================================================================
         with st.container(key=f"container_bloco_arborizacao_5_1_{ano_sel}", border=True):
@@ -3066,3 +3066,123 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 5.2 • PERIODICIDADE DE PODA/MANUTENÇÃO DAS ÁRVORES (MODELO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_arborizacao_5_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.2 - Cronograma e Regularidade de Podas", expanded=True):
+                st.subheader("5.2 • Periodicidade de Manutenção")
+                st.write("**A Prefeitura mantém uma periodicidade de poda/manutenção das árvores?**")
+                st.caption("ℹ *Atenção: Opções incorretas geram impactos negativos/penalidades na nota total. Selecione uma opção, insira a evidência/comentários e clique em 'Salvar Quesito 5.2'.*")
+
+                opts52 = {
+                    "Selecione...": 0.0,
+                    "Sim – 00": 0.0,
+                    "Não tem uma periodicidade – -10": -10.0,
+                    "Somente por solicitação – -10": -10.0,
+                    "Não realiza poda e/ou corte de árvores – -15": -15.0
+                }
+                lista_opts = list(opts52.keys())
+
+                # Recupera os dados salvos no banco de dados
+                d52 = res_data.get("5.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_52 = d52.get("valor", "Selecione...")
+                if v_salvo_52 not in lista_opts:
+                    v_salvo_52 = "Selecione..."
+
+                evidencia_52_salva = d52.get("link", "")
+
+                # Chaves fixas de componentes no Streamlit
+                chave_radio_52 = f"r_52_select_{ano_sel}"
+                chave_link_52 = f"l_52_txt_area_{ano_sel}"
+                chave_coment_52 = f"coment_5.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    try:
+                        idx52 = lista_opts.index(v_salvo_52)
+                    except ValueError:
+                        idx52 = 0
+
+                    opcao_selecionada = st.radio(
+                        "Selecione uma opção (5.2):",
+                        options=lista_opts,
+                        index=idx52,
+                        key=chave_radio_52
+                    )
+
+                with col2:
+                    link_52 = st.text_area(
+                        "Link/Evidência (5.2):",
+                        value=evidencia_52_salva,
+                        key=chave_link_52,
+                        placeholder="Insira o link do cronograma oficial de podas, decretos ou relatórios de atendimento...",
+                        height=150
+                    )
+                    placeholder_links_52 = st.empty()
+                    links_52_visuais = re.findall(REGEX_PURE_URL, link_52 or "")
+                    if links_52_visuais:
+                        placeholder_links_52.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_52_visuais]))
+
+                # Renderiza o bloco de comentários
+                bloco_comentarios("5.2", res_data, ano_sel)
+
+                # Cálculo visual de pontuação dinâmica
+                pts_atuais_52 = opts52.get(opcao_selecionada, 0.0)
+                if opcao_selecionada == "Selecione...":
+                    cor_txt_52 = "#6c757d"
+                elif pts_atuais_52 < 0.0:
+                    cor_txt_52 = "#dc3545"
+                else:
+                    cor_txt_52 = "#28a745"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_52}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.2: {pts_atuais_52:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.2", key=f"btn_salvar_5_2_{ano_sel}", type="primary"):
+                    val_salvar = opcao_selecionada
+                    lnk_val = link_52.strip()
+                    pts_calculados = float(opts52.get(val_salvar, 0.0))
+                    comentario_para_salvar = st.session_state.get(chave_coment_52, d52.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="5.2",
+                        valor=val_salvar,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["5.2"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_52_salva or "")]
+
+                    if lnk_val != evidencia_52_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 5.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 5.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.2", st.session_state.get(f"links_pendentes_5_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = False
