@@ -11161,3 +11161,104 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.0", st.session_state.get(f"links_pendentes_14_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 14.1 • QUANTIDADE DE PONTOS IDENTIFICADOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q14_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 14.1 - Quantidade de Pontos", expanded=True):
+                st.subheader("14.1 • Quantidade Identificada")
+                st.write("**Informe a quantidade de pontos identificados:**")
+
+                # Recuperação dos dados salvos no banco
+                d141 = res_data.get("14.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_141 = d141.get("valor", "")
+                pts_salvos_141 = float(d141.get("pontos", 0.0))
+                evidencia_141_salva = d141.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_resposta_141 = f"t141_in_{ano_sel}"
+                chave_link_141 = f"l141_in_{ano_sel}"
+                chave_coment_141 = f"coment_14.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    v_input_141 = st.text_area(
+                        "Quantidade de pontos (14.1):",
+                        value=v_salvo_141,
+                        key=chave_resposta_141,
+                        placeholder="Informe a quantidade ou detalhamento dos pontos identificados...",
+                        height=125
+                    )
+
+                    # Exibição de métrica de impacto salva
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_141:.1f} pts")
+
+                with col2:
+                    lk141 = st.text_area(
+                        "Link/Evidência (14.1):",
+                        value=evidencia_141_salva,
+                        key=chave_link_141,
+                        placeholder="Inserir link do relatório ou mapeamento das quantidades...",
+                        height=125
+                    )
+                    placeholder_links_141 = st.empty()
+                    links_141_visuais = re.findall(REGEX_PURE_URL, lk141 or "")
+                    if links_141_visuais:
+                        placeholder_links_141.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_141_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 14.1
+                bloco_comentarios("14.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>📊 Impacto 14.1: {pts_salvos_141:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 14.1", key=f"btn_salvar_14_1_{ano_sel}", type="primary"):
+                    val_texto_141 = v_input_141.strip()
+                    lnk_val = lk141.strip()
+                    pts_calculados_141 = 0.0
+                    comentario_para_salvar = st.session_state.get(chave_coment_141, d141.get("comentario", ""))
+
+                    # Persistência no banco de dados via save_resp
+                    save_resp(
+                        qid="14.1",
+                        valor=val_texto_141,
+                        pontos=float(pts_calculados_141),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do dicionário em memória
+                    res_data["14.1"] = {
+                        "valor": val_texto_141,
+                        "pontos": float(pts_calculados_141),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_141_salva or "")]
+
+                    if lnk_val != evidencia_141_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 14.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 14.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_14_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.1", st.session_state.get(f"links_pendentes_14_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_1_{ano_sel}"] = False
