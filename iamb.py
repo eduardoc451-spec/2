@@ -2010,7 +2010,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("1.1.2", st.session_state.get(f"links_pendentes_1_1_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_1_2_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 1.1.3 • CURSOS DE EDUCAÇÃO AMBIENTAL (MODELO PADRONIZADO iGov)
         # =============================================================================
         with st.container(key=f"container_bloco_rh_1_1_3_{ano_sel}", border=True):
@@ -2122,3 +2122,116 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.1.3", st.session_state.get(f"links_pendentes_1_1_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_1_3_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 1.2 • RECURSOS DISPONIBILIZADOS (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_recursos_1_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.2 - Recursos Disponibilizados Operacionais", expanded=True):
+                st.subheader("1.2 • Recursos Operacionais")
+                st.write("**Assinale os recursos disponibilizados para a operacionalização das atividades de meio ambiente: Não considerar Recursos Humanos e Estrutura Física nesta questão.**")
+                st.caption("ℹ *Marque as opções aplicáveis e clique no botão 'Salvar Quesito 1.2' para registrar.*")
+
+                opts12 = [
+                    "Recursos Tecnológicos – 05",
+                    "Recursos Orçamentários – 05",
+                    "Recursos Materiais – 05",
+                    "Outros – 05"
+                ]
+
+                # Recupera os dados salvos no banco ou cria valor zerado
+                d12 = res_data.get("1.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                texto_seguro_12 = str(d12.get("valor", "[]"))
+                evidencia_12_salva = d12.get("link", "")
+
+                # Chaves fixas para componentes Streamlit
+                chave_link_12 = f"l_12_txt_area_{ano_sel}"
+                chave_coment_12 = f"coment_1.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.write("*Selecione os recursos ativos:*")
+                    for opt in opts12:
+                        marcado = (opt in texto_seguro_12) if texto_seguro_12 and texto_seguro_12 != "[]" else False
+                        st.checkbox(
+                            opt,
+                            value=marcado,
+                            key=f"ck_12_{opt}_{ano_sel}"
+                        )
+
+                with col2:
+                    link_12 = st.text_area(
+                        "Link/Evidência (1.2):",
+                        value=evidencia_12_salva,
+                        key=chave_link_12,
+                        placeholder="Links da LOA/QDD para orçamento, notas fiscais ou inventário de sistemas/materiais...",
+                        height=150
+                    )
+                    placeholder_links_12 = st.empty()
+                    links_12_visuais = re.findall(REGEX_PURE_URL, link_12 or "")
+                    if links_12_visuais:
+                        placeholder_links_12.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_12_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.2", key=f"btn_salvar_1_2_{ano_sel}", type="primary"):
+                    # Coleta as escolhas ativas no session_state
+                    lista_selecionados = []
+                    pts_totais = 0.0
+                    for opt in opts12:
+                        if st.session_state.get(f"ck_12_{opt}_{ano_sel}", False):
+                            lista_selecionados.append(opt)
+                            pts_totais += 5.0
+
+                    val_salvar = str(lista_selecionados)
+                    lnk_val = link_12.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_12, d12.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="1.2",
+                        valor=val_salvar,
+                        pontos=pts_totais,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["1.2"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_totais,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_12_salva or "")]
+
+                    if lnk_val != evidencia_12_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual
+                pts_atuais_12 = d12.get("pontos", 0.0)
+                cor_txt_12 = "#28a745" if pts_atuais_12 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_12}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.2: +{pts_atuais_12:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
