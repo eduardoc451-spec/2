@@ -6128,3 +6128,159 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 8.4 • CONTROLE DE ACESSO À INFORMAÇÃO (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_8_4_final_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 8.4 - Controle de Acesso à Informação", expanded=True):
+            st.subheader("8.4 • Controle de Acesso à Informação")
+            st.write("**Assinale quais sistemas possuem controle de acesso à informação:**")
+            st.caption("ℹ *Controle relativo a histórico, níveis de acesso e logs de eventos. Cada item não assinalado gera uma penalidade de -3,0 pontos. Clique em 'Salvar Quesito 8.4'.*")
+
+            opcoes_sistemas = [
+                "Contabilidade", "Gestão de tributos (arrecadação)", "Dívida Ativa", 
+                "Precatórios", "Gestão patrimonial (bens e equipamentos)", 
+                "Gestão de negócios (Business Intelligence)", "Planejamento", 
+                "Recursos humanos / Departamento pessoal", "Almoxarifado", 
+                "Controle de frotas", "Controle Interno", "Saúde", 
+                "Ensino (educação)", "Compras, licitações e contratos", 
+                "Certidões e alvarás", "Saneamento", "Cemitérios"
+            ]
+
+            total_itens = len(opcoes_sistemas) # 17 sistemas
+
+            # Recupera o estado inicial do banco de dados com segurança
+            d84 = res_data.get("8.4") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            val_84_banco = d84.get("valor", "[]")
+            if isinstance(val_84_banco, str):
+                if val_84_banco.strip() in ["", "[]", "None"]:
+                    lista_salva_84 = []
+                else:
+                    try:
+                        import json
+                        lista_salva_84 = json.loads(val_84_banco.replace("'", '"'))
+                    except Exception:
+                        try:
+                            import ast
+                            lista_salva_84 = ast.literal_eval(val_84_banco)
+                        except Exception:
+                            lista_salva_84 = []
+            else:
+                lista_salva_84 = list(val_84_banco) if val_84_banco else []
+
+            evidencia_84_salva = d84.get("link", "")
+
+            # Chaves para sessão
+            chave_link_84 = f"l_84_txt_area_{ano_sel}"
+            chave_coment_84 = f"coment_8.4_{ano_sel}"
+
+            # Renderização dos Checkboxes e captura dos marcados na tela
+            col_sis1, col_sis2 = st.columns(2)
+            sel84_na_tela = []
+
+            for i, sistema in enumerate(opcoes_sistemas):
+                chave_ck = f"ck_84_{sistema}_{ano_sel}"
+                
+                # Garante valor padrão no session_state no primeiro carregamento
+                if chave_ck not in st.session_state:
+                    st.session_state[chave_ck] = (sistema in lista_salva_84)
+
+                with col_sis1 if i % 2 == 0 else col_sis2:
+                    marcado = st.checkbox(
+                        sistema, 
+                        key=chave_ck
+                    )
+                    if marcado:
+                        sel84_na_tela.append(sistema)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            link_84 = st.text_area(
+                "Link/Evidência (8.4):",
+                value=evidencia_84_salva,
+                key=chave_link_84,
+                placeholder="Insira links de manuais de segurança, políticas de senhas...",
+                height=90
+            )
+
+            placeholder_links_84 = st.empty()
+            
+            # Extração visual segura de links (handles tuples or strings)
+            raw_links_visuais = re.findall(regex_pure_url, link_84 or "")
+            links_84_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+
+            if links_84_visuais:
+                placeholder_links_84.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_84_visuais]))
+
+            # Bloco de comentários
+            bloco_comentarios("8.4", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # CÁLCULO DAS PENALIDADES (ITENS NÃO ASSINALADOS)
+            # -----------------------------------------------------------------
+            qtd_assinalados = len(sel84_na_tela)
+            qtd_nao_assinalados = total_itens - qtd_assinalados
+            pts_84_calculados = -(qtd_nao_assinalados * 3.0)
+
+            # Feedback visual em tempo real antes de salvar
+            if qtd_nao_assinalados > 0:
+                st.warning(
+                    f"⚠️ **Desconto de Pontuação:** {qtd_nao_assinalados} item(ns) não assinalado(s) "
+                    f"× -3,0 pts = **{pts_84_calculados:.1f} pontos**"
+                )
+            else:
+                st.success("✅ **Todos os 17 itens foram assinalados!** NENHUM desconto aplicado (0,0 pontos).")
+
+            st.markdown(
+                f"<span style='color:{'#28a745' if pts_84_calculados == 0.0 else '#dc3545'}; font-weight:bold;'>"
+                f"📊 Pontuação do Quesito 8.4: {pts_84_calculados:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.4", key=f"btn_salvar_8_4_{ano_sel}", type="primary"):
+                sel84_para_salvar = sorted(sel84_na_tela)
+                lnk_val = link_84.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_84, d84.get("comentario", ""))
+
+                # Salva no banco com os pontos negativos calculados
+                save_resp(
+                    qid="8.4",
+                    valor=str(sel84_para_salvar),
+                    pontos=pts_84_calculados,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualiza memória local
+                res_data["8.4"] = {
+                    "valor": str(sel84_para_salvar),
+                    "pontos": pts_84_calculados,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_84_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_84_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e pontuação do Quesito 8.4 salvas com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 8.4
+    if st.session_state.get(f"gatilho_modal_8_4_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("8.4", st.session_state.get(f"links_pendentes_8_4_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_8_4_{ano_sel}"] = False
