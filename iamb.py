@@ -4,6 +4,7 @@ import re
 import json
 import warnings
 import logging
+from iamb import init_db  # Troque 'database' pelo nome do seu arquivo .py
 from datetime import datetime, date
 from io import BytesIO
 
