@@ -7414,3 +7414,116 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.4.3.1", st.session_state.get(f"links_pendentes_8_4_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_4_3_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.4.4 • DATA DA ÚLTIMA REVISÃO DO PLANO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q8_4_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.4.4 - Data da Última Revisão do Plano", expanded=True):
+                st.subheader("8.4.4 • Data da Última Revisão do Plano")
+                st.write("**Qual a data da última revisão do Plano Municipal ou Regional de Gestão Integrada de Resíduos Sólidos?**")
+                st.caption("ℹ *Se não houve revisão do plano de gestão integrada de resíduos sólidos, informe a data do início de vigência do plano.*")
+
+                # Recupera os dados salvos no banco
+                d844 = res_data.get("8.4.4") or {"valor": "01/01/2015", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_844 = d844.get("valor", "01/01/2015")
+                evidencia_844_salva = d844.get("link", "")
+
+                # Parsing seguro para o objeto datetime.date
+                try:
+                    dt_parsed = datetime.strptime(str(v_salvo_844).strip(), "%d/%m/%Y").date()
+                except Exception:
+                    dt_parsed = date(2015, 1, 1)
+
+                # Definindo chaves do Streamlit
+                chave_date_844 = f"q844_dt_in_{ano_sel}"
+                chave_link_844 = f"l844_txt_in_{ano_sel}"
+                chave_coment_844 = f"coment_8.4.4_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    dt_selecionada = st.date_input(
+                        "Data da Última Revisão ou Vigência:",
+                        value=dt_parsed,
+                        format="DD/MM/YYYY",
+                        key=chave_date_844
+                    )
+
+                    # Regra de pontuação: <= 31/12/2014 aplica penalidade de -30.0 pts
+                    dt_limite = date(2014, 12, 31)
+                    if dt_selecionada <= dt_limite:
+                        pts_calculados = -30.0
+                        cor_metric = "#dc3545"  # Vermelho (penalidade)
+                    else:
+                        pts_calculados = 0.0
+                        cor_metric = "#28a745"  # Verde / Neutro
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_calculados:.1f} pts")
+
+                with col2:
+                    link_844 = st.text_area(
+                        "Link/Evidência (8.4.4):",
+                        value=evidencia_844_salva,
+                        key=chave_link_844,
+                        placeholder="Inserir link da publicação do plano, lei ou decreto...",
+                        height=125
+                    )
+                    placeholder_links_844 = st.empty()
+                    links_844_visuais = re.findall(REGEX_PURE_URL, link_844 or "")
+                    if links_844_visuais:
+                        placeholder_links_844.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_844_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 8.4.4
+                bloco_comentarios("8.4.4", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto Técnico 8.4.4: {pts_calculados:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.4.4", key=f"btn_salvar_8_4_4_{ano_sel}", type="primary"):
+                    lnk_val = link_844.strip()
+                    data_formatada = dt_selecionada.strftime("%d/%m/%Y")
+                    comentario_para_salvar = st.session_state.get(chave_coment_844, d844.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="8.4.4",
+                        valor=data_formatada,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["8.4.4"] = {
+                        "valor": data_formatada,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_844_salva or "")]
+
+                    if lnk_val != evidencia_844_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_4_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_4_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 8.4.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 8.4.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_4_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.4.4", st.session_state.get(f"links_pendentes_8_4_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_4_4_{ano_sel}"] = False
+
