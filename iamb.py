@@ -7990,3 +7990,121 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("9.3", st.session_state.get(f"links_pendentes_9_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 9.3.1 • DETALHAMENTO DAS AÇÕES (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q9_3_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 9.3.1 - Detalhamento das Ações", expanded=True):
+                st.subheader("9.3.1 • Detalhamento das Ações")
+                st.write("**9.3.1 Assinale quais Ações e/ou Campanhas foram realizadas:**")
+
+                # Recupera os dados salvos no banco
+                d931 = res_data.get("9.3.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                texto_seguro_931 = str(d931.get("valor", "")) if d931.get("valor") not in ["", "[]"] else ""
+                evidencia_931_salva = d931.get("link", "")
+
+                opts931 = [
+                    "Divulgações em redes sociais e/ou site da prefeitura – 01",
+                    "Ações de educação ambiental – 0,5",
+                    "Campanhas de conscientização por meio de sinalizações, folders, cartazes, propagandas e materiais impressos – 01",
+                    "Projetos de incentivo – 01",
+                    "Workshops / Palestras – 0,5",
+                    "Instalação de lixeiras seletivas e distribuição de sacolas retornáveis para separação dos resíduos recicláveis – 01"
+                ]
+
+                # Definindo chaves do Streamlit
+                chave_link_931 = f"l931_in_{ano_sel}"
+                chave_coment_931 = f"coment_9.3.1_{ano_sel}"
+
+                c1, c2 = st.columns([1, 1])
+
+                with c1:
+                    st.write("**Selecione as opções aplicáveis:**")
+                    marcados_selecionados = []
+                    pts_exibido_931 = 0.0
+
+                    for txt in opts931:
+                        # Recupera estado do checkbox no session_state ou do banco salvo
+                        ck_key = f"q931_in_{txt}_{ano_sel}"
+                        val_padrao = txt in texto_seguro_931
+                        checked = st.checkbox(txt, value=val_padrao, key=ck_key)
+                        
+                        if checked:
+                            marcados_selecionados.append(txt)
+                            pts_exibido_931 += 0.5 if "0,5" in txt else 1.0
+
+                    cor_metric = "#28a745" if pts_exibido_931 > 0 else "#6c757d"
+                    st.metric(label="Impacto na Pontuação", value=f"+{pts_exibido_931:.1f} pts")
+
+                with c2:
+                    lk931 = st.text_area(
+                        "Link/Evidência (9.3.1):",
+                        value=evidencia_931_salva,
+                        key=chave_link_931,
+                        placeholder="Inserir link das postagens, fotos das ações, folders ou materiais...",
+                        height=160
+                    )
+                    placeholder_links_931 = st.empty()
+                    links_931_visuais = re.findall(REGEX_PURE_URL, lk931 or "")
+                    if links_931_visuais:
+                        placeholder_links_931.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_931_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 9.3.1
+                bloco_comentarios("9.3.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 9.3.1: +{pts_exibido_931:.1f} pts</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.3.1", key=f"btn_salvar_9_3_1_{ano_sel}", type="primary"):
+                    lnk_val = lk931.strip()
+                    val_sel = str(marcados_selecionados)
+                    comentario_para_salvar = st.session_state.get(chave_coment_931, d931.get("comentario", ""))
+
+                    # Cálculo dos pontos para persistência
+                    pts_calculados = 0.0
+                    for m in marcados_selecionados:
+                        pts_calculados += 0.5 if "0,5" in m else 1.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="9.3.1",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["9.3.1"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_931_salva or "")]
+
+                    if lnk_val != evidencia_931_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 9.3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 9.3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.3.1", st.session_state.get(f"links_pendentes_9_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_3_1_{ano_sel}"] = False
+
