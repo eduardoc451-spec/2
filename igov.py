@@ -1413,7 +1413,8 @@ def mostrar_formulario_igov():
                     
                     # Exibição dinâmica dos links ativos digitados
                     placeholder_links_10 = st.empty()
-                    links_10_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_10 or "")]
+                    regex_url = r'https?://[^\s<>"]+'
+                    links_10_visuais = re.findall(regex_url, link_10 or "")
                     if links_10_visuais:
                         placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
