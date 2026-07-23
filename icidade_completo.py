@@ -6965,12 +6965,16 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
         st.session_state[f"gatilho_modal_c1_1_{ano_sel}"] = False
 
 # =============================================================================
-# INICIALIZAÇÃO SEGURA DO MÓDULO (SE EXECUTADO DIRETAMENTE)
+# ALIASES E INICIALIZAÇÃO SEGURA DO I-CIDADE
 # =============================================================================
 
-# Atalhos de segurança para o main.py encontrar a função principal
-mostrar_formulario_icidade = mostrar_formulario_cidade
-mostrar_formulario_igov = mostrar_formulario_cidade
+# Define os aliases apenas se a função principal realmente existir no arquivo
+if 'mostrar_formulario_cidade' in globals():
+    mostrar_formulario_icidade = mostrar_formulario_cidade
+    mostrar_formulario_igov = mostrar_formulario_cidade
+elif 'mostrar_formulario_igov' in globals():
+    mostrar_formulario_cidade = mostrar_formulario_igov
+    mostrar_formulario_icidade = mostrar_formulario_igov
 
 if __name__ == "__main__":
     try:
@@ -6981,7 +6985,8 @@ if __name__ == "__main__":
     if 'init_db' in globals():
         init_db()
 
-    if 'mostrar_formulario_cidade' in globals():
-        mostrar_formulario_cidade()
+    fn_principal = globals().get('mostrar_formulario_cidade') or globals().get('mostrar_formulario_igov')
+    if fn_principal:
+        fn_principal()
     else:
-        st.error("❌ A função 'mostrar_formulario_cidade' não foi encontrada. Verifique se a definição 'def mostrar_formulario_cidade():' está no arquivo e sem espaços no início da linha.")
+        st.error("❌ Nenhuma função principal ('mostrar_formulario_cidade' ou 'mostrar_formulario_igov') foi declarada no arquivo.")
