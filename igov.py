@@ -5600,3 +5600,124 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 8.2 • SISTEMAS INTEGRADOS À CONTABILIDADE (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_igov_8_2_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 8.2 - Sistemas Integrados ao Sistema de Contabilidade", expanded=True):
+            st.subheader("8.2 • Integração Contábil")
+            st.write("**Informe quais sistemas encontram-se integrados ao Sistema de Contabilidade do município:**")
+            st.caption("ℹ *Selecione os sistemas, inclua os links comprobatórios e clique no botão 'Salvar Quesito 8.2'.*")
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d82 = res_data.get("8.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            try:
+                import ast
+                lista_salva_82 = ast.literal_eval(d82.get("valor", "[]"))
+                if not isinstance(lista_salva_82, list):
+                    lista_salva_82 = []
+            except Exception:
+                lista_salva_82 = []
+
+            evidencia_82_salva = d82.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_link_82 = f"l_82_txt_area_{ano_sel}"
+            chave_coment_82 = f"coment_8.2_{ano_sel}"
+
+            opcoes_integracao = [
+                "Gestão de tributos (arrecadação)", "Dívida Ativa", "Precatórios", 
+                "Gestão patrimonial (bens e equipamentos)", "Gestão de negócios (Business Intelligence)", 
+                "Planejamento", "Recursos humanos / Departamento pessoal", "Almoxarifado", 
+                "Controle de frotas", "Controle Interno", "Saúde", 
+                "Ensino (educação)", "Compras, licitações e contratos", 
+                "Certidões e alvarás", "Saneamento", "Cemitérios"
+            ]
+
+            col_checks, col_link = st.columns([1.2, 1])
+
+            with col_checks:
+                col_int1, col_int2 = st.columns(2)
+                for i, sistema in enumerate(opcoes_integracao):
+                    with col_int1 if i % 2 == 0 else col_int2:
+                        st.checkbox(
+                            sistema,
+                            value=(sistema in lista_salva_82),
+                            key=f"q82_{sistema}_{ano_sel}"
+                        )
+
+            with col_link:
+                link_82 = st.text_area(
+                    "Link/Evidência (8.2):",
+                    value=evidencia_82_salva,
+                    key=chave_link_82,
+                    placeholder="Insira links de termos, manuais ou relatórios técnicos...",
+                    height=160
+                )
+
+                placeholder_links_82 = st.empty()
+                links_82_visuais = re.findall(regex_pure_url, link_82 or "")
+                if links_82_visuais:
+                    placeholder_links_82.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_82_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("8.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.2", key=f"btn_salvar_8_2_{ano_sel}", type="primary"):
+                # Coleta os checkboxes selecionados
+                sel82_coletado = [
+                    s_nome for s_nome in opcoes_integracao
+                    if st.session_state.get(f"q82_{s_nome}_{ano_sel}", False)
+                ]
+
+                string_salvar = str(sel82_coletado)
+                lnk_val = link_82.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_82, d82.get("comentario", ""))
+
+                # Salva no banco de dados
+                save_resp(
+                    qid="8.2",
+                    valor=string_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualiza o dicionário local res_data
+                res_data["8.2"] = {
+                    "valor": string_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_82_salva or "")
+
+                if lnk_val != evidencia_82_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
+
+                # Limpa o cache e atualiza a interface
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 8.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            # Resumo dinâmico de impacto
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 8.2: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 8.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_8_2_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
