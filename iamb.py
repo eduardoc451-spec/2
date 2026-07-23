@@ -9515,3 +9515,125 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("11.3.2", st.session_state.get(f"links_pendentes_11_3_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_3_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 11.3.2.1 • METODOLOGIA DE MONITORAMENTO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q11_3_2_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 11.3.2.1 - Metodologia de Monitoramento", expanded=True):
+                st.subheader("11.3.2.1 • Forma de Monitoramento")
+                st.write("**De que forma é realizado o monitoramento e avaliação?**")
+
+                # Recupera os dados salvos no banco
+                d11321 = res_data.get("11.3.2.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_11321 = d11321.get("valor", "[]")
+                evidencia_11321_salva = d11321.get("link", "")
+
+                opts11321 = [
+                    "Relatórios anuais discutidos e/ou publicados",
+                    "Indicadores de eficácia e eficiência",
+                    "Avaliação de recursos aplicados",
+                    "Outro"
+                ]
+
+                # Tenta parsear com segurança a lista de selecionados salva
+                try:
+                    import ast
+                    lista_salva_11321 = ast.literal_eval(v_salvo_11321) if isinstance(v_salvo_11321, str) and v_salvo_11321.startswith("[") else []
+                except Exception:
+                    lista_salva_11321 = []
+
+                # Definindo chaves do Streamlit
+                chave_link_11321 = f"l11321_in_{ano_sel}"
+                chave_coment_11321 = f"coment_11.3.2.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    # Renderização das Checkboxes
+                    for idx, opt in enumerate(opts11321):
+                        st.checkbox(
+                            opt,
+                            value=(opt in lista_salva_11321),
+                            key=f"ck_11321_{idx}_{ano_sel}"
+                        )
+
+                    # Quesito declarativo/referencial (0.0 pts)
+                    pts_exibido_11321 = 0.0
+                    cor_metric = "#6c757d"  # Cinza neutro
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_11321:.1f} pts")
+
+                with col2:
+                    lk11321 = st.text_area(
+                        "Link/Evidência (11.3.2.1):",
+                        value=evidencia_11321_salva,
+                        key=chave_link_11321,
+                        placeholder="Inserir link demonstrando relatórios, indicadores ou ata de reuniões de monitoramento...",
+                        height=125
+                    )
+                    placeholder_links_11321 = st.empty()
+                    links_11321_visuais = re.findall(REGEX_PURE_URL, lk11321 or "")
+                    if links_11321_visuais:
+                        placeholder_links_11321.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_11321_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 11.3.2.1
+                bloco_comentarios("11.3.2.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto (Referencial)
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 11.3.2.1: +0.0 pts (Referencial)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 11.3.2.1", key=f"btn_salvar_11_3_2_1_{ano_sel}", type="primary"):
+                    lnk_val = lk11321.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_11321, d11321.get("comentario", ""))
+
+                    # Coleta as opções marcadas no momento do clique
+                    sel_11321 = [
+                        opt for idx, opt in enumerate(opts11321)
+                        if st.session_state.get(f"ck_11321_{idx}_{ano_sel}", False)
+                    ]
+                    val_str_11321 = str(sel_11321)
+                    pts_calculados = 0.0  # Quesito sem impacto na pontuação global
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="11.3.2.1",
+                        valor=val_str_11321,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["11.3.2.1"] = {
+                        "valor": val_str_11321,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_11321_salva or "")]
+
+                    if lnk_val != evidencia_11321_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_3_2_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_3_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 11.3.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 11.3.2.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_3_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.3.2.1", st.session_state.get(f"links_pendentes_11_3_2_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_3_2_1_{ano_sel}"] = False
+
