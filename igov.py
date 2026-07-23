@@ -4673,3 +4673,121 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 6.2 • FORMATOS ABERTOS E NÃO PROPRIETÁRIOS (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_6_2_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 6.2 - Disponibilização de Dados em Formatos Abertos", expanded=True):
+            st.subheader("6.2 • Formatos Abertos")
+            st.write("**O site possibilita o download de dados/informações em formatos abertos e não proprietários? Exemplos de formatos abertos e não proprietários: JSON, XML, CSV, ODS, RDF, etc.**")
+            st.caption("ℹ *Selecione a opção, insira a evidência e clique no botão 'Salvar Quesito 6.2'.*")
+
+            opc62 = {
+                "Selecione...": 0.0,
+                "Possibilita para todos os relatórios – 20": 20.0,
+                "Possibilita para a maior parte dos relatórios – 10": 10.0,
+                "Possibilita para a menor parte dos relatórios – 05": 5.0,
+                "Não – 00": 0.0
+            }
+            lista62 = list(opc62.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d62 = res_data.get("6.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_62 = d62.get("valor", "Selecione...")
+            evidencia_62_salva = d62.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_62 = f"r_62_select_{ano_sel}"
+            chave_link_62 = f"l_62_txt_area_{ano_sel}"
+            chave_coment_62 = f"coment_6.2_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx62 = lista62.index(v_salvo_62) if v_salvo_62 in lista62 else 0
+                st.radio(
+                    "Selecione a cobertura de formatos abertos:",
+                    options=lista62,
+                    index=idx62,
+                    key=chave_radio_62
+                )
+
+            with col2:
+                link_62 = st.text_area(
+                    "Link/Evidência (6.2):",
+                    value=evidencia_62_salva,
+                    key=chave_link_62,
+                    placeholder="Insira o link da página de Dados Abertos ou com botões para downloads em CSV, JSON ou ODS...",
+                    height=110
+                )
+
+                placeholder_links_62 = st.empty()
+                links_62_visuais = re.findall(regex_pure_url, link_62 or "")
+                if links_62_visuais:
+                    placeholder_links_62.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_62_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("6.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 6.2", key=f"btn_salvar_6_2_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_62, v_salvo_62)
+                pts_62 = float(opc62.get(val_salvar, 0.0))
+                lnk_val = link_62.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_62, d62.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="6.2",
+                    valor=val_salvar,
+                    pontos=pts_62,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["6.2"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_62,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_62_salva or "")
+
+                if lnk_val != evidencia_62_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_6_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_6_2_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 6.2 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_62 = d62.get("pontos", 0.0)
+            cor_txt_62 = "#28a745" if pts_atuais_62 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_62}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 6.2: +{pts_atuais_62:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 6.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_6_2_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("6.2", st.session_state.get(f"links_pendentes_6_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_6_2_{ano_sel}"] = False
