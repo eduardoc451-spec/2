@@ -5721,3 +5721,125 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 8.2.1 • INTEGRAÇÃO DÍVIDA ATIVA (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_igov_8_2_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 8.2.1 - Integração Dívida Ativa", expanded=True):
+            st.subheader("8.2.1 • Integração Dívida Ativa")
+            st.write("**Informe o nível de integração entre o Sistema da Dívida Ativa e o de Contabilidade:**")
+            st.caption("ℹ *Selecione o nível de integração, insira o link de evidência e clique em 'Salvar Quesito 8.2.1'.*")
+
+            opc821 = {
+                "Selecione...": 0.0,
+                "Totalmente integrado (Inscrição / Atualização e Baixa) – 50": 50.0,
+                "Somente as Inscrições / Atualizações estão integrados – 10": 10.0,
+                "Somente as Baixas estão integradas – 10": 10.0
+            }
+            lista821 = list(opc821.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d821 = res_data.get("8.2.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            # Trata legados/inconsistências de strings vindas do banco de dados
+            v_salvo_821 = d821.get("valor", "Selecione...")
+            if v_salvo_821 and "Totalmente" in str(v_salvo_821):
+                v_salvo_821 = "Totalmente integrado (Inscrição / Atualização e Baixa) – 50"
+            elif v_salvo_821 and "Inscrições" in str(v_salvo_821):
+                v_salvo_821 = "Somente as Inscrições / Atualizações estão integrados – 10"
+            elif v_salvo_821 and "Baixas" in str(v_salvo_821):
+                v_salvo_821 = "Somente as Baixas estão integradas – 10"
+            else:
+                v_salvo_821 = "Selecione..."
+
+            evidencia_821_salva = d821.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_821 = f"r_821_select_{ano_sel}"
+            chave_link_821 = f"l_821_txt_area_{ano_sel}"
+            chave_coment_821 = f"coment_8.2.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx821 = lista821.index(v_salvo_821) if v_salvo_821 in lista821 else 0
+                st.radio(
+                    "Selecione o nível de integração:",
+                    options=lista821,
+                    index=idx821,
+                    key=chave_radio_821
+                )
+
+            with col2:
+                link_821 = st.text_area(
+                    "Link/Evidência (8.2.1):",
+                    value=evidencia_821_salva,
+                    key=chave_link_821,
+                    placeholder="Insira links de relatórios, telas de integração...",
+                    height=110
+                )
+
+                placeholder_links_821 = st.empty()
+                links_821_visuais = re.findall(regex_pure_url, link_821 or "")
+                if links_821_visuais:
+                    placeholder_links_821.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_821_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("8.2.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.2.1", key=f"btn_salvar_8_2_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_821, v_salvo_821)
+                pts_821 = float(opc821.get(val_salvar, 0.0))
+                lnk_val = link_821.strip()
+
+                # Captura o comentário do session_state
+                comentario_para_salvar = st.session_state.get(chave_coment_821, d821.get("comentario", ""))
+
+                # Salva no banco de dados
+                save_resp(
+                    qid="8.2.1",
+                    valor=val_salvar,
+                    pontos=pts_821,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualiza o dicionário local res_data
+                res_data["8.2.1"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_821,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_821_salva or "")
+
+                if lnk_val != evidencia_821_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_2_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_2_1_{ano_sel}"] = True
+
+                # Limpa o cache e atualiza a interface
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 8.2.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            # Resumo dinâmico de impacto
+            pts_atuais_821 = d821.get("pontos", 0.0)
+            cor_txt_821 = "#28a745" if pts_atuais_821 == 50.0 else ("#17a2b8" if pts_atuais_821 == 10.0 else "#6c757d")
+
+            st.markdown(
+                f"<span style='color:{cor_txt_821}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 8.2.1: +{pts_atuais_821:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 8.2.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_8_2_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("8.2.1", st.session_state.get(f"links_pendentes_8_2_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_8_2_1_{ano_sel}"] = False
