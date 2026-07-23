@@ -447,17 +447,145 @@ def analyze_performance(res_data):
     criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
     criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
 
-# =============================================================================
-# DICIONÁRIO DE PONTUAÇÕES MÁXIMAS DO I-GOV TI
-# =============================================================================
-PONTUACOES_MAX = {
-    "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
-    "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
-    "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
-    "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
-    "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
-}
+def analyze_performance(res_data):
+    """Mapeia os pontos fortes e fragilidades do ano atual."""
+    pontos_fortes = []
+    criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
+    criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
 
+    pontuacoes_referencia = {
+        "1.0": {"max": 40}, "1.3": {"max": 5}, "1.4": {"max": 50},
+        "2.0": {"max": 20}, "2.1": {"max": 30}, "2.2": {"max": 10},
+        "3.0": {"max": 10}, "3.1": {"max": 10}, "4.2": {"max": 10},
+        "5.0": {"max": 30}, "5.1.1": {"max": 20}, "5.2": {"max": 10},
+        "6.0": {"max": 30}, "7.0": {"max": 30}, "7.1": {"max": 10},
+        "7.2": {"max": 80}, "7.3": {"max": 10}, "7.4": {"max": 10},
+        "7.5": {"max": 10}, "7.6": {"max": 10}, "8.0": {"max": 30},
+        "8.1.1.1": {"max": 20}, "8.2": {"max": 10}, "9.0": {"max": 30},
+        "10.0": {"max": 0}, "11.1": {"max": 20}, "11.1.1": {"max": 10},
+        "11.2": {"max": 10}, "12.1": {"max": 20}, "12.1.3": {"max": 10},
+        "14.0": {"max": 30}, "15.0": {"max": 30}, "16.0": {"max": 30},
+        "C1.1": {"max": 0}
+    }
+
+    def classificar_relevancia(impacto):
+        abs_impacto = abs(impacto)
+        if abs_impacto >= 16:
+            return "Alta"
+        elif 6 <= abs_impacto <= 15:
+            return "Média"
+        else:
+            return "Baixa"
+
+    for qid, info in res_data.items():
+        if qid.startswith("COM_") or qid not in pontuacoes_referencia:
+            continue
+
+        pontos_atuais = info.get("pontos", 0)
+        max_pontos = pontuacoes_referencia[qid]["max"]
+
+        if pontos_atuais == max_pontos:
+            pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
+        else:
+            impacto = max_pontos - pontos_atuais
+            relevancia = classificar_relevancia(impacto)
+
+            if pontos_atuais < 0:
+                criticos_negativos[relevancia].append(
+                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
+                )
+            else:
+                criticos_zero[relevancia].append(
+                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
+                )
+
+    pontos_fortes.sort(key=lambda x: x[1], reverse=True)
+    for rel in ["Alta", "Média", "Baixa"]:
+        criticos_zero[rel].sort(key=lambda x: x[4], reverse=True)
+        criticos_negativos[rel].sort(key=lambda x: x[4], reverse=True)
+
+    return pontos_fortes, criticos_zero, criticos_negativos
+
+
+def analyze_recurrence(ano_atual, res_data_atual):
+    """Compara as perdas de pontos do ano selecionado com anos anteriores (reincidências)."""
+    reincidencias = []
+    all_data = get_all_years_data()
+
+      # Seleciona os anos anteriores ordenados do mais recente para o mais antigo
+    anos_anteriores = sorted([a for a in all_data.keys() if a < ano_atual], reverse=True)
+
+    for qid_atual, info_atual in res_data_atual.items():
+        if qid_atual.startswith("COM_") or qid_atual not in qids_pontuaveis:
+            continue
+            
+        pontos_atual = info_atual.get("pontos", 0)
+        
+        # Considera que houve perda/problema se os pontos forem <= 0
+        if pontos_atual <= 0:
+            for ano_anterior in anos_anteriores:
+                if qid_atual in all_data[ano_anterior]:
+                    pontos_anterior = all_data[ano_anterior][qid_atual].get("pontos", 0)
+                    if pontos_anterior <= 0:
+                        reincidencias.append((qid_atual, ano_anterior, pontos_anterior, pontos_atual))
+                        break
+
+    return reincidencias
+
+import os
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+
+# =============================================================================
+# 3. GERADOR DO RELATÓRIO PDF
+# =============================================================================
+
+def gerar_relatorio_pdf(dados, ano, total, faixa):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # -------------------------------------------------------------------------
+    # FOLHA 1: CAPA
+    # -------------------------------------------------------------------------
+    elements.append(Spacer(1, 100))
+    
+    # --- TRATAMENTO SEGURO DA IMAGEM DA CAPA ---
+    logo_path = "iegm.png"
+    if os.path.exists(logo_path):
+        try:
+            logo = Image(logo_path, width=380, height=180)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+        except Exception as e:
+            elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
+    else:
+        elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
+        
+    elements.append(Spacer(1, 50))
+    
+    style_titulo_capa = ParagraphStyle(
+        'TituloCapa', 
+        parent=styles['Normal'], 
+        fontName='Helvetica-Bold', 
+        fontSize=24, 
+        textColor=colors.HexColor("#2c3e50"), 
+        alignment=1  # Centralizado
+    )
+
+    elements.append(Paragraph("Relatório I-Cidade", style_titulo_capa))
+    elements.append(Spacer(1, 15))
+    
+    style_ano_capa = ParagraphStyle('AnoCapa', parent=styles['Normal'], fontName='Helvetica', fontSize=16, textColor=colors.HexColor("#7f8c8d"), alignment=1)
+    elements.append(Paragraph(str(ano), style_ano_capa))
+    elements.append(PageBreak())
+    
 # =============================================================================
 # GERADOR DO RELATÓRIO PDF (I-GOV TI)
 # =============================================================================
