@@ -1332,19 +1332,41 @@ def render_graficos(res_data_atual, ano_sel):
     st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
 
 # =============================================================================
-# 6. FORMULÁRIO PRINCIPAL
+# 6. FORMULÁRIO PRINCIPAL (CORRIGIDO)
 # =============================================================================
 
 def mostrar_formulario_igov():
-    # Caso render_sidebar() retorne None por algum motivo
-    dados_sidebar = render_sidebar()
-    
-    if dados_sidebar and len(dados_sidebar) == 3:
-        total_pts, res_data, ano_sel = dados_sidebar
-    else:
-        total_pts, res_data, ano_sel = 0, {}, "2026"  # Valor padrão de fallback
+    try:
+        # Tenta obter os dados da sidebar
+        dados_sidebar = render_sidebar()
+        
+        # Garante que dados_sidebar seja válido e tenha 3 elementos
+        if dados_sidebar and isinstance(dados_sidebar, (tuple, list)) and len(dados_sidebar) == 3:
+            total_pts, res_data, ano_sel = dados_sidebar
+        else:
+            # Fallback seguro: garante ano como INTEIRO (2026) e dicionário para res_data
+            total_pts, res_data, ano_sel = 0.0, {}, 2026
 
-    st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
+        # Garante que res_data não seja None
+        if res_data is None:
+            res_data = {}
+
+        st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
+
+        # --- AQUI VEM O RESTANTE DO SEU CÓDIGO DO FORMULÁRIO ---
+        # Exemplo de chamada das questões para evitar renderização vazia:
+        categoria_sel = st.selectbox(
+            "Selecione a Categoria:", 
+            options=list(CATEGORIAS_MAP.keys()), 
+            format_func=lambda x: CATEGORIAS_MAP[x]["label"]
+        )
+
+        for qid in CATEGORIAS_MAP[categoria_sel]["qids"]:
+            renderizar_questao(qid, res_data)
+
+    except Exception as e:
+        st.error("❌ Ocorreu um erro ao carregar o formulário!")
+        st.exception(e)  # Revela o erro e o Traceback completo diretamente na interface do Streamlit
 
     # -------------------------------------------------------------------------
     # ABAS PRINCIPAIS
