@@ -1227,95 +1227,115 @@ def mostrar_formulario_igov():
         st.info("Responda às questões da governança para atualizar a pontuação.")
 
         # =============================================================================
-        # QUESITO 1.0 • SETOR DE TIC (CORRIGIDO)
-        # =============================================================================
-        with st.container(key=f"container_bloco_igov_1_0_{ano_sel}", border=True):
-            with st.expander("📌 Quesito 1.0 - Setor de Tecnologia da Informação e Comunicação", expanded=True):
-                st.subheader("1.0 • Setor de TIC")
-                st.write(
-                    "**A Prefeitura possui uma área ou setor responsável por cuidar da "
-                    "Tecnologia da Informação e Comunicação (TIC)?**"
-                )
-                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.0' para registrar.*")
+    # QUESITO 1.0 • SETOR DE TIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_igov_1_0_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.0 - Setor de Tecnologia da Informação e Comunicação", expanded=True):
+            st.subheader("1.0 • Setor de TIC")
+            st.write(
+                "**A Prefeitura possui uma área ou setor responsável por cuidar da "
+                "Tecnologia da Informação e Comunicação (TIC)?**"
+            )
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.0' para registrar.*")
 
-                # Dicionário de opções e pontuação do i-Gov TI
-                opcoes_10 = {
-                    "Selecione...": 0.0,
-                    "Sim (30 pts)": 30.0,
-                    "Não (00 pts)": 0.0
+            opcoes_10 = {
+                "Selecione...": 0.0,
+                "Sim (30 pts)": 30.0,
+                "Não (00 pts)": 0.0
+            }
+
+            # Estado inicial / persistente
+            d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_10 = d10.get("valor", "Selecione...")
+
+            # Chaves fixas por componente e ano
+            chave_radio_10 = f"r_10_{ano_sel}"
+            chave_link_10 = f"l_10_txt_{ano_sel}"
+            chave_coment_10 = f"coment_1.0_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
+
+            c10_1, c10_2 = st.columns([1, 1])
+            with c10_1:
+                lista_opcoes_10 = list(opcoes_10.keys())
+                idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
+
+                val_radio_10 = st.radio(
+                    "Selecione a situação do setor de TIC:",
+                    options=lista_opcoes_10,
+                    index=idx_10,
+                    key=chave_radio_10,
+                    label_visibility="collapsed"
+                )
+
+            with c10_2:
+                link_10 = st.text_area(
+                    "Link de Evidência / Lei de Criacao / Organograma (1.0):",
+                    value=d10.get("link", ""),
+                    key=chave_link_10,
+                    placeholder="Insira o link da lei de estrutura administrativa...",
+                    height=100
+                )
+                placeholder_links_10 = st.empty()
+                regex_url = r'https?://[^\s<>"]+'
+                links_10_visuais = re.findall(regex_url, link_10 or "")
+                if links_10_visuais:
+                    placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
+                pts_10 = opcoes_10.get(val_radio_10, 0.0)
+                
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+                
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp("1.0", val_radio_10, pts_10, link_10, comentario_para_salvar)
+                
+                # 3. Atualiza o dicionário local res_data
+                res_data["1.0"] = {
+                    "valor": val_radio_10, 
+                    "pontos": pts_10, 
+                    "link": link_10, 
+                    "comentario": comentario_para_salvar
                 }
 
-                # Recuperação do estado salvo no banco/dicionário
-                d10 = res_data.get("1.0", {})
-                v_salvo_10 = d10.get("valor", "Selecione...")
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_url, link_10 or "")
+                links_antigos = re.findall(regex_url, d10.get("link", "") or "")
 
-                # Definição das chaves únicas do Streamlit
-                chave_radio_10 = f"r_10_{ano_sel}"
-                chave_link_10 = f"l_10_txt_{ano_sel}"
+                if link_10 != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
-                c10_1, c10_2 = st.columns([1, 1])
+                # Limpa o cache para garantir atualização no banco
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
                 
-                with c10_1:
-                    lista_opcoes_10 = list(opcoes_10.keys())
-                    idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Resolve o duplo clique e atualiza painéis)
+                st.rerun()
 
-                    val_radio_10 = st.radio(
-                        "Selecione a situação do setor de TIC:",
-                        options=lista_opcoes_10,
-                        index=idx_10,
-                        key=chave_radio_10,
-                        label_visibility="collapsed"
-                    )
+            # Exibição da pontuação dentro do expander
+            pts_atuais_10 = d10.get("pontos", 0.0)
+            cor_txt_10 = "#28a745" if pts_atuais_10 == 30.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
-                with c10_2:
-                    link_10 = st.text_area(
-                        "Link de Evidência / Lei de Criacao / Organograma (1.0):",
-                        value=d10.get("link", ""),
-                        key=chave_link_10,
-                        placeholder="Insira o link da lei de estrutura administrativa...",
-                        height=100
-                    )
-                    
-                    placeholder_links_10 = st.empty()
-                    regex_url = r'https?://[^\s<>"]+'
-                    links_10_visuais = re.findall(regex_url, link_10 or "")
-                    if links_10_visuais:
-                        placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
+    # GATILHO DO MODAL 1.0 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
-                if "bloco_comentarios" in globals():
-                    bloco_comentarios("1.0", res_data)
-
-                # Cálculo dinâmico da pontuação atual selecionada na tela
-                pts_calculados_10 = opcoes_10.get(val_radio_10, 0.0)
-
-                # -----------------------------------------------------------------
-                # BOTÃO DE SALVAMENTO MANUAL (CORRIGIDO)
-                # -----------------------------------------------------------------
-                if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
-                    comentarios_atuais = d10.get("comentarios", [])
-                    
-                    # Garantir que save_resp recebe o ID exato "1.0"
-                    save_resp(
-                        qid="1.0", 
-                        valor=val_radio_10, 
-                        pontos=pts_calculados_10, 
-                        link=link_10, 
-                        comentarios=comentarios_atuais
-                    )
-                    
-                    # Limpa todo o cache do Streamlit para forçar a busca do banco Neon no rerun
-                    st.cache_data.clear()
-
-                    st.toast("Resposta do Quesito 1.0 salva no Neon com sucesso!", icon="✅")
-                    st.rerun()
-
-                # Exibição visual da pontuação recalculada corretamente
-                cor_txt_10 = "#28a745" if pts_calculados_10 == 30.0 else ("#dc3545" if val_radio_10 != "Selecione..." else "#6c757d")
-                st.markdown(
-                    f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
-                    f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_calculados_10:.1f} pontos</span>",
-                    unsafe_allow_html=True
-                )
+    # Garante a exposição da variável r10 para dependências condicionais de outros quesitos
+    r10 = v_salvo_10
            
         # =============================================================================
         # QUESITO 1.1 • QUANTIDADE DA EQUIPE DE TIC (100% INDEPENDENTE VIA CALLBACKS)
