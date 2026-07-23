@@ -10011,3 +10011,114 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("11.4", st.session_state.get(f"links_pendentes_11_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_4_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 11.5 • EXECUÇÃO DE FISCALIZAÇÕES (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q11_5_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 11.5 - Fiscalização de Gerenciamento", expanded=True):
+                st.subheader("11.5 • Execução de Fiscalizações")
+                st.write("**A Prefeitura realiza fiscalizações das atividades envolvidas no gerenciamento dos resíduos da construção civil?**")
+
+                # Recupera os dados salvos no banco
+                d115 = res_data.get("11.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc115 = ["Selecione...", "Sim – 10", "Não – 00"]
+                v_salvo_115 = d115.get("valor", "Selecione...")
+                if v_salvo_115 not in opc115:
+                    v_salvo_115 = "Selecione..."
+                evidencia_115_salva = d115.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_115 = f"r115_in_{ano_sel}"
+                chave_link_115 = f"l115_in_{ano_sel}"
+                chave_coment_115 = f"coment_11.5_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    resp_115 = st.radio(
+                        "Selecione uma opção (11.5):",
+                        options=opc115,
+                        index=opc115.index(v_salvo_115),
+                        key=chave_radio_115
+                    )
+
+                    # Regra de pontuação para o Quesito 11.5
+                    if "Sim" in resp_115:
+                        pts_exibido_115 = 10.0
+                        cor_metric = "#28a745"  # Verde
+                    else:
+                        pts_exibido_115 = 0.0
+                        cor_metric = "#6c757d"  # Cinza neutro
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_115:.1f} pts")
+
+                with col2:
+                    lk115 = st.text_area(
+                        "Link/Evidência (11.5):",
+                        value=evidencia_115_salva,
+                        key=chave_link_115,
+                        placeholder="Inserir link comprobatório dos relatórios de fiscalização, autos de infração ou ordens de serviço...",
+                        height=125
+                    )
+                    placeholder_links_115 = st.empty()
+                    links_115_visuais = re.findall(REGEX_PURE_URL, lk115 or "")
+                    if links_115_visuais:
+                        placeholder_links_115.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_115_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 11.5
+                bloco_comentarios("11.5", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 11.5: +{pts_exibido_115:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 11.5", key=f"btn_salvar_11_5_{ano_sel}", type="primary"):
+                    lnk_val = lk115.strip()
+                    val_sel = resp_115
+                    comentario_para_salvar = st.session_state.get(chave_coment_115, d115.get("comentario", ""))
+
+                    # Cálculo exato dos pontos para gravação
+                    pts_calculados = 10.0 if "Sim" in val_sel else 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="11.5",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["11.5"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_115_salva or "")]
+
+                    if lnk_val != evidencia_115_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_5_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 11.5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 11.5 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.5", st.session_state.get(f"links_pendentes_11_5_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_5_{ano_sel}"] = False
+
