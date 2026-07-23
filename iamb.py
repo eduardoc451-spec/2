@@ -3186,3 +3186,169 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.2", st.session_state.get(f"links_pendentes_5_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 5.2.1 • DESTINAÇÃO DOS RESÍDUOS DE PODAS (MÚLTIPLA ESCOLHA - iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_arborizacao_5_2_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.2.1 - Destinação Sustentável de Resíduos Verdes", expanded=True):
+                st.subheader("5.2.1 • Destinação dos Resíduos de Podas")
+                st.write("**Qual a destinação dos resíduos das podas de árvores?**")
+                st.caption("ℹ *A pontuação aumenta progressivamente com o número de destinações sustentáveis. Aterros aplicam penalidade. Marque as opções válidas, insira o link/comentários e clique em 'Salvar Quesito 5.2.1'.*")
+
+                opts_pontuam = [
+                    "Reaproveitamento para produzir móveis, brinquedos, utensílios ou objetos de decoração",
+                    "Compostagem para produção de mudas, na jardinagem e arborização da cidade",
+                    "Queima para aquecimento e cocção",
+                    "Geração de energia",
+                    "Uso na construção civil"
+                ]
+                opt_aterro = "Envio para aterro sanitário – -05"
+                opt_armazenamento = "Armazenamento dos resíduos das podas"
+
+                # Recupera os dados salvos no banco de dados
+                d521 = res_data.get("5.2.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                
+                # Leitura defensiva para garantir formato de lista ou texto
+                texto_seguro_521 = str(d521.get("valor", "[]"))
+                evidencia_521_salva = d521.get("link", "")
+
+                # Chaves fixas de componentes no Streamlit
+                chave_link_521 = f"l_521_txt_area_{ano_sel}"
+                chave_coment_521 = f"coment_5.2.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.write("*Selecione os destinos comprovados:*")
+                    
+                    # Renders para as opções que pontuam positivamente
+                    for i, opt in enumerate(opts_pontuam):
+                        marcado = (opt in texto_seguro_521) if texto_seguro_521 and texto_seguro_521 != "[]" else False
+                        st.checkbox(
+                            opt, 
+                            value=marcado, 
+                            key=f"ck_521_pos_{i}_{ano_sel}"
+                        )
+                    
+                    # Checkbox para Aterro
+                    marcado_aterro = (opt_aterro in texto_seguro_521) if texto_seguro_521 and texto_seguro_521 != "[]" else False
+                    st.checkbox(
+                        opt_aterro, 
+                        value=marcado_aterro, 
+                        key=f"ck_521_aterro_{ano_sel}"
+                    )
+                    
+                    # Checkbox para Armazenamento
+                    marcado_arm = (opt_armazenamento in texto_seguro_521) if texto_seguro_521 and texto_seguro_521 != "[]" else False
+                    st.checkbox(
+                        opt_armazenamento, 
+                        value=marcado_arm, 
+                        key=f"ck_521_arm_{ano_sel}"
+                    )
+
+                with col2:
+                    link_521 = st.text_area(
+                        "Link/Evidência (5.2.1):",
+                        value=evidencia_521_salva,
+                        key=chave_link_521,
+                        placeholder="Insira links do pátio de compostagem, contratos de doação de biomassa ou controle de resíduos...",
+                        height=240
+                    )
+                    placeholder_links_521 = st.empty()
+                    links_521_visuais = re.findall(REGEX_PURE_URL, link_521 or "")
+                    if links_521_visuais:
+                        placeholder_links_521.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_521_visuais]))
+
+                # Renderiza o bloco de comentários do Quesito 5.2.1
+                bloco_comentarios("5.2.1", res_data, ano_sel)
+
+                # Cálculo de preview visual de pontuação no render (com base nos checkboxes atuais do session_state)
+                fb_validas = sum([1 for idx in range(len(opts_pontuam)) if st.session_state.get(f"ck_521_pos_{idx}_{ano_sel}", False)])
+                fb_penalidade = -5.0 if st.session_state.get(f"ck_521_aterro_{ano_sel}", False) else 0.0
+                fb_base = 20.0 if fb_validas >= 3 else (10.0 if fb_validas == 2 else (5.0 if fb_validas == 1 else 0.0))
+                
+                pts_feedback = fb_base + fb_penalidade
+                if pts_feedback > 0:
+                    cor_txt_521 = "#28a745"
+                elif pts_feedback < 0:
+                    cor_txt_521 = "#dc3545"
+                else:
+                    cor_txt_521 = "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_521}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.2.1: {pts_feedback:+.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.2.1", key=f"btn_salvar_5_2_1_{ano_sel}", type="primary"):
+                    lnk_val = link_521.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_521, d521.get("comentario", ""))
+
+                    lista_selecionados = []
+                    qtd_validas = 0
+                    penalidade = 0.0
+
+                    # Varre os checkboxes ativos
+                    for idx, opt in enumerate(opts_pontuam):
+                        if st.session_state.get(f"ck_521_pos_{idx}_{ano_sel}", False):
+                            lista_selecionados.append(opt)
+                            qtd_validas += 1
+
+                    if st.session_state.get(f"ck_521_aterro_{ano_sel}", False):
+                        lista_selecionados.append(opt_aterro)
+                        penalidade = -5.0
+
+                    if st.session_state.get(f"ck_521_arm_{ano_sel}", False):
+                        lista_selecionados.append(opt_armazenamento)
+
+                    # Regra de pontuação
+                    if qtd_validas >= 3:
+                        pts_base = 20.0
+                    elif qtd_validas == 2:
+                        pts_base = 10.0
+                    elif qtd_validas == 1:
+                        pts_base = 5.0
+                    else:
+                        pts_base = 0.0
+
+                    pts_totais = float(pts_base + penalidade)
+                    val_salvar = str(lista_selecionados)
+
+                    # Persistência via save_resp
+                    save_resp(
+                        qid="5.2.1",
+                        valor=val_salvar,
+                        pontos=pts_totais,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local
+                    res_data["5.2.1"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_totais,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_521_salva or "")]
+
+                    if lnk_val != evidencia_521_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_2_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 5.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 5.2.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.2.1", st.session_state.get(f"links_pendentes_5_2_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_2_1_{ano_sel}"] = False
