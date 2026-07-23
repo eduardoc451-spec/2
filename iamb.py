@@ -6354,3 +6354,124 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.2 • ENDEREÇO ELETRÔNICO DO PLANO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_residuos_8_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.2 - Transparência Ativa e Disponibilização Digital", expanded=True):
+                st.subheader("8.2 • Página Eletrônica do Plano")
+                st.write("**Informe a página eletrônica (link na internet) do instrumento normativo do Plano Municipal ou Regional de Gestão Integrada de Resíduos Sólidos:**")
+                st.caption("ℹ *Se não estiver disponível na internet, insira no campo de resposta o texto **XYZ**.*")
+
+                # Recupera os dados salvos do banco
+                d82 = res_data.get("8.2") or {"valor": "XYZ", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_82 = d82.get("valor", "XYZ")
+                evidencia_82_salva = d82.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_input_82 = f"q82_txt_input_{ano_sel}"
+                chave_link_82 = f"l_82_txt_area_{ano_sel}"
+                chave_coment_82 = f"coment_8.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    val82 = st.text_input(
+                        "Endereço eletrônico (Link) ou XYZ:",
+                        value=v_salvo_82,
+                        key=chave_input_82,
+                        placeholder="http://..."
+                    )
+
+                    cur_val_82 = st.session_state.get(chave_input_82, v_salvo_82)
+                    fb_pts_82 = 0.0 if cur_val_82.strip().upper() == "XYZ" or cur_val_82.strip() == "" else 2.0
+                    st.metric(label="Pontuação do Quesito", value=f"{fb_pts_82:.1f} pts")
+
+                    placeholder_links_v82 = st.empty()
+                    links_v82_visuais = re.findall(REGEX_PURE_URL, cur_val_82 or "")
+                    if links_v82_visuais:
+                        placeholder_links_v82.markdown(
+                            "**🔗 Link do Plano:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_v82_visuais])
+                        )
+
+                with col2:
+                    link_82 = st.text_area(
+                        "Link/Evidência Adicional (8.2):",
+                        value=evidencia_82_salva,
+                        key=chave_link_82,
+                        placeholder="Links complementares como portais da transparência ou repositórios municipais...",
+                        height=130
+                    )
+                    placeholder_links_82 = st.empty()
+                    links_82_visuais = re.findall(REGEX_PURE_URL, link_82 or "")
+                    if links_82_visuais:
+                        placeholder_links_82.markdown(
+                            "**🔗 Link complementar:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_82_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 8.2
+                bloco_comentarios("8.2", res_data, ano_sel)
+
+                # Feedback visual de pontuação baseado na gravação salva
+                pts_salvos_82 = float(d82.get("pontos", 0.0))
+                cor_txt_82 = "#28a745" if pts_salvos_82 > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_82}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.2: +{pts_salvos_82:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.2", key=f"btn_salvar_8_2_{ano_sel}", type="primary"):
+                    val_input = st.session_state.get(chave_input_82, v_salvo_82).strip()
+                    lnk_val = link_82.strip()
+
+                    if val_input.upper() == "XYZ" or val_input == "":
+                        pts_calculados = 0.0
+                    else:
+                        pts_calculados = 2.0
+
+                    comentario_para_salvar = st.session_state.get(chave_coment_82, d82.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="8.2",
+                        valor=val_input,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["8.2"] = {
+                        "valor": val_input,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais_val = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, val_input or "")]
+                    links_atuais_lnk = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    todos_atuais = links_atuais_val + links_atuais_lnk
+
+                    links_antigos_val = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_82 or "")]
+                    links_antigos_lnk = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_82_salva or "")]
+                    todos_antigos = links_antigos_val + links_antigos_lnk
+
+                    if (val_input != v_salvo_82 or lnk_val != evidencia_82_salva) and todos_atuais and todos_atuais != todos_antigos:
+                        st.session_state[f"links_pendentes_8_2_{ano_sel}"] = todos_atuais
+                        st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 8.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 8.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
+
