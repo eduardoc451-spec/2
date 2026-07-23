@@ -3023,3 +3023,136 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.1.1", st.session_state.get(f"links_pendentes_3_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_1_1_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 3.1.1.1 • TIPO DE ASSINATURA ELETRÔNICA (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    import ast
+
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_1_1_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.1.1.1 - Tipos de Assinatura Eletrônica Utilizada", expanded=True):
+            st.subheader("3.1.1.1 • Modalidades de Assinatura")
+            st.write("**Identifique os tipos de assinatura eletrônica aplicados na municipalidade:**")
+            st.caption("ℹ *Selecione as opções aplicáveis, preencha o link de evidência e clique no botão 'Salvar Quesito 3.1.1.1'.*")
+
+            tipos_assinatura = {
+                "Assinatura eletrônica de uso gratuito – 10": 10.0,
+                "Assinatura eletrônica onerosa – 00": 0.0
+            }
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d3111 = res_data.get("3.1.1.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            raw_v3111 = d3111.get("valor", "[]")
+            if not isinstance(raw_v3111, str) or not raw_v3111.startswith("["):
+                raw_v3111 = "[]"
+
+            try:
+                lista_salva_3111 = ast.literal_eval(raw_v3111)
+            except (ValueError, SyntaxError):
+                lista_salva_3111 = []
+
+            evidencia_3111_salva = d3111.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_link_3111 = f"l_3111_txt_area_{ano_sel}"
+            chave_coment_3111 = f"coment_3.1.1.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                # Renderiza checkboxes independentes por item
+                for item in tipos_assinatura.keys():
+                    slug_item = item.split(" – ")[0].replace(" ", "_").lower()
+                    st.checkbox(
+                        item,
+                        value=item in lista_salva_3111,
+                        key=f"chk_3111_{slug_item}_{ano_sel}"
+                    )
+
+            with col2:
+                link_3111 = st.text_area(
+                    "Link/Evidência das modalidades (3.1.1.1):",
+                    value=evidencia_3111_salva,
+                    key=chave_link_3111,
+                    placeholder="Insira os links comprobatórios...",
+                    height=90
+                )
+
+                placeholder_links_3111 = st.empty()
+                links_3111_visuais = re.findall(regex_pure_url, link_3111 or "")
+                if links_3111_visuais:
+                    placeholder_links_3111.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_3111_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.1.1.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.1.1.1", key=f"btn_salvar_3_1_1_1_{ano_sel}", type="primary"):
+                sel3111 = []
+                pts3111 = 0.0
+
+                # Captura os estados atuais dos checkboxes
+                for item, pts in tipos_assinatura.items():
+                    slug_item = item.split(" – ")[0].replace(" ", "_").lower()
+                    if st.session_state.get(f"chk_3111_{slug_item}_{ano_sel}", False):
+                        sel3111.append(item)
+                        pts3111 += pts
+
+                val_str = str(sel3111)
+                lnk_val = link_3111.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_3111, d3111.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.1.1.1",
+                    valor=val_str,
+                    pontos=pts3111,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.1.1.1"] = {
+                    "valor": val_str,
+                    "pontos": pts3111,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_3111_salva or "")
+
+                if lnk_val != evidencia_3111_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_1_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_1_1_1_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.1.1.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_3111 = d3111.get("pontos", 0.0)
+            cor_txt_3111 = "#28a745" if pts_atuais_3111 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_3111}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.1.1.1: +{pts_atuais_3111:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.1.1.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_1_1_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.1.1.1", st.session_state.get(f"links_pendentes_3_1_1_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_1_1_1_{ano_sel}"] = False
