@@ -1210,6 +1210,8 @@ def render_graficos(res_data_atual, ano_sel):
 
     st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
 
+import re  # Necessário para as expressões regulares dos links
+
 # =============================================================================
 # 6. FORMULÁRIO PRINCIPAL - iGov
 # =============================================================================
@@ -1224,15 +1226,14 @@ def mostrar_formulario_igov():
 
     st.title(f"🏛️ Avaliação de Governança (iGov) - {ano_sel}")
 
-    # Renomeado a segunda variável para aba_graf para alinhar com o restaste do arquivo
     aba_quest, aba_graf = st.tabs(["📋 Questionário iGov", "📊 Análise & Gráficos"])
 
+    # -------------------------------------------------------------------------
+    # ABA 1: QUESTIONÁRIO (Quesitos entram AQUI)
+    # -------------------------------------------------------------------------
     with aba_quest:
         st.info("Responda às questões da governança para atualizar a pontuação.")
-        # Seus componentes de questões entram aqui...
 
-    with aba_graf:
-        render_graficos(res_data, ano_sel)
         # =============================================================================
         # QUESITO 1.0 • SETOR DE TIC (MODELO COMPLETO i-Cidade)
         # =============================================================================
@@ -1290,21 +1291,19 @@ def mostrar_formulario_igov():
                     if links_10_visuais:
                         placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-                # Renderiza o bloco padrão de comentários internos (passando o histórico JSONB)
-                bloco_comentarios("1.0", res_data)
+                # Renderiza o bloco padrão de comentários se a função existir
+                if "bloco_comentarios" in globals():
+                    bloco_comentarios("1.0", res_data)
 
                 # -----------------------------------------------------------------
                 # BOTÃO DE SALVAMENTO MANUAL
                 # -----------------------------------------------------------------
                 if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                     pts_10 = opcoes_10.get(val_radio_10, 0.0)
-                    
-                    # Recupera o histórico de comentários atual do quesito
                     comentarios_atuais = d10.get("comentarios", [])
                     
-                    # 1. Salva no banco PostgreSQL / Neon
-                    salvar_resposta(
-                        ano=ano_sel, 
+                    # 1. Salva no banco PostgreSQL / Neon usando a função save_resp
+                    save_resp(
                         qid="1.0", 
                         valor=val_radio_10, 
                         pontos=pts_10, 
@@ -1312,7 +1311,7 @@ def mostrar_formulario_igov():
                         comentarios=comentarios_atuais
                     )
                     
-                    # 2. Atualiza a memória local res_data e a chave global do ano no session_state
+                    # 2. Atualiza a memória local res_data e a sessão
                     res_data["1.0"] = {
                         "valor": val_radio_10, 
                         "pontos": pts_10, 
@@ -1322,16 +1321,14 @@ def mostrar_formulario_igov():
                     st.session_state[f"respostas_igov_{ano_sel}"] = res_data
 
                     # 3. Validação de links para acionamento do modal de evidências
-                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_10 or "")]
-                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
+                    links_atuais = re.findall(regex_url, link_10 or "")
+                    links_antigos = re.findall(regex_url, d10.get("link", "") or "")
 
                     if link_10 != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
                         st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
                     st.toast("Resposta do Quesito 1.0 salva com sucesso!", icon="✅")
-                    
-                    # 4. Recarrega a página para atualizar os indicadores da tela
                     st.rerun()
 
                 # Exibição visual da pontuação obtida
@@ -1343,17 +1340,15 @@ def mostrar_formulario_igov():
                     unsafe_allow_html=True
                 )
 
-        # -------------------------------------------------------------------------
-        # MODAL DE VERIFICAÇÃO DE LINKS DE EVIDÊNCIA (FORA DO CONTAINER)
-        # -------------------------------------------------------------------------
+        # Modal fora do container do quesito
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
-        # Exposição da variável r10 para ser consultada em quesitos dependentes (Ex: 1.1, 1.2)
+        # Exposição da variável r10 para ser consultada por quesitos dependentes abaixo
         r10 = v_salvo_10
-        
+           
         # =============================================================================
         # QUESITO 1.1 • QUANTIDADE DA EQUIPE DE TIC (100% INDEPENDENTE VIA CALLBACKS)
         # =============================================================================
