@@ -10560,3 +10560,104 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("11.6.1.1", st.session_state.get(f"links_pendentes_11_6_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_6_1_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 12.0 • PROCESSAMENTO PRÉVIO DE RESÍDUOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q12_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 12.0 - Processamento de Resíduos", expanded=True):
+                st.subheader("12.0 • Processamento Prévio")
+                st.write("**Antes de aterrar o lixo, o município realiza algum tipo de processamento de resíduos?**")
+
+                # Recupera os dados salvos no banco
+                d120 = res_data.get("12.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc120 = ["Selecione...", "Sim", "Não"]
+                v_salvo_120 = d120.get("valor", "Selecione...")
+                if v_salvo_120 not in opc120:
+                    v_salvo_120 = "Selecione..."
+                
+                evidencia_120_salva = d120.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_resposta_120 = f"r120_in_{ano_sel}"
+                chave_link_120 = f"l120_in_{ano_sel}"
+                chave_coment_120 = f"coment_12.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    v_selecionado_120 = st.radio(
+                        "Selecione uma opção (12.0):",
+                        options=opc120,
+                        index=opc120.index(v_salvo_120),
+                        key=chave_resposta_120
+                    )
+
+                    # Pontuação informativa (0.0 pts)
+                    st.metric(label="Impacto na Pontuação", value="0.0 pts")
+
+                with col2:
+                    lk120 = st.text_area(
+                        "Link/Evidência (12.0):",
+                        value=evidencia_120_salva,
+                        key=chave_link_120,
+                        placeholder="Inserir link do documento que comprove o processamento prévio...",
+                        height=125
+                    )
+                    placeholder_links_120 = st.empty()
+                    links_120_visuais = re.findall(REGEX_PURE_URL, lk120 or "")
+                    if links_120_visuais:
+                        placeholder_links_120.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_120_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 12.0
+                bloco_comentarios("12.0", res_data, ano_sel)
+
+                # Feedback visual do impacto
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto 12.0: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 12.0", key=f"btn_salvar_12_0_{ano_sel}", type="primary"):
+                    lnk_val = lk120.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_120, d120.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="12.0",
+                        valor=v_selecionado_120,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["12.0"] = {
+                        "valor": v_selecionado_120,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_120_salva or "")]
+
+                    if lnk_val != evidencia_120_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_12_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 12.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 12.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_12_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.0", st.session_state.get(f"links_pendentes_12_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = False
