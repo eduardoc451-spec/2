@@ -1055,22 +1055,28 @@ def zerar_questionario_igov(ano: int):
         st.error(f"Erro ao zerar questionário iGov: {e}")
 
 
-@st.dialog("🔒 Confirmação de Segurança - iGov")
-def confirmar_zerar_dialog_igov(ano: int):
-    st.warning(f"Você está prestes a apagar todas as respostas do iGov relativas ao ano de {ano}. Esta ação é irreversível!")
+@st.dialog("⚠️ Zerar Respostas do iGov")
+def confirmar_zerar_dialog(ano):
+    st.warning(f"Tem certeza que deseja apagar TODAS as respostas do iGov para o ano {ano}?")
+    st.write("Esta ação é irreversível e excluirá os dados salvos no banco Neon.")
     
-    senha = st.text_input("Digite a senha de administrador:", type="password")
-    
-    col_Sim, col_Nao = st.columns(2)
-    with col_Sim:
-        if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
-            if senha == "fidelios":
-                zerar_questionario_igov(ano)
-                st.success(f"✅ Questionário iGov de {ano} foi zerado com sucesso!")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔴 Sim, Zerar Tudo", type="primary", use_container_width=True):
+            try:
+                with get_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("DELETE FROM respostas_igov WHERE ano = %s", (int(ano),))
+                    conn.commit()
+                
+                st.cache_data.clear()
+                st.session_state[f"respostas_igov_{ano}"] = {}
+                st.toast("Respostas zeradas com sucesso!", icon="🗑️")
                 st.rerun()
-            else:
-                st.error("❌ Senha incorreta!")
-    with col_Nao:
+            except Exception as e:
+                st.error(f"Erro ao zerar banco: {e}")
+
+    with col2:
         if st.button("Cancelar", use_container_width=True):
             st.rerun()
 
