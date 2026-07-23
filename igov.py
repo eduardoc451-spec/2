@@ -3409,3 +3409,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.2.1", st.session_state.get(f"links_pendentes_3_2_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_2_1_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 3.3 • IDENTIFICAÇÃO DE RISCOS DE TIC (ISO 31000) (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_3_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.3 - Gestão de Riscos de TIC (ABNT NBR ISO/IEC 31000)", expanded=True):
+            st.subheader("3.3 • Riscos de TIC (ISO 31000)")
+            st.write("**Os riscos de TIC são identificados de acordo com as normas da ABNT NBR ISO/IEC 31000? Se tiver apenas antivírus e firewall, a resposta é NÃO.**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 3.3'.*")
+
+            opc33 = {
+                "Selecione...": 0.0,
+                "Sim – 30": 30.0,
+                "Não – 00": 0.0
+            }
+            lista33 = list(opc33.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d33 = res_data.get("3.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_33 = d33.get("valor", "Selecione...")
+            evidencia_33_salva = d33.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_33 = f"r_33_select_{ano_sel}"
+            chave_link_33 = f"l_33_txt_area_{ano_sel}"
+            chave_coment_33 = f"coment_3.3_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx33 = lista33.index(v_salvo_33) if v_salvo_33 in lista33 else 0
+                st.radio(
+                    "Selecione o status da conformidade:",
+                    options=lista33,
+                    index=idx33,
+                    key=chave_radio_33
+                )
+
+            with col2:
+                link_33 = st.text_area(
+                    "Link/Evidência (3.3):",
+                    value=evidencia_33_salva,
+                    key=chave_link_33,
+                    placeholder="Insira o link da política, plano ou matriz institucional de gestão de riscos de TIC corporativos...",
+                    height=90
+                )
+
+                placeholder_links_33 = st.empty()
+                links_33_visuais = re.findall(regex_pure_url, link_33 or "")
+                if links_33_visuais:
+                    placeholder_links_33.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_33_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.3", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.3", key=f"btn_salvar_3_3_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_33, v_salvo_33)
+                pts_33 = float(opc33.get(val_salvar, 0.0))
+                lnk_val = link_33.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_33, d33.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.3",
+                    valor=val_salvar,
+                    pontos=pts_33,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.3"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_33,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_33_salva or "")
+
+                if lnk_val != evidencia_33_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_3_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.3 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_33 = d33.get("pontos", 0.0)
+            cor_txt_33 = "#28a745" if pts_atuais_33 == 30.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_33}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.3: +{pts_atuais_33:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.3 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_3_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.3", st.session_state.get(f"links_pendentes_3_3_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_3_{ano_sel}"] = False
