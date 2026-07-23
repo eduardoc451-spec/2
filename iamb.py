@@ -9045,3 +9045,128 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("11.1", st.session_state.get(f"links_pendentes_11_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 11.2 • PÁGINA ELETRÔNICA DO PGRCC (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q11_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 11.2 - Página Eletrônica do Plano", expanded=True):
+                st.subheader("11.2 • Endereço Eletrônico do PGRCC")
+                st.write("**Informe a página eletrônica (link na internet) do Plano de Gerenciamento de Resíduos da Construção Civil (PGRCC):**")
+                st.caption("Se não estiver disponível na internet, insira no campo de resposta o texto **XYZ**.")
+
+                # Recupera os dados salvos no banco
+                d112 = res_data.get("11.2") or {"valor": "XYZ", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_112 = d112.get("valor", "XYZ")
+                evidencia_112_salva = d112.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_input_112 = f"i112_in_{ano_sel}"
+                chave_link_112 = f"l112_in_{ano_sel}"
+                chave_coment_112 = f"coment_11.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    i112 = st.text_input(
+                        "Endereço eletrônico (Link) ou XYZ:",
+                        value=v_salvo_112,
+                        key=chave_input_112,
+                        placeholder="https://... ou XYZ"
+                    )
+
+                    # Regra de pontuação do Quesito 11.2 (XYZ / Vazio = 0.0 pts; Link preenchido = 2.0 pts)
+                    v_limpo_112 = i112.strip()
+                    if v_limpo_112.upper() == "XYZ" or v_limpo_112 == "":
+                        pts_exibido_112 = 0.0
+                        cor_metric = "#6c757d"  # Cinza neutro
+                    else:
+                        pts_exibido_112 = 2.0
+                        cor_metric = "#28a745"  # Verde
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_112:.1f} pts")
+
+                    placeholder_links_val_112 = st.empty()
+                    links_val_visuais = re.findall(REGEX_PURE_URL, i112 or "")
+                    if links_val_visuais and v_limpo_112.upper() != "XYZ":
+                        placeholder_links_val_112.markdown(
+                            "**🔗 Link do Plano:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_val_visuais])
+                        )
+
+                with col2:
+                    lk112 = st.text_area(
+                        "Link/Evidência Adicional (11.2):",
+                        value=evidencia_112_salva,
+                        key=chave_link_112,
+                        placeholder="Inserir evidência adicional, Diário Oficial ou documento comprobatório...",
+                        height=125
+                    )
+                    placeholder_links_112 = st.empty()
+                    links_112_visuais = re.findall(REGEX_PURE_URL, lk112 or "")
+                    if links_112_visuais:
+                        placeholder_links_112.markdown(
+                            "**🔗 Link de Evidência:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_112_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 11.2
+                bloco_comentarios("11.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 11.2: +{pts_exibido_112:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 11.2", key=f"btn_salvar_11_2_{ano_sel}", type="primary"):
+                    val_txt = i112.strip()
+                    lnk_val = lk112.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_112, d112.get("comentario", ""))
+
+                    # Cálculo exato dos pontos para gravação
+                    if val_txt.upper() == "XYZ" or val_txt == "":
+                        pts_calculados = 0.0
+                    else:
+                        pts_calculados = 2.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="11.2",
+                        valor=val_txt,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["11.2"] = {
+                        "valor": val_txt,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Coleta e consolidação de todos os links detectados nos dois campos
+                    lk_val_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, val_txt or "")]
+                    lk_lnk_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    todos_links_atuais = lk_val_atuais + lk_lnk_atuais
+
+                    lk_val_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_112 or "")]
+                    lk_lnk_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_112_salva or "")]
+                    todos_links_antigos = lk_val_antigos + lk_lnk_antigos
+
+                    if (val_txt != v_salvo_112 or lnk_val != evidencia_112_salva) and todos_links_atuais and todos_links_atuais != todos_links_antigos:
+                        st.session_state[f"links_pendentes_11_2_{ano_sel}"] = todos_links_atuais
+                        st.session_state[f"gatilho_modal_11_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 11.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 11.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.2", st.session_state.get(f"links_pendentes_11_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_2_{ano_sel}"] = False
+
