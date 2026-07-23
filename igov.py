@@ -7399,3 +7399,109 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("10.5.1", st.session_state.get(f"links_pendentes_10_5_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_10_5_1_{ano_sel}"] = False
+
+
+# =============================================================================
+    # QUESITO 11.0 • DESIGNAÇÃO DO ENCARREGADO DE DADOS (DPO) (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_dpo_11_0_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 11.0 - Designação de Encarregado de Dados", expanded=True):
+            st.subheader("11.0 • Encarregado de Dados / DPO")
+            st.write("**A Prefeitura Municipal designou um encarregado para as operações de tratamento de dados pessoais?**")
+            st.caption("ℹ *Selecione a opção desejada, insira o link de evidência e clique em 'Salvar Quesito 11.0'.*")
+
+            lista110 = ["Selecione...", "Sim", "Não"]
+
+            d110 = res_data.get("11.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_110 = d110.get("valor", "Selecione...")
+            if v_salvo_110 not in lista110:
+                v_salvo_110 = "Selecione..."
+
+            evidencia_110_salva = d110.get("link", "")
+            chave_radio_110 = f"r_110_select_{ano_sel}"
+            chave_link_110 = f"l_110_txt_area_{ano_sel}"
+            chave_coment_110 = f"coment_11.0_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                idx110 = lista110.index(v_salvo_110)
+                st.radio(
+                    "Selecione uma opção (11.0):",
+                    options=lista110,
+                    index=idx110,
+                    key=chave_radio_110
+                )
+
+            with col2:
+                link_110 = st.text_area(
+                    "Link/Evidência (11.0):",
+                    value=evidencia_110_salva,
+                    key=chave_link_110,
+                    placeholder="Insira o link do ato oficial ou portaria de nomeação do DPO...",
+                    height=150
+                )
+                placeholder_links_110 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_110 or "")
+                links_110_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_110_visuais:
+                    placeholder_links_110.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_110_visuais]))
+
+            # Renderiza bloco de comentários
+            bloco_comentarios("11.0", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da indicação na tela
+            v_atual_110 = st.session_state.get(chave_radio_110, v_salvo_110)
+            cor_txt_110 = "#28a745" if v_atual_110 == "Sim" else ("#dc3545" if v_atual_110 == "Não" else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_110}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 11.0: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 11.0", key=f"btn_salvar_11_0_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_110, v_salvo_110)
+                lnk_val = link_110.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_110, d110.get("comentario", ""))
+
+                # Gravação no Banco de Dados (0.0 pontos)
+                save_resp(
+                    qid="11.0",
+                    valor=val_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["11.0"] = {
+                    "valor": val_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_110_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_110_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_11_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 11.0 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 11.0
+    if st.session_state.get(f"gatilho_modal_11_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = False
