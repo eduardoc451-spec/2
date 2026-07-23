@@ -3352,3 +3352,121 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.2.1", st.session_state.get(f"links_pendentes_5_2_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_2_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 5.3 • ORIENTAÇÃO/TREINAMENTO DE EQUIPE DE MANUTENÇÃO (iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_arborizacao_5_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.3 - Capacitação e Treinamento da Equipe", expanded=True):
+                st.subheader("5.3 • Treinamento de Equipe")
+                st.write("**O pessoal da prefeitura responsável por manutenção das árvores é devidamente orientado/treinado para realizar a poda de maneira correta?**")
+                st.caption("ℹ *Atenção: A ausência de treinamento formalizado gera penalidade direta de pontuação. Insira os dados, links/comentários e clique em 'Salvar Quesito 5.3'.*")
+
+                opts53 = {
+                    "Selecione...": 0.0,
+                    "Sim – 00": 0.0,
+                    "Não – -10": -10.0
+                }
+                lista_opts53 = list(opts53.keys())
+
+                # Recupera os dados salvos no banco de dados
+                d53 = res_data.get("5.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                
+                v_salvo_53 = d53.get("valor", "Selecione...")
+                if v_salvo_53 not in lista_opts53:
+                    v_salvo_53 = "Selecione..."
+
+                evidencia_53_salva = d53.get("link", "")
+                
+                # Chaves fixas de componentes no Streamlit
+                chave_radio_53 = f"r_53_select_{ano_sel}"
+                chave_link_53 = f"l_53_txt_area_{ano_sel}"
+                chave_coment_53 = f"coment_5.3_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    idx_salvo53 = lista_opts53.index(v_salvo_53)
+                    st.radio(
+                        "Selecione uma opção (5.3):",
+                        options=lista_opts53,
+                        index=idx_salvo53,
+                        key=chave_radio_53
+                    )
+
+                with col2:
+                    link_53 = st.text_area(
+                        "Link/Evidência (5.3):",
+                        value=evidencia_53_salva,
+                        key=chave_link_53,
+                        placeholder="Insira o link contendo certificados de treinamento, listas de presença ou editais de capacitação...",
+                        height=120
+                    )
+                    placeholder_links_53 = st.empty()
+                    links_53_visuais = re.findall(REGEX_PURE_URL, link_53 or "")
+                    if links_53_visuais:
+                        placeholder_links_53.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_53_visuais]))
+
+                # Renderiza o bloco de comentários do Quesito 5.3
+                bloco_comentarios("5.3", res_data, ano_sel)
+
+                # Cálculo do preview de impacto visual na pontuação
+                v_atual_53 = st.session_state.get(chave_radio_53, v_salvo_53)
+                pts_atuais_53 = opts53.get(v_atual_53, 0.0)
+                
+                if v_atual_53 == "Selecione...":
+                    cor_txt_53 = "#6c757d"
+                elif pts_atuais_53 < 0:
+                    cor_txt_53 = "#dc3545"
+                else:
+                    cor_txt_53 = "#28a745"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_53}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.3: {pts_atuais_53:+.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.3", key=f"btn_salvar_5_3_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_53, v_salvo_53)
+                    lnk_val = link_53.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_53, d53.get("comentario", ""))
+
+                    pts_calculados = float(opts53.get(val_salvar, 0.0))
+
+                    # Persistência via save_resp
+                    save_resp(
+                        qid="5.3",
+                        valor=val_salvar,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local
+                    res_data["5.3"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_53_salva or "")]
+
+                    if lnk_val != evidencia_53_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 5.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 5.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.3", st.session_state.get(f"links_pendentes_5_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_3_{ano_sel}"] = False
