@@ -10122,3 +10122,117 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("11.5", st.session_state.get(f"links_pendentes_11_5_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_5_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 11.5.1 • ATIVIDADES FISCALIZADAS (Condicional Visual - Padrão iGov)
+        # =============================================================================
+        v_cond_115 = st.session_state.get(f"r115_in_{ano_sel}", res_data.get("11.5", {}).get("valor", "Selecione..."))
+        if "Sim" in v_cond_115:
+            with st.container(key=f"bloco_isolado_q11_5_1_{ano_sel}", border=True):
+                with st.expander("📌 Quesito 11.5.1 - Atividades Fiscalizadas", expanded=True):
+                    st.subheader("11.5.1 • Escopo das Fiscalizações")
+                    st.write("**Em quais atividades são realizadas essas fiscalizações?**")
+
+                    # Recupera os dados salvos no banco
+                    d1151 = res_data.get("11.5.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                    v_salvo_1151 = d1151.get("valor", "[]")
+                    evidencia_1151_salva = d1151.get("link", "")
+
+                    # Desserialização segura da lista salva
+                    try:
+                        import ast
+                        lista_salva_1151 = ast.literal_eval(v_salvo_1151) if isinstance(v_salvo_1151, str) else v_salvo_1151
+                        if not isinstance(lista_salva_1151, list):
+                            lista_salva_1151 = []
+                    except Exception:
+                        lista_salva_1151 = []
+
+                    opts1151 = ["Coleta", "Acondicionamento", "Transporte", "Destinação / disposição final"]
+
+                    # Definindo chaves do Streamlit
+                    chave_link_1151 = f"l1151_in_{ano_sel}"
+                    chave_coment_1151 = f"coment_11.5.1_{ano_sel}"
+
+                    col1, col2 = st.columns([1, 1])
+
+                    with col1:
+                        st.write("**Selecione as atividades fiscalizadas:**")
+                        selecionados_1151 = []
+                        for idx, opt in enumerate(opts1151):
+                            checked = st.checkbox(
+                                opt,
+                                value=(opt in lista_salva_1151),
+                                key=f"ck_1151_{idx}_{ano_sel}"
+                            )
+                            if checked:
+                                selecionados_1151.append(opt)
+
+                        # Pontuação informativa (0.0 pts)
+                        st.metric(label="Impacto na Pontuação", value="0.0 pts")
+
+                    with col2:
+                        lk1151 = st.text_area(
+                            "Link/Evidência (11.5.1):",
+                            value=evidencia_1151_salva,
+                            key=chave_link_1151,
+                            placeholder="Inserir link da documentação comprobatória do escopo das fiscalizações...",
+                            height=155
+                        )
+                        placeholder_links_1151 = st.empty()
+                        links_1151_visuais = re.findall(REGEX_PURE_URL, lk1151 or "")
+                        if links_1151_visuais:
+                            placeholder_links_1151.markdown(
+                                "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1151_visuais])
+                            )
+
+                    # Renderiza o bloco de comentários do Quesito 11.5.1
+                    bloco_comentarios("11.5.1", res_data, ano_sel)
+
+                    # Feedback visual dinâmico do impacto
+                    st.markdown(
+                        "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto 11.5.1: 0.0 pontos aplicados (Quesito Informativo)</span>",
+                        unsafe_allow_html=True
+                    )
+
+                    # -----------------------------------------------------------------
+                    # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                    # -----------------------------------------------------------------
+                    if st.button("💾 Salvar Quesito 11.5.1", key=f"btn_salvar_11_5_1_{ano_sel}", type="primary"):
+                        lnk_val = lk1151.strip()
+                        val_sel = str(selecionados_1151)
+                        comentario_para_salvar = st.session_state.get(chave_coment_1151, d1151.get("comentario", ""))
+
+                        # Persistência no banco via save_resp (sempre 0.0 pontos)
+                        save_resp(
+                            qid="11.5.1",
+                            valor=val_sel,
+                            pontos=0.0,
+                            link=lnk_val,
+                            comentario=comentario_para_salvar
+                        )
+
+                        # Atualização do estado local em memória
+                        res_data["11.5.1"] = {
+                            "valor": val_sel,
+                            "pontos": 0.0,
+                            "link": lnk_val,
+                            "comentario": comentario_para_salvar
+                        }
+
+                        # Verificação de novos links para disparo do modal de validação
+                        links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                        links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1151_salva or "")]
+
+                        if lnk_val != evidencia_1151_salva and links_atuais and links_atuais != links_antigos:
+                            st.session_state[f"links_pendentes_11_5_1_{ano_sel}"] = links_atuais
+                            st.session_state[f"gatilho_modal_11_5_1_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta e comentários do Quesito 11.5.1 salvos com sucesso!", icon="✅")
+                        st.rerun()
+
+            # GATILHO DO MODAL 11.5.1 (Fora do container principal)
+            if st.session_state.get(f"gatilho_modal_11_5_1_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link("11.5.1", st.session_state.get(f"links_pendentes_11_5_1_{ano_sel}", []))
+                st.session_state[f"gatilho_modal_11_5_1_{ano_sel}"] = False
+
