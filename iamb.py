@@ -8230,3 +8230,125 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("10.0", st.session_state.get(f"links_pendentes_10_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 10.1 • PROGRAMAÇÃO DA COLETA DOMÉSTICA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q10_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 10.1 - Programação da Coleta Doméstica", expanded=True):
+                st.subheader("10.1 • Programação da Coleta")
+                st.write(
+                    "**A coleta de lixo doméstico (resíduos domiciliares) ocorre de forma programada "
+                    "(determinados os horários e dias da semana)?**"
+                )
+
+                # Recupera os dados salvos no banco
+                d101 = res_data.get("10.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc101 = ["Selecione...", "Sim – 00", "Não – -30 (perde 30 pontos)"]
+                v_salvo_101 = d101.get("valor", "Selecione...")
+                if v_salvo_101 not in opc101:
+                    v_salvo_101 = "Selecione..."
+                evidencia_101_salva = d101.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_101 = f"r101_in_{ano_sel}"
+                chave_link_101 = f"l101_in_{ano_sel}"
+                chave_coment_101 = f"coment_10.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    resp_101 = st.radio(
+                        "Selecione uma opção (10.1):",
+                        options=opc101,
+                        index=opc101.index(v_salvo_101),
+                        key=chave_radio_101
+                    )
+
+                    # Cálculo dinâmico da pontuação para exibição
+                    if "Sim" in resp_101:
+                        pts_exibido_101 = 0.0
+                        cor_metric = "#28a745"  # Verde
+                    elif "Não" in resp_101:
+                        pts_exibido_101 = -30.0
+                        cor_metric = "#dc3545"  # Vermelho (penalidade)
+                    else:
+                        pts_exibido_101 = 0.0
+                        cor_metric = "#6c757d"  # Cinza
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_101:.1f} pts")
+
+                with col2:
+                    lk101 = st.text_area(
+                        "Link/Evidência (10.1):",
+                        value=evidencia_101_salva,
+                        key=chave_link_101,
+                        placeholder="Inserir link do cronograma, tabela de horários ou setorização da coleta...",
+                        height=125
+                    )
+                    placeholder_links_101 = st.empty()
+                    links_101_visuais = re.findall(REGEX_PURE_URL, lk101 or "")
+                    if links_101_visuais:
+                        placeholder_links_101.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_101_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 10.1
+                bloco_comentarios("10.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 10.1: {pts_exibido_101:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 10.1", key=f"btn_salvar_10_1_{ano_sel}", type="primary"):
+                    lnk_val = lk101.strip()
+                    val_sel = resp_101
+                    comentario_para_salvar = st.session_state.get(chave_coment_101, d101.get("comentario", ""))
+
+                    # Regra de pontuação
+                    if "Sim" in val_sel:
+                        pts_calculados = 0.0
+                    elif "Não" in val_sel:
+                        pts_calculados = -30.0
+                    else:
+                        pts_calculados = 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="10.1",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["10.1"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_101_salva or "")]
+
+                    if lnk_val != evidencia_101_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_10_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_10_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 10.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 10.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_10_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.1", st.session_state.get(f"links_pendentes_10_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_10_1_{ano_sel}"] = False
+
