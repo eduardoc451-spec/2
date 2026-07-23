@@ -10233,3 +10233,104 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("11.5.1", st.session_state.get(f"links_pendentes_11_5_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_5_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 11.6 • EXISTÊNCIA DE ATT (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q11_6_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 11.6 - Área de Transbordo e Triagem (ATT)", expanded=True):
+                st.subheader("11.6 • Existência de ATT")
+                st.write("**Existe Área de Transbordo e Triagem (ATT) para os Resíduos da Construção Civil no município?**")
+
+                # Recupera os dados salvos no banco
+                d116 = res_data.get("11.6") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc116 = ["Selecione...", "Sim", "Não"]
+                v_salvo_116 = d116.get("valor", "Selecione...")
+                if v_salvo_116 not in opc116:
+                    v_salvo_116 = "Selecione..."
+                evidencia_116_salva = d116.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_116 = f"r116_in_{ano_sel}"
+                chave_link_116 = f"l116_in_{ano_sel}"
+                chave_coment_116 = f"coment_11.6_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    resp_116 = st.radio(
+                        "Selecione uma opção (11.6):",
+                        options=opc116,
+                        index=opc116.index(v_salvo_116),
+                        key=chave_radio_116
+                    )
+
+                    # Pontuação informativa (0.0 pts)
+                    st.metric(label="Impacto na Pontuação", value="0.0 pts")
+
+                with col2:
+                    lk116 = st.text_area(
+                        "Link/Evidência (11.6):",
+                        value=evidencia_116_salva,
+                        key=chave_link_116,
+                        placeholder="Inserir link comprovando a existência de Área de Transbordo e Triagem (licença ambiental, relatório de infraestrutura)...",
+                        height=125
+                    )
+                    placeholder_links_116 = st.empty()
+                    links_116_visuais = re.findall(REGEX_PURE_URL, lk116 or "")
+                    if links_116_visuais:
+                        placeholder_links_116.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_116_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 11.6
+                bloco_comentarios("11.6", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto 11.6: 0.0 pontos aplicados (Quesito Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 11.6", key=f"btn_salvar_11_6_{ano_sel}", type="primary"):
+                    lnk_val = lk116.strip()
+                    val_sel = resp_116
+                    comentario_para_salvar = st.session_state.get(chave_coment_116, d116.get("comentario", ""))
+
+                    # Persistência no banco via save_resp (sempre 0.0 pontos)
+                    save_resp(
+                        qid="11.6",
+                        valor=val_sel,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["11.6"] = {
+                        "valor": val_sel,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_116_salva or "")]
+
+                    if lnk_val != evidencia_116_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_6_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_6_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 11.6 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 11.6 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_6_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.6", st.session_state.get(f"links_pendentes_11_6_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_6_{ano_sel}"] = False
