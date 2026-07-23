@@ -4275,3 +4275,133 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.3", st.session_state.get(f"links_pendentes_7_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_3_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 7.3.1 • DETALHAMENTO DAS METAS (Padrão iGov - Múltipla Escolha)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_3_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.3.1 - Detalhamento das Metas Estabelecidas", expanded=True):
+                st.subheader("7.3.1 • Metas de Qualidade e Eficiência")
+                st.write("**Assinale quais as metas estabelecidas sobre abastecimento de água potável:**")
+
+                opts731 = {
+                    "Metas de expansão do serviço de abastecimento de água – 00": 0.0,
+                    "Metas de redução de perdas na distribuição de água tratada – 2,5": 2.5,
+                    "Metas de qualidade na prestação do serviço de abastecimento de água – 2,5": 2.5,
+                    "Metas de eficiência e de uso racional da água – 2,5": 2.5,
+                    "Estabelecimento de volume mínimo de abastecimento de água per capita – 2,5": 2.5,
+                    "Estabelecimento de direitos e deveres dos usuários – 2,5": 2.5,
+                    "Meta de universalização do abastecimento de água potável até 31 de dezembro de 2033 – 2,5": 2.5,
+                    "Estabelecimento de cronograma para o atingimento das metas assinaladas acima – 05": 5.0
+                }
+
+                # Recupera os dados salvos do banco
+                d731 = res_data.get("7.3.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                
+                texto_seguro_731 = str(d731.get("valor", "[]"))
+                evidencia_731_salva = d731.get("link", "")
+
+                # Chaves de identificação no Streamlit
+                chave_link_731 = f"l_731_txt_area_{ano_sel}"
+                chave_coment_731 = f"coment_7.3.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.write("*Selecione os parâmetros contemplados:*")
+                    
+                    # Renderiza checkboxes e acumula estado/pontuação
+                    pts_calculados_731 = 0.0
+                    for i, (txt, pts) in enumerate(opts731.items()):
+                        key_ck = f"ck_731_opt_{i}_{ano_sel}"
+                        
+                        # Define valor inicial baseando-se no banco ou session_state
+                        if key_ck not in st.session_state:
+                            marcado_inicial = (txt in texto_seguro_731) if (texto_seguro_731 and texto_seguro_731 != "[]") else False
+                            st.session_state[key_ck] = marcado_inicial
+
+                        is_checked = st.checkbox(
+                            txt,
+                            key=key_ck
+                        )
+                        if is_checked:
+                            pts_calculados_731 += pts
+
+                    # Exibição do feedback de pontuação
+                    st.metric(label="Pontuação do Quesito (Acumulada)", value=f"{pts_calculados_731:.1f} pts")
+
+                with col2:
+                    link_731 = st.text_area(
+                        "Link/Evidência (7.3.1):",
+                        value=evidencia_731_salva,
+                        key=chave_link_731,
+                        placeholder="Links para anexos de engenharia municipal ou relatórios oficiais da regulação setorial...",
+                        height=280
+                    )
+                    placeholder_links_731 = st.empty()
+                    links_731_visuais = re.findall(REGEX_PURE_URL, link_731 or "")
+                    if links_731_visuais:
+                        placeholder_links_731.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_731_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.3.1
+                bloco_comentarios("7.3.1", res_data, ano_sel)
+
+                # Feedback visual do impacto na pontuação
+                cor_txt_731 = "#28a745" if pts_calculados_731 > 0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_731}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.3.1: +{pts_calculados_731:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.3.1", key=f"btn_salvar_7_3_1_{ano_sel}", type="primary"):
+                    lnk_val = link_731.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_731, d731.get("comentario", ""))
+
+                    # Varre os checkboxes para consolidar lista e total de pontos
+                    lista_selecionados = []
+                    pts_totais = 0.0
+                    for idx, (txt, pts) in enumerate(opts731.items()):
+                        if st.session_state.get(f"ck_731_opt_{idx}_{ano_sel}", False):
+                            lista_selecionados.append(txt)
+                            pts_totais += pts
+
+                    val_salvar = str(lista_selecionados)
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.3.1",
+                        valor=val_salvar,
+                        pontos=float(pts_totais),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização da estrutura em memória
+                    res_data["7.3.1"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_totais),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_731_salva or "")]
+
+                    if lnk_val != evidencia_731_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.3.1", st.session_state.get(f"links_pendentes_7_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_3_1_{ano_sel}"] = False
