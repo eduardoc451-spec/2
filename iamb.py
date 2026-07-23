@@ -2342,3 +2342,125 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 2.1 • AÇÃO EM REDE ESCOLAR MUNICIPAL (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_prog_2_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 2.1 - Cobertura de Educação Ambiental na Rede Escolar", expanded=True):
+                st.subheader("2.1 • Ação em Rede Escolar")
+                st.write("**Sobre programa ou ação de educação ambiental na rede escolar municipal, informe o número de escolas dos Anos Iniciais (1º ao 5º ano) que adotam o programa.**")
+                st.caption("ℹ *Informe as métricas, adicione os links/comentários e clique no botão 'Salvar Quesito 2.1' para registrar.*")
+
+                # Recupera os dados salvos no banco ou valores zerados
+                d21 = res_data.get("2.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                raw_valor = d21.get("valor", "")
+
+                # Extração segura do JSON
+                try:
+                    valores_salvos = json.loads(raw_valor) if raw_valor else {"n_com_programa": 0, "n_total": 1}
+                except (json.JSONDecodeError, TypeError):
+                    valores_salvos = {"n_com_programa": 0, "n_total": 1}
+
+                v_com_programa_salvo = int(valores_salvos.get("n_com_programa", 0))
+                v_total_salvo = int(valores_salvos.get("n_total", 1))
+                evidencia_21_salva = d21.get("link", "")
+
+                # Chaves fixas para componentes Streamlit
+                chave_com_prog = f"q21_com_prog_num_{ano_sel}"
+                chave_total_escolas = f"q21_total_num_{ano_sel}"
+                chave_link_21 = f"l_21_txt_area_{ano_sel}"
+                chave_coment_21 = f"coment_2.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.markdown("**Métricas da Rede Pública:**")
+                    st.number_input(
+                        "Nº de escolas com programa/ação ambiental:",
+                        min_value=0,
+                        value=v_com_programa_salvo,
+                        key=chave_com_prog
+                    )
+                    st.number_input(
+                        "Nº total de escolas de Anos Iniciais no município (i-Educ = E3.3):",
+                        min_value=1,
+                        value=v_total_salvo,
+                        key=chave_total_escolas
+                    )
+
+                with col2:
+                    link_21 = st.text_area(
+                        "Link/Evidência (2.1):",
+                        value=evidencia_21_salva,
+                        key=chave_link_21,
+                        placeholder="Insira o link contendo o relatório pedagógico, censo escolar municipal ou portarias das ações nas escolas...",
+                        height=140
+                    )
+                    placeholder_links_21 = st.empty()
+                    links_21_visuais = re.findall(REGEX_PURE_URL, link_21 or "")
+                    if links_21_visuais:
+                        placeholder_links_21.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_21_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("2.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 2.1", key=f"btn_salvar_2_1_{ano_sel}", type="primary"):
+                    n_com_prog = st.session_state.get(chave_com_prog, v_com_programa_salvo)
+                    n_tot = st.session_state.get(chave_total_escolas, v_total_salvo)
+                    lnk_val = link_21.strip()
+
+                    # Cálculo da proporção e pontuação limite (máx. 50.0)
+                    den = n_tot if n_tot > 0 else 1
+                    proporcao = n_com_prog / den
+                    pts_calculados = float(min(proporcao * 50.0, 50.0))
+
+                    valores_formatados = json.dumps({"n_com_programa": n_com_prog, "n_total": n_tot})
+                    comentario_para_salvar = st.session_state.get(chave_coment_21, d21.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="2.1",
+                        valor=valores_formatados,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["2.1"] = {
+                        "valor": valores_formatados,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_21_salva or "")]
+
+                    if lnk_val != evidencia_21_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_2_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual
+                pts_atuais_21 = d21.get("pontos", 0.0)
+                cor_txt_21 = "#28a745" if pts_atuais_21 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_21}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 2.1: +{pts_atuais_21:.2f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 2.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("2.1", st.session_state.get(f"links_pendentes_2_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_2_1_{ano_sel}"] = False
