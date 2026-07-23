@@ -4061,3 +4061,108 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 7.2 • PÁGINA ELETRÔNICA DO PLANO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.2 - Transparência Pública e Acesso ao Plano", expanded=True):
+                st.subheader("7.2 • Página Eletrônica do Plano")
+                st.write("**Informe a página eletrônica (link na internet) do Plano Municipal ou Regional de Saneamento Básico:**")
+                st.caption("ℹ *Se não estiver disponível na internet, insira o texto **XYZ** no campo de resposta para fins de auditoria.*")
+
+                # Recupera os dados salvos do banco
+                d72 = res_data.get("7.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_72 = d72.get("valor", "")
+                evidencia_72_salva = d72.get("link", "")
+
+                # Chaves de identificação no Streamlit
+                chave_val_72 = f"q72_link_val_{ano_sel}"
+                chave_link_72 = f"l_72_txt_area_{ano_sel}"
+                chave_coment_72 = f"coment_7.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    txt_val_input = st.text_input(
+                        "Link do Plano ou XYZ:",
+                        value=v_salvo_72,
+                        key=chave_val_72,
+                        placeholder="http://www... ou XYZ"
+                    )
+                    
+                    # Cálculo em tempo real da pontuação exibida no painel
+                    current_txt_72 = txt_val_input.strip().upper()
+                    fb_pts_72 = 0.0 if current_txt_72 in ["XYZ", ""] else 2.0
+                    st.metric(label="Pontuação do Quesito", value=f"{fb_pts_72:.1f} pts")
+
+                with col2:
+                    link_72 = st.text_area(
+                        "Link/Evidência (7.2):",
+                        value=evidencia_72_salva,
+                        key=chave_link_72,
+                        placeholder="Link da transparência, site da agência reguladora ou portal do município...",
+                        height=130
+                    )
+                    placeholder_links_72 = st.empty()
+                    links_72_visuais = re.findall(REGEX_PURE_URL, link_72 or "")
+                    if links_72_visuais:
+                        placeholder_links_72.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_72_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.2
+                bloco_comentarios("7.2", res_data, ano_sel)
+
+                # Feedback visual do impacto na pontuação
+                cor_txt_72 = "#28a745" if fb_pts_72 > 0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_72}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.2: +{fb_pts_72:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.2", key=f"btn_salvar_7_2_{ano_sel}", type="primary"):
+                    txt_val = st.session_state.get(chave_val_72, v_salvo_72).strip()
+                    lnk_val = link_72.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_72, d72.get("comentario", ""))
+
+                    # Regra de pontuação: XYZ ou Vazio = 0.0, Qualquer outra entrada = 2.0
+                    pts_calculados = 0.0 if txt_val.upper() in ["XYZ", ""] else 2.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.2",
+                        valor=txt_val,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização da estrutura em memória
+                    res_data["7.2"] = {
+                        "valor": txt_val,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_72_salva or "")]
+
+                    if lnk_val != evidencia_72_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.2", st.session_state.get(f"links_pendentes_7_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_2_{ano_sel}"] = False
