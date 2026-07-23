@@ -7718,14 +7718,19 @@ def mostrar_formulario_igov():
         st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = False
 
     # =========================================================================
-    # ABA DE GRÁFICOS E EVOLUÇÃO HISTÓRICA (INDENTAÇÃO PADRÃO: 4 ESPAÇOS)
+    # ABA DE GRÁFICOS E EVOLUÇÃO HISTÓRICA (CORRIGIDA)
     # =========================================================================
     with aba_graf:
         st.subheader("📈 Evolução dos Resultados — Série Histórica")
         st.write("Acompanhe o desempenho da pontuação total acumulada ao longo dos anos:")
 
-        # 1. Recupera o histórico tratado na sidebar
-        dados_historicos = st.session_state.get("all_data", {})
+        # 1. Busca os dados reais gravados de todos os anos no banco de dados
+        dados_historicos = get_all_years_data_igov()
+        
+        # Garante que o ano atualmente selecionado também esteja no dicionário, mesmo se recém-alterado
+        if ano_sel not in dados_historicos or not dados_historicos[ano_sel]:
+            dados_historicos[ano_sel] = res_data
+
         anos_periodo = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
 
         # 2. Processa os pontos de cada ano da série histórica
@@ -7734,7 +7739,7 @@ def mostrar_formulario_igov():
             dados_do_ano = dados_historicos.get(ano, {})
             if isinstance(dados_do_ano, dict) and dados_do_ano:
                 pts_ano = sum(
-                    float(v.get("pontos", 0))
+                    float(v.get("pontos", 0.0))
                     for k, v in dados_do_ano.items()
                     if isinstance(v, dict) and not k.startswith("COM_")
                 )
