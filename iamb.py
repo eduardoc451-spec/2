@@ -11363,3 +11363,137 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.2", st.session_state.get(f"links_pendentes_14_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_2_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 14.3 • AÇÕES PROMOVIDAS PELA PREFEITURA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q14_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 14.3 - Ações de Combate", expanded=True):
+                st.subheader("14.3 • Ações Promovidas pela Prefeitura")
+                st.write("**Assinale as ações promovidas pela Prefeitura para combater o descarte irregular de lixo no ano:**")
+
+                # Recuperação dos dados salvos no banco
+                d143 = res_data.get("14.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_143 = d143.get("valor", "[]")
+                pts_salvos_143 = float(d143.get("pontos", 0.0))
+                evidencia_143_salva = d143.get("link", "")
+
+                # Opções e pontuações do quesito 14.3
+                opts143 = {
+                    "Campanhas de conscientização – 05": 5.0,
+                    "Mobilização de grupos de bairro – 05": 5.0,
+                    "Retirada dos resíduos sólidos por caminhões – 05": 5.0,
+                    "Sinalização no local sobre a proibição de descarte naquele local – 05": 5.0,
+                    "Plantio de árvores em áreas que não deveriam receber lixo ou entulho – 05": 5.0,
+                    "Notificações e multas aos responsáveis – 05": 5.0
+                }
+
+                # Desserialização segura da lista salva
+                lista_selecionados_143 = []
+                if isinstance(v_salvo_143, list):
+                    lista_selecionados_143 = v_salvo_143
+                elif isinstance(v_salvo_143, str) and v_salvo_143.strip():
+                    try:
+                        import ast
+                        lista_selecionados_143 = ast.literal_eval(v_salvo_143)
+                        if not isinstance(lista_selecionados_143, list):
+                            lista_selecionados_143 = []
+                    except Exception:
+                        lista_selecionados_143 = []
+
+                # Definindo chaves do Streamlit
+                chave_link_143 = f"l143_in_{ano_sel}"
+                chave_coment_143 = f"coment_14.3_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.write("**Ações Executadas:**")
+                    # Renderiza cada checkbox mantendo o estado inicial desserializado
+                    for idx, (opt, p_val) in enumerate(opts143.items()):
+                        key_ck = f"ck_143_{idx}_{ano_sel}"
+                        st.checkbox(
+                            opt,
+                            value=(opt in lista_selecionados_143),
+                            key=key_ck
+                        )
+
+                    # Métrica visual do impacto em pontos salvo
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_143:.1f} pts")
+
+                with col2:
+                    lk143 = st.text_area(
+                        "Link/Evidência (14.3):",
+                        value=evidencia_143_salva,
+                        key=chave_link_143,
+                        placeholder="Inserir link das fotos, ordens de serviço, relatórios ou legislação...",
+                        height=160
+                    )
+                    placeholder_links_143 = st.empty()
+                    links_143_visuais = re.findall(REGEX_PURE_URL, lk143 or "")
+                    if links_143_visuais:
+                        placeholder_links_143.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_143_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 14.3
+                bloco_comentarios("14.3", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>📊 Impacto 14.3: {pts_salvos_143:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 14.3", key=f"btn_salvar_14_3_{ano_sel}", type="primary"):
+                    selecionados_atuais = []
+                    pts_calculados_143 = 0.0
+
+                    # Coleta as marcas dos checkboxes via session_state
+                    for idx, (opt, p_val) in enumerate(opts143.items()):
+                        key_ck = f"ck_143_{idx}_{ano_sel}"
+                        if st.session_state.get(key_ck, False):
+                            selecionados_atuais.append(opt)
+                            pts_calculados_143 += p_val
+
+                    lnk_val = lk143.strip()
+                    val_texto_143 = str(selecionados_atuais)
+                    comentario_para_salvar = st.session_state.get(chave_coment_143, d143.get("comentario", ""))
+
+                    # Persistência no banco de dados via save_resp
+                    save_resp(
+                        qid="14.3",
+                        valor=val_texto_143,
+                        pontos=float(pts_calculados_143),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do dicionário em memória
+                    res_data["14.3"] = {
+                        "valor": val_texto_143,
+                        "pontos": float(pts_calculados_143),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_143_salva or "")]
+
+                    if lnk_val != evidencia_143_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 14.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 14.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_14_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.3", st.session_state.get(f"links_pendentes_14_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_3_{ano_sel}"] = False
