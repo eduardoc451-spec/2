@@ -1336,5 +1336,110 @@ def mostrar_formulario_igov():
 
     # Garante a exposição da variável r10 para dependências condicionais de outros quesitos
     r10 = v_salvo_10
+
+    # =============================================================================
+    # QUESITO 1.1 • INSTRUMENTO NORMATIVO DO SETOR DE TIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_igov_1_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.1 - Instrumento Normativo de Criação / Estrutura do Setor de TIC", expanded=True):
+            st.subheader("1.1 • Instrumento Normativo do Setor de TIC")
+            st.write(
+                "**Informe o Instrumento normativo (Lei, Decreto, Portaria), Número e Data da "
+                "publicação que formaliza ou regulamenta o setor/área de TIC na Prefeitura:**"
+            )
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.1' para registrar.*")
+
+            # Recuperação do estado salvo no banco/dicionário
+            d11 = res_data.get("1.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_11 = d11.get("valor", "")
+            l_salvo_11 = d11.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_txt_11 = f"txt_val_1_1_{ano_sel}"
+            chave_link_11 = f"txt_link_1_1_{ano_sel}"
+            chave_coment_11 = f"coment_1.1_{ano_sel}"
+
+            c11_1, c11_2 = st.columns([1, 1])
+
+            with c11_1:
+                novo_valor_11 = st.text_area(
+                    "Dados do instrumento normativo / Detalhes:",
+                    value=v_salvo_11,
+                    key=chave_txt_11,
+                    height=100,
+                    placeholder="Ex: Lei Municipal nº 1.234 de 10/05/2021 - Cria a Coordenadoria de TIC"
+                )
+
+            with c11_2:
+                novo_link_11 = st.text_input(
+                    "Link da Evidência / Diário Oficial (1.1):",
+                    value=l_salvo_11,
+                    key=chave_link_11,
+                    placeholder="https://..."
+                )
+
+                # Exibição inline dos links detectados
+                regex_url = r'https?://[^\s<>"]+'
+                links_visuais_11 = re.findall(regex_url, novo_link_11 or "") + re.findall(regex_url, novo_valor_11 or "")
+                
+                placeholder_links_11 = st.empty()
+                if links_visuais_11:
+                    placeholder_links_11.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_visuais_11]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.1", key=f"btn_salvar_1_1_{ano_sel}", type="primary"):
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_11, d11.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="1.1",
+                    valor=novo_valor_11,
+                    pontos=0.0,  # Mantido 0.0 por ser um quesito meramente informativo
+                    link=novo_link_11,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["1.1"] = {
+                    "valor": novo_valor_11,
+                    "pontos": 0.0,
+                    "link": novo_link_11,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_url, novo_link_11 or "") + re.findall(regex_url, novo_valor_11 or "")
+                links_antigos = re.findall(regex_url, l_salvo_11 or "") + re.findall(regex_url, v_salvo_11 or "")
+
+                if (novo_link_11 != l_salvo_11 or novo_valor_11 != v_salvo_11) and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = True
+
+                # Limpa o cache para garantir que a busca do banco seja atualizada no rerun
+                st.cache_data.clear()
+
+                st.toast("Dados do Quesito 1.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza session state e painéis)
+                st.rerun()
+
+            # Exibição do impacto de pontuação (Informativo)
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 1.1: 0.0 pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
            
         
