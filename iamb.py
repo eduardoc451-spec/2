@@ -1766,3 +1766,126 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 1.1.1 • QUANTIDADE DE PESSOAL (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_rh_1_1_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.1.1 - Quadro Quantitativo de Servidores", expanded=True):
+                st.subheader("1.1.1 • Detalhamento Quantitativo de Pessoal")
+                st.write("**Informe a quantidade de pessoal alocado nas operações do Meio Ambiente:**")
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.1.1' para registrar.*")
+
+                # Recupera o dicionário ou cria um padrão vazio estruturado
+                d111 = res_data.get("1.1.1") or {"valor": "0", "pontos": 0.0, "link": "E:0, C:0, T:0 | Evidência: ", "comentario": ""}
+                
+                # Parse seguro dos valores numéricos salvos e do texto da evidência
+                string_banco = d111.get("link", "E:0, C:0, T:0 | Evidência: ")
+                try:
+                    if " | Evidência: " in string_banco:
+                        parte_numeros, evidencia_111_salva = string_banco.split(" | Evidência: ", 1)
+                    else:
+                        parte_numeros, evidencia_111_salva = string_banco, ""
+
+                    parts = parte_numeros.split(",")
+                    v_efe = int(parts[0].split(":")[1])
+                    v_com = int(parts[1].split(":")[1])
+                    v_ter = int(parts[2].split(":")[1])
+                except Exception:
+                    v_efe, v_com, v_ter = 0, 0, 0
+                    evidencia_111_salva = ""
+
+                # Chaves fixas por componente e ano
+                chave_efe = f"q111_efe_num_{ano_sel}"
+                chave_com = f"q111_com_num_{ano_sel}"
+                chave_ter = f"q111_ter_num_{ano_sel}"
+                chave_link_111 = f"l_111_txt_area_{ano_sel}"
+                chave_coment_111 = f"coment_1.1.1_{ano_sel}"
+
+                c111_1, c111_2 = st.columns([1, 1])
+                with c111_1:
+                    st.number_input("Servidores Efetivos:", min_value=0, value=v_efe, key=chave_efe)
+                    st.number_input("Cargos Comissionados:", min_value=0, value=v_com, key=chave_com)
+                    st.number_input("Profissionais Terceirizados:", min_value=0, value=v_ter, key=chave_ter)
+
+                with c111_2:
+                    n_efe_cur = st.session_state.get(chave_efe, v_efe)
+                    n_com_cur = st.session_state.get(chave_com, v_com)
+                    n_ter_cur = st.session_state.get(chave_ter, v_ter)
+                    total_atual = n_efe_cur + n_com_cur + n_ter_cur
+
+                    st.info(f"👥 **Força de Trabalho Total Calculada:** {total_atual} colaboradores")
+
+                    link_111 = st.text_area(
+                        "Link/Evidência (1.1.1):",
+                        value=evidencia_111_salva,
+                        key=chave_link_111,
+                        placeholder="Insira o link do diário oficial, portal da transparência ou documento comprobatório do quadro...",
+                        height=115
+                    )
+                    placeholder_links_111 = st.empty()
+                    links_111_visuais = re.findall(REGEX_PURE_URL, link_111 or "")
+                    if links_111_visuais:
+                        placeholder_links_111.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_111_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.1.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.1.1", key=f"btn_salvar_1_1_1_{ano_sel}", type="primary"):
+                    n_efe_salvar = st.session_state.get(chave_efe, v_efe)
+                    n_com_salvar = st.session_state.get(chave_com, v_com)
+                    n_ter_salvar = st.session_state.get(chave_ter, v_ter)
+                    total_rh = n_efe_salvar + n_com_salvar + n_ter_salvar
+
+                    lnk_val = link_111.strip()
+                    str_formatada_banco = f"E:{n_efe_salvar}, C:{n_com_salvar}, T:{n_ter_salvar} | Evidência: {lnk_val}"
+
+                    comentario_para_salvar = st.session_state.get(chave_coment_111, d111.get("comentario", ""))
+
+                    # Grava no banco de dados Neon
+                    save_resp(
+                        qid="1.1.1",
+                        valor=str(total_rh),
+                        pontos=0.0,
+                        link=str_formatada_banco,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.1.1"] = {
+                        "valor": str(total_rh),
+                        "pontos": 0.0,
+                        "link": str_formatada_banco,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_111_salva or "")]
+
+                    if lnk_val != evidencia_111_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo visual da pontuação
+                pts_atuais_111 = d111.get("pontos", 0.0)
+                cor_txt_111 = "#28a745" if pts_atuais_111 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_111}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.1.1: +{pts_atuais_111:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.1.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.1.1", st.session_state.get(f"links_pendentes_1_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_1_1_{ano_sel}"] = False
