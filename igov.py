@@ -1,3 +1,7 @@
+import re
+
+# Adicione no topo do arquivo igov.py:
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
 import os
 import sys
 import re
