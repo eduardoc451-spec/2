@@ -1919,3 +1919,130 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
         st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 1.4.1 • ETAPAS DE PARTICIPAÇÃO EM LICITAÇÕES (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_1_4_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.4.1 - Detalhamento das Etapas de Atuação Institucional", expanded=True):
+            st.subheader("1.4.1 • Etapas de Atuação")
+            st.write("**Selecione as etapas em que houve participação formalizada da equipe de TIC e anexe a comprovação:**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.4.1' para registrar.*")
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d141 = res_data.get("1.4.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+            
+            raw_v141 = d141.get("valor", "[]")
+            if not isinstance(raw_v141, str) or not raw_v141.startswith("["):
+                raw_v141 = "[]"
+            try:
+                lista_salva_141 = eval(raw_v141)
+            except Exception:
+                lista_salva_141 = []
+
+            l_salvo_141 = d141.get("link", "")
+            etapas = {
+                "Elaboração do edital / Especificação técnica – 15": 15.0,
+                "Comissão de Licitação / Equipe de Apoio – 10": 10.0,
+                "Recebimento / Gestão de Contrato – 15": 15.0
+            }
+
+            # Chaves fixas por componente e ano
+            chave_link_141 = f"l_141_txt_area_{ano_sel}"
+            chave_coment_141 = f"coment_1.4.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.markdown("**Selecione as etapas de atuação comprovadas:**")
+                
+                # Leitura direta dos estados dos checkboxes na renderização
+                chks_estados_141 = {}
+                for etapa, pts in etapas.items():
+                    slug_etapa = etapa.split(" – ")[0].replace(" / ", "_").replace(" ", "_").lower()
+                    chk_key = f"chk_141_{slug_etapa}_{ano_sel}"
+                    
+                    chks_estados_141[etapa] = st.checkbox(
+                        etapa,
+                        value=(etapa in lista_salva_141),
+                        key=chk_key
+                    )
+
+            with col2:
+                link_141 = st.text_area(
+                    "Link/Evidência das etapas de participação (1.4.1):",
+                    value=l_salvo_141,
+                    key=chave_link_141,
+                    placeholder="Insira o link das publicações no Diário Oficial, atas de sessões com assinatura da TI ou relatórios de homologação técnica...",
+                    height=110
+                )
+                
+                placeholder_links_141 = st.empty()
+                links_141_visuais = re.findall(regex_pure_url, link_141 or "")
+                if links_141_visuais:
+                    placeholder_links_141.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_141_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.4.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.4.1", key=f"btn_salvar_1_4_1_{ano_sel}", type="primary"):
+                # Filtra etapas selecionadas e calcula a pontuação incremental
+                selecionadas = [etapa for etapa, selecionado in chks_estados_141.items() if selecionado]
+                pts_calculados_141 = sum(etapas[etapa] for etapa in selecionadas)
+                val_str = str(selecionadas)
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_141, d141.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="1.4.1",
+                    valor=val_str,
+                    pontos=pts_calculados_141,
+                    link=link_141.strip(),
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["1.4.1"] = {
+                    "valor": val_str,
+                    "pontos": pts_calculados_141,
+                    "link": link_141.strip(),
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, link_141 or "")
+                links_antigos = re.findall(regex_pure_url, l_salvo_141 or "")
+
+                if link_141 != l_salvo_141 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_4_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_4_1_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 1.4.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_141 = d141.get("pontos", 0.0)
+            cor_txt_141 = "#28a745" if pts_atuais_141 == 40.0 else ("#ffc107" if pts_atuais_141 > 0.0 else "#6c757d")
+
+            st.markdown(
+                f"<span style='color:{cor_txt_141}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.4.1: +{pts_atuais_141:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.4.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_4_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("1.4.1", st.session_state.get(f"links_pendentes_1_4_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_4_1_{ano_sel}"] = False
