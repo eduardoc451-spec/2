@@ -1060,31 +1060,21 @@ def confirmar_zerar_dialog(ano):
     st.warning(f"Tem certeza que deseja apagar TODAS as respostas do iGov para o ano {ano}?")
     st.write("Esta ação é irreversível e excluirá os dados salvos no banco Neon.")
     
-    # Campo para inserção da senha de confirmação
-    senha_digitada = st.text_input(
-        "Digite a senha de confirmação para prosseguir:",
-        type="password",
-        placeholder="Digite a senha..."
-    )
-    
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔴 Sim, Zerar Tudo", type="primary", use_container_width=True):
-            if senha_digitada.strip() == "fidelios":
-                try:
-                    with get_connection() as conn:
-                        with conn.cursor() as cursor:
-                            cursor.execute("DELETE FROM respostas_igov WHERE ano = %s", (int(ano),))
-                        conn.commit()
-                    
-                    st.cache_data.clear()
-                    st.session_state[f"respostas_igov_{ano}"] = {}
-                    st.toast("Respostas zeradas com sucesso!", icon="🗑️")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao zerar banco: {e}")
-            else:
-                st.error("🔒 Senha incorreta! Ação cancelada.")
+            try:
+                with get_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("DELETE FROM respostas_igov WHERE ano = %s", (int(ano),))
+                    conn.commit()
+                
+                st.cache_data.clear()
+                st.session_state[f"respostas_igov_{ano}"] = {}
+                st.toast("Respostas zeradas com sucesso!", icon="🗑️")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao zerar banco: {e}")
 
     with col2:
         if st.button("Cancelar", use_container_width=True):
@@ -1215,10 +1205,10 @@ def render_graficos(res_data_atual, ano_sel):
 import re  # Necessário para as expressões regulares dos links
 
 # =============================================================================
-# 6. FORMULÁRIO PRINCIPAL - iAMB
+# 6. FORMULÁRIO PRINCIPAL - iGov
 # =============================================================================
 
-def mostrar_formulario_iamb():
+def mostrar_formulario_igov():
     dados_sidebar = render_sidebar()
     
     if dados_sidebar and len(dados_sidebar) == 3:
@@ -1226,83 +1216,16 @@ def mostrar_formulario_iamb():
     else:
         total_pts, res_data, ano_sel = 0.0, {}, 2026
 
-    st.title(f"🌿 Gestão Ambiental (iAMB) - {ano_sel}")
+    st.title(f"🏛️ Governança e Tecnologia (iGov) - {ano_sel}")
 
-    aba_quest, aba_graf = st.tabs(["📋 Questionário iAMB", "📊 Gráficos"])
+    aba_quest, aba_graf = st.tabs(["📋 Questionário iGov", "📊Gráficos"])
 
     # -------------------------------------------------------------------------
     # ABA 1: QUESTIONÁRIO (Quesitos entram AQUI)
     # -------------------------------------------------------------------------
     with aba_quest:
-        st.info("Responda às questões da gestão ambiental para atualizar a pontuação.")
+        st.info("Responda às questões da governança para atualizar a pontuação.")
 
-        # Percorre a estrutura de blocos / seções do iAMB
-        for secao_nome, questoes in ESTRUTURA_IAMB.items():
-            with st.expander(f"📌 {secao_nome}", expanded=False):
-                for qid, qdata in questoes.items():
-                    dado_salvo = res_data.get(qid, {})
-                    op_salva = dado_salvo.get("opcao", None)
-                    obs_salva = dado_salvo.get("observacao", "")
-                    link_salvo = dado_salvo.get("link", "")
-
-                    st.markdown(f"**{qid}. {qdata['titulo']}**")
-                    if "descricao" in qdata and qdata["descricao"]:
-                        st.caption(qdata["descricao"])
-
-                    # Opções de resposta em Rádio
-                    opcoes_labels = list(qdata["opcoes"].keys())
-                    idx_padrao = opcoes_labels.index(op_salva) if op_salva in opcoes_labels else 0
-
-                    col_resp, col_pts = st.columns([3, 1])
-
-                    with col_resp:
-                        op_selecionada = st.radio(
-                            "Selecione a resposta:",
-                            options=opcoes_labels,
-                            index=idx_padrao,
-                            key=f"rad_{qid}_{ano_sel}"
-                        )
-
-                    # Cálculo dinâmico dos pontos com base no dicionário de opções
-                    pts_obtidos = qdata["opcoes"].get(op_selecionada, 0.0)
-
-                    with col_pts:
-                        st.metric("Pontos", f"{pts_obtidos:.1f} / {qdata['max_pts']:.1f}")
-
-                    # Detalhes: Observação / Justificativa e Link da Evidência
-                    obs_input = st.text_area(
-                        "Evidência / Justificativa:",
-                        value=obs_salva,
-                        key=f"obs_{qid}_{ano_sel}",
-                        height=70,
-                        placeholder="Descreva a situação ou cole links de comprovação..."
-                    )
-
-                    link_input = st.text_input(
-                        "Link da Evidência (opcional):",
-                        value=link_salvo,
-                        key=f"lnk_{qid}_{ano_sel}",
-                        placeholder="https://..."
-                    )
-
-                    # Botão para salvar individualmente a questão
-                    if st.button("💾 Salvar Resposta", key=f"btn_{qid}_{ano_sel}", type="primary"):
-                        save_resposta_iamb(
-                            ano=ano_sel,
-                            qid=qid,
-                            opcao=op_selecionada,
-                            pontos=pts_obtidos,
-                            observacao=obs_input,
-                            link=link_input
-                        )
-                        st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
-                        st.rerun()
-
-                    st.divider()
-
-    # -------------------------------------------------------------------------
-    # ABA 1: QUESTIONÁRIO (Quesitos entram AQUI)
-    # -------------------------------------------------------------------------
     # =============================================================================
     # QUESITO 1.0 • SETOR DE TIC (MODELO PADRONIZADO iGov)
     # =============================================================================
@@ -7839,3 +7762,5 @@ def mostrar_formulario_iamb():
             "Pontuação": [f"{pts:.1f} pts" if pts > 0 else "-" for pts in pontuacoes_por_ano.values()]
         }
         st.dataframe(dados_tabela, hide_index=True, use_container_width=True)
+
+
