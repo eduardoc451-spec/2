@@ -156,7 +156,7 @@ from psycopg2.extras import RealDictCursor
 # =============================================================================
 
 def init_db():
-    """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir, com isolamento por módulo."""
+    """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir, garantindo suporte às colunas modulo e dimensao."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -165,6 +165,7 @@ def init_db():
                         id VARCHAR(50) NOT NULL,
                         ano INTEGER NOT NULL,
                         modulo VARCHAR(50) NOT NULL DEFAULT 'igov',
+                        dimensao VARCHAR(50) DEFAULT 'igov',
                         valor TEXT,
                         pontos DOUBLE PRECISION DEFAULT 0,
                         link TEXT,
@@ -179,16 +180,21 @@ def init_db():
         logging.error(f"Erro ao inicializar o banco iGov: {e}")
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=5) # Reduzido para 5 segundos para refletir as alterações no painel quase que instantaneamente
 def load_respostas(ano: int) -> dict:
-    """Busca do banco apenas as respostas relativas ao iGov para o ano selecionado."""
+    """Busca do banco as respostas relativas ao iGov (via modulo ou dimensao)."""
     respostas = {}
     try:
         ano_int = int(ano)
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                # Busca onde modulo é 'igov' OU dimensao é 'igov' para cobrir o histórico existente na imagem
                 cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s AND modulo = 'igov'",
+                    """
+                    SELECT id, valor, pontos, link, comentarios 
+                    FROM respostas 
+                    WHERE ano = %s AND (modulo = 'igov' OR dimensao = 'igov')
+                    """,
                     (ano_int,)
                 )
                 rows = cursor.fetchall()
@@ -200,9 +206,9 @@ def load_respostas(ano: int) -> dict:
                         except Exception:
                             comentarios = []
                             
-                    respostas[row["id"]] = {
+                    respostas[str(row["id"])] = {
                         "valor": row["valor"] or "",
-                        "pontos": row["pontos"] or 0.0,
+                        "pontos": float(row["pontos"] or 0.0),
                         "link": row["link"] or "",
                         "comentarios": comentarios
                     }
@@ -212,18 +218,14 @@ def load_respostas(ano: int) -> dict:
 
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Salva/Atualiza a resposta no Neon identificando como iGov."""
-    ano_sel = st.session_state.get("ano_referencia_igov") or st.session_state.get("ano_referencia_global")
-    if not ano_sel:
-        st.warning("Nenhum ano de referência selecionado!")
-        return
-
+    """Salva/Atualiza a resposta no Neon cravando 'igov' nas colunas modulo e dimensao."""
+    ano_sel = st.session_state.get("ano_referencia_igov") or st.session_state.get("ano_referencia_global") or 2026
     ano_int = int(ano_sel)
 
-    # Se comentários não forem fornecidos, busca do banco/cache para não sobrescrever
+    # Preserva o histórico de comentários se nenhum for passado
     if comentarios is None:
         dados_atuais = load_respostas(ano_int)
-        comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
+        comentarios = dados_atuais.get(str(qid), {}).get("comentarios", [])
 
     comentarios_json = json.dumps(comentarios, ensure_ascii=False)
     timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -232,21 +234,22 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas (id, ano, modulo, valor, pontos, link, comentarios, atualizado_em)
-                    VALUES (%s, %s, 'igov', %s, %s, %s, %s::jsonb, %s)
+                    INSERT INTO respostas (id, ano, modulo, dimensao, valor, pontos, link, comentarios, atualizado_em)
+                    VALUES (%s, %s, 'igov', 'igov', %s, %s, %s, %s::jsonb, %s)
                     ON CONFLICT (id, ano, modulo) DO UPDATE SET
                         valor = EXCLUDED.valor,
                         pontos = EXCLUDED.pontos,
                         link = EXCLUDED.link,
                         comentarios = EXCLUDED.comentarios,
+                        dimensao = 'igov',
                         atualizado_em = EXCLUDED.atualizado_em;
-                """, (qid, ano_int, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
+                """, (str(qid), ano_int, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
             conn.commit()
         
+        # Limpa o cache do Streamlit para reavaliar a pontuação no rerun
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar iGov {qid}: {e}")
-
 
 # =============================================================================
 # 2. COMPONENTE PARA RENDERIZAR E SALVAR QUESTÕES
