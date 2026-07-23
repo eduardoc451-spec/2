@@ -4276,7 +4276,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("7.3", st.session_state.get(f"links_pendentes_7_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_3_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 7.3.1 • DETALHAMENTO DAS METAS (Padrão iGov - Múltipla Escolha)
         # =============================================================================
         with st.container(key=f"container_bloco_saneamento_7_3_1_{ano_sel}", border=True):
@@ -4406,7 +4406,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("7.3.1", st.session_state.get(f"links_pendentes_7_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_3_1_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 7.3.2 • DATA DE UNIVERSALIZAÇÃO (Padrão iGov)
         # =============================================================================
         with st.container(key=f"container_bloco_saneamento_7_3_2_{ano_sel}", border=True):
@@ -4528,3 +4528,108 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.3.2", st.session_state.get(f"links_pendentes_7_3_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_3_2_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 7.4 • METAS DE COLETA DE ESGOTO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.4 - Fixação de Metas de Esgotamento Sanitário", expanded=True):
+                st.subheader("7.4 • Metas de Coleta de Esgoto")
+                st.write("**O Plano Municipal ou Regional de Saneamento Básico possui metas de coleta de esgoto?**")
+
+                opts74 = {"Selecione...": 0.0, "Sim – 10": 10.0, "Não – 00": 0.0}
+                lista_opts74 = list(opts74.keys())
+
+                # Recupera os dados salvos no banco
+                d74 = res_data.get("7.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_74 = d74.get("valor", "Selecione...")
+                if v_salvo_74 not in lista_opts74:
+                    v_salvo_74 = "Selecione..."
+
+                evidencia_74_salva = d74.get("link", "")
+
+                # Chaves de identificação no Streamlit
+                chave_radio_74 = f"r_74_select_{ano_sel}"
+                chave_link_74 = f"l_74_txt_area_{ano_sel}"
+                chave_coment_74 = f"coment_7.4_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    idx_salvo74 = lista_opts74.index(v_salvo_74)
+                    v_selecionado_74 = st.radio(
+                        "Selecione uma opção (7.4):",
+                        options=lista_opts74,
+                        index=idx_salvo74,
+                        key=chave_radio_74
+                    )
+
+                with col2:
+                    link_74 = st.text_area(
+                        "Link/Evidência (7.4):",
+                        value=evidencia_74_salva,
+                        key=chave_link_74,
+                        placeholder="Páginas do plano que estipulam as metas físicas estruturais para coleta de efluentes...",
+                        height=110
+                    )
+                    placeholder_links_74 = st.empty()
+                    links_74_visuais = re.findall(REGEX_PURE_URL, link_74 or "")
+                    if links_74_visuais:
+                        placeholder_links_74.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_74_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.4
+                bloco_comentarios("7.4", res_data, ano_sel)
+
+                # Feedback visual reativo do impacto na pontuação
+                pts_atuais_74 = opts74.get(v_selecionado_74, 0.0)
+                cor_txt_74 = "#28a745" if pts_atuais_74 > 0 else ("#6c757d" if v_selecionado_74 == "Selecione..." else "#dc3545")
+                st.markdown(
+                    f"<span style='color:{cor_txt_74}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.4: +{pts_atuais_74:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.4", key=f"btn_salvar_7_4_{ano_sel}", type="primary"):
+                    lnk_val = link_74.strip()
+                    val_salvar = st.session_state.get(chave_radio_74, v_salvo_74)
+                    pts_calculados = opts74.get(val_salvar, 0.0)
+                    comentario_para_salvar = st.session_state.get(chave_coment_74, d74.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.4",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização da estrutura em memória
+                    res_data["7.4"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_74_salva or "")]
+
+                    if lnk_val != evidencia_74_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.4", st.session_state.get(f"links_pendentes_7_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_4_{ano_sel}"] = False
