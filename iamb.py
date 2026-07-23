@@ -3953,3 +3953,111 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 7.1 • INSTRUMENTO NORMATIVO DO PLANO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.1 - Atos de Regulamentação Normativa", expanded=True):
+                st.subheader("7.1 • Instrumento Normativo")
+                st.write("**Informe o Instrumento normativo, Número e Data da publicação:**")
+                st.caption("ℹ *Preencha os campos abaixo, insira o link de evidência/comentários e clique em 'Salvar Quesito 7.1'.*")
+
+                # Recupera os dados salvos do banco
+                d71 = res_data.get("7.1") or {"valor": "Inst: | Nº: | Data:", "pontos": 0.0, "link": "", "comentario": ""}
+
+                # Faz o parse dos dados salvos no formato: "Inst: X | Nº: Y | Data: Z"
+                valor_salvo = d71.get("valor", "")
+                try:
+                    parts = valor_salvo.split("|")
+                    inst_salvo = parts[0].split(":")[1].strip() if len(parts) > 0 and ":" in parts[0] else ""
+                    num_salvo = parts[1].split(":")[1].strip() if len(parts) > 1 and ":" in parts[1] else ""
+                    data_salvo = parts[2].split(":")[1].strip() if len(parts) > 2 and ":" in parts[2] else ""
+                except Exception:
+                    inst_salvo, num_salvo, data_salvo = "", "", ""
+
+                evidencia_71_salva = d71.get("link", "")
+
+                # Chaves de identificação no Streamlit
+                chave_inst = f"q71_inst_txt_{ano_sel}"
+                chave_num = f"q71_num_txt_{ano_sel}"
+                chave_data = f"q71_data_txt_{ano_sel}"
+                chave_link_71 = f"l_71_txt_area_{ano_sel}"
+                chave_coment_71 = f"coment_7.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.text_input("Instrumento normativo:", value=inst_salvo, key=chave_inst)
+                    st.text_input("Número:", value=num_salvo, key=chave_num)
+                    st.text_input("Data da publicação:", value=data_salvo, key=chave_data)
+
+                with col2:
+                    link_71 = st.text_area(
+                        "Link/Evidência (7.1):",
+                        value=evidencia_71_salva,
+                        key=chave_link_71,
+                        placeholder="Link para o Diário Oficial contendo a publicação da portaria, decreto ou lei...",
+                        height=220
+                    )
+                    placeholder_links_71 = st.empty()
+                    links_71_visuais = re.findall(REGEX_PURE_URL, link_71 or "")
+                    if links_71_visuais:
+                        placeholder_links_71.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_71_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.1
+                bloco_comentarios("7.1", res_data, ano_sel)
+
+                # Feedback do impacto na pontuação (Quesito Informativo)
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.1: +0.0 pontos (Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.1", key=f"btn_salvar_7_1_{ano_sel}", type="primary"):
+                    inst_v = st.session_state.get(chave_inst, inst_salvo).strip()
+                    num_v = st.session_state.get(chave_num, num_salvo).strip()
+                    dt_v = st.session_state.get(chave_data, data_salvo).strip()
+
+                    val_salvar = f"Inst: {inst_v} | Nº: {num_v} | Data: {dt_v}"
+                    lnk_val = link_71.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_71, d71.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.1",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização da estrutura em memória
+                    res_data["7.1"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_71_salva or "")]
+
+                    if lnk_val != evidencia_71_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False
