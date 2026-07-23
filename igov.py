@@ -5478,3 +5478,125 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("8.0", st.session_state.get(f"links_pendentes_8_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 8.1 • PROCESSOS / SETORES ENGLOBADOS (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_igov_8_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 8.1 - Processos e Setores Englobados pelos Sistemas", expanded=True):
+            st.subheader("8.1 • Setores Englobados")
+            st.write("**Os programas de computador (softwares) englobam quais processos/setores?**")
+            st.caption("ℹ *Marque os setores, inclua os links comprobatórios e clique no botão 'Salvar Quesito 8.1'.*")
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d81 = res_data.get("8.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            try:
+                import ast
+                lista_salva_81 = ast.literal_eval(d81.get("valor", "[]"))
+                if not isinstance(lista_salva_81, list):
+                    lista_salva_81 = []
+            except Exception:
+                lista_salva_81 = []
+
+            evidencia_81_salva = d81.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_link_81 = f"l_81_txt_area_{ano_sel}"
+            chave_coment_81 = f"coment_8.1_{ano_sel}"
+
+            opcoes_setores = [
+                "Contabilidade", "Gestão de tributos (arrecadação)", "Dívida Ativa", 
+                "Precatórios", "Gestão patrimonial (bens e equipamentos)", 
+                "Gestão de negócios (Business Intelligence)", "Planejamento", 
+                "Recursos humanos / Departamento pessoal", "Almoxarifado", 
+                "Controle de frotas", "Controle Interno", "Saúde", 
+                "Ensino (education)", "Compras, licitações e contratos", 
+                "Certidões e alvarás", "Saneamento", "Cemitérios"
+            ]
+
+            col_checks, col_link = st.columns([1.2, 1])
+
+            with col_checks:
+                col_setor1, col_setor2 = st.columns(2)
+                for i, setor in enumerate(opcoes_setores):
+                    with col_setor1 if i % 2 == 0 else col_setor2:
+                        st.checkbox(
+                            setor,
+                            value=(setor in lista_salva_81),
+                            key=f"q81_{setor}_{ano_sel}"
+                        )
+
+            with col_link:
+                link_81 = st.text_area(
+                    "Link/Evidência (8.1):",
+                    value=evidencia_81_salva,
+                    key=chave_link_81,
+                    placeholder="Insira links de relatórios ou publicações que comprovem os setores integrados...",
+                    height=160
+                )
+
+                placeholder_links_81 = st.empty()
+                links_81_visuais = re.findall(regex_pure_url, link_81 or "")
+                if links_81_visuais:
+                    placeholder_links_81.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_81_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("8.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.1", key=f"btn_salvar_8_1_{ano_sel}", type="primary"):
+                # Coleta os checkboxes selecionados
+                sel81_coletado = [
+                    s_nome for s_nome in opcoes_setores
+                    if st.session_state.get(f"q81_{s_nome}_{ano_sel}", False)
+                ]
+                
+                string_salvar = str(sel81_coletado)
+                lnk_val = link_81.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_81, d81.get("comentario", ""))
+
+                # Salva no banco de dados
+                save_resp(
+                    qid="8.1",
+                    valor=string_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualiza o dicionário local res_data
+                res_data["8.1"] = {
+                    "valor": string_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_81_salva or "")
+
+                if lnk_val != evidencia_81_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = True
+
+                # Limpa o cache e atualiza a interface
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 8.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            # Resumo dinâmico de impacto
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 8.1: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 8.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_8_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
