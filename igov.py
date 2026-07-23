@@ -7088,3 +7088,108 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("10.3", st.session_state.get(f"links_pendentes_10_3_{ano_sel}", []))
         st.session_state[f"gatilho_modal_10_3_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 10.4 • MAPEAMENTO DE DADOS (DATA MAPPING) (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_lgpd_10_4_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 10.4 - Mapeamento de Dados (Data Mapping)", expanded=True):
+            st.subheader("10.4 • Data Mapping")
+            st.write("**A Prefeitura Municipal realizou mapeamento de dados (data mapping)?**")
+            st.caption("ℹ *Selecione a opção desejada, insira o link de evidência e clique em 'Salvar Quesito 10.4'.*")
+
+            lista104 = ["Selecione...", "Sim", "Não"]
+
+            d104 = res_data.get("10.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_104 = d104.get("valor", "Selecione...")
+            if v_salvo_104 not in lista104:
+                v_salvo_104 = "Selecione..."
+
+            evidencia_104_salva = d104.get("link", "")
+            chave_radio_104 = f"r_104_select_{ano_sel}"
+            chave_link_104 = f"l_104_txt_area_{ano_sel}"
+            chave_coment_104 = f"coment_10.4_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                idx104 = lista104.index(v_salvo_104)
+                st.radio(
+                    "Selecione uma opção (10.4):",
+                    options=lista104,
+                    index=idx104,
+                    key=chave_radio_104
+                )
+
+            with col2:
+                link_104 = st.text_area(
+                    "Link/Evidência (10.4):",
+                    value=evidencia_104_salva,
+                    key=chave_link_104,
+                    placeholder="Insira o link comprobatório do mapeamento de dados...",
+                    height=150
+                )
+                placeholder_links_104 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_104 or "")
+                links_104_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_104_visuais:
+                    placeholder_links_104.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_104_visuais]))
+
+            # Renderiza bloco de comentários
+            bloco_comentarios("10.4", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da indicação na tela
+            v_atual_104 = st.session_state.get(chave_radio_104, v_salvo_104)
+            cor_txt_104 = "#28a745" if v_atual_104 == "Sim" else ("#dc3545" if v_atual_104 == "Não" else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_104}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 10.4: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 10.4", key=f"btn_salvar_10_4_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_104, v_salvo_104)
+                lnk_val = link_104.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_104, d104.get("comentario", ""))
+
+                # Gravação no Banco de Dados (0.0 pontos)
+                save_resp(
+                    qid="10.4",
+                    valor=val_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["10.4"] = {
+                    "valor": val_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_104_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_104_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_10_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_10_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 10.4 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 10.4
+    if st.session_state.get(f"gatilho_modal_10_4_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("10.4", st.session_state.get(f"links_pendentes_10_4_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_10_4_{ano_sel}"] = False
