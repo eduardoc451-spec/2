@@ -8484,3 +8484,111 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("10.2", st.session_state.get(f"links_pendentes_10_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_10_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 10.3 • ÁREA DE TRANSBORDO E TRIAGEM (ATT) (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q10_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 10.3 - Área de Transbordo e Triagem (ATT)", expanded=True):
+                st.subheader("10.3 • Área de Transbordo e Triagem (ATT)")
+                st.write(
+                    "**Existe Área de Transbordo e Triagem (ATT) para os Resíduos Sólidos Urbanos no município?**"
+                )
+
+                # Recupera os dados salvos no banco
+                d103 = res_data.get("10.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc103 = ["Selecione...", "Sim", "Não"]
+                v_salvo_103 = d103.get("valor", "Selecione...")
+                if v_salvo_103 not in opc103:
+                    v_salvo_103 = "Selecione..."
+                evidencia_103_salva = d103.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_103 = f"r103_in_{ano_sel}"
+                chave_link_103 = f"l103_in_{ano_sel}"
+                chave_coment_103 = f"coment_10.3_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    resp_103 = st.radio(
+                        "Selecione uma opção (10.3):",
+                        options=opc103,
+                        index=opc103.index(v_salvo_103),
+                        key=chave_radio_103
+                    )
+
+                    # Quesito declarativo/referencial (sempre 0.0 pontos)
+                    pts_exibido_103 = 0.0
+                    cor_metric = "#6c757d"  # Cinza neutro (Referencial)
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_103:.1f} pts")
+
+                with col2:
+                    lk103 = st.text_area(
+                        "Link/Evidência (10.3):",
+                        value=evidencia_103_salva,
+                        key=chave_link_103,
+                        placeholder="Inserir link da licença ambiental da ATT, relatório fotográfico ou cadastro municipal...",
+                        height=125
+                    )
+                    placeholder_links_103 = st.empty()
+                    links_103_visuais = re.findall(REGEX_PURE_URL, lk103 or "")
+                    if links_103_visuais:
+                        placeholder_links_103.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_103_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 10.3
+                bloco_comentarios("10.3", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto (Referencial)
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 10.3: +0.0 pts (Referencial)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 10.3", key=f"btn_salvar_10_3_{ano_sel}", type="primary"):
+                    lnk_val = lk103.strip()
+                    val_sel = resp_103
+                    comentario_para_salvar = st.session_state.get(chave_coment_103, d103.get("comentario", ""))
+
+                    pts_calculados = 0.0  # Quesito sem impacto na pontuação global
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="10.3",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["10.3"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_103_salva or "")]
+
+                    if lnk_val != evidencia_103_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_10_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_10_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 10.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 10.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_10_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.3", st.session_state.get(f"links_pendentes_10_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_10_3_{ano_sel}"] = False
+
