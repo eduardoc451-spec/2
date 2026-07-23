@@ -11609,3 +11609,148 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.0", st.session_state.get(f"links_pendentes_15_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 15.1 • SERVIÇOS REGULADOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q15_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 15.1 - Serviços Regulados", expanded=True):
+                st.subheader("15.1 • Serviços com Entidade Responsável")
+                st.write("**Assinale quais os serviços que possuem entidade responsável pela regulação e fiscalização:**")
+
+                # Recuperação dos dados salvos no banco
+                d151 = res_data.get("15.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_151 = d151.get("valor", "[]")
+                pts_salvos_151 = float(d151.get("pontos", 0.0))
+                evidencia_151_salva = d151.get("link", "")
+
+                # Opções e pontuações do quesito 15.1
+                opts151 = {
+                    "Abastecimento de água potável: – 01": 1.0,
+                    "Esgotamento sanitário: – 01": 1.0,
+                    "Limpeza urbana e manejo de resíduos sólidos: – 01": 1.0,
+                    "Drenagem e manejo das águas pluviais urbanas: – 00": 0.0
+                }
+
+                # Desserialização segura da lista salva
+                lista_selecionados_151 = []
+                if isinstance(v_salvo_151, list):
+                    lista_selecionados_151 = v_salvo_151
+                elif isinstance(v_salvo_151, str) and v_salvo_151.strip():
+                    try:
+                        import ast
+                        lista_selecionados_151 = ast.literal_eval(v_salvo_151)
+                        if not isinstance(lista_selecionados_151, list):
+                            lista_selecionados_151 = []
+                    except Exception:
+                        lista_selecionados_151 = []
+
+                # Definindo chaves do Streamlit
+                chave_link_151 = f"l151_in_{ano_sel}"
+                chave_coment_151 = f"coment_15.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.write("**Serviços Atendidos:**")
+                    # Renderiza os checkboxes baseados nos dados desserializados
+                    for idx, (opt, p_val) in enumerate(opts151.items()):
+                        key_ck = f"ck_151_{idx}_{ano_sel}"
+                        st.checkbox(
+                            opt,
+                            value=(opt in lista_selecionados_151),
+                            key=key_ck
+                        )
+
+                    # Métrica de exibição do impacto na pontuação salva
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_151:.1f} pts")
+
+                with col2:
+                    lk151 = st.text_area(
+                        "Link/Evidência (15.1):",
+                        value=evidencia_151_salva,
+                        key=chave_link_151,
+                        placeholder="Inserir link dos contratos de concessão, regimento ou lei de criação...",
+                        height=140
+                    )
+                    placeholder_links_151 = st.empty()
+                    links_151_visuais = re.findall(REGEX_PURE_URL, lk151 or "")
+                    if links_151_visuais:
+                        placeholder_links_151.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_151_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 15.1
+                bloco_comentarios("15.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>📊 Impacto 15.1: {pts_salvos_151:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 15.1", key=f"btn_salvar_15_1_{ano_sel}", type="primary"):
+                    selecionados_atuais = []
+                    pts_calculados_151 = 0.0
+
+                    # Coleta as escolhas via session_state
+                    for idx, (opt, p_val) in enumerate(opts151.items()):
+                        key_ck = f"ck_151_{idx}_{ano_sel}"
+                        if st.session_state.get(key_ck, False):
+                            selecionados_atuais.append(opt)
+                            pts_calculados_151 += p_val
+
+                    lnk_val = lk151.strip()
+                    val_texto_151 = str(selecionados_atuais)
+                    comentario_para_salvar = st.session_state.get(chave_coment_151, d151.get("comentario", ""))
+
+                    # Persistência no banco de dados do Quesito 15.1
+                    save_resp(
+                        qid="15.1",
+                        valor=val_texto_151,
+                        pontos=float(pts_calculados_151),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do dicionário em memória
+                    res_data["15.1"] = {
+                        "valor": val_texto_151,
+                        "pontos": float(pts_calculados_151),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Limpezas cirúrgicas condicionais no banco de dados e memória para subquesitos desmarcados
+                    mapeamento_limpeza = {
+                        "Abastecimento de água potável: – 01": "15.1.1",
+                        "Esgotamento sanitário: – 01": "15.1.2",
+                        "Limpeza urbana e manejo de resíduos sólidos: – 01": "15.1.3",
+                        "Drenagem e manejo das águas pluviais urbanas: – 00": "15.1.4"
+                    }
+
+                    for opcao_texto, subq_id in mapeamento_limpeza.items():
+                        if opcao_texto not in selecionados_atuais:
+                            save_resp(subq_id, "", 0.0, "")
+                            res_data[subq_id] = {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_151_salva or "")]
+
+                    if lnk_val != evidencia_151_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 15.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 15.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_15_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.1", st.session_state.get(f"links_pendentes_15_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_1_{ano_sel}"] = False
