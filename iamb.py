@@ -3726,3 +3726,130 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 6.2 • SETORES ATENDIDOS POR AÇÕES ESPECÍFICAS (Padrão iGov)
+        # =============================================================================
+        import ast
+
+        with st.container(key=f"container_bloco_estiagem_6_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 6.2 - Setores Estratégicos com Provisão Assegurada", expanded=True):
+                st.subheader("6.2 • Setores Atendidos")
+                st.write("**Em quais setores existem ações e medidas de contingenciamento específicos para provisão de água potável?**")
+                st.caption("ℹ *A pontuação deste quesito é cumulativa baseada nas diretrizes assinaladas. Marque as opções válidas, insira os links/comentários e clique em 'Salvar Quesito 6.2'.*")
+
+                opts62 = {
+                    "Rede Municipal de Educação – 10": 10.0,
+                    "Rede Municipal da Atenção Básica da Saúde – 10": 10.0,
+                    "Outro – 05": 5.0
+                }
+
+                # Recupera os dados salvos no banco de dados
+                d62 = res_data.get("6.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                
+                texto_seguro_62 = str(d62.get("valor", "[]"))
+                
+                # Conversão segura da string recuperada para lista
+                try:
+                    lista_salva_62 = ast.literal_eval(texto_seguro_62) if isinstance(texto_seguro_62, str) else texto_seguro_62
+                    if not isinstance(lista_salva_62, list):
+                        lista_salva_62 = []
+                except Exception:
+                    lista_salva_62 = []
+
+                evidencia_62_salva = d62.get("link", "")
+                
+                # Chaves fixas de componentes no Streamlit
+                chave_link_62 = f"l_62_txt_area_{ano_sel}"
+                chave_coment_62 = f"coment_6.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.write("*Selecione os setores cobertos:*")
+                    for i, (txt, pts) in enumerate(opts62.items()):
+                        marcado = (txt in lista_salva_62) if lista_salva_62 else (txt in texto_seguro_62)
+                        st.checkbox(
+                            txt,
+                            value=marcado,
+                            key=f"ck_62_opt_{i}_{ano_sel}"
+                        )
+
+                with col2:
+                    link_62 = st.text_area(
+                        "Link/Evidência (6.2):",
+                        value=evidencia_62_salva,
+                        key=chave_link_62,
+                        placeholder="Insira links de termos de cooperação, contratos de abastecimento complementar dedicados a postos ou escolas...",
+                        height=140
+                    )
+                    placeholder_links_62 = st.empty()
+                    links_62_visuais = re.findall(REGEX_PURE_URL, link_62 or "")
+                    if links_62_visuais:
+                        placeholder_links_62.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_62_visuais]))
+
+                # Renderiza o bloco de comentários do Quesito 6.2
+                bloco_comentarios("6.2", res_data, ano_sel)
+
+                # Cálculo dinâmico do impacto na pontuação em tempo de execução
+                fb_pts_62 = sum([
+                    pts for i, (txt, pts) in enumerate(opts62.items())
+                    if st.session_state.get(f"ck_62_opt_{i}_{ano_sel}", (txt in lista_salva_62 if lista_salva_62 else False))
+                ])
+                
+                cor_txt_62 = "#28a745" if fb_pts_62 > 0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_62}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 6.2: +{fb_pts_62:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 6.2", key=f"btn_salvar_6_2_{ano_sel}", type="primary"):
+                    lista_selecionados = []
+                    pts_totais = 0.0
+
+                    for i, (txt, pts) in enumerate(opts62.items()):
+                        if st.session_state.get(f"ck_62_opt_{i}_{ano_sel}", False):
+                            lista_selecionados.append(txt)
+                            pts_totais += pts
+
+                    val_salvar = str(lista_selecionados)
+                    lnk_val = link_62.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_62, d62.get("comentario", ""))
+
+                    # Persistência via save_resp
+                    save_resp(
+                        qid="6.2",
+                        valor=val_salvar,
+                        pontos=float(pts_totais),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local
+                    res_data["6.2"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_totais),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_62_salva or "")]
+
+                    if lnk_val != evidencia_62_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_6_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_6_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 6.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 6.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_6_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("6.2", st.session_state.get(f"links_pendentes_6_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_6_2_{ano_sel}"] = False
