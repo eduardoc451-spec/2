@@ -2509,3 +2509,169 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("2.2", st.session_state.get(f"links_pendentes_2_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 2.3 • ATUALIZAÇÃO DO PDTIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_2_3_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 2.3 - Cronologia de Atualização / Publicação do PDTIC", expanded=True):
+            st.subheader("2.3 • Data de Atualização do PDTIC")
+            st.write("**Qual a data da última atualização do PDTIC? (Se não foi atualizado, informar a data da publicação)**")
+            st.caption("ℹ *Preencha a data ou marque a indisponibilidade, insira a evidência e clique em 'Salvar Quesito 2.3'.*")
+
+            st.info("""
+            **Regra de Pontuação:**
+            * ✅ **Data de até 5 anos atrás:** 20 pontos.
+            * ⚠️ **Data entre 5 e 10 anos atrás:** 10 pontos.
+            * 🚫 **Data com mais de 10 anos ou Inexistente:** 00 pontos.
+            """)
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d23 = res_data.get("2.3") or {"valor": None, "pontos": 0.0, "link": "", "comentario": ""}
+
+            valor_salvo_23 = d23.get("valor", "")
+            evidencia_23_salva = d23.get("link", "")
+
+            # Trata a data inicial a ser exibida no picker
+            try:
+                if valor_salvo_23 and valor_salvo_23 != "XYZ":
+                    dt_i = datetime.strptime(valor_salvo_23, '%Y-%m-%d').date()
+                else:
+                    dt_i = date.today()
+            except Exception:
+                dt_i = date.today()
+
+            # Chaves fixas por componente e ano
+            chave_switch_23 = f"chk_23_nao_possui_{ano_sel}"
+            chave_date_23 = f"dt23_picker_{ano_sel}"
+            chave_link_23 = f"l_23_txt_area_{ano_sel}"
+            chave_coment_23 = f"coment_2.3_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                documento_indisponivel = st.checkbox(
+                    "Documento indisponível / Não possui PDTIC",
+                    value=(valor_salvo_23 == "XYZ" or evidencia_23_salva == "XYZ"),
+                    key=chave_switch_23
+                )
+
+                dt_selecionada = st.date_input(
+                    "Selecione a data de vigência/publicação:",
+                    value=dt_i,
+                    key=chave_date_23,
+                    format="DD/MM/YYYY",
+                    disabled=documento_indisponivel
+                )
+
+                if not documento_indisponivel and dt_selecionada:
+                    idade_calculada = int(ano_sel) - dt_selecionada.year
+                    st.markdown(
+                        f"<div style='padding-top:10px;'><b>Idade calculada:</b> {idade_calculada} ano(s) em relação ao ciclo de {ano_sel}.</div>",
+                        unsafe_allow_html=True
+                    )
+                elif documento_indisponivel:
+                    st.markdown(
+                        "<div style='padding-top:10px; color:#dc3545;'><b>Status:</b> Constante 'XYZ' aplicada.</div>",
+                        unsafe_allow_html=True
+                    )
+
+            with col2:
+                link_23 = st.text_area(
+                    "Link/Evidência da data de publicação (2.3):",
+                    value="" if evidencia_23_salva == "XYZ" else evidencia_23_salva,
+                    key=chave_link_23,
+                    placeholder="Insira o link direto da página da publicação ou diário oficial contendo a data...",
+                    disabled=documento_indisponivel,
+                    height=100
+                )
+
+                placeholder_links_23 = st.empty()
+                links_23_visuais = re.findall(regex_pure_url, link_23 or "")
+                if links_23_visuais and not documento_indisponivel:
+                    placeholder_links_23.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_23_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("2.3", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 2.3", key=f"btn_salvar_2_3_{ano_sel}", type="primary"):
+                chk_indisponivel = st.session_state.get(chave_switch_23, False)
+                lnk_val = link_23.strip()
+
+                if chk_indisponivel or lnk_val.upper() == "XYZ":
+                    data_str = "XYZ"
+                    pontos_23 = 0.0
+                    lnk_val = "XYZ"
+                else:
+                    data_sel = dt_selecionada
+                    ano_documento = data_sel.year
+                    ano_contexto = int(ano_sel)
+                    idade_anos = ano_contexto - ano_documento
+
+                    if idade_anos <= 5:
+                        pontos_23 = 20.0
+                    elif 5 < idade_anos <= 10:
+                        pontos_23 = 10.0
+                    else:
+                        pontos_23 = 0.0
+
+                    if idade_anos < 0:
+                        pontos_23 = 20.0
+
+                    data_str = data_sel.strftime('%Y-%m-%d')
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_23, d23.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="2.3",
+                    valor=data_str,
+                    pontos=pontos_23,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["2.3"] = {
+                    "valor": data_str,
+                    "pontos": pontos_23,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_23_salva or "")
+
+                if lnk_val != evidencia_23_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_3_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 2.3 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_23 = d23.get("pontos", 0.0)
+            cor_txt_23 = "#28a745" if pts_atuais_23 == 20.0 else ("#ffc107" if pts_atuais_23 == 10.0 else "#6c757d")
+
+            st.markdown(
+                f"<span style='color:{cor_txt_23}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 2.3: +{pts_atuais_23:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 2.3 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_2_3_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("2.3", st.session_state.get(f"links_pendentes_2_3_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_2_3_{ano_sel}"] = False
