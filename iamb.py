@@ -7527,7 +7527,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.4.4", st.session_state.get(f"links_pendentes_8_4_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_4_4_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 9.0 • COLETA SELETIVA (Padrão iGov)
         # =============================================================================
         with st.container(key=f"bloco_isolado_q9_0_{ano_sel}", border=True):
@@ -7628,7 +7628,7 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
 
-# =============================================================================
+        # =============================================================================
         # QUESITO 9.1 • PROGRAMAÇÃO DA COLETA (Padrão iGov)
         # =============================================================================
         with st.container(key=f"bloco_isolado_q9_1_{ano_sel}", border=True):
@@ -7746,4 +7746,133 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("9.1", st.session_state.get(f"links_pendentes_9_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 9.2 • ABRANGÊNCIA DAS REGIÕES (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q9_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 9.2 - Abrangência das Regiões", expanded=True):
+                st.subheader("9.2 • Abrangência das Regiões")
+                st.write("**9.2 Todas as regiões do município são atendidas pela coleta seletiva?**")
+
+                # Recupera os dados salvos no banco
+                d92 = res_data.get("9.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc92 = [
+                    "Selecione...",
+                    "Todos os bairros do município são atendidos – 100",
+                    "A maior parte dos bairros são atendidos – 50",
+                    "A menor parte dos bairros são atendidos – 10"
+                ]
+                v_salvo_92 = d92.get("valor", "Selecione...")
+                if v_salvo_92 not in opc92:
+                    v_salvo_92 = "Selecione..."
+                evidencia_92_salva = d92.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_92 = f"r92_in_{ano_sel}"
+                chave_link_92 = f"l92_in_{ano_sel}"
+                chave_coment_92 = f"coment_9.2_{ano_sel}"
+
+                c1, c2 = st.columns([1, 1])
+
+                with c1:
+                    resp_92 = st.radio(
+                        "Selecione uma opção (9.2):",
+                        options=opc92,
+                        index=opc92.index(v_salvo_92),
+                        key=chave_radio_92
+                    )
+
+                    # Cálculo dinâmico da pontuação para exibição
+                    if "Todos" in resp_92:
+                        pts_exibido_92 = 100.0
+                        cor_metric = "#28a745"  # Verde
+                    elif "maior parte" in resp_92:
+                        pts_exibido_92 = 50.0
+                        cor_metric = "#28a745"  # Verde
+                    elif "menor parte" in resp_92:
+                        pts_exibido_92 = 10.0
+                        cor_metric = "#ffc107"  # Amarelo
+                    else:
+                        pts_exibido_92 = 0.0
+                        cor_metric = "#6c757d"  # Cinza
+
+                    st.metric(label="Impacto na Pontuação", value=f"+{pts_exibido_92:.1f} pts")
+
+                with c2:
+                    lk92 = st.text_area(
+                        "Link/Evidência (9.2):",
+                        value=evidencia_92_salva,
+                        key=chave_link_92,
+                        placeholder="Inserir link do plano de rotas, mapa de cobertura ou relatório...",
+                        height=125
+                    )
+                    placeholder_links_92 = st.empty()
+                    links_92_visuais = re.findall(REGEX_PURE_URL, lk92 or "")
+                    if links_92_visuais:
+                        placeholder_links_92.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_92_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 9.2
+                bloco_comentarios("9.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 9.2: +{pts_exibido_92:.1f} pts</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.2", key=f"btn_salvar_9_2_{ano_sel}", type="primary"):
+                    lnk_val = lk92.strip()
+                    val_sel = resp_92
+                    comentario_para_salvar = st.session_state.get(chave_coment_92, d92.get("comentario", ""))
+
+                    # Regra de pontuação
+                    if "Todos" in val_sel:
+                        pts_calculados = 100.0
+                    elif "maior parte" in val_sel:
+                        pts_calculados = 50.0
+                    elif "menor parte" in val_sel:
+                        pts_calculados = 10.0
+                    else:
+                        pts_calculados = 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="9.2",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["9.2"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_92_salva or "")]
+
+                    if lnk_val != evidencia_92_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 9.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 9.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = False
 
