@@ -5980,7 +5980,7 @@ def mostrar_formulario_igov():
         with st.expander("📌 Quesito 8.3 - Gestão Direta de Bases de Dados", expanded=True):
             st.subheader("8.3 • Gestão Direta de Bases de Dados")
             st.write("**Assinale quais bases de dados encontram-se sob gestão direta da Prefeitura:**")
-            st.caption("ℹ *Gestão Direta = empresa terceira não pode mudar os dados sem o conhecimento da Prefeitura. Selecione as bases, insira o link de evidência e clique em 'Salvar Quesito 8.3'.*")
+            st.caption("ℹ *Gestão Direta = empresa terceira não pode mudar os dados sem o conhecimento da Prefeitura. Cada item não assinalado gera uma penalidade de -3,0 pontos.*")
 
             opcoes_bases = [
                 "Contabilidade", "Gestão de tributos (arrecadação)", "Dívida Ativa", 
@@ -5992,9 +5992,9 @@ def mostrar_formulario_igov():
                 "Certidões e alvarás", "Saneamento", "Cemitérios"
             ]
 
-            total_itens = len(opcoes_bases) # 17 itens ao todo
+            total_itens = len(opcoes_bases) # 17 bases
 
-            # Recupera e trata o estado inicial do dicionário com segurança
+            # Recupera o estado inicial do banco de dados com segurança
             d83 = res_data.get("8.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
 
             val_83_banco = d83.get("valor", "[]")
@@ -6016,20 +6016,28 @@ def mostrar_formulario_igov():
 
             evidencia_83_salva = d83.get("link", "")
 
-            # Chaves fixas por componente e ano
+            # Chaves para sessão
             chave_link_83 = f"l_83_txt_area_{ano_sel}"
             chave_coment_83 = f"coment_8.3_{ano_sel}"
 
-            # Renderização das caixas de seleção (Checkboxes em 2 colunas)
+            # Renderização dos Checkboxes e captura dos marcados na tela
             col_base1, col_base2 = st.columns(2)
+            sel83_na_tela = []
+
             for i, base in enumerate(opcoes_bases):
+                chave_ck = f"ck_83_{base}_{ano_sel}"
+                
+                # Garante valor padrão no session_state no primeiro carregamento
+                if chave_ck not in st.session_state:
+                    st.session_state[chave_ck] = (base in lista_salva_83)
+
                 with col_base1 if i % 2 == 0 else col_base2:
-                    esta_marcado = base in lista_salva_83
-                    st.checkbox(
+                    marcado = st.checkbox(
                         base, 
-                        value=esta_marcado, 
-                        key=f"ck_83_{base}_{ano_sel}"
+                        key=chave_ck
                     )
+                    if marcado:
+                        sel83_na_tela.append(base)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -6043,58 +6051,64 @@ def mostrar_formulario_igov():
 
             placeholder_links_83 = st.empty()
             
-            # Extração segura de links lidando com tuples ou strings de RegEx
+            # Extração visual de links
             raw_links_visuais = re.findall(regex_pure_url, link_83 or "")
             links_83_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
 
             if links_83_visuais:
                 placeholder_links_83.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_83_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
+            # Bloco de comentários
             bloco_comentarios("8.3", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # CÁLCULO DAS PENALIDADES (ITENS NÃO ASSINALADOS)
+            # -----------------------------------------------------------------
+            qtd_assinalados = len(sel83_na_tela)
+            qtd_nao_assinalados = total_itens - qtd_assinalados
+            pts_83_calculados = -(qtd_nao_assinalados * 3.0)
+
+            # Feedback visual em tempo real antes de salvar
+            if qtd_nao_assinalados > 0:
+                st.warning(
+                    f"⚠️ **Desconto de Pontuação:** {qtd_nao_assinalados} item(ns) não assinalado(s) "
+                    f"× -3,0 pts = **{pts_83_calculados:.1f} pontos**"
+                )
+            else:
+                st.success("✅ **Todos os 17 itens foram assinalados!** NENHUM desconto aplicado (0,0 pontos).")
+
+            st.markdown(
+                f"<span style='color:{'#28a745' if pts_83_calculados == 0.0 else '#dc3545'}; font-weight:bold;'>"
+                f"📊 Pontuação do Quesito 8.3: {pts_83_calculados:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
             # -----------------------------------------------------------------
             # BOTÃO DE SALVAMENTO MANUAL
             # -----------------------------------------------------------------
             if st.button("💾 Salvar Quesito 8.3", key=f"btn_salvar_8_3_{ano_sel}", type="primary"):
-                # Coleta as bases selecionadas atualmente nos checkboxes da tela
-                sel83_atual = [
-                    base for base in opcoes_bases 
-                    if st.session_state.get(f"ck_83_{base}_{ano_sel}", False)
-                ]
-                sel83_atual = sorted(sel83_atual)
-
-                # Cálculo do impacto por itens NÃO assinalados (-3 pontos cada)
-                v_80 = st.session_state.get(f"r_80_select_{ano_sel}", res_data.get("8.0", {}).get("valor", ""))
-                deve_aplicar_penalidade = (v_80 and "Sim" in str(v_80))
-
-                if deve_aplicar_penalidade:
-                    itens_nao_assinalados = total_itens - len(sel83_atual)
-                    pts_83 = -(itens_nao_assinalados * 3.0)
-                else:
-                    pts_83 = 0.0
-
+                sel83_para_salvar = sorted(sel83_na_tela)
                 lnk_val = link_83.strip()
                 comentario_para_salvar = st.session_state.get(chave_coment_83, d83.get("comentario", ""))
 
-                # Salva no banco de dados
+                # Salva no banco com os pontos negativos calculados
                 save_resp(
                     qid="8.3",
-                    valor=str(sel83_atual),
-                    pontos=pts_83,
+                    valor=str(sel83_para_salvar),
+                    pontos=pts_83_calculados,
                     link=lnk_val,
                     comentarios=comentario_para_salvar
                 )
 
-                # Atualiza o dicionário de dados local
+                # Atualiza memória local
                 res_data["8.3"] = {
-                    "valor": str(sel83_atual),
-                    "pontos": pts_83,
+                    "valor": str(sel83_para_salvar),
+                    "pontos": pts_83_calculados,
                     "link": lnk_val,
                     "comentario": comentario_para_salvar
                 }
 
-                # Tratamento para disparo de modal de validação de links
+                # Tratamento do Modal de Validação de Links
                 raw_atuais = re.findall(regex_pure_url, lnk_val or "")
                 links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
 
@@ -6105,41 +6119,11 @@ def mostrar_formulario_igov():
                     st.session_state[f"links_pendentes_8_3_{ano_sel}"] = links_atuais
                     st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = True
 
-                # Limpeza de cache e feedback visual
                 st.cache_data.clear()
-                st.toast("Resposta e comentário do Quesito 8.3 salvos com sucesso!", icon="✅")
+                st.toast("Resposta e pontuação do Quesito 8.3 salvas com sucesso!", icon="✅")
                 st.rerun()
 
-            # -----------------------------------------------------------------
-            # RESUMO E FEEDBACK VISUAL EM TEMPO REAL
-            # -----------------------------------------------------------------
-            v_80_tela = st.session_state.get(f"r_80_select_{ano_sel}", res_data.get("8.0", {}).get("valor", ""))
-            deve_aplicar_penalidade_tela = (v_80_tela and "Sim" in str(v_80_tela))
-
-            # Obtém seleção atual para pré-visualização na tela
-            sel83_tela = [b for b in opcoes_bases if st.session_state.get(f"ck_83_{b}_{ano_sel}", b in lista_salva_83)]
-            qtd_nao_assinalados_tela = total_itens - len(sel83_tela)
-
-            if deve_aplicar_penalidade_tela:
-                pts_calculados_tela = -(qtd_nao_assinalados_tela * 3.0)
-
-                if qtd_nao_assinalados_tela > 0:
-                    st.warning(f"⚠️ Penalidade aplicada: {qtd_nao_assinalados_tela} item(ns) não assinalado(s) × -3,0 = {pts_calculados_tela:.1f} pontos")
-                else:
-                    st.success("✅ Nenhuma penalidade aplicada (Todos os 17 itens foram assinalados)!")
-                pontos_finais_display = pts_calculados_tela
-            else:
-                pontos_finais_display = 0.0
-                st.success("✅ Nenhuma penalidade aplicada (Quesito 8.0 é 'Não')!")
-
-            cor_txt_83 = "#28a745" if pontos_finais_display == 0.0 else "#dc3545"
-            st.markdown(
-                f"<span style='color:{cor_txt_83}; font-weight:bold;'>"
-                f"📊 Impacto de Pontuação no Quesito 8.3: {pontos_finais_display:.1f} pontos</span>",
-                unsafe_allow_html=True
-            )
-
-    # GATILHO DO MODAL 8.3 (Fora do container principal)
+    # GATILHO DO MODAL 8.3
     if st.session_state.get(f"gatilho_modal_8_3_{ano_sel}", False):
         if "modal_aviso_link" in globals():
             modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
