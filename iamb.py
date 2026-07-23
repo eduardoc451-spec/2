@@ -1503,72 +1503,83 @@ def mostrar_formulario_iamb():
         st.caption("ℹ *Atenção à consistência dos dados salvos no banco. Salvamento automático via callback.*")
 
         # =============================================================================
-        # QUESITO 1.0 • ESTRUTURA AMBIENTAL MUNICIPAL
+        # QUESITO 1.0 • ESTRUTURA AMBIENTAL MUNICIPAL (MODELO PADRONIZADO iGov)
         # =============================================================================
-        with st.container(key=f"container_bloco_ambiental_1_0_{ano_sel}", border=True):
+        with st.container(key=f"container_bloco_iamb_1_0_{ano_sel}", border=True):
             with st.expander("📌 Quesito 1.0 - Estrutura Organizacional Ambiental", expanded=True):
                 st.subheader("1.0 • Estrutura Ambiental")
-                st.write("**A prefeitura possui alguma estrutura organizacional para tratar de assuntos ligados ao Meio Ambiente Municipal?**")
+                st.write(
+                    "**A prefeitura possui alguma estrutura organizacional para tratar "
+                    "de assuntos ligados ao Meio Ambiente Municipal?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.0' para registrar.*")
 
-                opc10 = ["Selecione...", "Sim", "Não"]
-                d10 = res_data.get("1.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-                if d10 is None: 
-                    d10 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
+                # Dicionário com Mapeamento de Opções e Pontuações do iAMB
+                opcoes_10 = {
+                    "Selecione...": 0.0,
+                    "Sim (30 pts)": 30.0,
+                    "Não (00 pts)": 0.0
+                }
 
+                # Estado inicial / persistente
+                d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
                 v_salvo_10 = d10.get("valor", "Selecione...")
-                if v_salvo_10 not in opc10: 
-                    v_salvo_10 = "Selecione..."
 
-                evidencia_10_salva = d10.get("link", "")
-                chave_radio_10 = f"r_10_select_{ano_sel}"
-                chave_link_10 = f"l_10_txt_area_{ano_sel}"
+                # Chaves fixas por componente e ano
+                chave_radio_10 = f"r_10_{ano_sel}"
+                chave_link_10 = f"l_10_txt_{ano_sel}"
+                chave_coment_10 = f"coment_1.0_{ano_sel}"  # Chave padrão do bloco_comentarios
 
-                def cb_processa_e_salva_10():
-                    lnk_val = st.session_state.get(chave_link_10, evidencia_10_salva).strip()
-                    val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
+                c10_1, c10_2 = st.columns([1, 1])
+                with c10_1:
+                    lista_opcoes_10 = list(opcoes_10.keys())
+                    idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
 
-                    # Cálculo dinâmico ou pontuação associada ao quesito
-                    pts_calculados = 0.0
-
-                    save_resp("1.0", val_salvar, pts_calculados, lnk_val)
-                    res_data["1.0"] = {"valor": val_salvar, "pontos": pts_calculados, "link": lnk_val}
-
-                    # Ativação do modal para detecção de novos links
-                    links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk_val or "")]
-                    links_antigos = [u[0] for u in re.findall(regex_pure_url, evidencia_10_salva or "")]
-                    if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
-
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    idx10 = opc10.index(v_salvo_10)
-                    st.radio(
-                        "Selecione uma opção (1.0):",
-                        options=opc10,
-                        index=idx10,
-                        key=chave_radio_10,
-                        on_change=cb_processa_e_salva_10
+                    val_radio_10 = st.radio(
+                        "Selecione a situação da Estrutura Ambiental:",
+                        options=lista_opcoes_10,
+                        index=idx_10,
+                        key=chave_radio_10
                     )
 
-                with col2:
+                with c10_2:
                     link_10 = st.text_area(
-                        "Link/Evidência (1.0):",
-                        value=evidencia_10_salva,
+                        "Link de Evidência / Organograma / Lei de Criação (1.0):",
+                        value=d10.get("link", ""),
                         key=chave_link_10,
-                        on_change=cb_processa_e_salva_10,
                         placeholder="Insira o link oficial do organograma ou lei da estrutura ambiental...",
-                        height=110
+                        height=100
                     )
                     placeholder_links_10 = st.empty()
-                    links_10_visuais = [u[0] for u in re.findall(regex_pure_url, link_10 or "")]
+                    regex_url = r'https?://[^\s<>"]+'
+                    links_10_visuais = re.findall(regex_url, link_10 or "")
                     if links_10_visuais:
-                        placeholder_links_10.markdown(f"**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_10_visuais]))
+                        placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-                v_atual_10 = st.session_state.get(chave_radio_10, v_salvo_10)
-                cor_txt_10 = "#28a745" if v_atual_10 == "Sim" else ("#dc3545" if v_atual_10 == "Não" else "#6c757d")
-                st.markdown(f"<span style='color:{cor_txt_10}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.0: +0.0 pontos</span>", unsafe_allow_html=True)
-                
+                # Cálculo do impacto em tempo real para feedback visual antes de salvar
+                pts_atuais_10 = opcoes_10.get(val_radio_10, 0.0)
+                cor_txt_10 = "#28a745" if pts_atuais_10 > 0 else ("#dc3545" if val_radio_10 == "Não (00 pts)" else "#6c757d")
+                st.markdown(f"<span style='color:{cor_txt_10}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>", unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Botão Explicito de Salvamento (Padrão iGov)
+                if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
+                    comentario_10 = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+
+                    # Grava no Banco Neon
+                    save_resp("1.0", val_radio_10, pts_atuais_10, link_10, comentario_10)
+
+                    # Atualiza o estado local em memória
+                    res_data["1.0"] = {
+                        "valor": val_radio_10,
+                        "pontos": pts_atuais_10,
+                        "link": link_10,
+                        "comentario": comentario_10
+                    }
+
+                    st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Renderiza o bloco de comentários dentro do expander
                 bloco_comentarios("1.0", res_data, ano_sel)
-
-   
