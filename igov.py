@@ -6401,3 +6401,146 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 9.1 • DETALHAMENTO DE SERVIÇOS DIGITAIS (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_serv_9_1_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 9.1 - Tipos de Serviços Oferecidos Digitalmente", expanded=True):
+            st.subheader("9.1 • Detalhamento de Serviços")
+            st.write("**Quais tipos de serviços são oferecidos de forma digital?**")
+            st.caption("ℹ *Marque os serviços oferecidos, insira o link de evidência e clique em 'Salvar Quesito 9.1'.*")
+
+            d91 = res_data.get("9.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            try:
+                import ast
+                lista_salva_91 = ast.literal_eval(d91.get("valor", "[]"))
+                if not isinstance(lista_salva_91, list):
+                    lista_salva_91 = []
+            except Exception:
+                lista_salva_91 = []
+
+            evidencia_91_salva = d91.get("link", "")
+            chave_link_91 = f"l_91_txt_area_{ano_sel}"
+            chave_coment_91 = f"coment_9.1_{ano_sel}"
+
+            opcoes_servicos = [
+                "Alvarás / licenças de funcionamento",
+                "Certidões",
+                "Licenças / autorizaciones",
+                "Ouvidoria",
+                "Consulta de débitos municipais",
+                "Emissão de guias/boletos dos débitos municipais",
+                "Solicitação de serviços de zeladoria",
+                "Solicitação de obras e serviços de urbanização",
+                "Inscrições em oficinas, cursos, eventos e vagas",
+                "Nota fiscal eletrônica",
+                "Canal de denúncias",
+                "Cadastro de fornecedores",
+                "Agendamento de consultas na rede pública de saúde",
+                "Agendamento de exames em relação a doenças crônicas na rede pública de saúde",
+                "Pesquisa de satisfação em relação aos serviços prestados pela Prefeitura",
+                "Consulta a status de protocolos de todos os atendimentos dos serviços assinalados acima"
+            ]
+
+            teto_maximo = 120.0
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                col_serv1, col_serv2 = st.columns(2)
+                for i, servico in enumerate(opcoes_servicos):
+                    key_cb = f"q91_{servico}_{ano_sel}"
+                    target_col = col_serv1 if i % 2 == 0 else col_serv2
+                    with target_col:
+                        st.checkbox(
+                            f"{servico} (+7,5 pts)",
+                            value=(servico in lista_salva_91),
+                            key=key_cb
+                        )
+
+            with col2:
+                link_91 = st.text_area(
+                    "Link/Evidência (9.1):",
+                    value=evidencia_91_salva,
+                    key=chave_link_91,
+                    placeholder="Insira links comprobatórios das telas ou portais de serviços...",
+                    height=220
+                )
+                placeholder_links_91 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_91 or "")
+                links_91_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_91_visuais:
+                    placeholder_links_91.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_91_visuais]))
+
+            # Renderiza bloco de comentários
+            bloco_comentarios("9.1", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da pontuação na tela
+            sel91_atual = [
+                s for s in opcoes_servicos
+                if st.session_state.get(f"q91_{s}_{ano_sel}", s in lista_salva_91)
+            ]
+            pts_atuais_91 = min(float(len(sel91_atual) * 7.5), teto_maximo)
+
+            st.progress(min(pts_atuais_91 / teto_maximo, 1.0))
+
+            cor_txt_91 = "#28a745" if pts_atuais_91 > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_txt_91}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 9.1: +{pts_atuais_91:.1f} / {teto_maximo:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 9.1", key=f"btn_salvar_9_1_{ano_sel}", type="primary"):
+                # Coleta os checkboxes atualmente selecionados
+                sel91_coletado = [
+                    s_nome for s_nome in opcoes_servicos
+                    if st.session_state.get(f"q91_{s_nome}_{ano_sel}", False)
+                ]
+                string_salvar = str(sorted(sel91_coletado))
+                pts_91 = min(float(len(sel91_coletado) * 7.5), teto_maximo)
+                lnk_val = link_91.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_91, d91.get("comentario", ""))
+
+                # Gravação no Banco de Dados
+                save_resp(
+                    qid="9.1",
+                    valor=string_salvar,
+                    pontos=pts_91,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["9.1"] = {
+                    "valor": string_salvar,
+                    "pontos": pts_91,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_91_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_91_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_9_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 9.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 9.1
+    if st.session_state.get(f"gatilho_modal_9_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("9.1", st.session_state.get(f"links_pendentes_9_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = False
