@@ -1076,31 +1076,22 @@ def confirmar_zerar_dialog_igov(ano: int):
 
 
 def render_sidebar():
-    st.sidebar.title("🛠️ Painel iGov")
+    st.sidebar.title("🛠️ Painel de Controle")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
-    
-    # Salva na session_state para manter a referência usada pela função save_resp
-    ano_sel = st.sidebar.selectbox("Ano do Exercício:", anos, key="ano_referencia_igov")
+    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
 
-    # Carrega dados usando a sua função load_respostas
     res_data = load_respostas(ano_sel)
-    total_pts = sum(item.get("pontos", 0.0) for item in res_data.values())
+    total_pts = sum(item.get("pontos", 0) for item in res_data.values())
 
-    # Faixas de Maturidade do iGov
-    if total_pts <= 30:
-        faixa, cor = "Início / Crítico", "red"
-    elif total_pts <= 55:
-        faixa, cor = "Básico", "orange"
-    elif total_pts <= 75:
-        faixa, cor = "Intermediário", "#d4d400"
-    elif total_pts <= 90:
-        faixa, cor = "Aprimorado", "lightgreen"
-    else:
-        faixa, cor = "Excelência", "green"
+    if total_pts <= 500:    faixa, cor = "C",  "red"
+    elif total_pts <= 599: faixa, cor = "C+", "orange"
+    elif total_pts <= 749: faixa, cor = "B",  "#d4d400"
+    elif total_pts <= 899: faixa, cor = "B+", "lightgreen"
+    else:                  faixa, cor = "A",  "green"
 
-    st.sidebar.metric("Índice iGov Total", f"{total_pts:.1f} pts")
+    st.sidebar.metric("Pontuação Total", f"{total_pts} pts")
     st.sidebar.markdown(
-        f"**Nível de Governança:** <br><span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
+        f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>",
         unsafe_allow_html=True
     )
 
@@ -1108,19 +1099,20 @@ def render_sidebar():
     
     col1, col2 = st.sidebar.columns(2)
     
+    # Botão de Download direto (gera o PDF ao clicar, sem recarregar a tela antes)
     with col1:
-        # Substitua gerar_relatorio_pdf_igov pelo nome da sua função de PDF se houver
         st.download_button(
             label="📄 Baixar PDF",
-            data=gerar_relatorio_pdf_igov(res_data, ano_sel, total_pts, faixa) if 'gerar_relatorio_pdf_igov' in globals() else b"",
-            file_name=f"Relatorio_iGov_{ano_sel}.pdf",
+            data=gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa),
+            file_name=f"Relatorio_{ano_sel}.pdf",
             mime="application/pdf",
             use_container_width=True
         )
 
+    # Botão para abrir o Modal de confirmação
     with col2:
-        if st.button("🔄 Zerar", help="Limpar respostas do iGov para o ano selecionado", use_container_width=True):
-            confirmar_zerar_dialog_igov(ano_sel)
+        if st.button("🔄 Zerar", help="Limpar todas as respostas do ano selecionado", use_container_width=True):
+            confirmar_zerar_dialog(ano_sel)
 
     return total_pts, res_data, ano_sel
 
