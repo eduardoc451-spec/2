@@ -31,6 +31,17 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+import json
+import logging
+import os
+import re
+import warnings
+from datetime import datetime
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÕES DE AMBIENTE E BANCO DE DADOS NEON
 # -----------------------------------------------------------------------------
@@ -47,7 +58,7 @@ def get_connection():
 
 
 def init_db():
-    """Cria a tabela respostas_iamb isolada no Neon se não existir."""
+    """Cria a tabela respostas_iamb idêntica à estrutura configurada no Neon."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -57,9 +68,8 @@ def init_db():
                         ano INT NOT NULL,
                         quesito VARCHAR(50) NOT NULL,
                         resposta TEXT,
-                        pontos FLOAT DEFAULT 0.0,
-                        link TEXT,
-                        comentarios JSONB DEFAULT '[]'::jsonb,
+                        pontos DOUBLE PRECISION DEFAULT 0.0,
+                        detalhes JSONB DEFAULT '{}'::jsonb,
                         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         CONSTRAINT unq_ano_quesito_iamb UNIQUE(ano, quesito)
                     );
@@ -123,7 +133,7 @@ def get_ano_atual() -> int:
 
 
 def load_respostas(ano: int = None) -> dict:
-    """Carrega respostas do st.session_state ou do Neon se ainda não carregadas."""
+    """Carrega respostas do st.session_state ou do Neon (lendo a coluna detalhes)."""
     if ano is None:
         ano = get_ano_atual()
     
@@ -136,16 +146,25 @@ def load_respostas(ano: int = None) -> dict:
             with get_connection() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(
-                        "SELECT quesito, resposta, pontos, link, comentarios FROM respostas_iamb WHERE ano = %s",
+                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_iamb WHERE ano = %s",
                         (int(ano),)
                     )
                     rows = cursor.fetchall()
                     for r in rows:
+                        detalhes = r.get('detalhes') or {}
+                        if isinstance(detalhes, str):
+                            try:
+                                detalhes = json.loads(detalhes)
+                            except Exception:
+                                detalhes = {}
+
                         st.session_state[key_ano][str(r['quesito'])] = {
                             "valor": r['resposta'] or "",
                             "pontos": float(r['pontos'] or 0.0),
-                            "link": r['link'] or "",
-                            "comentarios": r['comentarios'] if isinstance(r['comentarios'], list) else []
+                            "link": detalhes.get("link", ""),
+                            "comentarios": detalhes.get("comentarios", []),
+                            "comentario": detalhes.get("comentario", ""),
+                            "detalhes": detalhes
                         }
         except Exception as e:
             logging.error(f"Erro ao carregar respostas do banco iAMB: {e}")
@@ -153,53 +172,67 @@ def load_respostas(ano: int = None) -> dict:
     return st.session_state[key_ano]
 
 
-def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Salva/Atualiza respostas no st.session_state e sincroniza com o banco Neon."""
+def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
+    """Salva/Atualiza respostas no st.session_state e sincroniza com a tabela respostas_iamb no Neon."""
     ano_int = get_ano_atual()
     key_ano = f"respostas_iamb_{ano_int}"
     
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
 
+    dados_atuais = st.session_state[key_ano].get(str(qid), {})
+
     if comentarios is None:
-        dados_atuais = st.session_state[key_ano].get(str(qid), {})
         comentarios = dados_atuais.get("comentarios", [])
+        
+    if not comentario:
+        comentario = dados_atuais.get("comentario", "")
+
+    # Monta o pacote JSON para a coluna 'detalhes'
+    dados_detalhes = {
+        "link": str(link or ""),
+        "comentarios": comentarios,
+        "comentario": str(comentario or "")
+    }
 
     # 1. Atualiza Session State
     dados_salvar = {
         "valor": str(valor),
         "pontos": float(pontos),
-        "link": str(link),
+        "link": str(link or ""),
         "comentarios": comentarios,
+        "comentario": str(comentario or ""),
+        "detalhes": dados_detalhes,
         "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     st.session_state[key_ano][str(qid)] = dados_salvar
 
-    # 2. Persiste no banco de dados Neon (UPSERT)
+    # 2. Persiste no banco de dados Neon (UPSERT nas colunas exatas da tabela respostas_iamb)
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas_iamb (ano, quesito, resposta, pontos, link, comentarios, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    INSERT INTO respostas_iamb (ano, quesito, resposta, pontos, detalhes, atualizado_em)
+                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (ano, quesito) 
                     DO UPDATE SET 
                         resposta = EXCLUDED.resposta,
                         pontos = EXCLUDED.pontos,
-                        link = EXCLUDED.link,
-                        comentarios = EXCLUDED.comentarios,
+                        detalhes = EXCLUDED.detalhes,
                         atualizado_em = CURRENT_TIMESTAMP;
                 """, (
-                    ano_int,
+                    int(ano_int),
                     str(qid),
                     str(valor),
                     float(pontos),
-                    str(link),
-                    json.dumps(comentarios)
+                    json.dumps(dados_detalhes)
                 ))
             conn.commit()
+            return True
     except Exception as e:
         logging.error(f"Erro ao salvar resposta do iAMB no banco Neon: {e}")
+        st.error(f"Erro ao salvar no banco Neon: {e}")
+        return False
 
 # =============================================================================
 # 2. COMPONENTE PARA RENDERIZAR E SALVAR QUESTÕES
