@@ -1,37 +1,53 @@
-import os
-import sys
-import re
 import json
-import warnings
 import logging
-from iamb import init_db  # Troque 'database' pelo nome do seu arquivo .py
-from datetime import datetime, date
+import os
+import re
+import sys
+import warnings
+from datetime import date, datetime
 from io import BytesIO
 
+import plotly.express as px
+import plotly.graph_objects as go
 import psycopg2
+from plotly.subplots import make_subplots
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 import streamlit as st
 
-# Silencia alertas e logs não críticos
+# Imports de componentes ReportLab para relatórios em PDF do iAMB
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+# Importação da inicialização do banco iAMB
+from iamb import init_db
+
+# -----------------------------------------------------------------------------
+# CONFIGURAÇÕES DE AMBIENTE E SUPRESSÃO DE LOGS
+# -----------------------------------------------------------------------------
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
 os.environ["PYTHONWARNINGS"] = "ignore"
 logging.getLogger("streamlit").setLevel(logging.ERROR)
 
-# Bibliotecas para o PDF (ReportLab)
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
-from reportlab.graphics.shapes import Drawing, String
-from reportlab.graphics.charts.barcharts import VerticalBarChart
-
-# Bibliotecas para Gráficos (Plotly)
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
+# Inicializa o banco de dados do iAMB no carregamento do arquivo
+try:
+    init_db()
+except Exception as e:
+    logging.error(f"Erro ao inicializar tabelas do iAMB: {e}")
 
 # =============================================================================
 # REGEX DE VALIDAÇÃO
