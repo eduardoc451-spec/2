@@ -7193,3 +7193,108 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("10.4", st.session_state.get(f"links_pendentes_10_4_{ano_sel}", []))
         st.session_state[f"gatilho_modal_10_4_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 10.5 • MEDIDAS DE SEGURANÇA ADOTADAS (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_lgpd_10_5_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 10.5 - Medidas de Segurança Implementadas", expanded=True):
+            st.subheader("10.5 • Medidas de Segurança Técnicas/Administrativas")
+            st.write("**Foram adotadas medidas de segurança, técnicas e administrativas a fim de proteger os dados pessoais de acessos não autorizados e de situações acidentais ou ilícitas?**")
+            st.caption("ℹ *Selecione a opção desejada, insira o link de evidência e clique em 'Salvar Quesito 10.5'.*")
+
+            lista105 = ["Selecione...", "Sim", "Não"]
+
+            d105 = res_data.get("10.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_105 = d105.get("valor", "Selecione...")
+            if v_salvo_105 not in lista105:
+                v_salvo_105 = "Selecione..."
+
+            evidencia_105_salva = d105.get("link", "")
+            chave_radio_105 = f"r_105_select_{ano_sel}"
+            chave_link_105 = f"l_105_txt_area_{ano_sel}"
+            chave_coment_105 = f"coment_10.5_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                idx105 = lista105.index(v_salvo_105)
+                st.radio(
+                    "Selecione uma opção (10.5):",
+                    options=lista105,
+                    index=idx105,
+                    key=chave_radio_105
+                )
+
+            with col2:
+                link_105 = st.text_area(
+                    "Link/Evidência (10.5):",
+                    value=evidencia_105_salva,
+                    key=chave_link_105,
+                    placeholder="Insira o link principal comprovando as políticas/medidas de segurança...",
+                    height=150
+                )
+                placeholder_links_105 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_105 or "")
+                links_105_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_105_visuais:
+                    placeholder_links_105.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_105_visuais]))
+
+            # Renderiza bloco de comentários
+            bloco_comentarios("10.5", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da indicação na tela
+            v_atual_105 = st.session_state.get(chave_radio_105, v_salvo_105)
+            cor_txt_105 = "#28a745" if v_atual_105 == "Sim" else ("#dc3545" if v_atual_105 == "Não" else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_105}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 10.5: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 10.5", key=f"btn_salvar_10_5_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_105, v_salvo_105)
+                lnk_val = link_105.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_105, d105.get("comentario", ""))
+
+                # Gravação no Banco de Dados (0.0 pontos)
+                save_resp(
+                    qid="10.5",
+                    valor=val_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["10.5"] = {
+                    "valor": val_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_105_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_105_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_10_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_10_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 10.5 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 10.5
+    if st.session_state.get(f"gatilho_modal_10_5_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("10.5", st.session_state.get(f"links_pendentes_10_5_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_10_5_{ano_sel}"] = False
