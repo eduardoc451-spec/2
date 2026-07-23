@@ -1216,9 +1216,9 @@ def mostrar_formulario_igov():
     else:
         total_pts, res_data, ano_sel = 0.0, {}, 2026
 
-    st.title(f"🏛️ Avaliação de Governança (iGov) - {ano_sel}")
+    st.title(f"🏛️ Governança e Tecnologia (iGov) - {ano_sel}")
 
-    aba_quest, aba_graf = st.tabs(["📋 Questionário iGov", "📊 Análise & Gráficos"])
+    aba_quest, aba_graf = st.tabs(["📋 Questionário iGov", "📊Gráficos"])
 
     # -------------------------------------------------------------------------
     # ABA 1: QUESTIONÁRIO (Quesitos entram AQUI)
