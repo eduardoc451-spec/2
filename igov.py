@@ -6544,3 +6544,130 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("9.1", st.session_state.get(f"links_pendentes_9_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 9.2 • FORMAS DE ATENDIMENTO À DISTÂNCIA (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_serv_9_2_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 9.2 - Formas de Atendimento à Distância", expanded=True):
+            st.subheader("9.2 • Atendimento à Distância")
+            st.write("**Quais as formas de atendimento à distância disponibilizadas ao público pela Prefeitura?**")
+            st.caption("ℹ *Marque as formas de atendimento disponibilizadas, insira o link de evidência e clique em 'Salvar Quesito 9.2'.*")
+
+            d92 = res_data.get("9.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            try:
+                import ast
+                lista_salva_92 = ast.literal_eval(d92.get("valor", "[]"))
+                if not isinstance(lista_salva_92, list):
+                    lista_salva_92 = []
+            except Exception:
+                lista_salva_92 = []
+
+            evidencia_92_salva = d92.get("link", "")
+            chave_link_92 = f"l_92_txt_area_{ano_sel}"
+            chave_coment_92 = f"coment_9.2_{ano_sel}"
+
+            opcoes_atendimento = [
+                "Telefone", 
+                "Site da Prefeitura", 
+                "Aplicativo de mensagens", 
+                "Redes sociais", 
+                "Aplicativo da Prefeitura", 
+                "Correio eletrônico (e-mail)", 
+                "Outros"
+            ]
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                col_atend1, col_atend2 = st.columns(2)
+                for i, forma in enumerate(opcoes_atendimento):
+                    key_cb = f"q92_{forma}_{ano_sel}"
+                    target_col = col_atend1 if i % 2 == 0 else col_atend2
+                    with target_col:
+                        st.checkbox(
+                            forma,
+                            value=(forma in lista_salva_92),
+                            key=key_cb
+                        )
+
+            with col2:
+                link_92 = st.text_area(
+                    "Link/Evidência (9.2):",
+                    value=evidencia_92_salva,
+                    key=chave_link_92,
+                    placeholder="Insira links comprobatórios dos canais de atendimento à distância...",
+                    height=110
+                )
+                placeholder_links_92 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_92 or "")
+                links_92_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_92_visuais:
+                    placeholder_links_92.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_92_visuais]))
+
+            # Renderiza bloco de comentários
+            bloco_comentarios("9.2", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da indicação na tela
+            sel92_atual = [
+                forma for forma in opcoes_atendimento
+                if st.session_state.get(f"q92_{forma}_{ano_sel}", forma in lista_salva_92)
+            ]
+            cor_txt_92 = "#28a745" if len(sel92_atual) > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_txt_92}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 9.2: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 9.2", key=f"btn_salvar_9_2_{ano_sel}", type="primary"):
+                # Coleta os checkboxes atualmente selecionados
+                sel92_coletado = [
+                    forma_nome for forma_nome in opcoes_atendimento
+                    if st.session_state.get(f"q92_{forma_nome}_{ano_sel}", False)
+                ]
+                string_salvar = str(sorted(sel92_coletado))
+                lnk_val = link_92.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_92, d92.get("comentario", ""))
+
+                # Gravação no Banco de Dados (0.0 pontos)
+                save_resp(
+                    qid="9.2",
+                    valor=string_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["9.2"] = {
+                    "valor": string_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_92_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_92_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_9_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 9.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 9.2
+    if st.session_state.get(f"gatilho_modal_9_2_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = False
