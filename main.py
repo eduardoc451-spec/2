@@ -378,7 +378,7 @@ def dimension_page():
         icidade.init_db()
         icidade.mostrar_formulario_cidade()
     elif dimension == "i-Gov TI" and igov:
-        igov.mostrar_formulario_gov()
+        igov.mostrar_formulario_igov()
     elif dimension == "i-Amb" and iamb:
         iamb.mostrar_formulario_amb()
     elif dimension == "i-Fiscal" and ifiscal:
