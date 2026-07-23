@@ -665,34 +665,6 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements.append(tabela_sumario)
     elements.append(PageBreak())
 
-     -------------------------------------------------------------------------
-    # FOLHA 2: SUMÁRIO
-    # -------------------------------------------------------------------------
-    elements.append(Paragraph("<b>SUMÁRIO</b>", styles["h1"]))
-    elements.append(Spacer(1, 30))
-
-    style_item_esquerda = ParagraphStyle('ItemEsq', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#2c3e50"))
-    style_pag_direita = ParagraphStyle('PagDir', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1b4f72"), alignment=2)
-
-    dados_sumario = [
-        [Paragraph("1. Resumo Executivo (Análise Comparativa)", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
-        [Paragraph("2. Análise de Desempenho por Quesito", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
-        [Paragraph("3. Análise de Impacto e Penalidades", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("4. Diagnóstico de Reincidências", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("5. Alinhamento com a Agenda 2030 (ODS)", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("6. Série Histórica do I-cidade", style_item_esquerda), Paragraph("Pág. 5", style_pag_direita)],
-    ]
-    
-    tabela_sumario = Table(dados_sumario, colWidths=[400, 90])
-    tabela_sumario.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 12),
-        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#bdc3c7"), 1, (2, 4)), 
-    ]))
-    elements.append(tabela_sumario)
-    elements.append(PageBreak())
-
     # -------------------------------------------------------------------------
     # 1. RESUMO EXECUTIVO (ANÁLISE COMPARATIVA DE EXERCÍCIOS)
     # -------------------------------------------------------------------------
@@ -879,40 +851,166 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     else: elements.append(Paragraph("<font color='#28a745'><b>Nenhuma reincidência ativa detectada.</b></font>", styles["Normal"]))
     elements.append(Spacer(1, 15))
     # -------------------------------------------------------------------------
-    # 5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU - TECNOLOGIA E INOVAÇÃO)
+    # 5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU)
     # -------------------------------------------------------------------------
+    # Importação com apelido isolado para não afetar o escopo global do PDF
+    import reportlab.lib.colors as rl_colors
+
     elements.append(Paragraph("<b>5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU)</b>", styles["h2"]))
     elements.append(Spacer(1, 6))
-    
+
     def calcular_percentual_checklist(resposta_bruta, total_itens):
-        if not resposta_bruta: return 0.0
+        if not resposta_bruta: 
+            return 0.0
+        
+        # Se a string salva contiver estrutura de lista do Python ['item1', 'item2']
+        if str(resposta_bruta).startswith("["):
+            try:
+                import ast
+                itens_lista = ast.literal_eval(str(resposta_bruta))
+                if isinstance(itens_lista, list):
+                    itens_validos = [str(i).strip().lower() for i in itens_lista if "outros" not in str(i).lower()]
+                    return min((len(itens_validos) / total_itens) * 100.0, 100.0) if total_itens > 0 else 0.0
+            except Exception:
+                pass
+                
+        # Fallback limpo caso seja texto puro separado por vírgula
         itens = [i.strip().lower() for i in str(resposta_bruta).split(",") if i.strip()]
         itens_validos = [i for i in itens if "outros" not in i]
         return min((len(itens_validos) / total_itens) * 100.0, 100.0) if total_itens > 0 else 0.0
 
-    analise_ods = [
-        {"ods": "ODS 9 (Indústria, Inovação e Infraestrutura)", "meta": "Infraestrutura Digital e Governança Eletrônica", "qid": "1.0", "tot": 5},
-        {"ods": "ODS 16 (Paz, Justiça e Instituições Eficazes)", "meta": "Transparência, Segurança da Informação e LGPD", "qid": "3.0", "tot": 6}
-    ]
+    # Dicionário de Metas ODS parametrizado conforme as regras do i-Gov TI
+    REGRAS_ODS = {
+        "1.0": {"metas": "16.6, 17.8", "total_chk": 0},
+        "1.2": {"metas": "9.c", "total_chk": 0},
+        "1.3": {"metas": "9.c, 16.6, 17.8", "total_chk": 0},
+        "1.4": {"metas": "16.6, 17.8", "total_chk": 0},
+        "1.4.2": {"metas": "16.6, 17.8", "total_chk": 0},
+        "2.0": {"metas": "16.6, 16.7, 17.8", "total_chk": 0},
+        "3.0": {"metas": "16.6, 16.a, 17.8", "total_chk": 0},
+        "3.1": {"metas": "16.6", "total_chk": 0},
+        "3.1.1": {"metas": "16.6", "total_chk": 0},
+        "3.3": {"metas": "16.6, 16.7, 17.8", "total_chk": 0},
+        "3.4": {"metas": "9.c, 16.6", "total_chk": 0},
+        "3.5": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "3.6": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "4.0": {"metas": "16.5, 16.6, 17.8", "total_chk": 0},
+        "5.0": {"metas": "9.4, 16.5, 16.6, 17.14", "total_chk": 0},
+        "6.0": {"metas": "16.6, 17.8", "total_chk": 0},
+        "6.1": {"metas": "9.c, 16.7, 17.8", "total_chk": 0},
+        "6.2": {"metas": "16.6", "total_chk": 0},
+        "6.3": {"metas": "16.6, 16.7", "total_chk": 0},
+        "6.4": {"metas": "10.2, 16.6, 17.8", "total_chk": 0},
+        "7.0": {"metas": "16.5, 16.6, 17.8", "total_chk": 0},
+        "7.1": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "7.2": {"metas": "16.5, 16.6, 17.8", "total_chk": 0},
+        "7.3": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "8.0": {"metas": "16.5, 16.6, 17.8, 17.14", "total_chk": 0},
+        "8.1": {"metas": "16.5, 16.6, 17.8", "total_chk": 17},
+        "8.2": {"metas": "16.5, 16.6, 17.8", "total_chk": 17},
+        "8.2.1": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "8.4": {"metas": "16.5, 16.6, 17.8", "total_chk": 17},
+        "9.0": {"metas": "10.2, 16.6, 17.8", "total_chk": 0},
+        "9.1": {"metas": "16.6", "total_chk": 16},
+        "10.0": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "10.3": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "10.4": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "10.5": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0},
+        "11.0": {"metas": "16.5, 16.6, 16.7, 17.8", "total_chk": 0}
+    }
 
-    data_ods = [["Objetivo ODS", "Meta Correlata", "Indicador TI", "Aderência Estima"]]
-    for item in analise_ods:
-        resp_val = dados.get(item["qid"], {}).get("valor", "")
-        perc = calcular_percentual_checklist(resp_val, item["tot"])
-        data_ods.append([item["ods"], item["meta"], f"Quesito {item['qid']}", f"{perc:.1f}%"])
+    analise_ods = []
+    
+    # Captura dinâmica do DICIONÁRIO DE DADOS para suportar qualquer escopo
+    dados_reference = None
+    for nome_var in ['dados', 'res_data', 'respostas', 'dados_municipio']:
+        if nome_var in locals():
+            dados_reference = locals()[nome_var]
+            break
 
-    tabela_ods = Table(data_ods, colWidths=[140, 175, 85, 90])
-    tabela_ods.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#27ae60")), 
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke), 
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"), 
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#27ae60")), 
-        ("FONTSIZE", (0, 0), (-1, -1), 9), 
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE")
-    ]))
-    elements.append(tabela_ods)
-    elements.append(Spacer(1, 15))
+    if dados_reference is None:
+        try: dados_reference = dados
+        except NameError:
+            try: dados_reference = res_data
+            except NameError: dados_reference = {}
 
+    for qid, config in REGRAS_ODS.items():
+        info = dados_reference.get(qid, {}) if isinstance(dados_reference, dict) else {"valor": "Não Respondido"}
+        if not isinstance(info, dict):
+            info = {"valor": str(info)}
+            
+        resp = str(info.get("valor", "")).strip()
+        resp_l = resp.lower()
+        
+        if not resp or resp_l == "não respondido" or resp == "[]": 
+            continue
+            
+        if config["total_chk"] > 0:
+            pct = calcular_percentual_checklist(resp, config["total_chk"])
+            status = f"{pct:.1f}% Atendido"
+        else:
+            # Filtros condicionais específicos
+            if qid == "6.2":
+                status = "Atendido" if "possibilita para todos os relatórios" in resp_l else "Não Atendido"
+            elif qid == "7.3":
+                status = "Atendido" if "não" in resp_l else "Não Atendido"
+            elif qid == "8.2.1":
+                status = "Atendido" if "totalmente integrado" in resp_l else "Não Atendido"
+            elif qid == "10.3":
+                status = "Atendido" if "todos os contratos vigentes" in resp_l else "Não Atendido"
+            # Regras genéricas e de fallback padrão do i-Gov TI
+            elif "não" in resp_l and qid in ["5.1.2"]: 
+                status = "Atendido"
+            elif "sim" in resp_l or "parcialmente" in resp_l or "integralmente" in resp_l or "todas" in resp_l or "maior parte" in resp_l:
+                status = "Atendido"
+            else:
+                status = "Não Atendido"
+
+        # Formatação para exibição limpa na tabela removendo colchetes e aspas simples
+        exibicao_resp = resp
+        if exibicao_resp.startswith("["):
+            exibicao_resp = exibicao_resp.replace("[", "").replace("]", "").replace("'", "")
+
+        analise_ods.append({
+            "qid": qid,
+            "status": status,
+            "metas": config["metas"],
+            "resp": exibicao_resp[:45] + "..." if len(exibicao_resp) > 45 else exibicao_resp
+        })
+
+    if analise_ods:
+        data_ods = [["Quesito", "Resposta Informada", "Vínculo Metas ODS", "Status de Cumprimento"]]
+        style_td_ods = ParagraphStyle('TdOds', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, alignment=1)
+        
+        for item in sorted(analise_ods, key=lambda x: [float(i) if i.replace('.','',1).isdigit() else 999 for i in x['qid'].split('.')]):
+            st_txt = item["status"]
+            
+            if "Não Atendido" in st_txt:
+                st_p = Paragraph(f"<font color='#dc3545'><b>{st_txt}</b></font>", style_td_ods)
+            elif "Atendido" in st_txt and "%" not in st_txt:
+                st_p = Paragraph(f"<font color='#28a745'><b>{st_txt}</b></font>", style_td_ods)
+            else:
+                st_p = Paragraph(f"<font color='#007bff'><b>{st_txt}</b></font>", style_td_ods)
+                
+            data_ods.append([
+                item["qid"], 
+                Paragraph(item["resp"], styles["Normal"]), 
+                item["metas"], 
+                st_p
+            ])
+            
+        tabela_ods = Table(data_ods, colWidths=[60, 200, 115, 110])
+        tabela_ods.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), rl_colors.HexColor("#0f9d58")), 
+            ("TEXTCOLOR", (0, 0), (-1, 0), rl_colors.whitesmoke), 
+            ("ALIGN", (0, 0), (0, -1), "CENTER"), 
+            ("GRID", (0, 0), (-1, -1), 0.5, rl_colors.HexColor("#0f9d58")), 
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(tabela_ods)
+        elements.append(Spacer(1, 15))
     # -------------------------------------------------------------------------
     # 6. SÉRIE HISTÓRICA DO I-GOV TI
     # -------------------------------------------------------------------------
