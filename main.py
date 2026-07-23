@@ -376,22 +376,26 @@ def dimension_page():
             
     elif dimension == "i-Cidade":
         if icidade is None:
-            st.error("❌ O arquivo 'icidade_completo.py' não foi encontrado ou falhou ao ser importado na pasta do projeto.")
+            st.error("❌ O arquivo 'icidade_completo.py' não foi encontrado ou falhou ao ser importado.")
         else:
             try:
-                # Inicializa o banco do i-Cidade se a função existir
+                # Inicializa o banco se a função existir
                 if hasattr(icidade, 'init_db'):
                     icidade.init_db()
                 
-                # Procura a função principal que desenha a tela no icidade_completo.py
-                if hasattr(icidade, 'mostrar_formulario_cidade'):
-                    icidade.mostrar_formulario_cidade()
-                elif hasattr(icidade, 'mostrar_formulario_icidade'):
-                    icidade.mostrar_formulario_icidade()
-                elif hasattr(icidade, 'main'):
-                    icidade.main()
+                # Lista de nomes possíveis da função
+                funcao_encontrada = None
+                for nome_fn in ['mostrar_formulario_cidade', 'mostrar_formulario_icidade', 'mostrar_icidade', 'run', 'main', 'app']:
+                    if hasattr(icidade, nome_fn):
+                        funcao_encontrada = getattr(icidade, nome_fn)
+                        break
+                
+                if funcao_encontrada:
+                    funcao_encontrada()
                 else:
-                    st.warning("⚠️ O arquivo 'icidade_completo.py' foi encontrado, mas a função de renderização precisa ter um desses nomes: 'mostrar_formulario_cidade', 'mostrar_formulario_icidade' ou 'main'.")
+                    # Exibe as funções disponíveis no arquivo para te mostrar o nome exato
+                    funcoes_disponiveis = [f for f in dir(icidade) if not f.startswith('_') and callable(getattr(icidade, f))]
+                    st.warning(f"⚠️ Nenhuma função padrão foi encontrada. Funções detectadas no arquivo: {funcoes_disponiveis}")
             except Exception as e:
                 st.error(f"❌ Erro ao executar o i-Cidade: {e}")
     elif dimension == "i-Gov TI" and igov:
