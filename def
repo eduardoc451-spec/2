@@ -1224,16 +1224,14 @@ def mostrar_formulario_igov():
 
     st.title(f"🏛️ Avaliação de Governança (iGov) - {ano_sel}")
 
-    aba_questionario, aba_graficos = st.tabs(["📋 Questionário iGov", "📊 Análise & Gráficos"])
+    # Renomeado a segunda variável para aba_graf para alinhar com o restaste do arquivo
+    aba_quest, aba_graf = st.tabs(["📋 Questionário iGov", "📊 Análise & Gráficos"])
 
-    with aba_questionario:
+    with aba_quest:
         st.info("Responda às questões da governança para atualizar a pontuação.")
-        
-        # Exemplo prático de salvamento usando sua função save_resp:
-        # if st.button("Salvar Resposta Exemplo"):
-        #     save_resp(qid="1.1", valor="Sim", pontos=10.0, link="https://...", comentarios=[])
+        # Seus componentes de questões entram aqui...
 
-    with aba_graficos:
+    with aba_graf:
         render_graficos(res_data, ano_sel)
         # =============================================================================
         # QUESITO 1.0 • SETOR DE TIC (MODELO COMPLETO i-Cidade)
