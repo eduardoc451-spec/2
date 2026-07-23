@@ -1004,8 +1004,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
 
         return total_pts, res_data, ano_sel
 
-
-    # =============================================================================
+# =============================================================================
 # 6. FORMULÁRIO PRINCIPAL E ABAS (i-Cidade)
 # =============================================================================
 
@@ -1043,11 +1042,7 @@ def mostrar_formulario_cidade():
         st.error(f"❌ Erro ao renderizar a página do i-Cidade: {e}")
         st.exception(e)
 
-
-# Atalhos para garantir que o main.py encontre a função com qualquer um desses nomes
-mostrar_formulario_icidade = mostrar_formulario_cidade
-mostrar_formulario_igov = mostrar_formulario_cidade
-    
+  
     # =============================================================================
     # QUESITO 1.0 • COORDENADORIA MUNICIPAL DE DEFESA CIVIL (COMPDEC)
     # =============================================================================
