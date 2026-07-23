@@ -401,7 +401,7 @@ def dimension_page():
     elif dimension == "i-Gov TI" and igov:
         igov.mostrar_formulario_igov()
     elif dimension == "i-Amb" and iamb:
-        iamb.mostrar_formulario_amb()
+       iamb.mostrar_formulario_iamb() 
     elif dimension == "i-Fiscal" and ifiscal:
         ifiscal.mostrar_formulario_ifiscal()
     elif dimension == "i-Plan" and iplan:
