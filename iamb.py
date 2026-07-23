@@ -6593,3 +6593,110 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.3.1 • MÉTODOS DE CARACTERIZAÇÃO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q8_3_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.3.1 - Métodos de Caracterização", expanded=True):
+                st.subheader("8.3.1 • Métodos de Caracterização")
+                st.write("**Assinale a forma utilizada para caracterizar os resíduos sólidos do município:**")
+
+                # Recupera os dados salvos do banco
+                d831 = res_data.get("8.3.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                texto_seguro_831 = str(d831.get("valor", "")) if d831.get("valor") not in ["", "[]"] else ""
+                evidencia_831_salva = d831.get("link", "")
+                opts831 = [
+                    "Estimativa com base em dados secundários",
+                    "Realização de estudo gravimétrico, por amostragem",
+                    "Pesquisa de dados primários com medição direta",
+                    "Outros"
+                ]
+
+                # Definindo chaves do Streamlit
+                chave_link_831 = f"l831_in_{ano_sel}"
+                chave_coment_831 = f"coment_8.3.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    for opt in opts831:
+                        st.checkbox(
+                            opt,
+                            value=(opt in texto_seguro_831),
+                            key=f"c831_{opt}_{ano_sel}"
+                        )
+
+                    # Quesito puramente referencial
+                    st.metric(label="Pontuação do Quesito", value="0.0 pts", help="Quesito de caráter referencial/informativo.")
+
+                with col2:
+                    link_831 = st.text_area(
+                        "Link/Evidência (8.3.1):",
+                        value=evidencia_831_salva,
+                        key=chave_link_831,
+                        placeholder="Inserir laudos, links de estudos ou documentação complementar...",
+                        height=120
+                    )
+                    placeholder_links_831 = st.empty()
+                    links_831_visuais = re.findall(REGEX_PURE_URL, link_831 or "")
+                    if links_831_visuais:
+                        placeholder_links_831.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_831_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 8.3.1
+                bloco_comentarios("8.3.1", res_data, ano_sel)
+
+                # Feedback visual de pontuação referencial
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.3.1: +0.0 pontos (Referencial)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.3.1", key=f"btn_salvar_8_3_1_{ano_sel}", type="primary"):
+                    lnk_val = link_831.strip()
+                    marcados = [opt for opt in opts831 if st.session_state.get(f"c831_{opt}_{ano_sel}", False)]
+                    val_salvar = str(marcados)
+
+                    pts_calculados = 0.0
+                    comentario_para_salvar = st.session_state.get(chave_coment_831, d831.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="8.3.1",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["8.3.1"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_831_salva or "")]
+
+                    if lnk_val != evidencia_831_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 8.3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 8.3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.3.1", st.session_state.get(f"links_pendentes_8_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_3_1_{ano_sel}"] = False
+
