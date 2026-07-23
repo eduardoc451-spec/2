@@ -5972,3 +5972,175 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("8.2.2", st.session_state.get(f"links_pendentes_8_2_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_2_2_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 8.3 • GESTÃO DIRETA DE BASES DE DADOS (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_8_3_final_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 8.3 - Gestão Direta de Bases de Dados", expanded=True):
+            st.subheader("8.3 • Gestão Direta de Bases de Dados")
+            st.write("**Assinale quais bases de dados encontram-se sob gestão direta da Prefeitura:**")
+            st.caption("ℹ *Gestão Direta = empresa terceira não pode mudar os dados sem o conhecimento da Prefeitura. Selecione as bases, insira o link de evidência e clique em 'Salvar Quesito 8.3'.*")
+
+            opcoes_bases = [
+                "Contabilidade", "Gestão de tributos (arrecadação)", "Dívida Ativa", 
+                "Precatórios", "Gestão patrimonial (bens e equipamentos)", 
+                "Gestão de negócios (Business Intelligence)", "Planejamento", 
+                "Recursos humanos / Departamento pessoal", "Almoxarifado", 
+                "Controle de frotas", "Controle Interno", "Saúde", 
+                "Ensino (educação)", "Compras, licitações e contratos", 
+                "Certidões e alvarás", "Saneamento", "Cemitérios"
+            ]
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d83 = res_data.get("8.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            val_83_banco = d83.get("valor", "[]")
+            if isinstance(val_83_banco, str):
+                if val_83_banco.strip() in ["", "[]", "None"]:
+                    lista_salva_83 = []
+                else:
+                    try:
+                        import json
+                        lista_salva_83 = json.loads(val_83_banco.replace("'", '"'))
+                    except Exception:
+                        try:
+                            import ast
+                            lista_salva_83 = ast.literal_eval(val_83_banco)
+                        except Exception:
+                            lista_salva_83 = []
+            else:
+                lista_salva_83 = list(val_83_banco) if val_83_banco else []
+
+            evidencia_83_salva = d83.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_link_83 = f"l_83_txt_area_{ano_sel}"
+            chave_coment_83 = f"coment_8.3_{ano_sel}"
+
+            # Renderização das caixas de seleção (Checkboxes em 2 colunas)
+            col_base1, col_base2 = st.columns(2)
+            for i, base in enumerate(opcoes_bases):
+                with col_base1 if i % 2 == 0 else col_base2:
+                    esta_marcado = base in lista_salva_83
+                    st.checkbox(
+                        base, 
+                        value=esta_marcado, 
+                        key=f"ck_83_{base}_{ano_sel}"
+                    )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            link_83 = st.text_area(
+                "Link/Evidência (8.3):",
+                value=evidencia_83_salva,
+                key=chave_link_83,
+                placeholder="Insira links de termos de auditoria, declarações de TI...",
+                height=90
+            )
+
+            placeholder_links_83 = st.empty()
+            
+            # Extração segura de links lidando com tuples ou strings de RegEx
+            raw_links_visuais = re.findall(regex_pure_url, link_83 or "")
+            links_83_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+
+            if links_83_visuais:
+                placeholder_links_83.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_83_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("8.3", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 8.3", key=f"btn_salvar_8_3_{ano_sel}", type="primary"):
+                # Coleta as bases selecionadas atualmente nos checkboxes da tela
+                sel83_atual = []
+                for base in opcoes_bases:
+                    if st.session_state.get(f"ck_83_{base}_{ano_sel}", False):
+                        sel83_atual.append(base)
+                sel83_atual = sorted(sel83_atual)
+
+                # Cálculo do impacto de pontuação considerando a resposta do Quesito 8.0
+                v_80 = st.session_state.get(f"r_80_select_{ano_sel}", res_data.get("8.0", {}).get("valor", ""))
+                deve_aplicar_penalidade = (v_80 and "Sim" in str(v_80))
+
+                if deve_aplicar_penalidade:
+                    pts_83 = -51.0 + (len(sel83_atual) * 3.0)
+                    if pts_83 > 0.0:
+                        pts_83 = 0.0
+                else:
+                    pts_83 = 0.0
+
+                lnk_val = link_83.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_83, d83.get("comentario", ""))
+
+                # Salva no banco de dados
+                save_resp(
+                    qid="8.3",
+                    valor=str(sel83_atual),
+                    pontos=pts_83,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualiza o dicionário de dados local
+                res_data["8.3"] = {
+                    "valor": str(sel83_atual),
+                    "pontos": pts_83,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento para disparo de modal de validação de links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_83_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_83_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = True
+
+                # Limpeza de cache e feedback visual
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 8.3 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            # -----------------------------------------------------------------
+            # RESUMO E FEEDBACK VISUAL EM TEMPO REAL
+            # -----------------------------------------------------------------
+            v_80_tela = st.session_state.get(f"r_80_select_{ano_sel}", res_data.get("8.0", {}).get("valor", ""))
+            deve_aplicar_penalidade_tela = (v_80_tela and "Sim" in str(v_80_tela))
+
+            # Obtém seleção atual para pré-visualização do resultado
+            sel83_tela = [b for b in opcoes_bases if st.session_state.get(f"ck_83_{b}_{ano_sel}", b in lista_salva_83)]
+            
+            if deve_aplicar_penalidade_tela:
+                pts_calculados_tela = -51.0 + (len(sel83_tela) * 3.0)
+                if pts_calculados_tela > 0.0:
+                    pts_calculados_tela = 0.0
+
+                if pts_calculados_tela < 0.0:
+                    st.warning(f"⚠️ Penalidade aplicada: {pts_calculados_tela:.1f} pontos")
+                else:
+                    st.success("✅ Nenhuma penalidade aplicada (Todos os itens preenchidos)!")
+                pontos_finais_display = pts_calculados_tela
+            else:
+                pontos_finais_display = 0.0
+                st.success("✅ Nenhuma penalidade aplicada (Quesito 8.0 é Não)!")
+
+            cor_txt_83 = "#28a745" if pontos_finais_display == 0.0 else "#dc3545"
+            st.markdown(
+                f"<span style='color:{cor_txt_83}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 8.3: {pontos_finais_display:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 8.3 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_8_3_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = False
