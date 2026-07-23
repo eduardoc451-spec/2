@@ -1006,46 +1006,47 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
 
 
     # =============================================================================
-    # 6. FORMULÁRIO PRINCIPAL E ABAS (i-Cidade)
-    # =============================================================================
+# 6. FORMULÁRIO PRINCIPAL E ABAS (i-Cidade)
+# =============================================================================
 
-    def mostrar_formulario_cidade():
-        try:
-            # Obter dados da Sidebar
-            dados_sidebar = render_sidebar()
+def mostrar_formulario_cidade():
+    try:
+        # Obter dados da Sidebar
+        dados_sidebar = render_sidebar()
+        
+        if dados_sidebar and isinstance(dados_sidebar, (tuple, list)) and len(dados_sidebar) == 3:
+            total_pts, res_data, ano_sel = dados_sidebar
+        else:
+            total_pts, res_data, ano_sel = 0, {}, 2026
+
+        st.title(f"🏙️ Preenchimento do i-Cidade - {ano_sel}")
+
+        # CRIAÇÃO DAS ABAS
+        aba_form, aba_graf = st.tabs(["📝 Formulário de Preenchimento", "📊 Gráficos & Desempenho"])
+
+        with aba_form:
+            st.subheader("Quesitos do i-Cidade")
+            # --- INSIRA AQUI O CÓDIGO DA SUA LISTA DE PERGUNTAS/FORMULÁRIO ---
+            st.info("Preencha os campos para calcular o índice do i-Cidade.")
             
-            if dados_sidebar and isinstance(dados_sidebar, (tuple, list)) and len(dados_sidebar) == 3:
-                total_pts, res_data, ano_sel = dados_sidebar
-            else:
-                total_pts, res_data, ano_sel = 0, {}, 2026
+            # Exemplo de chamada utilizando a função otimizada de renderização/salvamento:
+            # renderizar_questao("1.0", res_data)
+            # renderizar_questao("1.3", res_data)
 
-            st.title(f"🏙️ Preenchimento do i-Cidade - {ano_sel}")
+        with aba_graf:
+            st.subheader("Resultados e Comparativos")
+            # Chama a função de gráficos passando os dados carregados na sidebar
+            if 'analyze_performance' in globals():
+                analyze_performance(res_data, ano_sel)
 
-            # CRIAÇÃO DAS ABAS
-            aba_form, aba_graf = st.tabs(["📝 Formulário de Preenchimento", "📊 Gráficos & Desempenho"])
+    except Exception as e:
+        st.error(f"❌ Erro ao renderizar a página do i-Cidade: {e}")
+        st.exception(e)
 
-            with aba_form:
-                st.subheader("Quesitos do i-Cidade")
-                # --- INSIRA AQUI O CÓDIGO DA SUA LISTA DE PERGUNTAS/FORMULÁRIO ---
-                st.info("Preencha os campos para calcular o índice do i-Cidade.")
-                
-                # Exemplo de chamada utilizando a função otimizada de renderização/salvamento:
-                # renderizar_questao("1.0", res_data)
-                # renderizar_questao("1.3", res_data)
 
-            with aba_graf:
-                st.subheader("Resultados e Comparativos")
-                # Chama a função de gráficos passando os dados carregados na sidebar
-                if 'analyze_performance' in globals():
-                    analyze_performance(res_data, ano_sel)
-
-        except Exception as e:
-            st.error(f"❌ Erro ao renderizar a página do i-Cidade: {e}")
-            st.exception(e)
-
-    # Atalhos para garantir que o main.py encontre a função com qualquer um desses nomes
-    mostrar_formulario_icidade = mostrar_formulario_cidade
-    mostrar_formulario_igov = mostrar_formulario_cidade
+# Atalhos para garantir que o main.py encontre a função com qualquer um desses nomes
+mostrar_formulario_icidade = mostrar_formulario_cidade
+mostrar_formulario_igov = mostrar_formulario_cidade
     
     # =============================================================================
     # QUESITO 1.0 • COORDENADORIA MUNICIPAL DE DEFESA CIVIL (COMPDEC)
