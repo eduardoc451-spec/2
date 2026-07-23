@@ -140,12 +140,23 @@ def modal_aviso_link(qid, links_encontrados):
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
         st.rerun()
 
+import streamlit as st
+import json
+import logging
+import re
+from datetime import datetime, date
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+# Importe sua função de conexão existente (get_connection) ou ajuste se necessário
+# from database import get_connection
+
 # =============================================================================
-# 1. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL)
+# 1. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL - ISOLADO PARA IGOV)
 # =============================================================================
 
 def init_db():
-    """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir."""
+    """Cria a estrutura de tabelas no PostgreSQL/Neon se não existir, com isolamento por módulo."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -153,31 +164,32 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS respostas (
                         id VARCHAR(50) NOT NULL,
                         ano INTEGER NOT NULL,
+                        modulo VARCHAR(50) NOT NULL DEFAULT 'igov',
                         valor TEXT,
                         pontos DOUBLE PRECISION DEFAULT 0,
                         link TEXT,
                         comentarios JSONB DEFAULT '[]'::jsonb,
                         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (id, ano)
+                        PRIMARY KEY (id, ano, modulo)
                     );
                 """)
             conn.commit()
     except Exception as e:
-        logging.error(f"Erro ao inicializar o banco: {e}")
-        raise e
+        logging.error(f"Erro ao inicializar o banco iGov: {e}")
 
 
 @st.cache_data(ttl=60)
 def load_respostas(ano: int) -> dict:
-    """Busca do banco de dados todas as respostas relativas a um ano específico."""
+    """Busca do banco apenas as respostas relativas ao iGov para o ano selecionado."""
     respostas = {}
     try:
+        ano_int = int(ano)
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
-                    (ano,)
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s AND modulo = 'igov'",
+                    (ano_int,)
                 )
                 rows = cursor.fetchall()
                 for row in rows:
@@ -195,20 +207,22 @@ def load_respostas(ano: int) -> dict:
                         "comentarios": comentarios
                     }
     except Exception as e:
-        logging.error(f"Erro ao carregar respostas do ano {ano}: {e}")
+        logging.error(f"Erro ao carregar respostas iGov do ano {ano}: {e}")
     return respostas
 
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Salva/Atualiza a resposta no Neon e atualiza a interface."""
-    ano_sel = st.session_state.get("ano_referencia_global")
+    """Salva/Atualiza a resposta no Neon identificando como iGov."""
+    ano_sel = st.session_state.get("ano_referencia_igov") or st.session_state.get("ano_referencia_global")
     if not ano_sel:
         st.warning("Nenhum ano de referência selecionado!")
         return
 
-    # Se comentários não forem fornecidos, busca do banco/cache para não sobrescrever com vazio
+    ano_int = int(ano_sel)
+
+    # Se comentários não forem fornecidos, busca do banco/cache para não sobrescrever
     if comentarios is None:
-        dados_atuais = load_respostas(ano_sel)
+        dados_atuais = load_respostas(ano_int)
         comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
 
     comentarios_json = json.dumps(comentarios, ensure_ascii=False)
@@ -218,28 +232,28 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
-                    ON CONFLICT (id, ano) DO UPDATE SET
+                    INSERT INTO respostas (id, ano, modulo, valor, pontos, link, comentarios, atualizado_em)
+                    VALUES (%s, %s, 'igov', %s, %s, %s, %s::jsonb, %s)
+                    ON CONFLICT (id, ano, modulo) DO UPDATE SET
                         valor = EXCLUDED.valor,
                         pontos = EXCLUDED.pontos,
                         link = EXCLUDED.link,
                         comentarios = EXCLUDED.comentarios,
                         atualizado_em = EXCLUDED.atualizado_em;
-                """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
+                """, (qid, ano_int, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
             conn.commit()
         
-        # Limpa o cache para que `load_respostas` e `get_all_years_data` tragam dados novos
         st.cache_data.clear()
     except Exception as e:
-        st.error(f"Erro ao salvar {qid}: {e}")
+        st.error(f"Erro ao salvar iGov {qid}: {e}")
+
 
 # =============================================================================
-# 2. COMPONENTE OTIMIZADO PARA RENDERIZAR E SALVAR QUESTÕES
+# 2. COMPONENTE PARA RENDERIZAR E SALVAR QUESTÕES
 # =============================================================================
 
 def renderizar_questao(qid, res_data):
-    """Renderiza a questão de forma performática com botão manual de salvamento."""
+    """Renderiza a questão com botão de salvamento manual."""
     dados_q = res_data.get(qid, {})
     
     val_existente = dados_q.get("valor", "")
@@ -294,7 +308,7 @@ def renderizar_questao(qid, res_data):
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
     """Gera o diálogo interno avançado com histórico e status."""
-    ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
+    ano_sel = st.session_state.get("ano_referencia_igov", date.today().year)
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
     
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
@@ -327,7 +341,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             key=key_radio
         )
         
-        # CORREÇÃO DO LOOP: Verifica se o valor mudou em relação ao estado gravado no widget (interação do usuário)
+        # Mudança de Status
         if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
@@ -384,7 +398,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                         )
                         st.rerun()
         
-        # CORREÇÃO DA LIMPEZA: Aplica a limpeza antes de renderizar a caixa de texto
+        # Limpeza do campo de entrada
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
@@ -411,17 +425,17 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 st.rerun()
 
 # =============================================================================
-# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO
+# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (ISOLADO PARA IGOV)
 # =============================================================================
 
 @st.cache_data(ttl=60)
 def get_all_years_data():
-    """Retorna todos os registros agrupados por ano."""
+    """Retorna todos os registros do iGov agrupados por ano."""
     all_data = {}
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC")
+                cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas WHERE modulo = 'igov' ORDER BY ano DESC")
                 rows = cursor.fetchall()
                 for row in rows:
                     qid, ano = row["id"], row["ano"]
@@ -441,35 +455,23 @@ def get_all_years_data():
                         "comentarios": comentarios
                     }
     except Exception as e:
-        logging.error(f"Erro ao buscar dados históricos: {e}")
+        logging.error(f"Erro ao buscar dados históricos do iGov: {e}")
     return all_data
 
 
 def analyze_performance(res_data):
-    """Mapeia os pontos fortes e fragilidades do ano atual."""
+    """Mapeia os pontos fortes e fragilidades do ano atual no iGov usando o dicionário TETOS_VALIDOS."""
     pontos_fortes = []
     criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
     criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
 
-def analyze_performance(res_data):
-    """Mapeia os pontos fortes e fragilidades do ano atual."""
-    pontos_fortes = []
-    criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
-    criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
-
-    pontuacoes_referencia = {
-        "1.0": {"max": 40}, "1.3": {"max": 5}, "1.4": {"max": 50},
-        "2.0": {"max": 20}, "2.1": {"max": 30}, "2.2": {"max": 10},
-        "3.0": {"max": 10}, "3.1": {"max": 10}, "4.2": {"max": 10},
-        "5.0": {"max": 30}, "5.1.1": {"max": 20}, "5.2": {"max": 10},
-        "6.0": {"max": 30}, "7.0": {"max": 30}, "7.1": {"max": 10},
-        "7.2": {"max": 80}, "7.3": {"max": 10}, "7.4": {"max": 10},
-        "7.5": {"max": 10}, "7.6": {"max": 10}, "8.0": {"max": 30},
-        "8.1.1.1": {"max": 20}, "8.2": {"max": 10}, "9.0": {"max": 30},
-        "10.0": {"max": 0}, "11.1": {"max": 20}, "11.1.1": {"max": 10},
-        "11.2": {"max": 10}, "12.1": {"max": 20}, "12.1.3": {"max": 10},
-        "14.0": {"max": 30}, "15.0": {"max": 30}, "16.0": {"max": 30},
-        "C1.1": {"max": 0}
+    # Novo dicionário de tetos máximos por quesito
+    TETOS_VALIDOS = {
+        "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
+        "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
+        "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
+        "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
+        "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
     }
 
     def classificar_relevancia(impacto):
@@ -482,11 +484,12 @@ def analyze_performance(res_data):
             return "Baixa"
 
     for qid, info in res_data.items():
-        if qid.startswith("COM_") or qid not in pontuacoes_referencia:
+        # Ignora campos de comentários ou quesitos fora do mapeamento
+        if qid.startswith("COM_") or qid not in TETOS_VALIDOS:
             continue
 
-        pontos_atuais = info.get("pontos", 0)
-        max_pontos = pontuacoes_referencia[qid]["max"]
+        pontos_atuais = float(info.get("pontos", 0.0))
+        max_pontos = TETOS_VALIDOS[qid]
 
         if pontos_atuais == max_pontos:
             pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
@@ -503,40 +506,14 @@ def analyze_performance(res_data):
                     (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
                 )
 
+    # Ordenação dos resultados por pontuação/impacto
     pontos_fortes.sort(key=lambda x: x[1], reverse=True)
     for rel in ["Alta", "Média", "Baixa"]:
         criticos_zero[rel].sort(key=lambda x: x[4], reverse=True)
         criticos_negativos[rel].sort(key=lambda x: x[4], reverse=True)
 
     return pontos_fortes, criticos_zero, criticos_negativos
-
-
-def analyze_recurrence(ano_atual, res_data_atual):
-    """Compara as perdas de pontos do ano selecionado com anos anteriores (reincidências)."""
-    reincidencias = []
-    all_data = get_all_years_data()
-
-      # Seleciona os anos anteriores ordenados do mais recente para o mais antigo
-    anos_anteriores = sorted([a for a in all_data.keys() if a < ano_atual], reverse=True)
-
-    for qid_atual, info_atual in res_data_atual.items():
-        if qid_atual.startswith("COM_") or qid_atual not in qids_pontuaveis:
-            continue
-            
-        pontos_atual = info_atual.get("pontos", 0)
-        
-        # Considera que houve perda/problema se os pontos forem <= 0
-        if pontos_atual <= 0:
-            for ano_anterior in anos_anteriores:
-                if qid_atual in all_data[ano_anterior]:
-                    pontos_anterior = all_data[ano_anterior][qid_atual].get("pontos", 0)
-                    if pontos_anterior <= 0:
-                        reincidencias.append((qid_atual, ano_anterior, pontos_anterior, pontos_atual))
-                        break
-
-    return reincidencias
-
-import os
+    
 from io import BytesIO
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
