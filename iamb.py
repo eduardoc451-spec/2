@@ -2235,3 +2235,110 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 2.0 • PARTICIPAÇÃO EM PROGRAMA DE EDUCAÇÃO AMBIENTAL (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_prog_2_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 2.0 - Programa de Educação Ambiental", expanded=True):
+                st.subheader("2.0 • Programa de Educação Ambiental")
+                st.write("**O Município participa de algum Programa de Educação Ambiental?**")
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 2.0' para registrar.*")
+
+                opc20 = ["Selecione...", "Sim – 10", "Não – 00"]
+                
+                # Recupera os dados salvos no banco ou cria valor padrão
+                d20 = res_data.get("2.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_20 = d20.get("valor", "Selecione...")
+                if v_salvo_20 not in opc20:
+                    v_salvo_20 = "Selecione..."
+                
+                evidencia_20_salva = d20.get("link", "")
+
+                # Chaves fixas para componentes Streamlit
+                chave_radio_20 = f"r_20_select_{ano_sel}"
+                chave_link_20 = f"l_20_txt_area_{ano_sel}"
+                chave_coment_20 = f"coment_2.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    idx20 = opc20.index(v_salvo_20) if v_salvo_20 in opc20 else 0
+                    val_radio_20 = st.radio(
+                        "Selecione uma opção (2.0):",
+                        options=opc20,
+                        index=idx20,
+                        key=chave_radio_20
+                    )
+
+                with col2:
+                    link_20 = st.text_area(
+                        "Link/Evidência (2.0):",
+                        value=evidencia_20_salva,
+                        key=chave_link_20,
+                        placeholder="Insira o link oficial contendo o plano, adesão ou portaria do Programa...",
+                        height=110
+                    )
+                    placeholder_links_20 = st.empty()
+                    links_20_visuais = re.findall(REGEX_PURE_URL, link_20 or "")
+                    if links_20_visuais:
+                        placeholder_links_20.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_20_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("2.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 2.0", key=f"btn_salvar_2_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_20, v_salvo_20)
+                    lnk_val = link_20.strip()
+                    pts_calculados = 10.0 if "Sim" in str(val_salvar) else 0.0
+                    
+                    # Captura o comentário atual da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_20, d20.get("comentario", ""))
+
+                    # Gravação no banco de dados Neon
+                    save_resp(
+                        qid="2.0",
+                        valor=val_salvar,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["2.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_20_salva or "")]
+
+                    if lnk_val != evidencia_20_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_2_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 2.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual
+                pts_atuais_20 = d20.get("pontos", 0.0)
+                v_val_atual = d20.get("valor", "")
+                cor_txt_20 = "#28a745" if "Sim" in str(v_val_atual) else ("#dc3545" if "Não" in str(v_val_atual) else "#6c757d")
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_20}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 2.0: +{pts_atuais_20:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 2.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_2_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
