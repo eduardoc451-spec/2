@@ -6286,13 +6286,13 @@ def mostrar_formulario_igov():
         st.session_state[f"gatilho_modal_8_4_{ano_sel}"] = False
 
     # =============================================================================
-    # QUESITO 9.0 • SERVIÇOS ONLINE (PADRONIZADO E CORRIGIDO - 4 ESPAÇOS)
+    # QUESITO 9.0 • SERVIÇOS ONLINE (SALVAMENTO MANUAL - 4 ESPAÇOS)
     # =============================================================================
     with st.container(key=f"container_bloco_serv_9_0_final_{ano_sel}", border=True):
         with st.expander(f"📌 Quesito 9.0 - Serviços Oferecidos de Forma Online", expanded=True):
             st.subheader("9.0 • Serviços Online")
             st.write("**A Prefeitura ofereceu serviços de forma online?**")
-            st.caption("ℹ *Exemplos: Emissão de certidões, alvarás, portal do contribuinte, etc.*")
+            st.caption("ℹ *Exemplos: Emissão de certidões, alvarás, portal do contribuinte, etc. Selecione a opção, insira o link de evidência e clique em 'Salvar Quesito 9.0'.*")
 
             opc90 = {
                 "Selecione...": 0.0,
@@ -6301,11 +6301,9 @@ def mostrar_formulario_igov():
             }
             lista90 = list(opc90.keys())
 
-            d90 = res_data.get("9.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-            if d90 is None:
-                d90 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
+            d90 = res_data.get("9.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
 
-            # CORREÇÃO ESSENCIAL: Converte valores puros ou parciais vindos do banco para o padrão visual
+            # Normalização do valor vindo do banco
             v_salvo_90 = d90.get("valor", "Selecione...")
             if v_salvo_90 == "Sim":
                 v_salvo_90 = "Sim – 40"
@@ -6317,20 +6315,7 @@ def mostrar_formulario_igov():
             evidencia_90_salva = d90.get("link", "")
             chave_radio_90 = f"r_90_select_{ano_sel}"
             chave_link_90 = f"l_90_txt_area_{ano_sel}"
-
-            def cb_processa_e_salva_90():
-                lnk_val = st.session_state.get(chave_link_90, evidencia_90_salva).strip()
-                val_salvar = st.session_state.get(chave_radio_90, v_salvo_90)
-                pts_90 = float(opc90.get(val_salvar, 0.0))
-
-                save_resp("9.0", val_salvar, pts_90, lnk_val)
-                res_data["9.0"] = {"valor": val_salvar, "pontos": pts_90, "link": lnk_val}
-
-                links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk_val or "")]
-                links_antigos = [u[0] for u in re.findall(regex_pure_url, evidencia_90_salva or "")]
-                if lnk_val != evidencia_90_salva and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_9_0_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
+            chave_coment_90 = f"coment_9.0_{ano_sel}"
 
             col1, col2 = st.columns([1, 1])
             with col1:
@@ -6339,8 +6324,7 @@ def mostrar_formulario_igov():
                     "Selecione uma opção:",
                     options=lista90,
                     index=idx90,
-                    key=chave_radio_90,
-                    on_change=cb_processa_e_salva_90
+                    key=chave_radio_90
                 )
 
             with col2:
@@ -6348,23 +6332,71 @@ def mostrar_formulario_igov():
                     "Link/Evidência (9.0):",
                     value=evidencia_90_salva,
                     key=chave_link_90,
-                    on_change=cb_processa_e_salva_90,
                     placeholder="Insira o link principal que comprova o portal de serviços...",
                     height=110
                 )
                 placeholder_links_90 = st.empty()
-                links_90_visuais = [u[0] for u in re.findall(regex_pure_url, link_90 or "")]
+                raw_links_visuais = re.findall(regex_pure_url, link_90 or "")
+                links_90_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
                 if links_90_visuais:
-                    placeholder_links_90.markdown(f"**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_90_visuais]))
+                    placeholder_links_90.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_90_visuais]))
 
-            # Lógica reativa que lê direto do st.session_state
+            # Renderiza bloco de comentários
+            bloco_comentarios("9.0", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da pontuação na tela
             v_atual_90 = st.session_state.get(chave_radio_90, v_salvo_90)
             pts_atuais_90 = float(opc90.get(v_atual_90, 0.0))
 
             cor_txt_90 = "#28a745" if pts_atuais_90 == 40.0 else "#6c757d"
-            st.markdown(f"<span style='color:{cor_txt_90}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 9.0: +{pts_atuais_90:.1f} pontos</span>", unsafe_allow_html=True)
-            bloco_comentarios("9.0", res_data, ano_sel)
+            st.markdown(
+                f"<span style='color:{cor_txt_90}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 9.0: +{pts_atuais_90:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 9.0", key=f"btn_salvar_9_0_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_90, v_salvo_90)
+                pts_90 = float(opc90.get(val_salvar, 0.0))
+                lnk_val = link_90.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_90, d90.get("comentario", ""))
+
+                # Gravação no Banco de Dados
+                save_resp(
+                    qid="9.0",
+                    valor=val_salvar,
+                    pontos=pts_90,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["9.0"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_90,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links
+                raw_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in raw_atuais]
+
+                raw_antigos = re.findall(regex_pure_url, evidencia_90_salva or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+
+                if lnk_val != evidencia_90_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_9_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 9.0 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 9.0
     if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
         if "modal_aviso_link" in globals():
             modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
