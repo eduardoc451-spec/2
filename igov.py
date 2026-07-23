@@ -7505,3 +7505,111 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 11.1 • PÁGINA ELETRÔNICA DE CONTATO DO ENCARREGADO (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_dpo_11_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 11.1 - Página Eletrônica do Encarregado", expanded=True):
+            st.subheader("11.1 • Canal de Contato e Identidade do DPO")
+            st.write("**Informe a página eletrônica (link no site da prefeitura), que contenha a identidade e as informações de contato do encarregado:**")
+            st.markdown("<small style='color:gray;'>Se não estiver disponível na internet, inserir no campo de resposta o texto <b>XYZ</b></small>", unsafe_allow_html=True)
+            st.caption("ℹ *Insira o link ou texto de contingência, adicione evidências se necessário e clique em 'Salvar Quesito 11.1'.*")
+
+            d111 = res_data.get("11.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_111 = d111.get("valor", "")
+            evidencia_111_salva = d111.get("link", "")
+
+            chave_txt_111 = f"t_111_txt_input_{ano_sel}"
+            chave_link_111 = f"l_111_txt_area_{ano_sel}"
+            chave_coment_111 = f"coment_11.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                link_input_111 = st.text_input(
+                    "Link ou texto de contingência (11.1):",
+                    value=v_salvo_111,
+                    key=chave_txt_111,
+                    placeholder="Cole a URL da página do encarregado ou digite XYZ"
+                )
+                placeholder_input_links_111 = st.empty()
+                raw_input_visuais = re.findall(regex_pure_url, link_input_111 or "")
+                links_input_111_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_input_visuais]
+                if links_input_111_visuais:
+                    placeholder_input_links_111.markdown("**🔗 Link ativo detectado:** " + " | ".join([f"[{u}]({u})" for u in links_input_111_visuais]))
+
+            with col2:
+                link_111 = st.text_area(
+                    "Link/Evidência Adicional (11.1):",
+                    value=evidencia_111_salva,
+                    key=chave_link_111,
+                    placeholder="Insira links de comprovação adicionais se necessário...",
+                    height=110
+                )
+                placeholder_links_111 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_111 or "")
+                links_111_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_111_visuais:
+                    placeholder_links_111.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_111_visuais]))
+
+            # Renderiza bloco de comentários
+            bloco_comentarios("11.1", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da indicação na tela
+            v_atual_111 = st.session_state.get(chave_txt_111, v_salvo_111)
+            cor_txt_111 = "#28a745" if len(v_atual_111.strip()) > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_txt_111}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 11.1: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 11.1", key=f"btn_salvar_11_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_txt_111, v_salvo_111).strip()
+                lnk_val = link_111.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_111, d111.get("comentario", ""))
+
+                # Gravação no Banco de Dados (0.0 pontos)
+                save_resp(
+                    qid="11.1",
+                    valor=val_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["11.1"] = {
+                    "valor": val_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links (verifica tanto a evidência quanto o input)
+                raw_atuais_lnk = re.findall(regex_pure_url, lnk_val or "")
+                raw_atuais_val = re.findall(regex_pure_url, val_salvar or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in (raw_atuais_lnk + raw_atuais_val)]
+
+                raw_antigos_lnk = re.findall(regex_pure_url, evidencia_111_salva or "")
+                raw_antigos_val = re.findall(regex_pure_url, v_salvo_111 or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in (raw_antigos_lnk + raw_antigos_val)]
+
+                if (lnk_val != evidencia_111_salva or val_salvar != v_salvo_111) and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_11_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário do Quesito 11.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 11.1
+    if st.session_state.get(f"gatilho_modal_11_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("11.1", st.session_state.get(f"links_pendentes_11_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = False
