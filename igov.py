@@ -665,6 +665,34 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements.append(tabela_sumario)
     elements.append(PageBreak())
 
+     -------------------------------------------------------------------------
+    # FOLHA 2: SUMÁRIO
+    # -------------------------------------------------------------------------
+    elements.append(Paragraph("<b>SUMÁRIO</b>", styles["h1"]))
+    elements.append(Spacer(1, 30))
+
+    style_item_esquerda = ParagraphStyle('ItemEsq', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#2c3e50"))
+    style_pag_direita = ParagraphStyle('PagDir', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1b4f72"), alignment=2)
+
+    dados_sumario = [
+        [Paragraph("1. Resumo Executivo (Análise Comparativa)", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
+        [Paragraph("2. Análise de Desempenho por Quesito", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
+        [Paragraph("3. Análise de Impacto e Penalidades", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
+        [Paragraph("4. Diagnóstico de Reincidências", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
+        [Paragraph("5. Alinhamento com a Agenda 2030 (ODS)", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
+        [Paragraph("6. Série Histórica do I-cidade", style_item_esquerda), Paragraph("Pág. 5", style_pag_direita)],
+    ]
+    
+    tabela_sumario = Table(dados_sumario, colWidths=[400, 90])
+    tabela_sumario.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#bdc3c7"), 1, (2, 4)), 
+    ]))
+    elements.append(tabela_sumario)
+    elements.append(PageBreak())
+
     # -------------------------------------------------------------------------
     # 1. RESUMO EXECUTIVO (ANÁLISE COMPARATIVA DE EXERCÍCIOS)
     # -------------------------------------------------------------------------
@@ -683,7 +711,10 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
         elif 750.0 <= pts <= 899.9:  return "B+"
         else:                        return "A"
 
-    if all_data is None:
+    all_data = {}
+    try:
+        all_data = get_all_years_data()
+    except Exception:
         all_data = {}
 
     dados_ano_anterior = all_data.get(ano_ant, {})
@@ -739,17 +770,17 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
 
     style_analise = ParagraphStyle('Analise', parent=styles['Normal'], fontSize=10, leading=14)
     if variacao_pontos > 0:
-        texto_analise = f"<b>Análise de Tendência:</b> O município registrou uma evolução de desempenho com incremento de <b>{texto_percentual}</b> na sua pontuação global do i-Gov TI comparado ao exercício de {ano_ant}."
+        texto_analise = f"<b>Análise de Tendência:</b> O município registrou uma evolução de desempenho com incremento de <b>{texto_percentual}</b> na sua pontuação global comparado ao exercício de {ano_ant}."
     elif variacao_pontos < 0:
-        texto_analise = f"<b>Análise de Tendência:</b> <font color='#dc3545'><b>Alerta de Retrocesso:</b></font> Foi identificada uma redução de <b>{texto_percentual}</b> na eficiência dos indicadores de TI em relação a {ano_ant}."
+        texto_analise = f"<b>Análise de Tendência:</b> <font color='#dc3545'><b>Alerta de Retrocesso:</b></font> Foi identificada uma redução de <b>{texto_percentual}</b> na eficiência dos indicadores em relação a {ano_ant}."
     else:
-        texto_analise = f"<b>Análise de Tendência:</b> O município apresentou estagnação absoluta (0.00%) no seu índice de governança em TI."
+        texto_analise = f"<b>Análise de Tendência:</b> O município apresentou estagnação absoluta (0.00%) no seu índice geral de conformidade."
 
     elements.append(Paragraph(texto_analise, style_analise))
     elements.append(Spacer(1, 15))
 
     # -------------------------------------------------------------------------
-    # 2. ANÁLISE DE DESEMPENHO POR QUESITO (I-GOV TI)
+    # 2. ANÁLISE DE DESEMPENHO POR QUESITO
     # -------------------------------------------------------------------------
     elements.append(Paragraph("<b>2. ANÁLISE DE DESEMPENHO POR QUESITO</b>", styles["h2"]))
     elements.append(Spacer(1, 6))
@@ -805,8 +836,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements.append(Paragraph("<b>3. ANÁLISE DE IMPACTO E PENALIDADES (EFICIÊNCIA PREVENTIVA)</b>", styles["h2"]))
     elements.append(Spacer(1, 6))
 
-    # Penalidades aplicáveis em TI / Governança
-    PENALIDADES_MAX = {"1.4.2": -20.0, "2.3": -20.0, "3.6": -20.0, "6.3": -10.0, "7.3": -5.0}
+    PENALIDADES_MAX = {"4.2": -50.0, "5.1.1": -100.0, "5.2": -50.0, "6.0": -50.0, "10": -100.0, "10.0": -100.0, "11.1": -20.0, "11.2": -20.0, "11.2.1": -20.0, "12.1.3": -50.0, "14.0": -50.0}
 
     lista_penalidades = []
     for qid, pen_max in PENALIDADES_MAX.items():
@@ -848,7 +878,6 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
         elements.append(tabela_reinc)
     else: elements.append(Paragraph("<font color='#28a745'><b>Nenhuma reincidência ativa detectada.</b></font>", styles["Normal"]))
     elements.append(Spacer(1, 15))
-
     # -------------------------------------------------------------------------
     # 5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU - TECNOLOGIA E INOVAÇÃO)
     # -------------------------------------------------------------------------
