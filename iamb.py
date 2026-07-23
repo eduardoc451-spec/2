@@ -6025,3 +6025,133 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("7.9", st.session_state.get(f"links_pendentes_7_9_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_9_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 7.10 • ÚLTIMA REVISÃO DO PLANO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_10_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.10 - Vigência e Atualização Tempestiva do Plano", expanded=True):
+                st.subheader("7.10 • Última Revisão do Plano")
+                st.write("**Qual a data da última revisão do Plano Municipal ou Regional de Saneamento Básico?**")
+                st.caption("ℹ *Se não houve revisão do plano de saneamento básico, informe a data de início de vigência original dele.*")
+
+                # Recupera os dados salvos do banco
+                d710 = res_data.get("7.10") or {"valor": "01/01/2015", "pontos": 0.0, "link": "", "comentario": ""}
+
+                # Tratamento de conversão da data salva (DD/MM/AAAA)
+                val_data_salva = d710.get("valor", "01/01/2015")
+                try:
+                    dia_salvo, mes_salvo, ano_salvo = map(int, val_data_salva.split("/"))
+                except Exception:
+                    dia_salvo, mes_salvo, ano_salvo = 1, 1, 2015
+
+                evidencia_710_salva = d710.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_d_710 = f"q710_d_num_{ano_sel}"
+                chave_m_710 = f"q710_m_num_{ano_sel}"
+                chave_a_710 = f"q710_a_num_{ano_sel}"
+                chave_link_710 = f"l_710_txt_area_{ano_sel}"
+                chave_coment_710 = f"coment_7.10_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    c_dia, c_mes, c_ano = st.columns(3)
+                    with c_dia:
+                        st.number_input("Dia", min_value=1, max_value=31, value=dia_salvo, key=chave_d_710)
+                    with c_mes:
+                        st.number_input("Mês", min_value=1, max_value=12, value=mes_salvo, key=chave_m_710)
+                    with c_ano:
+                        st.number_input("Ano", min_value=1900, max_value=2100, value=ano_salvo, key=chave_a_710)
+
+                    # Leitura atual dos campos para exibição do status na tela
+                    cur_d = st.session_state.get(chave_d_710, dia_salvo)
+                    cur_m = st.session_state.get(chave_m_710, mes_salvo)
+                    cur_a = st.session_state.get(chave_a_710, ano_salvo)
+
+                    if cur_a < 2014 or (cur_a == 2014 and cur_m < 12) or (cur_a == 2014 and cur_m == 12 and cur_d <= 31):
+                        fb_pts_710 = -30.0
+                    else:
+                        fb_pts_710 = 0.0
+
+                    st.metric(label="Penalidade por Defasagem", value=f"{fb_pts_710:.1f} pts")
+
+                with col2:
+                    link_710 = st.text_area(
+                        "Link/Evidência (7.10):",
+                        value=evidencia_710_salva,
+                        key=chave_link_710,
+                        placeholder="Página do Diário Oficial que publicou o decreto de revisão ou lei sancionada...",
+                        height=130
+                    )
+                    placeholder_links_710 = st.empty()
+                    links_710_visuais = re.findall(REGEX_PURE_URL, link_710 or "")
+                    if links_710_visuais:
+                        placeholder_links_710.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_710_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.10
+                bloco_comentarios("7.10", res_data, ano_sel)
+
+                # Feedback visual de pontuação baseado na gravação salva
+                pts_salvos_710 = float(d710.get("pontos", 0.0))
+                cor_txt_710 = "#28a745" if pts_salvos_710 == 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_710}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.10: {pts_salvos_710:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.10", key=f"btn_salvar_7_10_{ano_sel}", type="primary"):
+                    lnk_val = link_710.strip()
+                    d_v = st.session_state.get(chave_d_710, dia_salvo)
+                    m_v = st.session_state.get(chave_m_710, mes_salvo)
+                    a_v = st.session_state.get(chave_a_710, ano_salvo)
+
+                    # Regra de negócio para aplicação da penalidade
+                    if a_v < 2014 or (a_v == 2014 and m_v < 12) or (a_v == 2014 and m_v == 12 and d_v <= 31):
+                        pts_calculados = -30.0
+                    else:
+                        pts_calculados = 0.0
+
+                    val_salvar = f"{d_v:02d}/{m_v:02d}/{a_v}"
+                    comentario_para_salvar = st.session_state.get(chave_coment_710, d710.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.10",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["7.10"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_710_salva or "")]
+
+                    if lnk_val != evidencia_710_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_10_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_10_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.10 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.10 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_10_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.10", st.session_state.get(f"links_pendentes_7_10_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_10_{ano_sel}"] = False
+
