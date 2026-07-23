@@ -11855,3 +11855,104 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.1.1", st.session_state.get(f"links_pendentes_15_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_1_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 15.1.2 • REGULAÇÃO DE ESGOTAMENTO SANITÁRIO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q15_1_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 15.1.2 - Regulação de Esgotamento", expanded=True):
+                st.subheader("15.1.2 • Entidade de Esgotamento Sanitário")
+                st.write("**Informe a entidade responsável pela regulação e fiscalização do esgotamento sanitário do município:**")
+
+                # Recuperação dos dados salvos no banco
+                d1512 = res_data.get("15.1.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_1512 = d1512.get("valor", "")
+                pts_salvos_1512 = float(d1512.get("pontos", 0.0))
+                evidencia_1512_salva = d1512.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_texto_1512 = f"t1512_in_{ano_sel}"
+                chave_link_1512 = f"l1512_in_{ano_sel}"
+                chave_coment_1512 = f"coment_15.1.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    txt_entidade_1512 = st.text_area(
+                        "Entidade responsável (15.1.2):",
+                        value=v_salvo_1512,
+                        key=chave_texto_1512,
+                        placeholder="Nome ou sigla da entidade responsável (ex: ARSESP, ARSAE, Agência Municipal...)",
+                        height=125
+                    )
+
+                    # Exibição da métrica de impacto (fixo em 0.0 pts por ser informativo)
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_1512:.1f} pts")
+
+                with col2:
+                    lk1512 = st.text_area(
+                        "Link/Evidência (15.1.2):",
+                        value=evidencia_1512_salva,
+                        key=chave_link_1512,
+                        placeholder="Inserir link da lei de criação, convênio ou contrato de regulação de esgotamento...",
+                        height=125
+                    )
+                    placeholder_links_1512 = st.empty()
+                    links_1512_visuais = re.findall(REGEX_PURE_URL, lk1512 or "")
+                    if links_1512_visuais:
+                        placeholder_links_1512.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1512_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 15.1.2
+                bloco_comentarios("15.1.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>📊 Impacto 15.1.2: {pts_salvos_1512:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 15.1.2", key=f"btn_salvar_15_1_2_{ano_sel}", type="primary"):
+                    val_entidade_1512 = txt_entidade_1512.strip()
+                    lnk_val = lk1512.strip()
+                    pts_calculados_1512 = 0.0
+                    comentario_para_salvar = st.session_state.get(chave_coment_1512, d1512.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="15.1.2",
+                        valor=val_entidade_1512,
+                        pontos=float(pts_calculados_1512),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do dicionário em memória
+                    res_data["15.1.2"] = {
+                        "valor": val_entidade_1512,
+                        "pontos": float(pts_calculados_1512),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1512_salva or "")]
+
+                    if lnk_val != evidencia_1512_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_1_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 15.1.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 15.1.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_15_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.1.2", st.session_state.get(f"links_pendentes_15_1_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_1_2_{ano_sel}"] = False
