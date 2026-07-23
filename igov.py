@@ -7613,3 +7613,106 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("11.1", st.session_state.get(f"links_pendentes_11_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 12.0 • CONSIDERAÇÕES FINAIS E FEEDBACK (SALVAMENTO MANUAL - 4 ESPAÇOS)
+    # =============================================================================
+    with st.container(key=f"container_bloco_feedback_12_0_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 12.0 - Considerações Finais e Feedback", expanded=True):
+            st.subheader("12.0 • Considerações Finais")
+            st.write("**Gostaria de registrar suas impressões, comentários e sugestões a respeito do presente questionário?**")
+            st.caption("ℹ *Insira seu feedback, adicione evidências se necessário e clique em 'Salvar Quesito 12.0'.*")
+
+            d120 = res_data.get("12.0") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_120 = d120.get("valor", "")
+            evidencia_120_salva = d120.get("link", "")
+
+            chave_txt_120 = f"t_120_txt_area_{ano_sel}"
+            chave_link_120 = f"l_120_txt_area_{ano_sel}"
+            chave_coment_120 = f"coment_12.0_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                texto_input_120 = st.text_area(
+                    "Suas impressões / comentários:",
+                    value=v_salvo_120,
+                    key=chave_txt_120,
+                    placeholder="Escreva aqui suas críticas, elogios, dificuldades ou sugestões de melhoria para os próximos anos...",
+                    height=150
+                )
+
+            with col2:
+                link_120 = st.text_area(
+                    "Link/Evidência Complementar (Opcional):",
+                    value=evidencia_120_salva,
+                    key=chave_link_120,
+                    placeholder="Caso queira anexar uma URL com relatórios de melhoria ou documentos de feedback...",
+                    height=150
+                )
+                placeholder_links_120 = st.empty()
+                raw_links_visuais = re.findall(regex_pure_url, link_120 or "")
+                links_120_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_visuais]
+                if links_120_visuais:
+                    placeholder_links_120.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_120_visuais]))
+
+            # Renderiza bloco de comentários da avaliação
+            bloco_comentarios("12.0", res_data, ano_sel)
+
+            # Lógica reativa para pré-visualização da indicação na tela
+            v_atual_120 = st.session_state.get(chave_txt_120, v_salvo_120)
+            cor_txt_120 = "#28a745" if len(v_atual_120.strip()) > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_txt_120}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 12.0: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 12.0", key=f"btn_salvar_12_0_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_txt_120, v_salvo_120).strip()
+                lnk_val = link_120.strip()
+                comentario_para_salvar = st.session_state.get(chave_coment_120, d120.get("comentario", ""))
+
+                # Gravação no Banco de Dados (0.0 pontos)
+                save_resp(
+                    qid="12.0",
+                    valor=val_salvar,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # Atualização do dicionário local
+                res_data["12.0"] = {
+                    "valor": val_salvar,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Tratamento do Modal de Validação de Links (verifica a evidência e o texto principal)
+                raw_atuais_lnk = re.findall(regex_pure_url, lnk_val or "")
+                raw_atuais_val = re.findall(regex_pure_url, val_salvar or "")
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in (raw_atuais_lnk + raw_atuais_val)]
+
+                raw_antigos_lnk = re.findall(regex_pure_url, evidencia_120_salva or "")
+                raw_antigos_val = re.findall(regex_pure_url, v_salvo_120 or "")
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in (raw_antigos_lnk + raw_antigos_val)]
+
+                if (lnk_val != evidencia_120_salva or val_salvar != v_salvo_120) and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_12_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Feedback e comentário do Quesito 12.0 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    # GATILHO DO MODAL 12.0
+    if st.session_state.get(f"gatilho_modal_12_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("12.0", st.session_state.get(f"links_pendentes_12_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = False
