@@ -3853,3 +3853,103 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("6.2", st.session_state.get(f"links_pendentes_6_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_6_2_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 7.0 • INSTITUIÇÃO DO PLANO DE SANEAMENTO BÁSICO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.0 - Plano Municipal/Regional de Saneamento", expanded=True):
+                st.subheader("7.0 • Plano de Saneamento Básico")
+                st.write("**O município possui seu Plano Municipal ou Regional de Saneamento Básico instituído?**")
+                st.caption("ℹ *O plano instituído orienta as diretrizes de infraestrutura urbana. Selecione a opção, insira a evidência/comentários e clique em 'Salvar Quesito 7.0'.*")
+
+                opc70 = ["Selecione...", "Sim", "Não"]
+                
+                # Recupera os dados salvos do banco
+                d70 = res_data.get("7.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                
+                v_salvo_70 = d70.get("valor", "Selecione...")
+                if v_salvo_70 not in opc70:
+                    v_salvo_70 = "Selecione..."
+
+                evidencia_70_salva = d70.get("link", "")
+                
+                # Chaves de identificação no Streamlit
+                chave_radio_70 = f"r_70_select_{ano_sel}"
+                chave_link_70 = f"l_70_txt_area_{ano_sel}"
+                chave_coment_70 = f"coment_7.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    idx70 = opc70.index(v_salvo_70)
+                    st.radio(
+                        "Selecione uma opção (7.0):",
+                        options=opc70,
+                        index=idx70,
+                        key=chave_radio_70
+                    )
+
+                with col2:
+                    link_70 = st.text_area(
+                        "Link/Evidência (7.0):",
+                        value=evidencia_70_salva,
+                        key=chave_link_70,
+                        placeholder="Insira o link para o decreto, lei municipal ou ato regulamentar de instituição do plano...",
+                        height=110
+                    )
+                    placeholder_links_70 = st.empty()
+                    links_70_visuais = re.findall(REGEX_PURE_URL, link_70 or "")
+                    if links_70_visuais:
+                        placeholder_links_70.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_70_visuais]))
+
+                # Renderiza o bloco de comentários do Quesito 7.0
+                bloco_comentarios("7.0", res_data, ano_sel)
+
+                # Feedback do impacto na pontuação (Quesito Informativo)
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.0: +0.0 pontos (Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.0", key=f"btn_salvar_7_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_70, v_salvo_70)
+                    lnk_val = link_70.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_70, d70.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.0",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização da estrutura em memória
+                    res_data["7.0"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_70_salva or "")]
+
+                    if lnk_val != evidencia_70_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = False
