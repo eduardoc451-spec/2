@@ -2835,3 +2835,117 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 5.0 • CONTRATO DE PRESTAÇÃO DE SERVIÇO DE PODA E CORTE (MODELO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_arborizacao_5_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.0 - Contratos Vigentes para Podas e Cortes", expanded=True):
+                st.subheader("5.0 • Contrato de Prestação de Serviço")
+                st.write("**A Prefeitura Municipal possui contrato de prestação de serviço de poda e corte de árvores, arbustos e outras plantas lenhosas em áreas urbanas?**")
+                st.caption("ℹ *Selecione a opção aplicável, informe o link de evidência/comentário e clique no botão 'Salvar Quesito 5.0' para registrar.*")
+
+                opc50 = ["Selecione...", "Sim", "Não"]
+
+                # Recupera os dados salvos no banco de dados ou estrutura zerada
+                d50 = res_data.get("5.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_50 = d50.get("valor", "Selecione...")
+                if v_salvo_50 not in opc50:
+                    v_salvo_50 = "Selecione..."
+
+                evidencia_50_salva = d50.get("link", "")
+
+                # Chaves fixas para os componentes Streamlit
+                chave_radio_50 = f"r_50_select_{ano_sel}"
+                chave_link_50 = f"l_50_txt_area_{ano_sel}"
+                chave_coment_50 = f"coment_5.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    idx50 = opc50.index(v_salvo_50) if v_salvo_50 in opc50 else 0
+                    val_radio_50 = st.radio(
+                        "Selecione uma opção (5.0):",
+                        options=opc50,
+                        index=idx50,
+                        key=chave_radio_50
+                    )
+
+                with col2:
+                    link_50 = st.text_area(
+                        "Link/Evidência (5.0):",
+                        value=evidencia_50_salva,
+                        key=chave_link_50,
+                        placeholder="Insira o link do contrato de prestação de serviços, publicação no Diário Oficial ou termo de licitação...",
+                        height=110
+                    )
+                    placeholder_links_50 = st.empty()
+                    links_50_visuais = re.findall(REGEX_PURE_URL, link_50 or "")
+                    if links_50_visuais:
+                        placeholder_links_50.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_50_visuais]))
+
+                # Renderiza o bloco de comentários
+                bloco_comentarios("5.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.0", key=f"btn_salvar_5_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_50, v_salvo_50)
+                    lnk_val = link_50.strip()
+
+                    # Regra de pontuação: Quesito informativo (0.0 pontos)
+                    pts_calculados = 0.0
+
+                    # Captura o comentário do estado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_50, d50.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="5.0",
+                        valor=val_salvar,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["5.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_50_salva or "")]
+
+                    if lnk_val != evidencia_50_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 5.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual
+                v_val_atual = d50.get("valor", "Selecione...")
+
+                if v_val_atual == "Sim":
+                    cor_txt_50 = "#28a745"
+                elif v_val_atual == "Não":
+                    cor_txt_50 = "#dc3545"
+                else:
+                    cor_txt_50 = "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_50}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.0: +0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
