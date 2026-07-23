@@ -692,6 +692,73 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     return buffer.getvalue()
 
 # =============================================================================
+# BARRA LATERAL (SIDEBAR)
+# =============================================================================
+def render_sidebar():
+    """Renderiza os controles da barra lateral e retorna os dados/filtros selecionados."""
+    with st.sidebar:
+        st.header("⚙️ Configurações i-Gov TI")
+        
+        # Seleção do Ano de Referência
+        ano_atual = datetime.now().year
+        anos_disponiveis = list(range(ano_atual, ano_atual - 6, -1))
+        
+        if "ano_referencia_global" not in st.session_state:
+            st.session_state["ano_referencia_global"] = ano_atual
+            
+        ano_selecionado = st.selectbox(
+            "Ano de Exercício:",
+            options=anos_disponiveis,
+            index=anos_disponiveis.index(st.session_state["ano_referencia_global"])
+            if st.session_state["ano_referencia_global"] in anos_disponiveis else 0,
+            key="sb_ano_referencia"
+        )
+        st.session_state["ano_referencia_global"] = ano_selecionado
+
+        st.divider()
+
+        # Carrega todas as respostas para calcular totais
+        res_data = load_respostas(ano_selecionado)
+        total_pontos = sum(
+            float(v.get("pontos", 0)) 
+            for k, v in res_data.items() 
+            if isinstance(v, dict) and not k.startswith("COM_")
+        )
+
+        st.metric(
+            label="Pontuação Total Atual",
+            value=f"{total_pontos:.1f} pts"
+        )
+
+        st.divider()
+
+        # Botão de download do relatório PDF
+        if st.button("📄 Gerar Relatório PDF", use_container_width=True):
+            try:
+                pdf_bytes = gerar_relatorio_pdf(
+                    dados=res_data,
+                    ano=ano_selecionado,
+                    total=total_pontos,
+                    faixa=None,
+                    all_data={ano_selecionado: res_data}
+                )
+                st.download_button(
+                    label="⬇️ Baixar PDF",
+                    data=pdf_bytes,
+                    file_name=f"relatorio_igov_ti_{ano_selecionado}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"Erro ao gerar PDF: {e}")
+
+        return {
+            "ano": ano_selecionado,
+            "respostas": res_data,
+            "total_pontos": total_pontos
+        }
+
+# =============================================================================
 # 6. FORMULÁRIO PRINCIPAL (I-GOV TI)
 # =============================================================================
 
