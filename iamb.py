@@ -1,28 +1,46 @@
-import streamlit as st
-import sqlite3
-import json
+import os
+import sys
 import re
-# Definição da regex no formato de tupla/grupo esperado pelo list comprehension do código
-regex_pure_url = r'((https?://[^\s]+))'
-from io import BytesIO
+import json
+import warnings
+import logging
 from datetime import datetime, date
+from io import BytesIO
 
-# Bibliotecas para o PDF (Requer: pip install reportlab)
+import psycopg2
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+
+# Silencia alertas e logs não críticos
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
+os.environ["PYTHONWARNINGS"] = "ignore"
+logging.getLogger("streamlit").setLevel(logging.ERROR)
+
+# Bibliotecas para o PDF (ReportLab)
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle  # <-- Garanta que ele está aqui em cima!
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.graphics.charts.barcharts import VerticalBarChart
 
-# Bibliotecas para os Gráficos (Requer: pip install plotly)
+# Bibliotecas para Gráficos (Plotly)
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
 # =============================================================================
+# REGEX DE VALIDAÇÃO
+# =============================================================================
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
+
+# =============================================================================
 # CONSTANTES GLOBAIS - IAMB
 # =============================================================================
-
-PONTUACOES_MAX = {
+PONTUACOES_MAX_IAMB = {
     "1.1.2": 20,
     "1.1.3": 5,
     "1.2": 20,
@@ -68,19 +86,6 @@ PONTUACOES_MAX = {
     "A4.1.3": 22,
     "A6": 5
 }
-
-CATEGORIAS_MAP = {
-    "planejamento":   {"label": "Planejamento",    "qids": ["1.1.2", "1.1.3", "1.2"]},
-    "gestao_fiscal":  {"label": "Gestão Fiscal",   "qids": ["2.0", "2.1"]},
-    "educacao":       {"label": "Educação",         "qids": ["3.0", "3.1"]},
-    "saude":          {"label": "Saúde",            "qids": ["4.0"]},
-    "meio_ambiente":  {"label": "Meio Ambiente",    "qids": ["5.2.1", "6.0", "6.1", "6.2", "14.3"]},
-    "governanca_ti":  {"label": "Governança TI",    "qids": ["7.2", "7.3", "7.3.1", "7.4", "7.4.1", "7.5", "7.7", "7.8", "7.8.1", "7.9"]},
-    "transparencia":  {"label": "Transparência",    "qids": ["8.2", "8.3", "8.4", "8.4.1", "8.4.2", "8.4.3", "9.2", "9.3", "9.3.1"]},
-    "outros":         {"label": "Outros",           "qids": ["11.2", "11.3", "11.3.2", "11.3.3", "11.5", "12.1", "15", "15.1", "A4.1.1", "A4.1.2", "A4.1.3", "A6"]},
-}
-
-FAIXA_CORES = {"C": "#ef4444", "C+": "#f97316", "B": "#eab308", "B+": "#22c55e", "A": "#16a34a"}
 
 # =============================================================================
 # MODAL DE AVISO AUTOMÁTICO (CORRIGIDO PARA LINKS CLICÁVEIS)
