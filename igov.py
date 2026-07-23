@@ -7299,7 +7299,7 @@ def mostrar_formulario_igov():
             modal_aviso_link("10.5", st.session_state.get(f"links_pendentes_10_5_{ano_sel}", []))
         st.session_state[f"gatilho_modal_10_5_{ano_sel}"] = False
 
-# =============================================================================
+    # =============================================================================
     # QUESITO 10.5.1 • DETALHAMENTO DAS MEDIDAS ADOTADAS (SALVAMENTO MANUAL - 4 ESPAÇOS)
     # =============================================================================
     with st.container(key=f"container_bloco_lgpd_10_5_1_{ano_sel}", border=True):
