@@ -374,9 +374,26 @@ def dimension_page():
             st.error("Erro técnico: O arquivo 'hal.py' não foi detectado no sistema.")
             st.chat_input("Como posso ajudar hoje? (Modo Offline)")
             
-    elif dimension == "i-Cidade" and icidade:
-        icidade.init_db()
-        icidade.mostrar_formulario_cidade()
+    elif dimension == "i-Cidade":
+        if icidade is None:
+            st.error("❌ O arquivo 'icidade_completo.py' não foi encontrado ou falhou ao ser importado na pasta do projeto.")
+        else:
+            try:
+                # Inicializa o banco do i-Cidade se a função existir
+                if hasattr(icidade, 'init_db'):
+                    icidade.init_db()
+                
+                # Procura a função principal que desenha a tela no icidade_completo.py
+                if hasattr(icidade, 'mostrar_formulario_cidade'):
+                    icidade.mostrar_formulario_cidade()
+                elif hasattr(icidade, 'mostrar_formulario_icidade'):
+                    icidade.mostrar_formulario_icidade()
+                elif hasattr(icidade, 'main'):
+                    icidade.main()
+                else:
+                    st.warning("⚠️ O arquivo 'icidade_completo.py' foi encontrado, mas a função de renderização precisa ter um desses nomes: 'mostrar_formulario_cidade', 'mostrar_formulario_icidade' ou 'main'.")
+            except Exception as e:
+                st.error(f"❌ Erro ao executar o i-Cidade: {e}")
     elif dimension == "i-Gov TI" and igov:
         igov.mostrar_formulario_igov()
     elif dimension == "i-Amb" and iamb:
