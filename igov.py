@@ -1338,108 +1338,136 @@ def mostrar_formulario_igov():
     r10 = v_salvo_10
 
     # =============================================================================
-    # QUESITO 1.1 • INSTRUMENTO NORMATIVO DO SETOR DE TIC (MODELO PADRONIZADO iGov)
-    # =============================================================================
-    with st.container(key=f"container_bloco_igov_1_1_{ano_sel}", border=True):
-        with st.expander("📌 Quesito 1.1 - Instrumento Normativo de Criação / Estrutura do Setor de TIC", expanded=True):
-            st.subheader("1.1 • Instrumento Normativo do Setor de TIC")
-            st.write(
-                "**Informe o Instrumento normativo (Lei, Decreto, Portaria), Número e Data da "
-                "publicação que formaliza ou regulamenta o setor/área de TIC na Prefeitura:**"
-            )
-            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.1' para registrar.*")
+        # QUESITO 1.1 • RECURSOS HUMANOS EM TIC (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        regex_pure_url = r'https?://[^\s<>"]+'
 
-            # Recuperação do estado salvo no banco/dicionário
-            d11 = res_data.get("1.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
-            v_salvo_11 = d11.get("valor", "")
-            l_salvo_11 = d11.get("link", "")
+        with st.container(key=f"container_bloco_igov_1_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.1 - Composição de Recursos Humanos do Setor de TIC", expanded=True):
+                st.subheader("1.1 • Recursos Humanos em TIC")
+                st.write("**Informe a quantidade da equipe que atua no suporte e atendimento de primeiro nível:**")
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.1' para registrar.*")
 
-            # Chaves fixas por componente e ano
-            chave_txt_11 = f"txt_val_1_1_{ano_sel}"
-            chave_link_11 = f"txt_link_1_1_{ano_sel}"
-            chave_coment_11 = f"coment_1.1_{ano_sel}"
-
-            c11_1, c11_2 = st.columns([1, 1])
-
-            with c11_1:
-                novo_valor_11 = st.text_area(
-                    "Dados do instrumento normativo / Detalhes:",
-                    value=v_salvo_11,
-                    key=chave_txt_11,
-                    height=100,
-                    placeholder="Ex: Lei Municipal nº 1.234 de 10/05/2021 - Cria a Coordenadoria de TIC"
-                )
-
-            with c11_2:
-                novo_link_11 = st.text_input(
-                    "Link da Evidência / Diário Oficial (1.1):",
-                    value=l_salvo_11,
-                    key=chave_link_11,
-                    placeholder="https://..."
-                )
-
-                # Exibição inline dos links detectados
-                regex_url = r'https?://[^\s<>"]+'
-                links_visuais_11 = re.findall(regex_url, novo_link_11 or "") + re.findall(regex_url, novo_valor_11 or "")
+                # Recupera e trata o estado inicial do dicionário com segurança
+                d11 = res_data.get("1.1") or {"valor": "0", "pontos": 0.0, "link": "", "comentario": ""}
                 
-                placeholder_links_11 = st.empty()
-                if links_visuais_11:
-                    placeholder_links_11.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_visuais_11]))
+                v_conc_i, v_comi_i, v_esta_i, v_outr_i = 0, 0, 0, 0
+                evidencia_11_salva = ""
+                raw_link = d11.get("link", "")
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("1.1", res_data, ano_sel)
+                if raw_link:
+                    try:
+                        if "|LINK:" in raw_link:
+                            contadores_part, evidencia_11_salva = raw_link.split("|LINK:", 1)
+                        else:
+                            contadores_part = raw_link
+                        
+                        parts = contadores_part.split(",")
+                        v_conc_i = int(parts[0].split(":")[1])
+                        v_comi_i = int(parts[1].split(":")[1])
+                        v_esta_i = int(parts[2].split(":")[1])
+                        v_outr_i = int(parts[3].split(":")[1])
+                    except Exception:
+                        v_conc_i, v_comi_i, v_esta_i, v_outr_i = 0, 0, 0, 0
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 1.1", key=f"btn_salvar_1_1_{ano_sel}", type="primary"):
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar = st.session_state.get(chave_coment_11, d11.get("comentario", ""))
+                # Chaves fixas por componente e ano
+                chave_conc_11 = f"q11_num_conc_{ano_sel}"
+                chave_comi_11 = f"q11_num_comi_{ano_sel}"
+                chave_esta_11 = f"q11_num_esta_{ano_sel}"
+                chave_outr_11 = f"q11_num_outr_{ano_sel}"
+                chave_link_11 = f"l_11_txt_area_{ano_sel}"
+                chave_coment_11 = f"coment_1.1_{ano_sel}"
 
-                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
-                save_resp(
-                    qid="1.1",
-                    valor=novo_valor_11,
-                    pontos=0.0,  # Mantido 0.0 por ser um quesito meramente informativo
-                    link=novo_link_11,
-                    comentarios=comentario_para_salvar
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.markdown('<label style="font-size: 14px; font-weight: 500;">Concursados:</label>', unsafe_allow_html=True)
+                    val_conc_11 = st.number_input("", min_value=0, step=1, value=v_conc_i, key=chave_conc_11, label_visibility="collapsed")
+                with col2:
+                    st.markdown('<label style="font-size: 14px; font-weight: 500;">Comissionados:</label>', unsafe_allow_html=True)
+                    val_comi_11 = st.number_input("", min_value=0, step=1, value=v_comi_i, key=chave_comi_11, label_visibility="collapsed")
+                with col3:
+                    st.markdown('<label style="font-size: 14px; font-weight: 500;">Estagiários:</label>', unsafe_allow_html=True)
+                    val_esta_11 = st.number_input("", min_value=0, step=1, value=v_esta_i, key=chave_esta_11, label_visibility="collapsed")
+                with col4:
+                    st.markdown('<label style="font-size: 14px; font-weight: 500;">Outros:</label>', unsafe_allow_html=True)
+                    val_outr_11 = st.number_input("", min_value=0, step=1, value=v_outr_i, key=chave_outr_11, label_visibility="collapsed")
+
+                st.markdown("<div style='margin-bottom: 5px;'></div>", unsafe_allow_html=True)
+
+                link_11 = st.text_area(
+                    "Link/Evidência da composição da equipe (1.1):", 
+                    value=evidencia_11_salva, 
+                    key=chave_link_11, 
+                    placeholder="Cole aqui o link do decreto de lotação de pessoal, relatório do setor de RH ou folha simplificada da TI...",
+                    height=90
                 )
 
-                # 3. Atualiza o dicionário local res_data
-                res_data["1.1"] = {
-                    "valor": novo_valor_11,
-                    "pontos": 0.0,
-                    "link": novo_link_11,
-                    "comentario": comentario_para_salvar
-                }
+                placeholder_links_11 = st.empty()
+                links_11_visuais = re.findall(regex_pure_url, link_11 or "")
+                if links_11_visuais:
+                    placeholder_links_11.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_11_visuais]))
 
-                # 4. Validação de links para gatilho do modal
-                links_atuais = re.findall(regex_url, novo_link_11 or "") + re.findall(regex_url, novo_valor_11 or "")
-                links_antigos = re.findall(regex_url, l_salvo_11 or "") + re.findall(regex_url, v_salvo_11 or "")
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.1", res_data, ano_sel)
 
-                if (novo_link_11 != l_salvo_11 or novo_valor_11 != v_salvo_11) and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_1_1_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = True
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.1", key=f"btn_salvar_1_1_{ano_sel}", type="primary"):
+                    total_p = val_conc_11 + val_comi_11 + val_esta_11
+                    pts_calculados_11 = 30.0 if total_p > 0 else 0.0
+                    composite_string = f"C:{val_conc_11},Co:{val_comi_11},E:{val_esta_11},O:{val_outr_11}|LINK:{link_11.strip()}"
 
-                # Limpa o cache para garantir que a busca do banco seja atualizada no rerun
-                st.cache_data.clear()
+                    # 1. Captura o comentário atual do session_state antes do rerun
+                    comentario_para_salvar = st.session_state.get(chave_coment_11, d11.get("comentario", ""))
 
-                st.toast("Dados do Quesito 1.1 salvos com sucesso!", icon="✅")
+                    # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                    save_resp(
+                        qid="1.1",
+                        valor=str(total_p),
+                        pontos=pts_calculados_11,
+                        link=composite_string,
+                        comentarios=comentario_para_salvar
+                    )
 
-                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza session state e painéis)
-                st.rerun()
+                    # 3. Atualiza o dicionário local res_data
+                    res_data["1.1"] = {
+                        "valor": str(total_p),
+                        "pontos": pts_calculados_11,
+                        "link": composite_string,
+                        "comentario": comentario_para_salvar
+                    }
 
-            # Exibição do impacto de pontuação (Informativo)
-            st.markdown(
-                "<span style='color:#6c757d; font-weight:bold;'>"
-                "📊 Impacto de Pontuação no Quesito 1.1: 0.0 pontos (Informativo)</span>",
-                unsafe_allow_html=True
-            )
+                    # 4. Validação de links para gatilho do modal
+                    links_atuais = re.findall(regex_pure_url, link_11 or "")
+                    links_antigos = re.findall(regex_pure_url, evidencia_11_salva or "")
 
-    # GATILHO DO MODAL 1.1 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_1_1_{ano_sel}", False):
-        if "modal_aviso_link" in globals():
-            modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
-           
-        
+                    if link_11 != evidencia_11_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = True
+
+                    # Limpa o cache para forçar a atualização imediata dos painéis
+                    st.cache_data.clear()
+
+                    st.toast("Resposta e comentário do Quesito 1.1 salvos com sucesso!", icon="✅")
+
+                    # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                total_pessoal = int(d11.get("valor", "0"))
+                pts_atuais_11 = d11.get("pontos", 0.0)
+                cor_txt_11 = "#28a745" if pts_atuais_11 == 30.0 else "#6c757d"
+
+                st.info(f"👥 Total de Pessoal Efetivo Computado (C+Co+E): {total_pessoal} funcionário(s)")
+                st.markdown(
+                    f"<span style='color:{cor_txt_11}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.1: +{pts_atuais_11:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
