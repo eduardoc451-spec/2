@@ -5913,3 +5913,115 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("7.8.1.1", st.session_state.get(f"links_pendentes_7_8_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_8_1_1_{ano_sel}"] = False
 
+# =============================================================================
+        # QUESITO 7.9 • ÁREAS PRIORITÁRIAS / CRÍTICAS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_9_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.9 - Identificação de Vulnerabilidades Setoriais", expanded=True):
+                st.subheader("7.9 • Áreas Prioritárias / Críticas")
+                st.write("**Possui previsão para áreas prioritárias/críticas de abastecimento de água potável e esgotamento sanitário do município?**")
+                st.caption("ℹ *Ex.: Áreas com assentamentos habitacionais precários, corpos de água degradados (em especial nas regiões de mananciais) ou áreas vulneráveis quanto aos indicadores de saúde pública.*")
+
+                opts79 = {
+                    "Selecione...": 0.0,
+                    "Sim – 03": 3.0,
+                    "Não – 00": 0.0,
+                    "Não há áreas prioritárias/críticas no município – 03": 3.0
+                }
+                lista_opts79 = list(opts79.keys())
+
+                # Recupera os dados salvos do banco
+                d79 = res_data.get("7.9") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_79 = d79.get("valor", "Selecione...")
+                if v_salvo_79 not in lista_opts79:
+                    v_salvo_79 = "Selecione..."
+
+                evidencia_79_salva = d79.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_79 = f"r_79_select_{ano_sel}"
+                chave_link_79 = f"l_79_txt_area_{ano_sel}"
+                chave_coment_79 = f"coment_7.9_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    idx_salvo79 = lista_opts79.index(v_salvo_79)
+                    st.radio(
+                        "Selecione uma opção (7.9):",
+                        options=lista_opts79,
+                        index=idx_salvo79,
+                        key=chave_radio_79
+                    )
+
+                with col2:
+                    link_79 = st.text_area(
+                        "Link/Evidência (7.9):",
+                        value=evidencia_79_salva,
+                        key=chave_link_79,
+                        placeholder="Seção mapeada no Plano Municipal ou relatórios de vulnerabilidade social...",
+                        height=120
+                    )
+                    placeholder_links_79 = st.empty()
+                    links_79_visuais = re.findall(REGEX_PURE_URL, link_79 or "")
+                    if links_79_visuais:
+                        placeholder_links_79.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_79_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.9
+                bloco_comentarios("7.9", res_data, ano_sel)
+
+                # Feedback visual reativo da pontuação
+                pts_salvos_79 = float(d79.get("pontos", 0.0))
+                cor_txt_79 = "#28a745" if pts_salvos_79 > 0 else ("#6c757d" if v_salvo_79 == "Selecione..." else "#dc3545")
+                st.markdown(
+                    f"<span style='color:{cor_txt_79}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.9: +{pts_salvos_79:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.9", key=f"btn_salvar_7_9_{ano_sel}", type="primary"):
+                    lnk_val = link_79.strip()
+                    val_salvar = st.session_state.get(chave_radio_79, v_salvo_79)
+                    pts_calculados = opts79.get(val_salvar, 0.0)
+                    comentario_para_salvar = st.session_state.get(chave_coment_79, d79.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.9",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["7.9"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_79_salva or "")]
+
+                    if lnk_val != evidencia_79_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_9_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_9_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.9 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.9 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_9_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.9", st.session_state.get(f"links_pendentes_7_9_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_9_{ano_sel}"] = False
+
