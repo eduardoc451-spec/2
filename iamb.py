@@ -7054,3 +7054,114 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.4.2", st.session_state.get(f"links_pendentes_8_4_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_4_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.4.2.1 • FORMAS DE MONITORAMENTO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q8_4_2_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.4.2.1 - Formas de Monitoramento", expanded=True):
+                st.subheader("8.4.2.1 • Formas de Monitoramento")
+                st.write("**De que forma é realizado o monitoramento e avaliação das ações e metas de resíduos sólidos?**")
+
+                opts8421 = [
+                    "Relatórios anuais discutidos e/ou publicados",
+                    "Indicadores de eficácia e eficiência",
+                    "Avaliação de recursos aplicados",
+                    "Outros"
+                ]
+
+                # Recupera os dados salvos do banco
+                d8421 = res_data.get("8.4.2.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                texto_seguro_8421 = str(d8421.get("valor", "")) if d8421.get("valor") not in ["", "[]"] else ""
+                evidencia_8421_salva = d8421.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_link_8421 = f"l8421_in_{ano_sel}"
+                chave_coment_8421 = f"coment_8.4.2.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    marcados_atuais = []
+                    for opt in opts8421:
+                        chk_key = f"c8421_{opt}_{ano_sel}"
+                        chk_val = st.checkbox(
+                            opt,
+                            value=(opt in texto_seguro_8421),
+                            key=chk_key
+                        )
+                        if chk_val:
+                            marcados_atuais.append(opt)
+
+                    # Métrica informativa para quesitos referenciais
+                    st.metric(label="Pontuação do Quesito", value="0.0 pts (Informativo)")
+
+                with col2:
+                    link_8421 = st.text_area(
+                        "Link/Evidência (8.4.2.1):",
+                        value=evidencia_8421_salva,
+                        key=chave_link_8421,
+                        placeholder="Inserir links de relatórios, atas, painéis de indicadores ou documentos comprobatórios...",
+                        height=140
+                    )
+                    placeholder_links_8421 = st.empty()
+                    links_8421_visuais = re.findall(REGEX_PURE_URL, link_8421 or "")
+                    if links_8421_visuais:
+                        placeholder_links_8421.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_8421_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 8.4.2.1
+                bloco_comentarios("8.4.2.1", res_data, ano_sel)
+
+                # Feedback visual de pontuação (Referencial)
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.4.2.1: +0.0 pontos (Referencial)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.4.2.1", key=f"btn_salvar_8_4_2_1_{ano_sel}", type="primary"):
+                    lnk_val = link_8421.strip()
+                    marcados = [opt for opt in opts8421 if st.session_state.get(f"c8421_{opt}_{ano_sel}", False)]
+                    val_salvar = str(marcados)
+
+                    comentario_para_salvar = st.session_state.get(chave_coment_8421, d8421.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="8.4.2.1",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["8.4.2.1"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_8421_salva or "")]
+
+                    if lnk_val != evidencia_8421_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_4_2_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_4_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 8.4.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 8.4.2.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_4_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.4.2.1", st.session_state.get(f"links_pendentes_8_4_2_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_4_2_1_{ano_sel}"] = False
+
