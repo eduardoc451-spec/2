@@ -4058,3 +4058,96 @@ def mostrar_formulario_igov():
                 "📊 Impacto de Pontuação no Quesito 4.1: +0.0 pontos</span>",
                 unsafe_allow_html=True
             )
+
+    # =============================================================================
+    # QUESITO 4.2 • LINK DO INSTRUMENTO NORMATIVO (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_4_2_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 4.2 - Endereço Eletrônico do Instrumento Normativo", expanded=True):
+            st.subheader("4.2 • Link da Normativa")
+            st.write("**Página eletrônica (link) do instrumento oficial de regulamentação:**")
+            st.caption("ℹ *Preencha o link da normativa e clique no botão 'Salvar Quesito 4.2'.*")
+
+            # Recupera os dados do 4.2 de forma isolada
+            d42 = res_data.get("4.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+            evidencia_42_salva = d42.get("link", "") if d42.get("link", "") else d42.get("valor", "")
+            if evidencia_42_salva == "XYZ":
+                evidencia_42_salva = ""
+
+            # Chaves fixas por componente e ano
+            chave_link_42 = f"l_42_txt_area_{ano_sel}"
+            chave_coment_42 = f"coment_4.2_{ano_sel}"
+
+            link_42 = st.text_area(
+                "Link URL da Normativa (4.2):",
+                value=evidencia_42_salva,
+                key=chave_link_42,
+                placeholder="Insira a URL direta para acesso à publicação oficial do decreto ou ato normativo municipal...",
+                height=90
+            )
+
+            placeholder_links_42 = st.empty()
+            links_42_visuais = re.findall(regex_pure_url, link_42 or "")
+            if links_42_visuais:
+                placeholder_links_42.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_42_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("4.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 4.2", key=f"btn_salvar_4_2_{ano_sel}", type="primary"):
+                lnk_val = link_42.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_42, d42.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="4.2",
+                    valor=lnk_val,
+                    pontos=0.0,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["4.2"] = {
+                    "valor": lnk_val,
+                    "pontos": 0.0,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_42_salva or "")
+
+                if lnk_val != evidencia_42_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_4_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 4.2 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo de impacto de pontuação
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 4.2: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 4.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_4_2_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("4.2", st.session_state.get(f"links_pendentes_4_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = False
