@@ -3758,7 +3758,7 @@ def mostrar_formulario_igov():
             modal_aviso_link("3.5", st.session_state.get(f"links_pendentes_3_5_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_5_{ano_sel}"] = False
 
-# =============================================================================
+    # =============================================================================
     # QUESITO 3.6 • INVENTÁRIO DE ATIVOS DE TIC (MODELO PADRONIZADO iGov)
     # =============================================================================
     regex_pure_url = r'https?://[^\s<>"]+'
@@ -3873,3 +3873,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.6", st.session_state.get(f"links_pendentes_3_6_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_6_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 4.0 • REGULAMENTAÇÃO DA LAI (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_4_0_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 4.0 - Regulamentação da Lei de Acesso à Informação (LAI)", expanded=True):
+            st.subheader("4.0 • Regulamentação da LAI")
+            st.write("**O município regulamentou a Lei de Acesso à Informação?**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 4.0'.*")
+
+            opc40 = {
+                "Selecione...": 0.0,
+                "Sim – 40": 40.0,
+                "Não – 00": 0.0
+            }
+            lista40 = list(opc40.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d40 = res_data.get("4.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_40 = d40.get("valor", "Selecione...")
+            evidencia_40_salva = d40.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_40 = f"r_40_select_{ano_sel}"
+            chave_link_40 = f"l_40_txt_area_{ano_sel}"
+            chave_coment_40 = f"coment_4.0_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx40 = lista40.index(v_salvo_40) if v_salvo_40 in lista40 else 0
+                st.radio(
+                    "Selecione o status da regulamentação:",
+                    options=lista40,
+                    index=idx40,
+                    key=chave_radio_40
+                )
+
+            with col2:
+                link_40 = st.text_area(
+                    "Link/Evidência (4.0):",
+                    value=evidencia_40_salva,
+                    key=chave_link_40,
+                    placeholder="Insira o link do decreto ou ato normativo municipal que regulamentou a LAI local...",
+                    height=90
+                )
+
+                placeholder_links_40 = st.empty()
+                links_40_visuais = re.findall(regex_pure_url, link_40 or "")
+                if links_40_visuais:
+                    placeholder_links_40.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_40_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("4.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 4.0", key=f"btn_salvar_4_0_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_40, v_salvo_40)
+                pts_40 = float(opc40.get(val_salvar, 0.0))
+                lnk_val = link_40.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_40, d40.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="4.0",
+                    valor=val_salvar,
+                    pontos=pts_40,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["4.0"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_40,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_40_salva or "")
+
+                if lnk_val != evidencia_40_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_4_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 4.0 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_40 = d40.get("pontos", 0.0)
+            cor_txt_40 = "#28a745" if pts_atuais_40 == 40.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_40}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 4.0: +{pts_atuais_40:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 4.0 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_4_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
