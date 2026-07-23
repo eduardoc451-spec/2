@@ -8714,3 +8714,121 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("10.3.1", st.session_state.get(f"links_pendentes_10_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_10_3_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 10.3.1.1 • VALIDADE DA LICENÇA DA ATT (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q10_3_1_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 10.3.1.1 - Validade da Licença da ATT", expanded=True):
+                st.subheader("10.3.1.1 • Validade da Licença")
+                st.write("**Informe o prazo de validade da licença da Área de Transbordo e Triagem (ATT):**")
+
+                # Recupera os dados salvos no banco
+                d10311 = res_data.get("10.3.1.1") or {"valor": "31/12/2024", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_10311 = d10311.get("valor", "31/12/2024")
+                evidencia_10311_salva = d10311.get("link", "")
+
+                # Conversão da string de data para objeto datetime.date
+                try:
+                    data_obj = datetime.strptime(v_salvo_10311, "%d/%m/%Y").date()
+                except Exception:
+                    data_obj = date(2024, 12, 31)
+
+                # Definindo chaves do Streamlit
+                chave_data_10311 = f"q10311_data_in_{ano_sel}"
+                chave_link_10311 = f"l10311_txt_in_{ano_sel}"
+                chave_coment_10311 = f"coment_10.3.1.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    data_selecionada = st.date_input(
+                        "Data de Validade (10.3.1.1):",
+                        value=data_obj,
+                        format="DD/MM/YYYY",
+                        key=chave_data_10311
+                    )
+
+                    # Regra de corte para pontuação (Vencida <= 31/12/2024 perde 50 pts)
+                    data_corte = date(2024, 12, 31)
+                    if data_selecionada <= data_corte:
+                        pts_exibido_10311 = -50.0
+                        cor_metric = "#dc3545"  # Vermelho (penalidade severa)
+                    else:
+                        pts_exibido_10311 = 0.0
+                        cor_metric = "#28a745"  # Verde
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_10311:.1f} pts")
+
+                with col2:
+                    lk10311 = st.text_area(
+                        "Link/Evidência (10.3.1.1):",
+                        value=evidencia_10311_salva,
+                        key=chave_link_10311,
+                        placeholder="Inserir link do documento da licença onde consta a data de validade...",
+                        height=125
+                    )
+                    placeholder_links_10311 = st.empty()
+                    links_10311_visuais = re.findall(REGEX_PURE_URL, lk10311 or "")
+                    if links_10311_visuais:
+                        placeholder_links_10311.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10311_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 10.3.1.1
+                bloco_comentarios("10.3.1.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto Técnico 10.3.1.1: {pts_exibido_10311:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 10.3.1.1", key=f"btn_salvar_10_3_1_1_{ano_sel}", type="primary"):
+                    lnk_val = lk10311.strip()
+                    data_formatada = data_selecionada.strftime("%d/%m/%Y")
+                    comentario_para_salvar = st.session_state.get(chave_coment_10311, d10311.get("comentario", ""))
+
+                    # Regra de cálculo de pontos no salvamento
+                    if data_selecionada <= data_corte:
+                        pts_calculados = -50.0
+                    else:
+                        pts_calculados = 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="10.3.1.1",
+                        valor=data_formatada,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["10.3.1.1"] = {
+                        "valor": data_formatada,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10311_salva or "")]
+
+                    if lnk_val != evidencia_10311_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_10_3_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_10_3_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 10.3.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 10.3.1.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_10_3_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.3.1.1", st.session_state.get(f"links_pendentes_10_3_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_10_3_1_1_{ano_sel}"] = False
+
