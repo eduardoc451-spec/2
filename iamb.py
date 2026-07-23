@@ -2584,3 +2584,128 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 3.1 • AÇÕES REALIZADAS PELO MUNICÍPIO (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_recursos_3_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 3.1 - Tipos de Ações de Uso Racional Praticadas", expanded=True):
+                st.subheader("3.1 • Ações Realizadas")
+                st.write("**Assinale quais tipos de ações realizadas pela Prefeitura para o uso racional de recursos naturais:**")
+                st.caption("ℹ *Marque todas as ações executadas, insira os links de evidência/comentários e clique no botão 'Salvar Quesito 3.1' para registrar.*")
+
+                opts31 = {
+                    "Coleta seletiva – 1,5": 1.5,
+                    "Uso racional da água – 1,5": 1.5,
+                    "Uso racional de energia elétrica – 1,5": 1.5,
+                    "Reúso de materiais – 1,5": 1.5,
+                    "Horta coletiva – 1,5": 1.5,
+                    "Compostagem – 1,5": 1.5,
+                    "Instalação de bicicletários e vestiários para os servidores públicos – 1,5": 1.5,
+                    "Implantação de caixas acopladas nos vasos sanitários – 1,5": 1.5,
+                    "Substituição de lâmpadas fluorescentes por lâmpadas LED – 1,5": 1.5,
+                    "Instalação de estruturas para a captação de água de chuva – 1,5": 1.5,
+                    "Instalação de torneiras com redutores de pressão – 1,5": 1.5,
+                    "Substituição de material descartável – 1,5": 1.5,
+                    "Logística reversa de pilhas, baterias e eletrônicos – 1,5": 1.5,
+                    "Outros – 0,5": 0.5
+                }
+
+                # Recupera os dados salvos no banco de dados ou estrutura padrão
+                d31 = res_data.get("3.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                texto_seguro_31 = str(d31.get("valor", "[]"))
+                evidencia_31_salva = d31.get("link", "")
+
+                # Chaves fixas de componentes no Streamlit
+                chave_link_31 = f"l_31_txt_area_{ano_sel}"
+                chave_coment_31 = f"coment_3.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.write("*Selecione as iniciativas em execução:*")
+                    for i, (txt, pts) in enumerate(opts31.items()):
+                        # Identifica se a opção estava salva anteriormente
+                        marcado = (txt in texto_seguro_31) if texto_seguro_31 and texto_seguro_31 != "[]" else False
+                        st.checkbox(
+                            txt,
+                            value=marcado,
+                            key=f"ck_31_opt_{i}_{ano_sel}"
+                        )
+
+                with col2:
+                    link_31 = st.text_area(
+                        "Link/Evidência (3.1):",
+                        value=evidencia_31_salva,
+                        key=chave_link_31,
+                        placeholder="Insira os links comprobatórios das iniciativas marcadas (contratos de LED, fotos de cisternas, etc)...",
+                        height=320
+                    )
+                    placeholder_links_31 = st.empty()
+                    links_31_visuais = re.findall(REGEX_PURE_URL, link_31 or "")
+                    if links_31_visuais:
+                        placeholder_links_31.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_31_visuais]))
+
+                # Renderiza o bloco de comentários
+                bloco_comentarios("3.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 3.1", key=f"btn_salvar_3_1_{ano_sel}", type="primary"):
+                    lista_selecionados = []
+                    pts_totais = 0.0
+
+                    # Varre todos os checkboxes e soma a pontuação
+                    for idx, (txt, pts) in enumerate(opts31.items()):
+                        if st.session_state.get(f"ck_31_opt_{idx}_{ano_sel}", False):
+                            lista_selecionados.append(txt)
+                            pts_totais += pts
+
+                    lnk_val = link_31.strip()
+                    val_salvar = json.dumps(lista_selecionados, ensure_ascii=False)
+                    comentario_para_salvar = st.session_state.get(chave_coment_31, d31.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="3.1",
+                        valor=val_salvar,
+                        pontos=pts_totais,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["3.1"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_totais,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_31_salva or "")]
+
+                    if lnk_val != evidencia_31_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual da pontuação
+                pts_atuais_31 = d31.get("pontos", 0.0)
+                cor_txt_31 = "#28a745" if pts_atuais_31 > 0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_31}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 3.1: +{pts_atuais_31:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
