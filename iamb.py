@@ -8352,3 +8352,135 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("10.1", st.session_state.get(f"links_pendentes_10_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_10_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 10.2 • ABRANGÊNCIA DA COLETA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q10_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 10.2 - Abrangência da Coleta", expanded=True):
+                st.subheader("10.2 • Abrangência das Regiões")
+                st.write(
+                    "**Todas as regiões do município são atendidas pela coleta de lixo doméstico (resíduos domiciliares)?** "
+                    "*Inclusive zona rural e periferia*"
+                )
+
+                # Recupera os dados salvos no banco
+                d102 = res_data.get("10.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc102 = [
+                    "Selecione...",
+                    "Todos os bairros do município são atendidos – 00",
+                    "A maior parte dos bairros são atendidos – -10 (perde 10 pontos)",
+                    "A menor parte dos bairros são atendidos – -30 (perde 30 pontos)"
+                ]
+                v_salvo_102 = d102.get("valor", "Selecione...")
+                if v_salvo_102 not in opc102:
+                    v_salvo_102 = "Selecione..."
+                evidencia_102_salva = d102.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_102 = f"r102_in_{ano_sel}"
+                chave_link_102 = f"l102_in_{ano_sel}"
+                chave_coment_102 = f"coment_10.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    resp_102 = st.radio(
+                        "Selecione uma opção (10.2):",
+                        options=opc102,
+                        index=opc102.index(v_salvo_102),
+                        key=chave_radio_102
+                    )
+
+                    # Cálculo dinâmico da pontuação para exibição
+                    if "Todos" in resp_102:
+                        pts_exibido_102 = 0.0
+                        cor_metric = "#28a745"  # Verde
+                    elif "maior parte" in resp_102:
+                        pts_exibido_102 = -10.0
+                        cor_metric = "#dc3545"  # Vermelho (penalidade)
+                    elif "menor parte" in resp_102:
+                        pts_exibido_102 = -30.0
+                        cor_metric = "#dc3545"  # Vermelho (penalidade)
+                    else:
+                        pts_exibido_102 = 0.0
+                        cor_metric = "#6c757d"  # Cinza
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_102:.1f} pts")
+
+                with col2:
+                    lk102 = st.text_area(
+                        "Link/Evidência (10.2):",
+                        value=evidencia_102_salva,
+                        key=chave_link_102,
+                        placeholder="Inserir link do mapa de cobertura, plano de rotas ou relatório de rotas rurais/periféricas...",
+                        height=140
+                    )
+                    placeholder_links_102 = st.empty()
+                    links_102_visuais = re.findall(REGEX_PURE_URL, lk102 or "")
+                    if links_102_visuais:
+                        placeholder_links_102.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_102_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 10.2
+                bloco_comentarios("10.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 10.2: {pts_exibido_102:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 10.2", key=f"btn_salvar_10_2_{ano_sel}", type="primary"):
+                    lnk_val = lk102.strip()
+                    val_sel = resp_102
+                    comentario_para_salvar = st.session_state.get(chave_coment_102, d102.get("comentario", ""))
+
+                    # Regra de pontuação
+                    if "Todos" in val_sel:
+                        pts_calculados = 0.0
+                    elif "maior parte" in val_sel:
+                        pts_calculados = -10.0
+                    elif "menor parte" in val_sel:
+                        pts_calculados = -30.0
+                    else:
+                        pts_calculados = 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="10.2",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["10.2"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_102_salva or "")]
+
+                    if lnk_val != evidencia_102_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_10_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_10_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 10.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 10.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_10_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.2", st.session_state.get(f"links_pendentes_10_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_10_2_{ano_sel}"] = False
+
