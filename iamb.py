@@ -2949,3 +2949,120 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 5.1 • NÚMERO DO CONTRATO E PRESTADOR DE SERVIÇO (MODELO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_arborizacao_5_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.1 - Detalhes do Contrato de Poda", expanded=True):
+                st.subheader("5.1 • Identificação do Contrato")
+                st.write("**Informe o número do contrato e o prestador de serviço:**")
+                st.caption("ℹ *Informe os dados contratuais, insira os links de evidência/comentários e clique no botão 'Salvar Quesito 5.1' para registrar.*")
+
+                # Recupera os dados salvos no banco de dados ou estrutura padrão
+                d51 = res_data.get("5.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                val_salvo_raw = d51.get("valor", "")
+
+                # Extração tolerante a falhas dos campos estruturados
+                c_salvo, p_salvo = "", ""
+                if val_salvo_raw and "|" in val_salvo_raw:
+                    try:
+                        parts = val_salvo_raw.split("|")
+                        c_salvo = parts[0].split(":")[1].strip() if ":" in parts[0] else ""
+                        p_salvo = parts[1].split(":")[1].strip() if ":" in parts[1] else ""
+                    except Exception:
+                        c_salvo, p_salvo = "", ""
+
+                evidencia_51_salva = d51.get("link", "")
+
+                # Chaves fixas de componentes no Streamlit
+                chave_num_cont = f"q51_cont_txt_{ano_sel}"
+                chave_prestador = f"q51_prest_txt_{ano_sel}"
+                chave_link_51 = f"l_51_txt_area_{ano_sel}"
+                chave_coment_51 = f"coment_5.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    num_contrato_input = st.text_input(
+                        "Número do contrato:",
+                        value=c_salvo,
+                        key=chave_num_cont,
+                        placeholder="Ex: 042/2024"
+                    )
+                    prestador_input = st.text_input(
+                        "Prestador de serviço:",
+                        value=p_salvo,
+                        key=chave_prestador,
+                        placeholder="Ex: Terceirizada Verde Ltda."
+                    )
+
+                with col2:
+                    link_51 = st.text_area(
+                        "Link/Evidência (5.1):",
+                        value=evidencia_51_salva,
+                        key=chave_link_51,
+                        placeholder="Insira o link para a cópia digital do contrato ou termo de homologação...",
+                        height=140
+                    )
+                    placeholder_links_51 = st.empty()
+                    links_51_visuais = re.findall(REGEX_PURE_URL, link_51 or "")
+                    if links_51_visuais:
+                        placeholder_links_51.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_51_visuais]))
+
+                # Renderiza o bloco de comentários
+                bloco_comentarios("5.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.1", key=f"btn_salvar_5_1_{ano_sel}", type="primary"):
+                    num_c = num_contrato_input.strip()
+                    prest = prestador_input.strip()
+                    lnk_val = link_51.strip()
+
+                    valor_ajustado = f"Contrato: {num_c} | Prestador: {prest}"
+                    pts_calculados = 0.0  # Quesito informativo/cadastral
+
+                    comentario_para_salvar = st.session_state.get(chave_coment_51, d51.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="5.1",
+                        valor=valor_ajustado,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["5.1"] = {
+                        "valor": valor_ajustado,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_51_salva or "")]
+
+                    if lnk_val != evidencia_51_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 5.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação (Informativo)
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 5.1: +0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = False
