@@ -5992,6 +5992,8 @@ def mostrar_formulario_igov():
                 "Certidões e alvarás", "Saneamento", "Cemitérios"
             ]
 
+            total_itens = len(opcoes_bases) # 17 itens ao todo
+
             # Recupera e trata o estado inicial do dicionário com segurança
             d83 = res_data.get("8.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
 
@@ -6056,20 +6058,19 @@ def mostrar_formulario_igov():
             # -----------------------------------------------------------------
             if st.button("💾 Salvar Quesito 8.3", key=f"btn_salvar_8_3_{ano_sel}", type="primary"):
                 # Coleta as bases selecionadas atualmente nos checkboxes da tela
-                sel83_atual = []
-                for base in opcoes_bases:
-                    if st.session_state.get(f"ck_83_{base}_{ano_sel}", False):
-                        sel83_atual.append(base)
+                sel83_atual = [
+                    base for base in opcoes_bases 
+                    if st.session_state.get(f"ck_83_{base}_{ano_sel}", False)
+                ]
                 sel83_atual = sorted(sel83_atual)
 
-                # Cálculo do impacto de pontuação considerando a resposta do Quesito 8.0
+                # Cálculo do impacto por itens NÃO assinalados (-3 pontos cada)
                 v_80 = st.session_state.get(f"r_80_select_{ano_sel}", res_data.get("8.0", {}).get("valor", ""))
                 deve_aplicar_penalidade = (v_80 and "Sim" in str(v_80))
 
                 if deve_aplicar_penalidade:
-                    pts_83 = -51.0 + (len(sel83_atual) * 3.0)
-                    if pts_83 > 0.0:
-                        pts_83 = 0.0
+                    itens_nao_assinalados = total_itens - len(sel83_atual)
+                    pts_83 = -(itens_nao_assinalados * 3.0)
                 else:
                     pts_83 = 0.0
 
@@ -6115,22 +6116,21 @@ def mostrar_formulario_igov():
             v_80_tela = st.session_state.get(f"r_80_select_{ano_sel}", res_data.get("8.0", {}).get("valor", ""))
             deve_aplicar_penalidade_tela = (v_80_tela and "Sim" in str(v_80_tela))
 
-            # Obtém seleção atual para pré-visualização do resultado
+            # Obtém seleção atual para pré-visualização na tela
             sel83_tela = [b for b in opcoes_bases if st.session_state.get(f"ck_83_{b}_{ano_sel}", b in lista_salva_83)]
-            
-            if deve_aplicar_penalidade_tela:
-                pts_calculados_tela = -51.0 + (len(sel83_tela) * 3.0)
-                if pts_calculados_tela > 0.0:
-                    pts_calculados_tela = 0.0
+            qtd_nao_assinalados_tela = total_itens - len(sel83_tela)
 
-                if pts_calculados_tela < 0.0:
-                    st.warning(f"⚠️ Penalidade aplicada: {pts_calculados_tela:.1f} pontos")
+            if deve_aplicar_penalidade_tela:
+                pts_calculados_tela = -(qtd_nao_assinalados_tela * 3.0)
+
+                if qtd_nao_assinalados_tela > 0:
+                    st.warning(f"⚠️ Penalidade aplicada: {qtd_nao_assinalados_tela} item(ns) não assinalado(s) × -3,0 = {pts_calculados_tela:.1f} pontos")
                 else:
-                    st.success("✅ Nenhuma penalidade aplicada (Todos os itens preenchidos)!")
+                    st.success("✅ Nenhuma penalidade aplicada (Todos os 17 itens foram assinalados)!")
                 pontos_finais_display = pts_calculados_tela
             else:
                 pontos_finais_display = 0.0
-                st.success("✅ Nenhuma penalidade aplicada (Quesito 8.0 é Não)!")
+                st.success("✅ Nenhuma penalidade aplicada (Quesito 8.0 é 'Não')!")
 
             cor_txt_83 = "#28a745" if pontos_finais_display == 0.0 else "#dc3545"
             st.markdown(
