@@ -3587,3 +3587,142 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 6.1 • DETALHAMENTO DAS MEDIDAS DE ESTIAGEM (Padrão iGov)
+        # =============================================================================
+        import ast
+
+        with st.container(key=f"container_bloco_estiagem_6_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 6.1 - Ações de Enfrentamento Executadas", expanded=True):
+                st.subheader("6.1 • Detalhamento das Medidas")
+                st.write("**Assinale as ações e medidas preventivas de contingenciamento para os períodos de estiagem executados pela Prefeitura:**")
+                st.caption("ℹ *A pontuação deste quesito é cumulativa baseada nas diretrizes assinaladas. Marque as opções válidas, insira os links/comentários e clique em 'Salvar Quesito 6.1'.*")
+
+                opts61 = {
+                    "Plano emergencial ou de contingenciamento sobre abastecimento de água no caso de sua escassez – 30": 30.0,
+                    "Manejo/manobras de água entre os reservatórios – 00": 0.0,
+                    "Campanha de conscientização da população – 05": 5.0,
+                    "Busca de fontes alternativas de abastecimento, como: poços artesianos – 00": 0.0,
+                    "Uso racional da distribuição de água (racionamento) – 00": 0.0,
+                    "Implantação de rodízio de fornecimento de água – 00": 0.0,
+                    "Redução da pressão no abastecimento de água – 00": 0.0,
+                    "Multa em caso de desperdício de água – 00": 0.0,
+                    "Tarifa/taxa diferenciada para o aumento de consumo de água – 00": 0.0,
+                    "Fornecimento de caminhões pipa – 00": 0.0,
+                    "Drenagem pluvial – 00": 0.0,
+                    "Incentivo à instalação de sistema para água de reúso – 05": 5.0,
+                    "Redução das perdas na distribuição de água – 00": 0.0,
+                    "Desassoreamento – 00": 0.0,
+                    "Divulgação dos resultados obtidos com o contingenciamento, situação dos mananciais/represas/ETAs – 10": 10.0
+                }
+
+                # Recupera os dados salvos no banco de dados
+                d61 = res_data.get("6.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                
+                texto_seguro_61 = str(d61.get("valor", "[]"))
+                
+                # Conversão segura da string recuperada para lista
+                try:
+                    lista_salva_61 = ast.literal_eval(texto_seguro_61) if isinstance(texto_seguro_61, str) else texto_seguro_61
+                    if not isinstance(lista_salva_61, list):
+                        lista_salva_61 = []
+                except Exception:
+                    lista_salva_61 = []
+
+                evidencia_61_salva = d61.get("link", "")
+                
+                # Chaves fixas de componentes no Streamlit
+                chave_link_61 = f"l_61_txt_area_{ano_sel}"
+                chave_coment_61 = f"coment_6.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.write("*Selecione as ações válidas:*")
+                    for i, (txt, pts) in enumerate(opts61.items()):
+                        marcado = (txt in lista_salva_61) if lista_salva_61 else (txt in texto_seguro_61)
+                        st.checkbox(
+                            txt,
+                            value=marcado,
+                            key=f"ck_61_opt_{i}_{ano_sel}"
+                        )
+
+                with col2:
+                    link_61 = st.text_area(
+                        "Link/Evidência (6.1):",
+                        value=evidencia_61_salva,
+                        key=chave_link_61,
+                        placeholder="Insira links de diários oficiais, campanhas institucionais ou legislações tarifárias aplicadas...",
+                        height=340
+                    )
+                    placeholder_links_61 = st.empty()
+                    links_61_visuais = re.findall(REGEX_PURE_URL, link_61 or "")
+                    if links_61_visuais:
+                        placeholder_links_61.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_61_visuais]))
+
+                # Renderiza o bloco de comentários do Quesito 6.1
+                bloco_comentarios("6.1", res_data, ano_sel)
+
+                # Cálculo dinâmico do impacto na pontuação em tempo de execução
+                fb_pts_61 = sum([
+                    pts for i, (txt, pts) in enumerate(opts61.items())
+                    if st.session_state.get(f"ck_61_opt_{i}_{ano_sel}", (txt in lista_salva_61 if lista_salva_61 else False))
+                ])
+                
+                cor_txt_61 = "#28a745" if fb_pts_61 > 0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_61}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 6.1: +{fb_pts_61:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 6.1", key=f"btn_salvar_6_1_{ano_sel}", type="primary"):
+                    lista_selecionados = []
+                    pts_totais = 0.0
+
+                    for i, (txt, pts) in enumerate(opts61.items()):
+                        if st.session_state.get(f"ck_61_opt_{i}_{ano_sel}", False):
+                            lista_selecionados.append(txt)
+                            pts_totais += pts
+
+                    val_salvar = str(lista_selecionados)
+                    lnk_val = link_61.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_61, d61.get("comentario", ""))
+
+                    # Persistência via save_resp
+                    save_resp(
+                        qid="6.1",
+                        valor=val_salvar,
+                        pontos=float(pts_totais),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local
+                    res_data["6.1"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_totais),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_61_salva or "")]
+
+                    if lnk_val != evidencia_61_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_6_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 6.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 6.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_6_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = False
