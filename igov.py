@@ -3156,3 +3156,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.1.1.1", st.session_state.get(f"links_pendentes_3_1_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_1_1_1_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 3.2 • IDENTIFICAÇÃO DE RISCOS DE TIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_2_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.2 - Identificação de Riscos de TIC (ISO/IEC 27000)", expanded=True):
+            st.subheader("3.2 • Riscos de TIC")
+            st.write("**Os riscos de TIC são identificados de acordo com as normas brasileiras da família ISO/IEC 27000?**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 3.2'.*")
+
+            opc32 = {
+                "Selecione...": 0.0,
+                "Sim": 0.0,
+                "Não": 0.0
+            }
+            lista32 = list(opc32.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d32 = res_data.get("3.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_32 = d32.get("valor", "Selecione...")
+            evidencia_32_salva = d32.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_32 = f"r_32_select_{ano_sel}"
+            chave_link_32 = f"l_32_txt_area_{ano_sel}"
+            chave_coment_32 = f"coment_3.2_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx32 = lista32.index(v_salvo_32) if v_salvo_32 in lista32 else 0
+                st.radio(
+                    "Selecione o status da identificação:",
+                    options=lista32,
+                    index=idx32,
+                    key=chave_radio_32
+                )
+
+            with col2:
+                link_32 = st.text_area(
+                    "Link/Evidência (3.2):",
+                    value=evidencia_32_salva,
+                    key=chave_link_32,
+                    placeholder="Insira o link do processo, relatório ou mapeamento de riscos baseado na ISO 27000...",
+                    height=90
+                )
+
+                placeholder_links_32 = st.empty()
+                links_32_visuais = re.findall(regex_pure_url, link_32 or "")
+                if links_32_visuais:
+                    placeholder_links_32.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_32_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.2", key=f"btn_salvar_3_2_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_32, v_salvo_32)
+                pts_32 = float(opc32.get(val_salvar, 0.0))
+                lnk_val = link_32.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_32, d32.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.2",
+                    valor=val_salvar,
+                    pontos=pts_32,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.2"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_32,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_32_salva or "")
+
+                if lnk_val != evidencia_32_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_2_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.2 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_32 = d32.get("pontos", 0.0)
+            cor_txt_32 = "#28a745" if pts_atuais_32 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_32}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.2: +{pts_atuais_32:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_2_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.2", st.session_state.get(f"links_pendentes_3_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_2_{ano_sel}"] = False
