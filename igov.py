@@ -4272,3 +4272,72 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 5.1 • IDENTIFICAÇÃO DO INSTRUMENTO NORMATIVO (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    with st.container(key=f"container_bloco_igov_5_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 5.1 - Identificação da Normativa de Governo Digital", expanded=True):
+            st.subheader("5.1 • Dados do Instrumento")
+            st.write("**Informe o Instrumento normativo, Número e Data da publicação:**")
+            st.caption("ℹ *Preencha os dados da normativa e clique no botão 'Salvar Quesito 5.1'.*")
+
+            # Recupera os dados do 5.1 de forma segura
+            d51 = res_data.get("5.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_51 = d51.get("valor", "")
+
+            # Chaves fixas por componente e ano
+            chave_input_51 = f"t_51_input_{ano_sel}"
+            chave_coment_51 = f"coment_5.1_{ano_sel}"
+
+            txt_normativa = st.text_input(
+                "Identificação do Instrumento Normativo:",
+                value=v_salvo_51,
+                key=chave_input_51,
+                placeholder="Ex: Decreto Municipal nº 4.321, de 10 de maio de 2022"
+            )
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("5.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 5.1", key=f"btn_salvar_5_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_input_51, v_salvo_51).strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_51, d51.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="5.1",
+                    valor=val_salvar,
+                    pontos=0.0,
+                    link="",
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["5.1"] = {
+                    "valor": val_salvar,
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentario": comentario_para_salvar
+                }
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 5.1 salvos com sucesso!", icon="✅")
+
+                # 4. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo de impacto de pontuação
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 5.1: +0.0 pontos</span>",
+                unsafe_allow_html=True
+            )
