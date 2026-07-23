@@ -4651,7 +4651,7 @@ def mostrar_formulario_iamb():
                     "Estabelecimento de cronograma para o atingimento das metas assinaladas acima – 06": 6.0
                 }
 
-                # Recupera os dados salvos no banco
+                # Recupera os dados salvos do banco
                 d741 = res_data.get("7.4.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
 
                 # Conversão segura do valor salvo para lista de selecionados
@@ -4659,11 +4659,9 @@ def mostrar_formulario_iamb():
                 lista_salva_741 = []
                 if raw_val_741:
                     try:
-                        import json
                         lista_salva_741 = json.loads(raw_val_741) if isinstance(raw_val_741, str) else raw_val_741
-                    except Exception:
+                    except (json.JSONDecodeError, TypeError, ValueError):
                         try:
-                            import ast
                             lista_salva_741 = ast.literal_eval(raw_val_741)
                         except Exception:
                             lista_salva_741 = []
@@ -4733,7 +4731,6 @@ def mostrar_formulario_iamb():
                             selecionados.append(txt_opt)
                             pts_totais += pts_opt
 
-                    import json
                     val_salvar = json.dumps(selecionados, ensure_ascii=False)
                     comentario_para_salvar = st.session_state.get(chave_coment_741, d741.get("comentario", ""))
 
