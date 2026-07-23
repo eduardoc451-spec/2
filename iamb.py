@@ -31,9 +31,6 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-# Importação da inicialização do banco iAMB
-from iamb import init_db
-
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÕES DE AMBIENTE E SUPRESSÃO DE LOGS
 # -----------------------------------------------------------------------------
