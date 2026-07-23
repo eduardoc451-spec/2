@@ -1035,24 +1035,35 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     buffer.seek(0)
     return buffer.getvalue()
 
+import json
+import logging
+from datetime import datetime
+import streamlit as st
+import plotly.graph_objects as go
+from psycopg2.extras import RealDictCursor
+
 # =============================================================================
 # 4. SIDEBAR - iGov
 # =============================================================================
 
-def zerar_questionario_igov(ano):
-    """Deleta todas as respostas do ano selecionado no Neon PostgreSQL para o iGov."""
+def zerar_questionario_igov(ano: int):
+    """Deleta todas as respostas do ano selecionado com modulo = 'igov'."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("DELETE FROM respostas_igov WHERE ano = %s", (ano,))
+                cursor.execute(
+                    "DELETE FROM respostas WHERE ano = %s AND modulo = 'igov'",
+                    (int(ano),)
+                )
+            conn.commit()
         st.cache_data.clear()  # Limpa o cache após deletar
     except Exception as e:
         st.error(f"Erro ao zerar questionário iGov: {e}")
 
-# Janela pop-up de confirmação definida no escopo global
+
 @st.dialog("🔒 Confirmação de Segurança - iGov")
-def confirmar_zerar_dialog_igov(ano):
-    st.warning(f"Você está prestes a apagar todas as respostas do iGov relativas a {ano}. Esta ação é irreversível!")
+def confirmar_zerar_dialog_igov(ano: int):
+    st.warning(f"Você está prestes a apagar todas as respostas do iGov relativas ao ano de {ano}. Esta ação é irreversível!")
     
     senha = st.text_input("Digite a senha de administrador:", type="password")
     
@@ -1069,13 +1080,17 @@ def confirmar_zerar_dialog_igov(ano):
         if st.button("Cancelar", use_container_width=True):
             st.rerun()
 
+
 def render_sidebar():
     st.sidebar.title("🛠️ Painel iGov")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    
+    # Salva na session_state para manter a referência usada pela função save_resp
     ano_sel = st.sidebar.selectbox("Ano do Exercício:", anos, key="ano_referencia_igov")
 
-    res_data = load_respostas_igov(ano_sel)
-    total_pts = sum(item.get("pontos", 0) for item in res_data.values())
+    # Carrega dados usando a sua função load_respostas
+    res_data = load_respostas(ano_sel)
+    total_pts = sum(item.get("pontos", 0.0) for item in res_data.values())
 
     # Faixas de Maturidade do iGov
     if total_pts <= 30:
@@ -1099,26 +1114,42 @@ def render_sidebar():
     
     col1, col2 = st.sidebar.columns(2)
     
-    # Botão de Download do Relatório do iGov
     with col1:
+        # Substitua gerar_relatorio_pdf_igov pelo nome da sua função de PDF se houver
         st.download_button(
             label="📄 Baixar PDF",
-            data=gerar_relatorio_pdf_igov(res_data, ano_sel, total_pts, faixa),
+            data=gerar_relatorio_pdf_igov(res_data, ano_sel, total_pts, faixa) if 'gerar_relatorio_pdf_igov' in globals() else b"",
             file_name=f"Relatorio_iGov_{ano_sel}.pdf",
             mime="application/pdf",
             use_container_width=True
         )
 
-    # Botão para zerar dados do exercício selecionado
     with col2:
-        if st.button("🔄 Zerar", help="Limpar todas as respostas iGov do ano selecionado", use_container_width=True):
+        if st.button("🔄 Zerar", help="Limpar respostas do iGov para o ano selecionado", use_container_width=True):
             confirmar_zerar_dialog_igov(ano_sel)
 
     return total_pts, res_data, ano_sel
 
 # =============================================================================
-# 5. GRÁFICOS COMPARATIVOS - iGov
+# 5. GRÁFICOS E HISTÓRICO - iGov
 # =============================================================================
+
+def get_all_years_data_igov() -> dict:
+    """Busca o histórico de dados de todos os anos para a métrica iGov."""
+    all_data = {}
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT DISTINCT ano FROM respostas WHERE modulo = 'igov' ORDER BY ano"
+                )
+                anos = [row[0] for row in cursor.fetchall()]
+                for ano in anos:
+                    all_data[ano] = load_respostas(ano)
+    except Exception as e:
+        logging.error(f"Erro ao buscar histórico de anos iGov: {e}")
+    return all_data
+
 
 def get_faixa_igov(total):
     if total <= 30:  return "Crítico"
@@ -1128,164 +1159,22 @@ def get_faixa_igov(total):
     return "Excelência"
 
 
-def calcular_pontos_por_categoria(res_data):
-    resultado = {}
-    for cat_key, cat_info in CATEGORIAS_IGOV_MAP.items():
-        resultado[cat_key] = sum(
-            res_data.get(qid, {}).get("pontos", 0) for qid in cat_info["qids"]
-        )
-    return resultado
-
-
-def calcular_max_por_categoria():
-    resultado = {}
-    for cat_key, cat_info in CATEGORIAS_IGOV_MAP.items():
-        resultado[cat_key] = sum(PONTUACOES_MAX_IGOV.get(qid, 0) for qid in cat_info["qids"])
-    return resultado
-
-
-def grafico_comparativo_total(all_data):
-    anos = sorted(all_data.keys())
-    totais, faixas, cores = [], [], []
-    for ano in anos:
-        res = all_data[ano]
-        total = sum(v.get("pontos", 0) for k, v in res.items() if not k.startswith("COM_"))
-        faixa = get_faixa_igov(total)
-        totais.append(total)
-        faixas.append(faixa)
-        cores.append(FAIXA_CORES_IGOV.get(faixa, "#0ea5e9"))
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=[str(a) for a in anos],
-        y=totais,
-        marker_color=cores,
-        text=[f"{t:.1f} pts<br>{f}" for t, f in zip(totais, faixas)],
-        textposition="outside",
-        hovertemplate="<b>%{x}</b><br>%{text}<extra></extra>",
-    ))
-    
-    # Linhas de referência de faixas iGov
-    for y_val, label, cor in [
-        (30, "Crítico → Básico", "#f97316"), 
-        (55, "Básico → Intermediário", "#eab308"),
-        (75, "Intermediário → Aprimorado", "#22c55e"), 
-        (90, "Aprimorado → Excelência", "#16a34a")
-    ]:
-        fig.add_hline(y=y_val, line_dash="dash", line_color=cor,
-                      annotation_text=label, annotation_position="right")
-                      
-    fig.update_layout(
-        title="Evolução do Índice iGov por Ano",
-        xaxis_title="Ano", yaxis_title="Pontos / Índice",
-        plot_bgcolor="white", paper_bgcolor="white",
-        showlegend=False, height=400,
-    )
-    return fig
-
-
-def grafico_evolucao_categorias(all_data):
-    anos = sorted(all_data.keys())
-    CORES_CAT = ["#1e3a5f","#0ea5e9","#22c55e","#f97316","#ef4444","#8b5cf6","#ec4899","#6b7280"]
-    fig = go.Figure()
-    for idx, (cat_key, cat_info) in enumerate(CATEGORIAS_IGOV_MAP.items()):
-        valores = [
-            sum(all_data.get(ano, {}).get(qid, {}).get("pontos", 0) for qid in cat_info["qids"])
-            for ano in anos
-        ]
-        fig.add_trace(go.Scatter(
-            x=[str(a) for a in anos], y=valores,
-            mode="lines+markers", name=cat_info["label"],
-            line=dict(color=CORES_CAT[idx % len(CORES_CAT)], width=2),
-            marker=dict(size=7),
-        ))
-    fig.update_layout(
-        title="Evolução das Dimensões de Governança ao Longo dos Anos",
-        xaxis_title="Ano", yaxis_title="Pontos",
-        plot_bgcolor="white", paper_bgcolor="white",
-        legend=dict(orientation="h", yanchor="bottom", y=-0.4),
-        height=450,
-    )
-    return fig
-
-
-def grafico_radar_categorias(res_data, ano):
-    maximos = calcular_max_por_categoria()
-    pontos  = calcular_pontos_por_categoria(res_data)
-    labels  = [CATEGORIAS_IGOV_MAP[k]["label"] for k in CATEGORIAS_IGOV_MAP]
-    valores_pct = [
-        round(max(0, pontos.get(k, 0) / maximos[k] * 100), 1) if maximos.get(k, 0) > 0 else 0
-        for k in CATEGORIAS_IGOV_MAP
-    ]
-    labels_fechado  = labels + [labels[0]]
-    valores_fechado = valores_pct + [valores_pct[0]]
-    
-    fig = go.Figure(go.Scatterpolar(
-        r=valores_fechado, theta=labels_fechado,
-        fill="toself", fillcolor="rgba(30,58,95,0.15)",
-        line=dict(color="#1e3a5f", width=2),
-        hovertemplate="%{theta}: %{r:.1f}%<extra></extra>",
-    ))
-    fig.update_layout(
-        title=f"Maturidade por Dimensão de Governança — {ano}",
-        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-        showlegend=False, height=420, paper_bgcolor="white",
-    )
-    return fig
-
-
-def grafico_quesitos_barra(res_data, ano):
-    qids_pontuaveis = sorted([q for q, v in PONTUACOES_MAX_IGOV.items() if v > 0])
-    qids, obtido, maximo, cores = [], [], [], []
-    for qid in qids_pontuaveis:
-        pts = res_data.get(qid, {}).get("pontos", 0)
-        mx  = PONTUACOES_MAX_IGOV[qid]
-        qids.append(qid)
-        obtido.append(pts)
-        maximo.append(mx)
-        if pts == mx:   cores.append("#16a34a")
-        elif pts < 0:   cores.append("#ef4444")
-        elif pts == 0:  cores.append("#9ca3af")
-        else:           cores.append("#0ea5e9")
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        name="Pontuação Máxima", x=maximo, y=qids, orientation="h",
-        marker_color="rgba(200,200,200,0.35)", hoverinfo="skip",
-    ))
-    fig.add_trace(go.Bar(
-        name="Pontuação Obtida", x=obtido, y=qids, orientation="h",
-        marker_color=cores,
-        hovertemplate="<b>%{y}</b><br>Obtido: %{x} pts<extra></extra>",
-    ))
-    fig.update_layout(
-        title=f"Desempenho por Prática / Item — {ano}",
-        barmode="overlay", xaxis_title="Pontos",
-        plot_bgcolor="white", paper_bgcolor="white",
-        height=max(500, len(qids) * 22),
-        legend=dict(orientation="h"),
-        yaxis=dict(autorange="reversed"),
-    )
-    return fig
-
-
 def grafico_pontos_por_ano(all_data):
-    """Gráfico de barras vertical com índice total do iGov por ano."""
+    """Gráfico de barras vertical com pontos totais por ano."""
     anos = sorted(all_data.keys())
     totais = []
     cores = []
     
     for ano in anos:
         res = all_data[ano]
-        total = sum(v.get("pontos", 0) for k, v in res.items() if not k.startswith("COM_"))
+        total = sum(v.get("pontos", 0.0) for k, v in res.items() if not k.startswith("COM_"))
         totais.append(total)
         
-        # Cor por faixa do iGov
-        if total <= 30:    cores.append("#ef4444")  # Crítico - Vermelho
-        elif total <= 55:  cores.append("#f97316")  # Básico - Laranja
-        elif total <= 75:  cores.append("#eab308")  # Intermediário - Amarelo
-        elif total <= 90:  cores.append("#22c55e")  # Aprimorado - Verde Claro
-        else:              cores.append("#16a34a")  # Excelência - Verde
+        if total <= 30:    cores.append("#ef4444")
+        elif total <= 55:  cores.append("#f97316")
+        elif total <= 75:  cores.append("#eab308")
+        elif total <= 90:  cores.append("#22c55e")
+        else:              cores.append("#16a34a")
     
     fig = go.Figure()
     fig.add_trace(go.Bar(
@@ -1298,8 +1187,8 @@ def grafico_pontos_por_ano(all_data):
     ))
     
     fig.update_layout(
-        title="Índice iGov Histórico por Ano",
-        xaxis_title="Ano do Exercício",
+        title="Índice Histórico iGov por Exercício",
+        xaxis_title="Ano",
         yaxis_title="Pontuação iGov",
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -1309,13 +1198,14 @@ def grafico_pontos_por_ano(all_data):
     
     return fig
 
+
 def render_graficos(res_data_atual, ano_sel):
     st.header("📊 Painel de Análise do iGov")
     
     all_data = get_all_years_data_igov()
     
     if not all_data:
-        st.info("Nenhum dado do iGov registrado ainda. Preencha os itens para visualizar a análise.")
+        st.info("Nenhum dado do iGov registrado ainda. Preencha os itens para visualizar os gráficos.")
         return
 
     st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
@@ -1330,40 +1220,21 @@ def mostrar_formulario_igov():
     if dados_sidebar and len(dados_sidebar) == 3:
         total_pts, res_data, ano_sel = dados_sidebar
     else:
-        total_pts, res_data, ano_sel = 0, {}, "2026"
+        total_pts, res_data, ano_sel = 0.0, {}, 2026
 
-    st.title(f"🏛️ Avaliação de Governança Pública (iGov) - {ano_sel}")
+    st.title(f"🏛️ Avaliação de Governança (iGov) - {ano_sel}")
 
-    # -------------------------------------------------------------------------
-    # ABAS PRINCIPAIS
-    # -------------------------------------------------------------------------
     aba_questionario, aba_graficos = st.tabs(["📋 Questionário iGov", "📊 Análise & Gráficos"])
 
     with aba_questionario:
-        st.info("Responda aos itens abaixo para calcular o nível de maturidade e governança da instituição.")
+        st.info("Responda às questões da governança para atualizar a pontuação.")
         
-        # Exemplo de chamada para renderizar os itens do iGov:
-        # renderizar_questao_igov("1.1", res_data)
-        # renderizar_questao_igov("1.2", res_data)
+        # Exemplo prático de salvamento usando sua função save_resp:
+        # if st.button("Salvar Resposta Exemplo"):
+        #     save_resp(qid="1.1", valor="Sim", pontos=10.0, link="https://...", comentarios=[])
 
     with aba_graficos:
         render_graficos(res_data, ano_sel)
-
-    # -------------------------------------------------------------------------
-    # ABAS PRINCIPAIS
-    # -------------------------------------------------------------------------
-    aba_questionario, aba_graficos = st.tabs(["📋 Questionário", "📊 Gráficos"])
-
-    with aba_questionario:
-        st.info("Preencha os quesitos abaixo usando o componente de renderização.")
-        
-        # Exemplo de chamada utilizando a função otimizada de renderização/salvamento:
-        # renderizar_questao("1.0", res_data)
-        # renderizar_questao("1.3", res_data)
-
-    with aba_graficos:
-        render_graficos(res_data, ano_sel)
-
         # =============================================================================
         # QUESITO 1.0 • SETOR DE TIC (MODELO COMPLETO i-Cidade)
         # =============================================================================
