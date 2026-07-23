@@ -2009,3 +2009,116 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.1.2", st.session_state.get(f"links_pendentes_1_1_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_1_2_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 1.1.3 • CURSOS DE EDUCAÇÃO AMBIENTAL (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_rh_1_1_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.1.3 - Cursos e Treinamentos Oferecidos à Comunidade", expanded=True):
+                st.subheader("1.1.3 • Educação Ambiental")
+                st.write("**A Secretaria Municipal de Meio Ambiente ou similar ofereceu cursos/treinamento sobre educação ambiental para qual público?**")
+                st.caption("ℹ *Marque as opções aplicáveis e clique no botão 'Salvar Quesito 1.1.3' para registrar.*")
+
+                opts113 = {
+                    "Para escolas – 05": 5.0, 
+                    "Para outras secretarias / entidades municipais – 02": 2.0, 
+                    "Para munícipes ou empresas – 03": 3.0, 
+                    "Não ofereceu nenhum curso/treinamento no ano – 00": 0.0
+                }
+
+                # Recupera os dados salvos no banco ou cria valor zerado
+                d113 = res_data.get("1.1.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                texto_seguro_113 = str(d113.get("valor", "[]"))
+                evidencia_113_salva = d113.get("link", "")
+
+                # Chaves fixas para componentes Streamlit
+                chave_link_113 = f"l_113_txt_area_{ano_sel}"
+                chave_coment_113 = f"coment_1.1.3_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.write("*Selecione os públicos-alvo atendidos:*")
+                    for txt, pts in opts113.items():
+                        marcado = (txt in texto_seguro_113) if texto_seguro_113 and texto_seguro_113 != "[]" else False
+                        st.checkbox(
+                            txt,
+                            value=marcado,
+                            key=f"ck_113_{txt}_{ano_sel}"
+                        )
+
+                with col2:
+                    link_113 = st.text_area(
+                        "Link/Evidência (1.1.3):",
+                        value=evidencia_113_salva,
+                        key=chave_link_113,
+                        placeholder="Links de fotos de divulgação, diário oficial, decretos ou notícias dos cursos...",
+                        height=150
+                    )
+                    placeholder_links_113 = st.empty()
+                    links_113_visuais = re.findall(REGEX_PURE_URL, link_113 or "")
+                    if links_113_visuais:
+                        placeholder_links_113.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_113_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.1.3", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.1.3", key=f"btn_salvar_1_1_3_{ano_sel}", type="primary"):
+                    # Coleta as escolhas ativas no session_state
+                    lista_selecionados = []
+                    pts_totais = 0.0
+                    for txt, pts in opts113.items():
+                        if st.session_state.get(f"ck_113_{txt}_{ano_sel}", False):
+                            lista_selecionados.append(txt)
+                            pts_totais += pts
+
+                    val_salvar = str(lista_selecionados)
+                    lnk_val = link_113.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_113, d113.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="1.1.3",
+                        valor=val_salvar,
+                        pontos=pts_totais,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["1.1.3"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_totais,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_113_salva or "")]
+
+                    if lnk_val != evidencia_113_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_1_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_1_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.1.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual
+                pts_atuais_113 = d113.get("pontos", 0.0)
+                cor_txt_113 = "#28a745" if pts_atuais_113 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_113}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.1.3: +{pts_atuais_113:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.1.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_1_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.1.3", st.session_state.get(f"links_pendentes_1_1_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_1_3_{ano_sel}"] = False
