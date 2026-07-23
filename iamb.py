@@ -338,13 +338,13 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 st.rerun()
 
 # =============================================================================
-# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO
+# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (ADAPTADO PARA IAMB)
 # =============================================================================
 
 def get_all_years_data():
-    """Varre a sessão procurando por chaves do tipo respostas_igov_<ano>."""
+    """Varre a sessão procurando por chaves do tipo respostas_iamb_<ano>."""
     all_data = {}
-    prefixo = "respostas_igov_"
+    prefixo = "respostas_iamb_"
     
     for key in list(st.session_state.keys()):
         if key.startswith(prefixo):
@@ -358,18 +358,19 @@ def get_all_years_data():
 
 
 def analyze_performance(res_data):
-    """Mapeia os pontos fortes e fragilidades do ano atual no iGov usando o dicionário TETOS_VALIDOS."""
+    """Mapeia os pontos fortes e fragilidades do ano atual no iAmb usando o dicionário TETOS_VALIDOS."""
     pontos_fortes = []
     criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
     criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
 
-    # Dicionário de tetos máximos por quesito
+    # Dicionário de tetos máximos por quesito - iAmb
     TETOS_VALIDOS = {
-        "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
-        "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
-        "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
-        "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
-        "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
+        "1.1.2": 20.0, "1.1.3": 10.0, "1.2": 20.0, "2.0": 10.0, "2.1": 50.0, "3.0": 10.0, "3.1": 20.0, "4.0": 20.0,
+        "5.2.1": 20.0, "6.0": 20.0, "6.1": 50.0, "6.2": 25.0, "7.2": 2.0, "7.3": 10.0, "7.3.1": 20.0, "7.4": 10.0,
+        "7.4.1": 20.0, "7.5": 30.0, "7.7": 30.0, "7.8": 20.0, "7.8.1": 50.0, "7.9": 3.0, "8.2": 2.0, "8.3": 10.0,
+        "8.4": 20.0, "8.4.1": 10.0, "8.4.2": 30.0, "8.4.3": 50.0, "9.2": 100.0, "9.3": 5.0, "9.3.1": 5.0,
+        "11": 10.0, "11.2": 2.0, "11.3": 30.0, "11.3.2": 20.0, "11.3.3": 40.0, "11.5": 10.0, "12.1": 54.0, "14.3": 30.0,
+        "15": 2.0, "15.1": 3.0, "A4.1.1": 90.0, "A4.1.2": 20.0, "A4.1.3": 22.0, "A6": 5.0
     }
 
     def classificar_relevancia(impacto):
