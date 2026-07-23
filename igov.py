@@ -2046,3 +2046,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("1.4.1", st.session_state.get(f"links_pendentes_1_4_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_1_4_1_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 1.4.2 • ESTUDOS PRELIMINARES DE SOFTWARE (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_1_4_2_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.4.2 - Análise de Viabilidade Técnica e Contratações de Software", expanded=True):
+            st.subheader("1.4.2 • Estudos de Viabilidade de Software")
+            st.write("**Sobre programas de computador (softwares) adquiridos ou licenciados nos últimos 5 anos, foi realizada análise ou estudo antes de sua contratação com a participação do pessoal de Tecnologia da Informação e Comunicação (TIC)?**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.4.2' para registrar.*")
+
+            opc142 = {
+                "Selecione...": 0.0,
+                "Sim, para todos os softwares – 20": 20.0,
+                "Sim, para a maior parte dos softwares – 15": 15.0,
+                "Sim, para a menor parte dos softwares – 08": 8.0,
+                "Não foi realizado – 00": 0.0,
+                "Não foi adquirido nenhum software nos últimos 5 anos – 20": 20.0
+            }
+            lista142 = list(opc142.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d142 = res_data.get("1.4.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_142 = d142.get("valor", "Selecione...")
+            l_salvo_142 = d142.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_142 = f"r_142_{ano_sel}"
+            chave_link_142 = f"l_142_txt_{ano_sel}"
+            chave_coment_142 = f"coment_1.4.2_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx142 = lista142.index(v_salvo_142) if v_salvo_142 in lista142 else 0
+                val_radio_142 = st.radio(
+                    "Selecione 1.4.2:",
+                    options=lista142,
+                    index=idx142,
+                    key=chave_radio_142,
+                    label_visibility="collapsed"
+                )
+
+            with col2:
+                link_142 = st.text_area(
+                    "Link/Evidência (1.4.2):",
+                    value=l_salvo_142,
+                    key=chave_link_142,
+                    placeholder="Insira o link dos Estudos Técnicos Preliminares (ETP), relatórios de análise de aderência ou certidões de inexistência de compras de software...",
+                    height=120
+                )
+                placeholder_links_142 = st.empty()
+                links_142_visuais = re.findall(regex_pure_url, link_142 or "")
+                if links_142_visuais:
+                    placeholder_links_142.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_142_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.4.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.4.2", key=f"btn_salvar_1_4_2_{ano_sel}", type="primary"):
+                pts_calculados_142 = float(opc142.get(val_radio_142, 0.0))
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_142, d142.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="1.4.2",
+                    valor=val_radio_142,
+                    pontos=pts_calculados_142,
+                    link=link_142.strip(),
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["1.4.2"] = {
+                    "valor": val_radio_142,
+                    "pontos": pts_calculados_142,
+                    "link": link_142.strip(),
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, link_142 or "")
+                links_antigos = re.findall(regex_pure_url, l_salvo_142 or "")
+
+                if link_142 != l_salvo_142 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_4_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_4_2_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 1.4.2 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_142 = d142.get("pontos", 0.0)
+            cor_txt_142 = "#28a745" if pts_atuais_142 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_142}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.4.2: +{pts_atuais_142:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.4.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_4_2_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("1.4.2", st.session_state.get(f"links_pendentes_1_4_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_4_2_{ano_sel}"] = False
