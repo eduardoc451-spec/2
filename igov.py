@@ -2791,3 +2791,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 3.1 • TERMO DE RESPONSABILIDADE (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.1 - Termo de Responsabilidade e Compromisso de TI", expanded=True):
+            st.subheader("3.1 • Termo de Responsabilidade")
+            st.write("**A Prefeitura estabelece procedimentos e responsabilidades quanto ao uso da tecnologia da informação pelos funcionários municipais, conhecido como Termo de Responsabilidade/Compromisso?**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 3.1'.*")
+
+            opc31 = {
+                "Selecione...": 0.0,
+                "Sim – 20": 20.0,
+                "Não – 00": 0.0
+            }
+            lista31 = list(opc31.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d31 = res_data.get("3.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_31 = d31.get("valor", "Selecione...")
+            evidencia_31_salva = d31.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_31 = f"r_31_select_{ano_sel}"
+            chave_link_31 = f"l_31_txt_area_{ano_sel}"
+            chave_coment_31 = f"coment_3.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx31 = lista31.index(v_salvo_31) if v_salvo_31 in lista31 else 0
+                st.radio(
+                    "Selecione o status do Termo:",
+                    options=lista31,
+                    index=idx31,
+                    key=chave_radio_31
+                )
+
+            with col2:
+                link_31 = st.text_area(
+                    "Link/Evidência (3.1):",
+                    value=evidencia_31_salva,
+                    key=chave_link_31,
+                    placeholder="Insira o link de publicação do decreto, portaria ou regulamento interno do Termo de Responsabilidade...",
+                    height=90
+                )
+
+                placeholder_links_31 = st.empty()
+                links_31_visuais = re.findall(regex_pure_url, link_31 or "")
+                if links_31_visuais:
+                    placeholder_links_31.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_31_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.1", key=f"btn_salvar_3_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_31, v_salvo_31)
+                pts_31 = float(opc31.get(val_salvar, 0.0))
+                lnk_val = link_31.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_31, d31.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.1",
+                    valor=val_salvar,
+                    pontos=pts_31,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.1"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_31,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_31_salva or "")
+
+                if lnk_val != evidencia_31_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_31 = d31.get("pontos", 0.0)
+            cor_txt_31 = "#28a745" if pts_atuais_31 == 20.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_31}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.1: +{pts_atuais_31:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
