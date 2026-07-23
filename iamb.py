@@ -32,7 +32,7 @@ from reportlab.platypus import (
 )
 
 # -----------------------------------------------------------------------------
-# CONFIGURAÇÕES DE AMBIENTE E SUPRESSÃO DE LOGS
+# CONFIGURAÇÕES DE AMBIENTE E BANCO DE DADOS NEON
 # -----------------------------------------------------------------------------
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
@@ -40,11 +40,40 @@ os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
 os.environ["PYTHONWARNINGS"] = "ignore"
 logging.getLogger("streamlit").setLevel(logging.ERROR)
 
-# Inicializa o banco de dados do iAMB no carregamento do arquivo
+
+def get_connection():
+    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
+    return psycopg2.connect(st.secrets["DATABASE_URL"])
+
+
+def init_db():
+    """Cria a tabela respostas_iamb isolada no Neon se não existir."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS respostas_iamb (
+                        id SERIAL PRIMARY KEY,
+                        ano INT NOT NULL,
+                        quesito VARCHAR(50) NOT NULL,
+                        resposta TEXT,
+                        pontos FLOAT DEFAULT 0.0,
+                        link TEXT,
+                        comentarios JSONB DEFAULT '[]'::jsonb,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT unq_ano_quesito_iamb UNIQUE(ano, quesito)
+                    );
+                """)
+            conn.commit()
+    except Exception as e:
+        logging.error(f"Erro ao inicializar banco iAMB: {e}")
+
+
+# Inicializa a tabela no carregamento do módulo
 try:
     init_db()
 except Exception as e:
-    logging.error(f"Erro ao inicializar tabelas do iAMB: {e}")
+    logging.error(f"Erro no auto-init do iAMB: {e}")
 
 # =============================================================================
 # REGEX DE VALIDAÇÃO
@@ -55,69 +84,16 @@ REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
 # CONSTANTES GLOBAIS - IAMB
 # =============================================================================
 PONTUACOES_MAX_IAMB = {
-    "1.1.2": 20,
-    "1.1.3": 5,
-    "1.2": 20,
-    "2.0": 10,
-    "2.1": 50,
-    "3.0": 10,
-    "3.1": 20,
-    "4.0": 20,
-    "5.2.1": 20,
-    "6.0": 20,
-    "6.1": 50,
-    "6.2": 25,
-    "7.2": 2,
-    "7.3": 10,
-    "7.3.1": 20,
-    "7.4": 10,
-    "7.4.1": 20,
-    "7.5": 30,
-    "7.7": 30,
-    "7.8": 20,
-    "7.8.1": 50,
-    "7.9": 3,
-    "8.2": 2,
-    "8.3": 10,
-    "8.4": 20,
-    "8.4.1": 10,
-    "8.4.2": 30,
-    "8.4.3": 50,
-    "9.2": 100,
-    "9.3": 5,
-    "9.3.1": 5,
-    "11.2": 2,
-    "11.3": 30,
-    "11.3.2": 20,
-    "11.3.3": 40,
-    "11.5": 10,
-    "12.1": 54,
-    "14.3": 30,
-    "15": 2,
-    "15.1": 3,
-    "A4.1.1": 90,
-    "A4.1.2": 20,
-    "A4.1.3": 22,
-    "A6": 5
+    "1.1.2": 20.0, "1.1.3": 5.0, "1.2": 20.0, "2.0": 10.0, "2.1": 50.0,
+    "3.0": 10.0, "3.1": 20.0, "4.0": 20.0, "5.2.1": 20.0, "6.0": 20.0,
+    "6.1": 50.0, "6.2": 25.0, "7.2": 2.0, "7.3": 10.0, "7.3.1": 20.0,
+    "7.4": 10.0, "7.4.1": 20.0, "7.5": 30.0, "7.7": 30.0, "7.8": 20.0,
+    "7.8.1": 50.0, "7.9": 3.0, "8.2": 2.0, "8.3": 10.0, "8.4": 20.0,
+    "8.4.1": 10.0, "8.4.2": 30.0, "8.4.3": 50.0, "9.2": 100.0, "9.3": 5.0,
+    "9.3.1": 5.0, "11.2": 2.0, "11.3": 30.0, "11.3.2": 20.0, "11.3.3": 40.0,
+    "11.5": 10.0, "12.1": 54.0, "14.3": 30.0, "15": 2.0, "15.1": 3.0,
+    "A4.1.1": 90.0, "A4.1.2": 20.0, "A4.1.3": 22.0, "A6": 5.0
 }
-
-# =============================================================================
-# MODAL DE AVISO AUTOMÁTICO (CORRIGIDO PARA LINKS CLICÁVEIS)
-# =============================================================================
-@st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados):
-    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    
-    for lk in links_encontrados:
-        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
-        
-    st.markdown("""
-    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
-    
-    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
-    """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
-        st.rerun()
 
 # =============================================================================
 # MODAL DE AVISO AUTOMÁTICO
@@ -125,6 +101,7 @@ def modal_aviso_link(qid, links_encontrados):
 @st.dialog("⚠️ Atenção! Evidência em Link Externo")
 def modal_aviso_link(qid, links_encontrados):
     st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    
     for lk in links_encontrados:
         st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
         
@@ -137,28 +114,49 @@ def modal_aviso_link(qid, links_encontrados):
         st.rerun()
 
 # =============================================================================
-# 1. GESTÃO DE ESTADO E PERSISTÊNCIA EM MEMÓRIA (st.session_state)
+# 1. GESTÃO DE ESTADO E PERSISTÊNCIA (SESSION STATE + NEON POSTGRES)
 # =============================================================================
 
 def get_ano_atual() -> int:
-    """Recupera o ano de referência ativo no aplicativo."""
-    return int(st.session_state.get("ano_referencia_igov") or st.session_state.get("ano_referencia_global") or 2024)
+    """Recupera o ano de referência ativo para o iAMB."""
+    return int(st.session_state.get("ano_referencia_iamb") or st.session_state.get("ano_referencia_global") or 2026)
+
 
 def load_respostas(ano: int = None) -> dict:
-    """Carrega as respostas armazenadas no session_state para o ano especificado."""
+    """Carrega respostas do st.session_state ou do Neon se ainda não carregadas."""
     if ano is None:
         ano = get_ano_atual()
     
-    key_ano = f"respostas_igov_{ano}"
+    key_ano = f"respostas_iamb_{ano}"
+    
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
-    
+        # Carrega do banco Neon
+        try:
+            with get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(
+                        "SELECT quesito, resposta, pontos, link, comentarios FROM respostas_iamb WHERE ano = %s",
+                        (int(ano),)
+                    )
+                    rows = cursor.fetchall()
+                    for r in rows:
+                        st.session_state[key_ano][str(r['quesito'])] = {
+                            "valor": r['resposta'] or "",
+                            "pontos": float(r['pontos'] or 0.0),
+                            "link": r['link'] or "",
+                            "comentarios": r['comentarios'] if isinstance(r['comentarios'], list) else []
+                        }
+        except Exception as e:
+            logging.error(f"Erro ao carregar respostas do banco iAMB: {e}")
+
     return st.session_state[key_ano]
 
+
 def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Salva/Atualiza as respostas diretamente no st.session_state do iGov."""
+    """Salva/Atualiza respostas no st.session_state e sincroniza com o banco Neon."""
     ano_int = get_ano_atual()
-    key_ano = f"respostas_igov_{ano_int}"
+    key_ano = f"respostas_iamb_{ano_int}"
     
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
@@ -167,13 +165,41 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
         dados_atuais = st.session_state[key_ano].get(str(qid), {})
         comentarios = dados_atuais.get("comentarios", [])
 
-    st.session_state[key_ano][str(qid)] = {
+    # 1. Atualiza Session State
+    dados_salvar = {
         "valor": str(valor),
         "pontos": float(pontos),
         "link": str(link),
         "comentarios": comentarios,
         "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+    st.session_state[key_ano][str(qid)] = dados_salvar
+
+    # 2. Persiste no banco de dados Neon (UPSERT)
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO respostas_iamb (ano, quesito, resposta, pontos, link, comentarios, atualizado_em)
+                    VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (ano, quesito) 
+                    DO UPDATE SET 
+                        resposta = EXCLUDED.resposta,
+                        pontos = EXCLUDED.pontos,
+                        link = EXCLUDED.link,
+                        comentarios = EXCLUDED.comentarios,
+                        atualizado_em = CURRENT_TIMESTAMP;
+                """, (
+                    ano_int,
+                    str(qid),
+                    str(valor),
+                    float(pontos),
+                    str(link),
+                    json.dumps(comentarios)
+                ))
+            conn.commit()
+    except Exception as e:
+        logging.error(f"Erro ao salvar resposta do iAMB no banco Neon: {e}")
 
 # =============================================================================
 # 2. COMPONENTE PARA RENDERIZAR E SALVAR QUESTÕES
@@ -352,7 +378,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 st.rerun()
 
 # =============================================================================
-# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (ADAPTADO PARA IAMB)
+# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (iAMB)
 # =============================================================================
 
 def get_all_years_data():
@@ -372,20 +398,10 @@ def get_all_years_data():
 
 
 def analyze_performance(res_data):
-    """Mapeia os pontos fortes e fragilidades do ano atual no iAmb usando o dicionário TETOS_VALIDOS."""
+    """Mapeia os pontos fortes e fragilidades do ano atual no iAMB usando PONTUACOES_MAX_IAMB."""
     pontos_fortes = []
     criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
     criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
-
-    # Dicionário de tetos máximos por quesito - iAmb
-    TETOS_VALIDOS = {
-        "1.1.2": 20.0, "1.1.3": 10.0, "1.2": 20.0, "2.0": 10.0, "2.1": 50.0, "3.0": 10.0, "3.1": 20.0, "4.0": 20.0,
-        "5.2.1": 20.0, "6.0": 20.0, "6.1": 50.0, "6.2": 25.0, "7.2": 2.0, "7.3": 10.0, "7.3.1": 20.0, "7.4": 10.0,
-        "7.4.1": 20.0, "7.5": 30.0, "7.7": 30.0, "7.8": 20.0, "7.8.1": 50.0, "7.9": 3.0, "8.2": 2.0, "8.3": 10.0,
-        "8.4": 20.0, "8.4.1": 10.0, "8.4.2": 30.0, "8.4.3": 50.0, "9.2": 100.0, "9.3": 5.0, "9.3.1": 5.0,
-        "11": 10.0, "11.2": 2.0, "11.3": 30.0, "11.3.2": 20.0, "11.3.3": 40.0, "11.5": 10.0, "12.1": 54.0, "14.3": 30.0,
-        "15": 2.0, "15.1": 3.0, "A4.1.1": 90.0, "A4.1.2": 20.0, "A4.1.3": 22.0, "A6": 5.0
-    }
 
     def classificar_relevancia(impacto):
         abs_impacto = abs(impacto)
@@ -397,12 +413,11 @@ def analyze_performance(res_data):
             return "Baixa"
 
     for qid, info in res_data.items():
-        # Ignora campos de comentários ou quesitos fora do mapeamento
-        if qid.startswith("COM_") or qid not in TETOS_VALIDOS:
+        if qid.startswith("COM_") or qid not in PONTUACOES_MAX_IAMB:
             continue
 
         pontos_atuais = float(info.get("pontos", 0.0))
-        max_pontos = TETOS_VALIDOS[qid]
+        max_pontos = PONTUACOES_MAX_IAMB[qid]
 
         if pontos_atuais == max_pontos:
             pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
@@ -419,7 +434,6 @@ def analyze_performance(res_data):
                     (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
                 )
 
-    # Ordenação dos resultados por pontuação/impacto
     pontos_fortes.sort(key=lambda x: x[1], reverse=True)
     for rel in ["Alta", "Média", "Baixa"]:
         criticos_zero[rel].sort(key=lambda x: x[4], reverse=True)
