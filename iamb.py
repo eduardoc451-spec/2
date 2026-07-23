@@ -11497,3 +11497,115 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.3", st.session_state.get(f"links_pendentes_14_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_3_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 15.0 • ENTIDADE REGULADORA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q15_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 15.0 - Entidade Reguladora", expanded=True):
+                st.subheader("15.0 • Definição de Entidade Responsável")
+                st.write("**O Município definiu a entidade responsável pela regulação e fiscalização dos serviços públicos de saneamento básico?**")
+
+                # Recuperação dos dados salvos no banco
+                d150 = res_data.get("15.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc150 = ["Selecione...", "Sim – 02", "Não – 00"]
+                v_salvo_150 = d150.get("valor", "Selecione...")
+                if v_salvo_150 not in opc150:
+                    v_salvo_150 = "Selecione..."
+                pts_salvos_150 = float(d150.get("pontos", 0.0))
+                evidencia_150_salva = d150.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_resposta_150 = f"r150_in_{ano_sel}"
+                chave_link_150 = f"l150_in_{ano_sel}"
+                chave_coment_150 = f"coment_15.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    v_input_150 = st.radio(
+                        "Selecione uma opção (15.0):",
+                        options=opc150,
+                        index=opc150.index(v_salvo_150),
+                        key=chave_resposta_150
+                    )
+
+                    # Exibição de métrica de impacto salva
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_150:.1f} pts")
+
+                with col2:
+                    lk150 = st.text_area(
+                        "Link/Evidência (15.0):",
+                        value=evidencia_150_salva,
+                        key=chave_link_150,
+                        placeholder="Inserir link da lei de criação da agência, convênio de delegação ou decreto...",
+                        height=125
+                    )
+                    placeholder_links_150 = st.empty()
+                    links_150_visuais = re.findall(REGEX_PURE_URL, lk150 or "")
+                    if links_150_visuais:
+                        placeholder_links_150.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_150_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 15.0
+                bloco_comentarios("15.0", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>📊 Impacto 15.0: {pts_salvos_150:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 15.0", key=f"btn_salvar_15_0_{ano_sel}", type="primary"):
+                    val_selecionado_150 = v_input_150
+                    lnk_val = lk150.strip()
+                    pts_calculados_150 = 2.0 if "Sim" in val_selecionado_150 else 0.0
+                    comentario_para_salvar = st.session_state.get(chave_coment_150, d150.get("comentario", ""))
+
+                    # Persistência no banco de dados via save_resp
+                    save_resp(
+                        qid="15.0",
+                        valor=val_selecionado_150,
+                        pontos=float(pts_calculados_150),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do dicionário em memória
+                    res_data["15.0"] = {
+                        "valor": val_selecionado_150,
+                        "pontos": float(pts_calculados_150),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Limpeza em cascata dos subquesitos dependentes caso a resposta não seja "Sim"
+                    if "Sim" not in val_selecionado_150:
+                        save_resp("15.1", "[]", 0.0, "")
+                        res_data["15.1"] = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                        for subq in ["15.1.1", "15.1.2", "15.1.3", "15.1.4"]:
+                            save_resp(subq, "", 0.0, "")
+                            res_data[subq] = {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_150_salva or "")]
+
+                    if lnk_val != evidencia_150_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 15.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 15.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_15_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.0", st.session_state.get(f"links_pendentes_15_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = False
