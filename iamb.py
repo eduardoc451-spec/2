@@ -6700,3 +6700,121 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.3.1", st.session_state.get(f"links_pendentes_8_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_3_1_{ano_sel}"] = False
 
+# =============================================================================
+        # QUESITO 8.4 • CRONOGRAMA DE METAS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q8_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.4 - Cronograma de Metas", expanded=True):
+                st.subheader("8.4 • Cronograma de Metas")
+                st.write("**Possui cronograma com as metas a serem cumpridas de resíduos sólidos?**")
+
+                opc84 = ["Selecione...", "Sim – 20", "Não – 00"]
+
+                # Recupera os dados salvos do banco
+                d84 = res_data.get("8.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_84 = d84.get("valor", "Selecione...")
+                if v_salvo_84 not in opc84:
+                    v_salvo_84 = "Selecione..."
+
+                evidencia_84_salva = d84.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_84 = f"r84_in_{ano_sel}"
+                chave_link_84 = f"l84_in_{ano_sel}"
+                chave_coment_84 = f"coment_8.4_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    idx84 = opc84.index(v_salvo_84)
+                    st.radio(
+                        "Selecione uma opção (8.4):",
+                        options=opc84,
+                        index=idx84,
+                        key=chave_radio_84
+                    )
+
+                    v_atual_84 = st.session_state.get(chave_radio_84, v_salvo_84)
+                    fb_pts_84 = 20.0 if "Sim" in v_atual_84 else 0.0
+                    st.metric(label="Pontuação do Quesito", value=f"{fb_pts_84:.1f} pts")
+
+                with col2:
+                    link_84 = st.text_area(
+                        "Link/Evidência (8.4):",
+                        value=evidencia_84_salva,
+                        key=chave_link_84,
+                        placeholder="Inserir documentos comprobatórios, cronogramas de metas do PMGIRS...",
+                        height=110
+                    )
+                    placeholder_links_84 = st.empty()
+                    links_84_visuais = re.findall(REGEX_PURE_URL, link_84 or "")
+                    if links_84_visuais:
+                        placeholder_links_84.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_84_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 8.4
+                bloco_comentarios("8.4", res_data, ano_sel)
+
+                # Feedback visual de pontuação baseado na gravação salva
+                pts_salvos_84 = float(d84.get("pontos", 0.0))
+                val_salvo_atual = d84.get("valor", "Selecione...")
+
+                if pts_salvos_84 > 0:
+                    cor_txt_84 = "#28a745"
+                elif val_salvo_atual == "Selecione...":
+                    cor_txt_84 = "#6c757d"
+                else:
+                    cor_txt_84 = "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_84}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.4: +{pts_salvos_84:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.4", key=f"btn_salvar_8_4_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_84, v_salvo_84)
+                    lnk_val = link_84.strip()
+
+                    pts_calculados = 20.0 if "Sim" in val_salvar else 0.0
+                    comentario_para_salvar = st.session_state.get(chave_coment_84, d84.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="8.4",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["8.4"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_84_salva or "")]
+
+                    if lnk_val != evidencia_84_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 8.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 8.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.4", st.session_state.get(f"links_pendentes_8_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_4_{ano_sel}"] = False
+
