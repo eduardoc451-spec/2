@@ -3757,3 +3757,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.5", st.session_state.get(f"links_pendentes_3_5_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_5_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 3.6 • INVENTÁRIO DE ATIVOS DE TIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_6_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.6 - Inventário Atualizado de Ativos de TIC", expanded=True):
+            st.subheader("3.6 • Inventário de Ativos")
+            st.write("**A Prefeitura possui inventário atualizado dos ativos de TIC? Ativos de TIC: switches, roteadores, servidores, firewalls, Sistemas operacionais, carga de processamento, backup, utilização de storages, etc.**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 3.6'.*")
+
+            opc36 = {
+                "Selecione...": 0.0,
+                "Sim – 20": 20.0,
+                "Não – 00": 0.0
+            }
+            lista36 = list(opc36.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d36 = res_data.get("3.6") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_36 = d36.get("valor", "Selecione...")
+            evidencia_36_salva = d36.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_36 = f"r_36_select_{ano_sel}"
+            chave_link_36 = f"l_36_txt_area_{ano_sel}"
+            chave_coment_36 = f"coment_3.6_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx36 = lista36.index(v_salvo_36) if v_salvo_36 in lista36 else 0
+                st.radio(
+                    "Selecione o status do inventário:",
+                    options=lista36,
+                    index=idx36,
+                    key=chave_radio_36
+                )
+
+            with col2:
+                link_36 = st.text_area(
+                    "Link/Evidência (3.6):",
+                    value=evidencia_36_salva,
+                    key=chave_link_36,
+                    placeholder="Insira o link do sistema de inventário, planilha corporativa compartilhada ou relatório de ativos...",
+                    height=90
+                )
+
+                placeholder_links_36 = st.empty()
+                links_36_visuais = re.findall(regex_pure_url, link_36 or "")
+                if links_36_visuais:
+                    placeholder_links_36.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_36_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.6", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.6", key=f"btn_salvar_3_6_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_36, v_salvo_36)
+                pts_36 = float(opc36.get(val_salvar, 0.0))
+                lnk_val = link_36.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_36, d36.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.6",
+                    valor=val_salvar,
+                    pontos=pts_36,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.6"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_36,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_36_salva or "")
+
+                if lnk_val != evidencia_36_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_6_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_6_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.6 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_36 = d36.get("pontos", 0.0)
+            cor_txt_36 = "#28a745" if pts_atuais_36 == 20.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_36}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.6: +{pts_atuais_36:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.6 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_6_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.6", st.session_state.get(f"links_pendentes_3_6_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_6_{ano_sel}"] = False
