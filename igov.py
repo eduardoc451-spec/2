@@ -7716,3 +7716,44 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("12.0", st.session_state.get(f"links_pendentes_12_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = False
+
+    # =========================================================================
+    # ABA DE GRÁFICOS E EVOLUÇÃO HISTÓRICA (INDENTAÇÃO PADRÃO: 4 ESPAÇOS)
+    # =========================================================================
+    with aba_graf:
+        st.subheader("📈 Evolução dos Resultados — Série Histórica")
+        st.write("Acompanhe o desempenho da pontuação total acumulada ao longo dos anos:")
+
+        # 1. Recupera o histórico tratado na sidebar
+        dados_historicos = st.session_state.get("all_data", {})
+        anos_periodo = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+
+        # 2. Processa os pontos de cada ano da série histórica
+        pontuacoes_por_ano = {}
+        for ano in anos_periodo:
+            dados_do_ano = dados_historicos.get(ano, {})
+            if isinstance(dados_do_ano, dict) and dados_do_ano:
+                pts_ano = sum(
+                    float(v.get("pontos", 0))
+                    for k, v in dados_do_ano.items()
+                    if isinstance(v, dict) and not k.startswith("COM_")
+                )
+            else:
+                pts_ano = 0.0
+            pontuacoes_por_ano[str(ano)] = pts_ano
+
+        # 3. Renderiza o Gráfico de Barras
+        st.bar_chart(
+            pontuacoes_por_ano,
+            x_label="Ano de Referência",
+            y_label="Pontuação Total",
+            color="#1e3a5f"
+        )
+
+        # 4. Tabela resumida de apoio
+        st.markdown("#### 📋 Resumo dos Dados")
+        dados_tabela = {
+            "Ano": list(pontuacoes_por_ano.keys()),
+            "Pontuação": [f"{pts:.1f} pts" if pts > 0 else "-" for pts in pontuacoes_por_ano.values()]
+        }
+        st.dataframe(dados_tabela, hide_index=True, use_container_width=True)
