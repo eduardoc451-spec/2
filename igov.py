@@ -1579,3 +1579,111 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 1.3 • CAPACITAÇÃO EM TIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_1_3_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 1.3 - Capacitação e Treinamento do Pessoal de TIC", expanded=True):
+            st.subheader("1.3 • Capacitação do Setor")
+            st.write("**A prefeitura disponibilizou capacitação para o pessoal da área de Tecnologia da Informação e Comunicação (TIC)?**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.3' para registrar.*")
+
+            opcoes13 = ["Selecione...", "Sim – 30", "Não – 00"]
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d13 = res_data.get("1.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_13 = d13.get("valor", "Selecione...")
+            l_salvo_13 = d13.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_13 = f"r_13_{ano_sel}"
+            chave_link_13 = f"l_13_txt_{ano_sel}"
+            chave_coment_13 = f"coment_1.3_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx13 = opcoes13.index(v_salvo_13) if v_salvo_13 in opcoes13 else 0
+                val_radio_13 = st.radio(
+                    "Selecione 1.3:",
+                    options=opcoes13,
+                    index=idx13,
+                    key=chave_radio_13,
+                    label_visibility="collapsed"
+                )
+
+            with col2:
+                link_13 = st.text_area(
+                    "Link/Evidência (1.3):",
+                    value=l_salvo_13,
+                    key=chave_link_13,
+                    placeholder="Insira o link de certificados emitidos, notas de empenho de cursos contratados ou plano anual de capacitação...",
+                    height=100
+                )
+                placeholder_links_13 = st.empty()
+                links_13_visuais = re.findall(regex_pure_url, link_13 or "")
+                if links_13_visuais:
+                    placeholder_links_13.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_13_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.3", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.3", key=f"btn_salvar_1_3_{ano_sel}", type="primary"):
+                pts_calculados_13 = 30.0 if "Sim" in val_radio_13 else 0.0
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_13, d13.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="1.3",
+                    valor=val_radio_13,
+                    pontos=pts_calculados_13,
+                    link=link_13.strip(),
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["1.3"] = {
+                    "valor": val_radio_13,
+                    "pontos": pts_calculados_13,
+                    "link": link_13.strip(),
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, link_13 or "")
+                links_antigos = re.findall(regex_pure_url, l_salvo_13 or "")
+
+                if link_13 != l_salvo_13 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 1.3 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_13 = d13.get("pontos", 0.0)
+            cor_txt_13 = "#28a745" if pts_atuais_13 == 30.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_13}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.3: +{pts_atuais_13:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.3 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_3_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = False
