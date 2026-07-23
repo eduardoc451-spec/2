@@ -3525,3 +3525,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.3", st.session_state.get(f"links_pendentes_3_3_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_3_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 3.4 • PLANO DE CONTINUIDADE DE SERVIÇOS (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_4_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.4 - Plano de Continuidade dos Serviços de TIC", expanded=True):
+            st.subheader("3.4 • Plano de Continuidade")
+            st.write("**A Prefeitura possui um Plano de Continuidade dos Serviços de Tecnologia da Informação e Comunicação (TIC)? Recomendamos anexar o Plano de continuidade de serviços de TI, conforme Instrução de Preenchimento (IP)**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 3.4'.*")
+
+            opc34 = {
+                "Selecione...": 0.0,
+                "Sim – 30": 30.0,
+                "Não – 00": 0.0
+            }
+            lista34 = list(opc34.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d34 = res_data.get("3.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_34 = d34.get("valor", "Selecione...")
+            evidencia_34_salva = d34.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_34 = f"r_34_select_{ano_sel}"
+            chave_link_34 = f"l_34_txt_area_{ano_sel}"
+            chave_coment_34 = f"coment_3.4_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx34 = lista34.index(v_salvo_34) if v_salvo_34 in lista34 else 0
+                st.radio(
+                    "Selecione o status da continuidade:",
+                    options=lista34,
+                    index=idx34,
+                    key=chave_radio_34
+                )
+
+            with col2:
+                link_34 = st.text_area(
+                    "Link/Evidência (3.4):",
+                    value=evidencia_34_salva,
+                    key=chave_link_34,
+                    placeholder="Insira o link para o Plano de Continuidade de Negócios/TI aprovado institucionalmente...",
+                    height=90
+                )
+
+                placeholder_links_34 = st.empty()
+                links_34_visuais = re.findall(regex_pure_url, link_34 or "")
+                if links_34_visuais:
+                    placeholder_links_34.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_34_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.4", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.4", key=f"btn_salvar_3_4_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_34, v_salvo_34)
+                pts_34 = float(opc34.get(val_salvar, 0.0))
+                lnk_val = link_34.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_34, d34.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.4",
+                    valor=val_salvar,
+                    pontos=pts_34,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.4"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_34,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_34_salva or "")
+
+                if lnk_val != evidencia_34_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_4_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.4 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_34 = d34.get("pontos", 0.0)
+            cor_txt_34 = "#28a745" if pts_atuais_34 == 30.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_34}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.4: +{pts_atuais_34:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.4 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_4_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.4", st.session_state.get(f"links_pendentes_3_4_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_4_{ano_sel}"] = False
