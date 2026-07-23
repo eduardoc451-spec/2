@@ -5460,3 +5460,116 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("7.7", st.session_state.get(f"links_pendentes_7_7_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_7_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 7.7.1 • FORMA DE MONITORAMENTO (MÚLTIPLA ESCOLHA)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_7_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.7.1 - Metodologia e Instrumentos de Controle", expanded=True):
+                st.subheader("7.7.1 • Forma de Monitoramento")
+                st.write("**De que forma é realizado o monitoramento e avaliação relacionadas ao abastecimento de água potável e esgotamento sanitário?**")
+
+                opts771 = {
+                    "Relatórios anuais discutidos e/ou publicados": 0.0,
+                    "Indicadores de eficácia e eficiência": 0.0,
+                    "Avaliação de recursos aplicados": 0.0,
+                    "Outro": 0.0
+                }
+
+                # Recupera os dados salvos do banco
+                d771 = res_data.get("7.7.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                texto_seguro_771 = str(d771.get("valor", "[]"))
+                evidencia_771_salva = d771.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_link_771 = f"l_771_txt_area_{ano_sel}"
+                chave_coment_771 = f"coment_7.7.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.write("*Selecione as opções aplicáveis:*")
+                    for i, (txt, pts) in enumerate(opts771.items()):
+                        marcado = (txt in texto_seguro_771) if texto_seguro_771 and texto_seguro_771 != "[]" else False
+                        st.checkbox(
+                            txt,
+                            value=marcado,
+                            key=f"ck_771_opt_{i}_{ano_sel}"
+                        )
+
+                with col2:
+                    link_771 = st.text_area(
+                        "Link/Evidência (7.7.1):",
+                        value=evidencia_771_salva,
+                        key=chave_link_771,
+                        placeholder="Links para atas do conselho municipal, painéis SNIS ou relatórios públicos...",
+                        height=180
+                    )
+                    placeholder_links_771 = st.empty()
+                    links_771_visuais = re.findall(REGEX_PURE_URL, link_771 or "")
+                    if links_771_visuais:
+                        placeholder_links_771.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_771_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.7.1
+                bloco_comentarios("7.7.1", res_data, ano_sel)
+
+                # Feedback visual reativo da pontuação (Informativo)
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.7.1: +0.0 pontos (Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.7.1", key=f"btn_salvar_7_7_1_{ano_sel}", type="primary"):
+                    lnk_val = link_771.strip()
+
+                    # Processa as opções selecionadas nos checkboxes
+                    lista_selecionados = []
+                    pts_totais = 0.0
+                    for i, (txt, pts) in enumerate(opts771.items()):
+                        if st.session_state.get(f"ck_771_opt_{i}_{ano_sel}", False):
+                            lista_selecionados.append(txt)
+                            pts_totais += pts
+
+                    val_salvar = str(lista_selecionados)
+                    comentario_para_salvar = st.session_state.get(chave_coment_771, d771.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.7.1",
+                        valor=val_salvar,
+                        pontos=float(pts_totais),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["7.7.1"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_totais),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_771_salva or "")]
+
+                    if lnk_val != evidencia_771_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_7_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_7_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.7.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.7.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_7_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.7.1", st.session_state.get(f"links_pendentes_7_7_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_7_1_{ano_sel}"] = False
+
