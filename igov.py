@@ -4151,3 +4151,124 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("4.2", st.session_state.get(f"links_pendentes_4_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 5.0 • REGULAMENTAÇÃO DO GOVERNO DIGITAL (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_5_0_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 5.0 - Lei sobre Eficiência Pública (Governo Digital)", expanded=True):
+            st.subheader("5.0 • Governo Digital")
+            st.write("**O município regulamentou a Lei sobre Eficiência Pública (Governo Digital)?**")
+            st.caption("ℹ *Lei Federal nº 14.129, de 29 de Março de 2021. Selecione a opção, insira a evidência e clique no botão 'Salvar Quesito 5.0'.*")
+
+            opc50 = {
+                "Selecione...": 0.0,
+                "Sim – 10": 10.0,
+                "Não – 00": 0.0
+            }
+            lista50 = list(opc50.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d50 = res_data.get("5.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_50 = d50.get("valor", "Selecione...")
+            if v_salvo_50 == "Sim":
+                v_salvo_50 = "Sim – 10"
+            if v_salvo_50 == "Não":
+                v_salvo_50 = "Não – 00"
+
+            evidencia_50_salva = d50.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_50 = f"r_50_select_{ano_sel}"
+            chave_link_50 = f"l_50_txt_area_{ano_sel}"
+            chave_coment_50 = f"coment_5.0_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx50 = lista50.index(v_salvo_50) if v_salvo_50 in lista50 else 0
+                st.radio(
+                    "Selecione o status da regulamentação:",
+                    options=lista50,
+                    index=idx50,
+                    key=chave_radio_50
+                )
+
+            with col2:
+                link_50 = st.text_area(
+                    "Link/Evidência (5.0):",
+                    value=evidencia_50_salva,
+                    key=chave_link_50,
+                    placeholder="Insira o link do decreto ou ato normativo municipal de Governo Digital...",
+                    height=90
+                )
+
+                placeholder_links_50 = st.empty()
+                links_50_visuais = re.findall(regex_pure_url, link_50 or "")
+                if links_50_visuais:
+                    placeholder_links_50.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_50_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("5.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 5.0", key=f"btn_salvar_5_0_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_50, v_salvo_50)
+                pts_50 = float(opc50.get(val_salvar, 0.0))
+                lnk_val = link_50.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_50, d50.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="5.0",
+                    valor=val_salvar,
+                    pontos=pts_50,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["5.0"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_50,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_50_salva or "")
+
+                if lnk_val != evidencia_50_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 5.0 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_50 = d50.get("pontos", 0.0)
+            cor_txt_50 = "#28a745" if pts_atuais_50 == 10.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_50}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 5.0: +{pts_atuais_50:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 5.0 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_5_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
