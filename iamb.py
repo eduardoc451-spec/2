@@ -1385,15 +1385,15 @@ def render_sidebar():
 
     # Régua de Classificação IEGM / iAMB
     if total_pts <= 500:
-        faixa, cor = "C (Inefetivo)", "red"
+        faixa, cor = "C", "red"
     elif total_pts <= 599:
-        faixa, cor = "C+ (Em Adequação)", "orange"
+        faixa, cor = "C+", "orange"
     elif total_pts <= 749:
-        faixa, cor = "B (Efetivo)", "#d4d400"
+        faixa, cor = "B", "#d4d400"
     elif total_pts <= 899:
-        faixa, cor = "B+ (Muito Efetivo)", "lightgreen"
+        faixa, cor = "B+", "lightgreen"
     else:
-        faixa, cor = "A (Altamente Efetivo)", "green"
+        faixa, cor = "A", "green"
 
     st.sidebar.metric("Pontuação Total iAMB", f"{total_pts:.1f} pts")
     st.sidebar.markdown(
