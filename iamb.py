@@ -1654,3 +1654,115 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 1.1 • DISPONIBILIDADE DE RECURSOS HUMANOS (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_rh_1_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.1 - Recursos Humanos Operacionais", expanded=True):
+                st.subheader("1.1 • Recursos Humanos")
+                st.write("**A Prefeitura possui recursos humanos para operacionalização dos assuntos ligados ao Meio Ambiente?**")
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.1' para registrar.*")
+
+                # Dicionário de Opções e Pontuações (Ajuste a pontuação se houver valor específico no iAMB)
+                opcoes_11 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+                lista_opcoes_11 = list(opcoes_11.keys())
+
+                # Recupera estado inicial salvo
+                d11 = res_data.get("1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_11 = d11.get("valor", "Selecione...")
+                if v_salvo_11 not in lista_opcoes_11:
+                    v_salvo_11 = "Selecione..."
+
+                evidencia_11_salva = d11.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_11 = f"r_11_select_{ano_sel}"
+                chave_link_11 = f"l_11_txt_area_{ano_sel}"
+                chave_coment_11 = f"coment_1.1_{ano_sel}"
+
+                c11_1, c11_2 = st.columns([1, 1])
+                with c11_1:
+                    idx11 = lista_opcoes_11.index(v_salvo_11) if v_salvo_11 in lista_opcoes_11 else 0
+                    val_radio_11 = st.radio(
+                        "Selecione a situação dos Recursos Humanos:",
+                        options=lista_opcoes_11,
+                        index=idx11,
+                        key=chave_radio_11
+                    )
+
+                with c11_2:
+                    link_11 = st.text_area(
+                        "Link/Evidência (1.1):",
+                        value=evidencia_11_salva,
+                        key=chave_link_11,
+                        placeholder="Insira o link com a relação de servidores, portarias de alocação, etc...",
+                        height=110
+                    )
+                    placeholder_links_11 = st.empty()
+                    links_11_visuais = re.findall(REGEX_PURE_URL, link_11 or "")
+                    if links_11_visuais:
+                        placeholder_links_11.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_11_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.1", key=f"btn_salvar_1_1_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_11, v_salvo_11)
+                    pts_11 = float(opcoes_11.get(val_salvar, 0.0))
+                    lnk_val = link_11.strip()
+
+                    # Captura comentário da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_11, d11.get("comentario", ""))
+
+                    # Grava no banco de dados Neon
+                    save_resp(
+                        qid="1.1",
+                        valor=val_salvar,
+                        pontos=pts_11,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.1"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_11,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_11_salva or "")]
+
+                    if lnk_val != evidencia_11_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual
+                pts_atuais_11 = d11.get("pontos", 0.0)
+                cor_txt_11 = "#28a745" if pts_atuais_11 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_11}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.1: +{pts_atuais_11:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
