@@ -2276,3 +2276,105 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 2.1 • PÁGINA ELETRÔNICA DO PDTIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_2_1_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 2.1 - Endereço Eletrônico de Publicação do PDTIC", expanded=True):
+            st.subheader("2.1 • Página Eletrônica do PDTIC")
+            st.write("**Informe a página eletrônica (link na internet) do PDTIC:**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 2.1' para registrar.*")
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d21 = res_data.get("2.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+            valor_salvo_21 = d21.get("valor", "")
+            l_salvo_21 = d21.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_link_21 = f"l_21_txt_input_{ano_sel}"
+            chave_coment_21 = f"coment_2.1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.info("Insira a URL direta do plano publicado ou digite 'XYZ' caso esteja indisponível.")
+
+            with col2:
+                link_21 = st.text_input(
+                    "Página eletrônica (link URL):",
+                    value=valor_salvo_21,
+                    key=chave_link_21,
+                    placeholder="https://www.municipio.sp.gov.br/transparencia/pdtic.pdf"
+                )
+
+                placeholder_links_21 = st.empty()
+                links_21_visuais = re.findall(regex_pure_url, link_21 or "")
+                if links_21_visuais:
+                    placeholder_links_21.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_21_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("2.1", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 2.1", key=f"btn_salvar_2_1_{ano_sel}", type="primary"):
+                lnk_val = link_21.strip()
+
+                # Regra de pontuação: Se preenchido e diferente de vazio ou XYZ, pontua 20.0
+                pts_calculados_21 = 20.0 if lnk_val != "" and lnk_val.upper() != "XYZ" else 0.0
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_21, d21.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="2.1",
+                    valor=lnk_val,
+                    pontos=pts_calculados_21,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["2.1"] = {
+                    "valor": lnk_val,
+                    "pontos": pts_calculados_21,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, l_salvo_21 or "")
+
+                if lnk_val != l_salvo_21 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_1_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 2.1 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_21 = d21.get("pontos", 0.0)
+            cor_txt_21 = "#28a745" if pts_atuais_21 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_21}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 2.1: +{pts_atuais_21:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 2.1 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_2_1_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("2.1", st.session_state.get(f"links_pendentes_2_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_2_1_{ano_sel}"] = False
