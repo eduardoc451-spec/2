@@ -8941,3 +8941,107 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 11.1 • INSTRUMENTO NORMATIVO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q11_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 11.1 - Instrumento Normativo", expanded=True):
+                st.subheader("11.1 • Instrumento Normativo")
+                st.write("**Informe o Instrumento normativo, Número e Data da publicação:**")
+
+                # Recupera os dados salvos no banco
+                d111 = res_data.get("11.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_111 = d111.get("valor", "")
+                evidencia_111_salva = d111.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_texto_111 = f"t111_in_{ano_sel}"
+                chave_link_111 = f"l111_in_{ano_sel}"
+                chave_coment_111 = f"coment_11.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    t111 = st.text_area(
+                        "Instrumento normativo, Número e Data da publicação (11.1):",
+                        value=v_salvo_111,
+                        key=chave_texto_111,
+                        placeholder="Ex: Lei Municipal nº 1.234 de 15/03/2021...",
+                        height=125
+                    )
+
+                    # Quesito declarativo/referencial (0.0 pts)
+                    pts_exibido_111 = 0.0
+                    cor_metric = "#6c757d"  # Cinza neutro
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_111:.1f} pts")
+
+                with col2:
+                    lk111 = st.text_area(
+                        "Link/Evidência (11.1):",
+                        value=evidencia_111_salva,
+                        key=chave_link_111,
+                        placeholder="Inserir link da publicação oficial no Diário Oficial ou portal da Prefeitura...",
+                        height=125
+                    )
+                    placeholder_links_111 = st.empty()
+                    links_111_visuais = re.findall(REGEX_PURE_URL, lk111 or "")
+                    if links_111_visuais:
+                        placeholder_links_111.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_111_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 11.1
+                bloco_comentarios("11.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto (Referencial)
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 11.1: +0.0 pts (Referencial)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 11.1", key=f"btn_salvar_11_1_{ano_sel}", type="primary"):
+                    val_txt = t111.strip()
+                    lnk_val = lk111.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_111, d111.get("comentario", ""))
+
+                    pts_calculados = 0.0  # Quesito sem impacto na pontuação global
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="11.1",
+                        valor=val_txt,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["11.1"] = {
+                        "valor": val_txt,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_111_salva or "")]
+
+                    if lnk_val != evidencia_111_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 11.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 11.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.1", st.session_state.get(f"links_pendentes_11_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = False
+
