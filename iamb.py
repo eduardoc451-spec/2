@@ -11039,3 +11039,125 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 14.0 • EXISTÊNCIA DE DESCARTE IRREGULAR (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q14_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 14.0 - Pontos de Descarte Irregular", expanded=True):
+                st.subheader("14.0 • Existência de Descarte Irregular")
+                st.write("**Existem pontos de descarte irregular de lixo no município?**")
+
+                # Recuperação dos dados salvos no banco
+                d140 = res_data.get("14.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc140 = ["Selecione...", "Sim – -30 (perde 30 pontos)", "Não – 00"]
+                v_salvo_140 = d140.get("valor", "Selecione...")
+                if v_salvo_140 not in opc140:
+                    v_salvo_140 = "Selecione..."
+
+                pts_salvos_140 = float(d140.get("pontos", 0.0))
+                evidencia_140_salva = d140.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_resposta_140 = f"r140_in_{ano_sel}"
+                chave_link_140 = f"l140_in_{ano_sel}"
+                chave_coment_140 = f"coment_14.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    v_selecionado_140 = st.radio(
+                        "Selecione uma opção (14.0):",
+                        options=opc140,
+                        index=opc140.index(v_salvo_140),
+                        key=chave_resposta_140
+                    )
+
+                    # Exibição de métrica de impacto salva
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_140:.1f} pts")
+
+                with col2:
+                    lk140 = st.text_area(
+                        "Link/Evidência (14.0):",
+                        value=evidencia_140_salva,
+                        key=chave_link_140,
+                        placeholder="Inserir link da documentação ou fiscalização sobre descarte irregular...",
+                        height=125
+                    )
+                    placeholder_links_140 = st.empty()
+                    links_140_visuais = re.findall(REGEX_PURE_URL, lk140 or "")
+                    if links_140_visuais:
+                        placeholder_links_140.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_140_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 14.0
+                bloco_comentarios("14.0", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_impacto = "#dc3545" if pts_salvos_140 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto 14.0: {pts_salvos_140:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 14.0", key=f"btn_salvar_14_0_{ano_sel}", type="primary"):
+                    # Cálculo do impacto de pontuação
+                    pts_calculados_140 = -30.0 if "Sim" in v_selecionado_140 else 0.0
+                    lnk_val = lk140.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_140, d140.get("comentario", ""))
+
+                    # Persistência no banco de dados via save_resp
+                    save_resp(
+                        qid="14.0",
+                        valor=v_selecionado_140,
+                        pontos=float(pts_calculados_140),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do dicionário em memória
+                    res_data["14.0"] = {
+                        "valor": v_selecionado_140,
+                        "pontos": float(pts_calculados_140),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Lógica de Limpeza Condicional para Quesitos Dependentes (14.1, 14.2 e 14.3)
+                    if "Não" in v_selecionado_140:
+                        # Limpa Quesito 14.1
+                        coment_141 = res_data.get("14.1", {}).get("comentario", "")
+                        save_resp("14.1", "", 0.0, "", coment_141)
+                        res_data["14.1"] = {"valor": "", "pontos": 0.0, "link": "", "comentario": coment_141}
+
+                        # Limpa Quesito 14.2
+                        coment_142 = res_data.get("14.2", {}).get("comentario", "")
+                        save_resp("14.2", "", 0.0, "", coment_142)
+                        res_data["14.2"] = {"valor": "", "pontos": 0.0, "link": "", "comentario": coment_142}
+
+                        # Limpa Quesito 14.3
+                        coment_143 = res_data.get("14.3", {}).get("comentario", "")
+                        save_resp("14.3", "[]", 0.0, "", coment_143)
+                        res_data["14.3"] = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": coment_143}
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_140_salva or "")]
+
+                    if lnk_val != evidencia_140_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 14.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 14.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_14_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.0", st.session_state.get(f"links_pendentes_14_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = False
