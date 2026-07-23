@@ -1557,6 +1557,14 @@ def mostrar_formulario_iamb():
                 # Estado inicial / persistente
                 d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
                 v_salvo_10 = d10.get("valor", "Selecione...")
+                
+                # Trata migração de legado caso no banco esteja salvo apenas "Sim" ou "Não"
+                if v_salvo_10 == "Sim":
+                    v_salvo_10 = "Sim (30 pts)"
+                elif v_salvo_10 == "Não":
+                    v_salvo_10 = "Não (00 pts)"
+
+                evidencia_10_salva = d10.get("link", "")
 
                 # Chaves fixas por componente e ano
                 chave_radio_10 = f"r_10_{ano_sel}"
@@ -1578,41 +1586,71 @@ def mostrar_formulario_iamb():
                 with c10_2:
                     link_10 = st.text_area(
                         "Link de Evidência / Organograma / Lei de Criação (1.0):",
-                        value=d10.get("link", ""),
+                        value=evidencia_10_salva,
                         key=chave_link_10,
                         placeholder="Insira o link oficial do organograma ou lei da estrutura ambiental...",
                         height=100
                     )
                     placeholder_links_10 = st.empty()
-                    regex_url = r'https?://[^\s<>"]+'
-                    links_10_visuais = re.findall(regex_url, link_10 or "")
+                    links_10_visuais = re.findall(REGEX_PURE_URL, link_10 or "")
                     if links_10_visuais:
-                        placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
-
-                # Cálculo do impacto em tempo real para feedback visual antes de salvar
-                pts_atuais_10 = opcoes_10.get(val_radio_10, 0.0)
-                cor_txt_10 = "#28a745" if pts_atuais_10 > 0 else ("#dc3545" if val_radio_10 == "Não (00 pts)" else "#6c757d")
-                st.markdown(f"<span style='color:{cor_txt_10}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>", unsafe_allow_html=True)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                # Botão Explicito de Salvamento (Padrão iGov)
-                if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
-                    comentario_10 = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
-
-                    # Grava no Banco Neon
-                    save_resp("1.0", val_radio_10, pts_atuais_10, link_10, comentario_10)
-
-                    # Atualiza o estado local em memória
-                    res_data["1.0"] = {
-                        "valor": val_radio_10,
-                        "pontos": pts_atuais_10,
-                        "link": link_10,
-                        "comentario": comentario_10
-                    }
-
-                    st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
-                    st.rerun()
+                        placeholder_links_10.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10_visuais]))
 
                 # Renderiza o bloco de comentários dentro do expander
                 bloco_comentarios("1.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
+                    pts_10 = float(opcoes_10.get(val_salvar, 0.0))
+                    lnk_val = link_10.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp(
+                        qid="1.0",
+                        valor=val_salvar,
+                        pontos=pts_10,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_10,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
+
+                    if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_10 = d10.get("pontos", 0.0)
+                cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
