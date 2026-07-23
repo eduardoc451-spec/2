@@ -4633,3 +4633,141 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.4", st.session_state.get(f"links_pendentes_7_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_4_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 7.4.1 • DETALHAMENTO DAS METAS DE ESGOTO (MÚLTIPLA ESCOLHA - Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_4_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.4.1 - Detalhamento das Metas de Esgoto Assinaladas", expanded=True):
+                st.subheader("7.4.1 • Parâmetros e Diretrizes do Esgotamento")
+                st.write("**Assinale quais as metas estabelecidas sobre coleta de esgoto:**")
+
+                opts741 = {
+                    "Metas de expansão do serviço de coleta de esgoto – 00": 0.0,
+                    "Metas de qualidade na prestação do serviço de coleta de esgoto – 3,5": 3.5,
+                    "Meta do reúso de efluentes sanitários – 3,5": 3.5,
+                    "Estabelecimento de direitos e deveres dos usuários – 3,5": 3.5,
+                    "Meta de universalização da coleta de esgoto até 31 de dezembro de 2033 – 3,5": 3.5,
+                    "Estabelecimento de cronograma para o atingimento das metas assinaladas acima – 06": 6.0
+                }
+
+                # Recupera os dados salvos no banco
+                d741 = res_data.get("7.4.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                # Conversão segura do valor salvo para lista de selecionados
+                raw_val_741 = d741.get("valor", "[]")
+                lista_salva_741 = []
+                if raw_val_741:
+                    try:
+                        import json
+                        lista_salva_741 = json.loads(raw_val_741) if isinstance(raw_val_741, str) else raw_val_741
+                    except Exception:
+                        try:
+                            import ast
+                            lista_salva_741 = ast.literal_eval(raw_val_741)
+                        except Exception:
+                            lista_salva_741 = []
+
+                if not isinstance(lista_salva_741, list):
+                    lista_salva_741 = []
+
+                evidencia_741_salva = d741.get("link", "")
+
+                # Chaves de identificação no Streamlit
+                chave_link_741 = f"l_741_txt_area_{ano_sel}"
+                chave_coment_741 = f"coment_7.4.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.write("*Selecione os parâmetros contemplados:*")
+                    for i, (txt_opt, pts_opt) in enumerate(opts741.items()):
+                        key_ck = f"ck_741_opt_{i}_{ano_sel}"
+                        marcado_previo = txt_opt in lista_salva_741
+                        st.checkbox(
+                            txt_opt,
+                            value=marcado_previo,
+                            key=key_ck
+                        )
+
+                with col2:
+                    link_741 = st.text_area(
+                        "Link/Evidência (7.4.1):",
+                        value=evidencia_741_salva,
+                        key=chave_link_741,
+                        placeholder="Anexos técnicos do Plano Municipal ou relatórios da concessionária local...",
+                        height=240
+                    )
+                    placeholder_links_741 = st.empty()
+                    links_741_visuais = re.findall(REGEX_PURE_URL, link_741 or "")
+                    if links_741_visuais:
+                        placeholder_links_741.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_741_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.4.1
+                bloco_comentarios("7.4.1", res_data, ano_sel)
+
+                # Feedback visual reativo da pontuação acumulada dos checkboxes selecionados
+                fb_pts_741 = sum([
+                    pts for i, (txt, pts) in enumerate(opts741.items())
+                    if st.session_state.get(f"ck_741_opt_{i}_{ano_sel}", False)
+                ])
+                cor_txt_741 = "#28a745" if fb_pts_741 > 0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_741}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.4.1: +{fb_pts_741:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.4.1", key=f"btn_salvar_7_4_1_{ano_sel}", type="primary"):
+                    lnk_val = link_741.strip()
+                    
+                    # Coleta os itens selecionados nos checkboxes
+                    selecionados = []
+                    pts_totais = 0.0
+                    for i, (txt_opt, pts_opt) in enumerate(opts741.items()):
+                        if st.session_state.get(f"ck_741_opt_{i}_{ano_sel}", False):
+                            selecionados.append(txt_opt)
+                            pts_totais += pts_opt
+
+                    import json
+                    val_salvar = json.dumps(selecionados, ensure_ascii=False)
+                    comentario_para_salvar = st.session_state.get(chave_coment_741, d741.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.4.1",
+                        valor=val_salvar,
+                        pontos=float(pts_totais),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização da estrutura em memória
+                    res_data["7.4.1"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_totais),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_741_salva or "")]
+
+                    if lnk_val != evidencia_741_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_4_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_4_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.4.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.4.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_4_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.4.1", st.session_state.get(f"links_pendentes_7_4_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_4_1_{ano_sel}"] = False
