@@ -2709,3 +2709,129 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 4.0 • FISCALIZAÇÃO DE EMISSÃO DE POLUENTES (MODELO PADRONIZADO iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_poluentes_4_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 4.0 - Fiscalização de Emissões Veiculares", expanded=True):
+                st.subheader("4.0 • Emissão de Poluentes")
+                st.write("**O município fiscalizou a emissão de poluentes de combustíveis fósseis (diesel) na frota da Prefeitura Municipal?**")
+                st.caption("ℹ *Selecione a opção aplicável, informe o link de evidência/comentário e clique no botão 'Salvar Quesito 4.0' para registrar.*")
+
+                opc40 = [
+                    "Selecione...",
+                    "Sim, com medição da densidade colorimétrica da Escala Ringelmann ou equivalente – 20",
+                    "Sim, através de outra forma de medição – 15",
+                    "Não – 00"
+                ]
+
+                # Recupera os dados salvos no banco ou estrutura zerada
+                d40 = res_data.get("4.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_40 = d40.get("valor", "Selecione...")
+                if v_salvo_40 not in opc40:
+                    v_salvo_40 = "Selecione..."
+
+                evidencia_40_salva = d40.get("link", "")
+
+                # Chaves fixas para componentes Streamlit
+                chave_radio_40 = f"r_40_select_{ano_sel}"
+                chave_link_40 = f"l_40_txt_area_{ano_sel}"
+                chave_coment_40 = f"coment_4.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    idx40 = opc40.index(v_salvo_40) if v_salvo_40 in opc40 else 0
+                    val_radio_40 = st.radio(
+                        "Selecione uma opção (4.0):",
+                        options=opc40,
+                        index=idx40,
+                        key=chave_radio_40
+                    )
+
+                with col2:
+                    link_40 = st.text_area(
+                        "Link/Evidência (4.0):",
+                        value=evidencia_40_salva,
+                        key=chave_link_40,
+                        placeholder="Insira o link contendo relatórios de medição da frota, laudos da Escala Ringelmann, etc...",
+                        height=110
+                    )
+                    placeholder_links_40 = st.empty()
+                    links_40_visuais = re.findall(REGEX_PURE_URL, link_40 or "")
+                    if links_40_visuais:
+                        placeholder_links_40.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_40_visuais]))
+
+                # Renderiza o bloco de comentários
+                bloco_comentarios("4.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 4.0", key=f"btn_salvar_4_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_40, v_salvo_40)
+                    lnk_val = link_40.strip()
+
+                    # Regra de pontuação
+                    if "Ringelmann" in str(val_salvar):
+                        pts_calculados = 20.0
+                    elif "outra" in str(val_salvar):
+                        pts_calculados = 15.0
+                    else:
+                        pts_calculados = 0.0
+
+                    # Captura o comentário do estado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_40, d40.get("comentario", ""))
+
+                    # Gravação no Neon PostgreSQL
+                    save_resp(
+                        qid="4.0",
+                        valor=val_salvar,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local res_data
+                    res_data["4.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_40_salva or "")]
+
+                    if lnk_val != evidencia_40_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 4.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto e resumo visual
+                pts_atuais_40 = d40.get("pontos", 0.0)
+
+                if pts_atuais_40 == 20.0:
+                    cor_txt_40 = "#28a745"
+                elif pts_atuais_40 == 15.0:
+                    cor_txt_40 = "#ffc107"
+                elif "Não" in str(d40.get("valor", "")):
+                    cor_txt_40 = "#dc3545"
+                else:
+                    cor_txt_40 = "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_40}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 4.0: +{pts_atuais_40:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 4.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_4_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
