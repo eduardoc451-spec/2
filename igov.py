@@ -2378,3 +2378,134 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("2.1", st.session_state.get(f"links_pendentes_2_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_2_1_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 2.2 • ESCOPO DO PLANO DE TIC (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_2_2_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 2.2 - Elementos Contemplados no Plano de TIC", expanded=True):
+            st.subheader("2.2 • Escopo do Plano de TIC")
+            st.write("**O plano de TIC vigente contempla:**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 2.2' para registrar. Pontuação incremental acumulativa até 40 pontos.*")
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d22 = res_data.get("2.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+            raw_v22 = d22.get("valor", "[]")
+            if not isinstance(raw_v22, str) or not raw_v22.startswith("["):
+                raw_v22 = "[]"
+            try:
+                lista_salva_22 = eval(raw_v22)
+            except Exception:
+                lista_salva_22 = []
+
+            evidencia_22_salva = d22.get("link", "")
+            contempla = {
+                "Alocação de recursos orçamentários – 10": 10.0,
+                "Alocação de recursos humanos – 10": 10.0,
+                "Alocação de recursos materiais – 10": 10.0,
+                "Estratégia de execução indireta (terceirização) – 10": 10.0
+            }
+
+            # Chaves fixas por componente e ano
+            chave_link_22 = f"l_22_txt_area_{ano_sel}"
+            chave_coment_22 = f"coment_2.2_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.markdown("**Selecione as metas/estratégias contempladas:**")
+                # Renderização das caixas de seleção
+                for item, pts in contempla.items():
+                    slug_item = item.split(" – ")[0].replace(" (", "_").replace(")", "").replace(" ", "_").lower()
+                    st.checkbox(
+                        item,
+                        value=item in lista_salva_22,
+                        key=f"chk_22_{slug_item}_{ano_sel}"
+                    )
+
+            with col2:
+                link_22 = st.text_area(
+                    "Link/Evidência do escopo do plano (2.2):",
+                    value=evidencia_22_salva,
+                    key=chave_link_22,
+                    placeholder="Insira as páginas ou links diretos das seções do PDTIC que comprovam as alocações de recursos e terceirizações...",
+                    height=130
+                )
+
+                placeholder_links_22 = st.empty()
+                links_22_visuais = re.findall(regex_pure_url, link_22 or "")
+                if links_22_visuais:
+                    placeholder_links_22.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_22_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("2.2", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 2.2", key=f"btn_salvar_2_2_{ano_sel}", type="primary"):
+                sel22 = []
+                pts22 = 0.0
+
+                for item, pts in contempla.items():
+                    slug_item = item.split(" – ")[0].replace(" (", "_").replace(")", "").replace(" ", "_").lower()
+                    if st.session_state.get(f"chk_22_{slug_item}_{ano_sel}", False):
+                        sel22.append(item)
+                        pts22 += pts
+
+                val_str = str(sel22)
+                lnk_val = link_22.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_22, d22.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="2.2",
+                    valor=val_str,
+                    pontos=pts22,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["2.2"] = {
+                    "valor": val_str,
+                    "pontos": pts22,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_22_salva or "")
+
+                if lnk_val != evidencia_22_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 2.2 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_22 = d22.get("pontos", 0.0)
+            cor_txt_22 = "#28a745" if pts_atuais_22 == 40.0 else ("#ffc107" if pts_atuais_22 > 0.0 else "#6c757d")
+
+            st.markdown(
+                f"<span style='color:{cor_txt_22}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 2.2: +{pts_atuais_22:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 2.2 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_2_2_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("2.2", st.session_state.get(f"links_pendentes_2_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = False
