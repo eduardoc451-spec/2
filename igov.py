@@ -1012,144 +1012,350 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
         elements.append(tabela_ods)
         elements.append(Spacer(1, 15))
     # -------------------------------------------------------------------------
-    # 6. SÉRIE HISTÓRICA DO I-GOV TI
+    # 6. SÉRIE HISTÓRICA DO I-CIDADE
     # -------------------------------------------------------------------------
-    elements.append(PageBreak())
-    elements.append(Paragraph("<b>6. SÉRIE HISTÓRICA DO I-GOV TI</b>", styles["h2"]))
     elements.append(Spacer(1, 10))
 
-    anos_ordenados = sorted(all_data.keys()) if all_data else [ano]
-    if len(anos_ordenados) > 0:
-        d = Drawing(460, 180)
-        chart = VerticalBarChart()
-        chart.x = 40
-        chart.y = 25
-        chart.height = 130
-        chart.width = 400
-        
-        valores_grafico = []
-        labels_anos = []
+    anos_serie = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    valores_serie = []
+    for a in anos_serie:
+        if a == ano_atual: valores_serie.append(nota_atual)
+        elif a in all_data:
+            valores_serie.append(float(sum(info_h.get("pontos", 0) for qid_h, info_h in all_data[a].items() if isinstance(info_h, dict) and not qid_h.startswith("COM_"))))
+        else: valores_serie.append(0.0)
 
-        for a in anos_ordenados:
-            labels_anos.append(str(a))
-            dados_a = all_data.get(a, {})
-            tot_a = sum(
-                float(val.get("pontos", 0)) 
-                for k, val in dados_a.items() 
-                if isinstance(val, dict) and not k.startswith("COM_")
-            )
-            valores_grafico.append(tot_a)
+    # Configuração do Gráfico
+    desenho_grafico = Drawing(480, 165)
+    bc = VerticalBarChart()
+    bc.x = 45; bc.y = 25; bc.height = 110; bc.width = 410
+    bc.data = [valores_serie]
+    bc.categoryAxis.categoryNames = [str(a) for a in anos_serie]
+    bc.categoryAxis.labels.fontSize = 9; bc.categoryAxis.labels.fontName = 'Helvetica-Bold'; bc.categoryAxis.labels.dy = -10
+    
+    bc.valueAxis.valueMin = 0; bc.valueAxis.valueMax = 1000; bc.valueAxis.valueStep = 200; bc.valueAxis.labels.fontSize = 8
+    
+    # Rótulos (Pontuação em cima da barra)
+    bc.barLabels.nudge = 8
+    bc.barLabels.fontSize = 8
+    bc.barLabels.fontName = 'Helvetica-Bold'
+    bc.barLabelFormat = '%.1f'
+    
+    bc.bars[0].fillColor = colors.HexColor("#1b4f72")
+    bc.bars[0].strokeColor = colors.HexColor("#2c3e50")
+    bc.bars[0].strokeWidth = 0.5
 
-        chart.data = [valores_grafico]
-        chart.categoryAxis.categoryNames = labels_anos
-        chart.bars[0].fillColor = colors.HexColor("#1b4f72")
-        chart.valueAxis.valueMin = 0
-        chart.valueAxis.valueMax = 1000
-        chart.valueAxis.valueStep = 200
+    desenho_grafico.add(String(240, 150, "Série Histórica do I-cidade", textAnchor='middle', fontName='Helvetica-Bold', fontSize=12, fillColor=colors.HexColor("#2c3e50")))
+    desenho_grafico.add(bc)
+    
+    elements.append(desenho_grafico)
 
-        d.add(chart)
-        elements.append(d)
-
+    # Fechamento do documento
     doc.build(elements)
     buffer.seek(0)
     return buffer.getvalue()
 
 # =============================================================================
-# BARRA LATERAL (SIDEBAR)
+# 4. SIDEBAR
 # =============================================================================
+
+def zerar_questionario(ano):
+    """Deleta todas as respostas do ano selecionado no Neon PostgreSQL."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM respostas WHERE ano = %s", (ano,))
+        st.cache_data.clear()  # Limpa o cache após deletar
+    except Exception as e:
+        st.error(f"Erro ao zerar questionário: {e}")
+
+# Janela pop-up de confirmação definida no escopo global
+@st.dialog("🔒 Confirmação de Segurança")
+def confirmar_zerar_dialog(ano):
+    st.warning(f"Você está prestes a apagar todas as respostas de {ano}. Esta ação é irreversível!")
+    
+    senha = st.text_input("Digite a senha de administrador:", type="password")
+    
+    col_Sim, col_Nao = st.columns(2)
+    with col_Sim:
+        if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
+            if senha == "fidelios":
+                zerar_questionario(ano)
+                st.success(f"✅ Questionário de {ano} foi zerado!")
+                st.rerun()
+            else:
+                st.error("❌ Senha incorreta!")
+    with col_Nao:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
 def render_sidebar():
-    """Renderiza os controles da barra lateral e retorna os dados/filtros selecionados."""
-    with st.sidebar:
-        st.header("⚙️ Configurações i-Gov TI")
-        
-        # Seleção do Ano de Referência
-        ano_atual = datetime.now().year
-        anos_disponiveis = list(range(ano_atual, ano_atual - 6, -1))
-        
-        if "ano_referencia_global" not in st.session_state:
-            st.session_state["ano_referencia_global"] = ano_atual
-            
-        ano_selecionado = st.selectbox(
-            "Ano de Exercício:",
-            options=anos_disponiveis,
-            index=anos_disponiveis.index(st.session_state["ano_referencia_global"])
-            if st.session_state["ano_referencia_global"] in anos_disponiveis else 0,
-            key="sb_ano_referencia"
-        )
-        st.session_state["ano_referencia_global"] = ano_selecionado
+    st.sidebar.title("🛠️ Painel de Controle")
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
 
-        st.divider()
+    res_data = load_respostas(ano_sel)
+    total_pts = sum(item.get("pontos", 0) for item in res_data.values())
 
-        # Carrega todas as respostas para calcular totais
-        res_data = load_respostas(ano_selecionado)
-        total_pontos = sum(
-            float(v.get("pontos", 0)) 
-            for k, v in res_data.items() 
-            if isinstance(v, dict) and not k.startswith("COM_")
-        )
+    if total_pts <= 500:    faixa, cor = "C",  "red"
+    elif total_pts <= 599: faixa, cor = "C+", "orange"
+    elif total_pts <= 749: faixa, cor = "B",  "#d4d400"
+    elif total_pts <= 899: faixa, cor = "B+", "lightgreen"
+    else:                  faixa, cor = "A",  "green"
 
-        st.metric(
-            label="Pontuação Total Atual",
-            value=f"{total_pontos:.1f} pts"
+    st.sidebar.metric("Pontuação Total", f"{total_pts} pts")
+    st.sidebar.markdown(
+        f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>",
+        unsafe_allow_html=True
+    )
+
+    st.sidebar.divider()
+    
+    col1, col2 = st.sidebar.columns(2)
+    
+    # Botão de Download direto (gera o PDF ao clicar, sem recarregar a tela antes)
+    with col1:
+        st.download_button(
+            label="📄 Baixar PDF",
+            data=gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa),
+            file_name=f"Relatorio_{ano_sel}.pdf",
+            mime="application/pdf",
+            use_container_width=True
         )
 
-        st.divider()
+    # Botão para abrir o Modal de confirmação
+    with col2:
+        if st.button("🔄 Zerar", help="Limpar todas as respostas do ano selecionado", use_container_width=True):
+            confirmar_zerar_dialog(ano_sel)
 
-        # Botão de download do relatório PDF
-        if st.button("📄 Gerar Relatório PDF", use_container_width=True):
-            try:
-                pdf_bytes = gerar_relatorio_pdf(
-                    dados=res_data,
-                    ano=ano_selecionado,
-                    total=total_pontos,
-                    faixa=None,
-                    all_data={ano_selecionado: res_data}
-                )
-                st.download_button(
-                    label="⬇️ Baixar PDF",
-                    data=pdf_bytes,
-                    file_name=f"relatorio_igov_ti_{ano_selecionado}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-            except Exception as e:
-                st.error(f"Erro ao gerar PDF: {e}")
-
-        return {
-            "ano": ano_selecionado,
-            "respostas": res_data,
-            "total_pontos": total_pontos
-        }
+    return total_pts, res_data, ano_sel
 
 # =============================================================================
-# 6. FORMULÁRIO PRINCIPAL (I-GOV TI)
+# 5. GRÁFICOS COMPARATIVOS
 # =============================================================================
 
-def mostrar_formulario_gov():
-    # -------------------------------------------------------------------------
-    # RECUPERAÇÃO DE DADOS DA SIDEBAR
-    # -------------------------------------------------------------------------
+def get_faixa(total):
+    if total <= 500:  return "C"
+    if total <= 599:  return "C+"
+    if total <= 749:  return "B"
+    if total <= 899:  return "B+"
+    return "A"
+
+
+def calcular_pontos_por_categoria(res_data):
+    resultado = {}
+    for cat_key, cat_info in CATEGORIAS_MAP.items():
+        resultado[cat_key] = sum(
+            res_data.get(qid, {}).get("pontos", 0) for qid in cat_info["qids"]
+        )
+    return resultado
+
+
+def calcular_max_por_categoria():
+    resultado = {}
+    for cat_key, cat_info in CATEGORIAS_MAP.items():
+        resultado[cat_key] = sum(PONTUACOES_MAX.get(qid, 0) for qid in cat_info["qids"])
+    return resultado
+
+
+def grafico_comparativo_total(all_data):
+    anos = sorted(all_data.keys())
+    totais, faixas, cores = [], [], []
+    for ano in anos:
+        res = all_data[ano]
+        total = sum(v.get("pontos", 0) for k, v in res.items() if not k.startswith("COM_"))
+        faixa = get_faixa(total)
+        totais.append(total)
+        faixas.append(faixa)
+        cores.append(FAIXA_CORES[faixa])
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[str(a) for a in anos],
+        y=totais,
+        marker_color=cores,
+        text=[f"{t} pts<br>Faixa {f}" for t, f in zip(totais, faixas)],
+        textposition="outside",
+        hovertemplate="<b>%{x}</b><br>%{text}<extra></extra>",
+    ))
+    for y_val, label, cor in [
+        (500, "C→C+", "#f97316"), (600, "C+→B", "#eab308"),
+        (750, "B→B+", "#22c55e"), (900, "B+→A", "#16a34a")
+    ]:
+        fig.add_hline(y=y_val, line_dash="dash", line_color=cor,
+                      annotation_text=label, annotation_position="right")
+    fig.update_layout(
+        title="Pontuação Total por Ano",
+        xaxis_title="Ano", yaxis_title="Pontos",
+        plot_bgcolor="white", paper_bgcolor="white",
+        showlegend=False, height=400,
+    )
+    return fig
+
+
+def grafico_evolucao_categorias(all_data):
+    anos = sorted(all_data.keys())
+    CORES_CAT = ["#1e3a5f","#0ea5e9","#22c55e","#f97316","#ef4444","#8b5cf6","#ec4899","#6b7280"]
+    fig = go.Figure()
+    for idx, (cat_key, cat_info) in enumerate(CATEGORIAS_MAP.items()):
+        valores = [
+            sum(all_data.get(ano, {}).get(qid, {}).get("pontos", 0) for qid in cat_info["qids"])
+            for ano in anos
+        ]
+        fig.add_trace(go.Scatter(
+            x=[str(a) for a in anos], y=valores,
+            mode="lines+markers", name=cat_info["label"],
+            line=dict(color=CORES_CAT[idx % len(CORES_CAT)], width=2),
+            marker=dict(size=7),
+        ))
+    fig.update_layout(
+        title="Evolução por Categoria ao Longo dos Anos",
+        xaxis_title="Ano", yaxis_title="Pontos",
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.4),
+        height=450,
+    )
+    return fig
+
+
+def grafico_radar_categorias(res_data, ano):
+    maximos = calcular_max_por_categoria()
+    pontos  = calcular_pontos_por_categoria(res_data)
+    labels  = [CATEGORIAS_MAP[k]["label"] for k in CATEGORIAS_MAP]
+    valores_pct = [
+        round(max(0, pontos.get(k, 0) / maximos[k] * 100), 1) if maximos[k] > 0 else 0
+        for k in CATEGORIAS_MAP
+    ]
+    labels_fechado  = labels + [labels[0]]
+    valores_fechado = valores_pct + [valores_pct[0]]
+    fig = go.Figure(go.Scatterpolar(
+        r=valores_fechado, theta=labels_fechado,
+        fill="toself", fillcolor="rgba(30,58,95,0.15)",
+        line=dict(color="#1e3a5f", width=2),
+        hovertemplate="%{theta}: %{r:.1f}%<extra></extra>",
+    ))
+    fig.update_layout(
+        title=f"Radar de Categorias — {ano}",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+        showlegend=False, height=420, paper_bgcolor="white",
+    )
+    return fig
+
+
+def grafico_quesitos_barra(res_data, ano):
+    qids_pontuaveis = sorted([q for q, v in PONTUACOES_MAX.items() if v > 0])
+    qids, obtido, maximo, cores = [], [], [], []
+    for qid in qids_pontuaveis:
+        pts = res_data.get(qid, {}).get("pontos", 0)
+        mx  = PONTUACOES_MAX[qid]
+        qids.append(qid)
+        obtido.append(pts)
+        maximo.append(mx)
+        if pts == mx:   cores.append("#16a34a")
+        elif pts < 0:   cores.append("#ef4444")
+        elif pts == 0:  cores.append("#9ca3af")
+        else:           cores.append("#0ea5e9")
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        name="Máximo", x=maximo, y=qids, orientation="h",
+        marker_color="rgba(200,200,200,0.35)", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Bar(
+        name="Obtido", x=obtido, y=qids, orientation="h",
+        marker_color=cores,
+        hovertemplate="<b>%{y}</b><br>Obtido: %{x} pts<extra></extra>",
+    ))
+    fig.update_layout(
+        title=f"Pontuação por Quesito — {ano}",
+        barmode="overlay", xaxis_title="Pontos",
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=max(500, len(qids) * 22),
+        legend=dict(orientation="h"),
+        yaxis=dict(autorange="reversed"),
+    )
+    return fig
+
+
+def grafico_pontos_por_ano(all_data):
+    """Gráfico de barras vertical com pontos totais por ano."""
+    anos = sorted(all_data.keys())
+    totais = []
+    cores = []
+    
+    for ano in anos:
+        res = all_data[ano]
+        total = sum(v.get("pontos", 0) for k, v in res.items() if not k.startswith("COM_"))
+        totais.append(total)
+        
+        # Definir cor baseado na faixa
+        if total <= 500:   cores.append("#ef4444")  # C - Vermelho
+        elif total <= 599: cores.append("#f97316")  # C+ - Laranja
+        elif total <= 749: cores.append("#eab308")  # B - Amarelo
+        elif total <= 899: cores.append("#22c55e")  # B+ - Verde Claro
+        else:              cores.append("#16a34a")  # A - Verde
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[str(a) for a in anos],
+        y=totais,
+        marker_color=cores,
+        text=[f"{t} pts" for t in totais],
+        textposition="outside",
+        hovertemplate="<b>Ano: %{x}</b><br>Pontos: %{y}<extra></extra>",
+    ))
+    
+    fig.update_layout(
+        title="Pontuação Total por Ano",
+        xaxis_title="Ano",
+        yaxis_title="Pontos",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        showlegend=False,
+        height=400,
+    )
+    
+    return fig
+
+def render_graficos(res_data_atual, ano_sel):
+    st.header("📊 Gráfico de Pontuação")
+    
+    all_data = get_all_years_data()
+    
+    if not all_data:
+        st.info("Nenhum dado registrado ainda. Preencha os quesitos para ver o gráfico.")
+        return
+
+    st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
+
+# =============================================================================
+# 6. FORMULÁRIO PRINCIPAL
+# =============================================================================
+
+def mostrar_formulario_igov():
+    # Caso render_sidebar() retorne None por algum motivo
     dados_sidebar = render_sidebar()
     
-    if dados_sidebar and isinstance(dados_sidebar, dict):
-        ano_sel = dados_sidebar.get("ano", datetime.now().year)
-        res_data = dados_sidebar.get("respostas", {})
-        total_pts = dados_sidebar.get("total_pontos", 0.0)
+    if dados_sidebar and len(dados_sidebar) == 3:
+        total_pts, res_data, ano_sel = dados_sidebar
     else:
-        total_pts, res_data, ano_sel = 0.0, {}, datetime.now().year
+        total_pts, res_data, ano_sel = 0, {}, "2026"  # Valor padrão de fallback
 
-    st.title(f"💻 Governance & TI (i-Gov TI) - {ano_sel}")
-
-    # Regex para identificação e validação de URLs
-    REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
+    st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
 
     # -------------------------------------------------------------------------
     # ABAS PRINCIPAIS
     # -------------------------------------------------------------------------
-    aba_questionario, aba_graficos = st.tabs(["📋 Questionário i-Gov TI", "📊 Gráficos & Desempenho"])
+    aba_questionario, aba_graficos = st.tabs(["📋 Questionário", "📊 Gráficos"])
 
     with aba_questionario:
-        st.info("Preencha os quesitos de Governança e Tecnologia da Informação abaixo.")
+        st.info("Preencha os quesitos abaixo usando o componente de renderização.")
+        
+        # Exemplo de chamada utilizando a função otimizada de renderização/salvamento:
+        # renderizar_questao("1.0", res_data)
+        # renderizar_questao("1.3", res_data)
+
+    with aba_graficos:
+        render_graficos(res_data, ano_sel)
 
         # =============================================================================
         # QUESITO 1.0 • SETOR DE TIC (MODELO COMPLETO i-Cidade)
