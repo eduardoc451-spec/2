@@ -9404,3 +9404,114 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("11.3.1", st.session_state.get(f"links_pendentes_11_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_3_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 11.3.2 • MONITORAMENTO DO PLANO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q11_3_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 11.3.2 - Monitoramento do Plano", expanded=True):
+                st.subheader("11.3.2 • Realização de Monitoramento")
+                st.write("**Realiza monitoramento e avaliação das ações e metas?**")
+
+                # Recupera os dados salvos no banco
+                d1132 = res_data.get("11.3.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc1132 = ["Selecione...", "Sim – 20", "Não – 00"]
+                v_salvo_1132 = d1132.get("valor", "Selecione...")
+                if v_salvo_1132 not in opc1132:
+                    v_salvo_1132 = "Selecione..."
+                evidencia_1132_salva = d1132.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_1132 = f"r1132_in_{ano_sel}"
+                chave_link_1132 = f"l1132_in_{ano_sel}"
+                chave_coment_1132 = f"coment_11.3.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    resp_1132 = st.radio(
+                        "Selecione uma opção (11.3.2):",
+                        options=opc1132,
+                        index=opc1132.index(v_salvo_1132),
+                        key=chave_radio_1132
+                    )
+
+                    # Regra de pontuação do Quesito 11.3.2 (Sim = 20.0 pts; Outros = 0.0 pts)
+                    if "Sim" in resp_1132:
+                        pts_exibido_1132 = 20.0
+                        cor_metric = "#28a745"  # Verde
+                    else:
+                        pts_exibido_1132 = 0.0
+                        cor_metric = "#6c757d"  # Cinza neutro
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_1132:.1f} pts")
+
+                with col2:
+                    lk1132 = st.text_area(
+                        "Link/Evidência (11.3.2):",
+                        value=evidencia_1132_salva,
+                        key=chave_link_1132,
+                        placeholder="Inserir link comprovando relatórios, comissões ou ferramentas de monitoramento das metas...",
+                        height=125
+                    )
+                    placeholder_links_1132 = st.empty()
+                    links_1132_visuais = re.findall(REGEX_PURE_URL, lk1132 or "")
+                    if links_1132_visuais:
+                        placeholder_links_1132.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1132_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 11.3.2
+                bloco_comentarios("11.3.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 11.3.2: +{pts_exibido_1132:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 11.3.2", key=f"btn_salvar_11_3_2_{ano_sel}", type="primary"):
+                    lnk_val = lk1132.strip()
+                    val_sel = resp_1132
+                    comentario_para_salvar = st.session_state.get(chave_coment_1132, d1132.get("comentario", ""))
+
+                    # Cálculo exato dos pontos para gravação
+                    pts_calculados = 20.0 if "Sim" in val_sel else 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="11.3.2",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["11.3.2"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1132_salva or "")]
+
+                    if lnk_val != evidencia_1132_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_3_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_3_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 11.3.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 11.3.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_3_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.3.2", st.session_state.get(f"links_pendentes_11_3_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_3_2_{ano_sel}"] = False
+
