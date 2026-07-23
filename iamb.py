@@ -5134,3 +5134,108 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("7.5.1", st.session_state.get(f"links_pendentes_7_5_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_5_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 7.6 • METAS DE DRENAGEM URBANAS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_saneamento_7_6_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.6 - Diretrizes de Drenagem e Águas Pluviais", expanded=True):
+                st.subheader("7.6 • Metas de Drenagem Urbana")
+                st.write("**O Plano Municipal ou Regional de Saneamento Básico possui metas de drenagem e manejo de águas pluviais urbanas?**")
+
+                # Dicionário e lista de opções
+                opts76 = {"Selecione...": 0.0, "Sim": 0.0, "Não": 0.0}
+                lista_opts76 = list(opts76.keys())
+
+                # Recupera os dados salvos do banco
+                d76 = res_data.get("7.6") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_76 = d76.get("valor", "Selecione...")
+                if v_salvo_76 not in lista_opts76:
+                    v_salvo_76 = "Selecione..."
+
+                evidencia_76_salva = d76.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_76 = f"r_76_select_{ano_sel}"
+                chave_link_76 = f"l_76_txt_area_{ano_sel}"
+                chave_coment_76 = f"coment_7.6_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    idx_salvo76 = lista_opts76.index(v_salvo_76)
+                    st.radio(
+                        "Selecione uma opção (7.6):",
+                        options=lista_opts76,
+                        index=idx_salvo76,
+                        key=chave_radio_76
+                    )
+
+                with col2:
+                    link_76 = st.text_area(
+                        "Link/Evidência (7.6):",
+                        value=evidencia_76_salva,
+                        key=chave_link_76,
+                        placeholder="Seções ou anexos voltados ao gerenciamento de águas pluviais...",
+                        height=110
+                    )
+                    placeholder_links_76 = st.empty()
+                    links_76_visuais = re.findall(REGEX_PURE_URL, link_76 or "")
+                    if links_76_visuais:
+                        placeholder_links_76.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_76_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 7.6
+                bloco_comentarios("7.6", res_data, ano_sel)
+
+                # Feedback visual reativo da pontuação (Informativo)
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 7.6: +0.0 pontos (Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.6", key=f"btn_salvar_7_6_{ano_sel}", type="primary"):
+                    lnk_val = link_76.strip()
+                    val_salvar = st.session_state.get(chave_radio_76, v_salvo_76)
+                    pts_calculados = opts76.get(val_salvar, 0.0)
+                    comentario_para_salvar = st.session_state.get(chave_coment_76, d76.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="7.6",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["7.6"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novo link para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_76_salva or "")]
+
+                    if lnk_val != evidencia_76_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_6_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_6_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 7.6 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 7.6 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_6_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.6", st.session_state.get(f"links_pendentes_7_6_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_6_{ano_sel}"] = False
+
