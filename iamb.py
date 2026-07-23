@@ -6475,3 +6475,121 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.3 • CARACTERIZAÇÃO DOS RESÍDUOS SÓLIDOS URBANOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_residuos_8_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.3 - Gravimetria, Qualificação e Quantificação de RSU", expanded=True):
+                st.subheader("8.3 • Caracterização Qualitativa e Quantitativa")
+                st.write("**A Prefeitura realizou a caracterização qualitativa e quantitativa dos resíduos sólidos urbanos gerados no município, identificando ainda sua origem?**")
+
+                opc83 = ["Selecione...", "Sim – 10", "Não – 00"]
+
+                # Recupera os dados salvos do banco
+                d83 = res_data.get("8.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_83 = d83.get("valor", "Selecione...")
+                if v_salvo_83 not in opc83:
+                    v_salvo_83 = "Selecione..."
+
+                evidencia_83_salva = d83.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_83 = f"r_83_select_{ano_sel}"
+                chave_link_83 = f"l_83_txt_area_{ano_sel}"
+                chave_coment_83 = f"coment_8.3_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    idx83 = opc83.index(v_salvo_83)
+                    st.radio(
+                        "Selecione uma opção (8.3):",
+                        options=opc83,
+                        index=idx83,
+                        key=chave_radio_83
+                    )
+
+                    v_atual_83 = st.session_state.get(chave_radio_83, v_salvo_83)
+                    fb_pts_83 = 10.0 if "Sim" in v_atual_83 else 0.0
+                    st.metric(label="Pontuação do Quesito", value=f"{fb_pts_83:.1f} pts")
+
+                with col2:
+                    link_83 = st.text_area(
+                        "Link/Evidência (8.3):",
+                        value=evidencia_83_salva,
+                        key=chave_link_83,
+                        placeholder="Estudos gravimétricos oficiais, laudos técnicos ou relatórios anexos ao PMGIRS...",
+                        height=110
+                    )
+                    placeholder_links_83 = st.empty()
+                    links_83_visuais = re.findall(REGEX_PURE_URL, link_83 or "")
+                    if links_83_visuais:
+                        placeholder_links_83.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_83_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 8.3
+                bloco_comentarios("8.3", res_data, ano_sel)
+
+                # Feedback visual de pontuação baseado na gravação salva
+                pts_salvos_83 = float(d83.get("pontos", 0.0))
+                val_salvo_atual = d83.get("valor", "Selecione...")
+
+                if pts_salvos_83 > 0:
+                    cor_txt_83 = "#28a745"
+                elif val_salvo_atual == "Selecione...":
+                    cor_txt_83 = "#6c757d"
+                else:
+                    cor_txt_83 = "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_83}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.3: +{pts_salvos_83:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.3", key=f"btn_salvar_8_3_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_83, v_salvo_83)
+                    lnk_val = link_83.strip()
+
+                    pts_calculados = 10.0 if "Sim" in val_salvar else 0.0
+                    comentario_para_salvar = st.session_state.get(chave_coment_83, d83.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="8.3",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização em memória
+                    res_data["8.3"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_83_salva or "")]
+
+                    if lnk_val != evidencia_83_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 8.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 8.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = False
+
