@@ -3470,3 +3470,120 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.3", st.session_state.get(f"links_pendentes_5_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_3_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 6.0 • AÇÕES PREVENTIVAS DE ESTIAGEM (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_estiagem_6_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 6.0 - Plano de Contingência para Estiagem", expanded=True):
+                st.subheader("6.0 • Medidas Contra Estiagem")
+                st.write("**Existem ações e medidas preventivas de contingenciamento para os períodos de estiagem executados pela Prefeitura?**")
+                st.caption("ℹ *Estiagem é um período prolongado de baixa pluviosidade, ou sua ausência, na qual a perda de umidade do solo é superior à sua reposição. Selecione uma opção, insira os links/comentários e clique em 'Salvar Quesito 6.0'.*")
+
+                opc60 = ["Selecione...", "Sim – 20", "Não – 00"]
+                
+                # Recupera os dados salvos no banco de dados
+                d60 = res_data.get("6.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                
+                v_salvo_60 = d60.get("valor", "Selecione...")
+                if v_salvo_60 not in opc60:
+                    v_salvo_60 = "Selecione..."
+
+                evidencia_60_salva = d60.get("link", "")
+                
+                # Chaves fixas de componentes no Streamlit
+                chave_radio_60 = f"r_60_select_{ano_sel}"
+                chave_link_60 = f"l_60_txt_area_{ano_sel}"
+                chave_coment_60 = f"coment_6.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    try:
+                        idx60 = opc60.index(v_salvo_60)
+                    except ValueError:
+                        idx60 = 0
+
+                    opcao_selecionada_60 = st.radio(
+                        "Selecione uma opção (6.0):",
+                        options=opc60,
+                        index=idx60,
+                        key=chave_radio_60
+                    )
+
+                with col2:
+                    link_60 = st.text_area(
+                        "Link/Evidência (6.0):",
+                        value=evidencia_60_salva,
+                        key=chave_link_60,
+                        placeholder="Insira o link contendo o decreto de contingenciamento, plano de metas de estiagem, etc...",
+                        height=110
+                    )
+                    placeholder_links_60 = st.empty()
+                    links_60_visuais = re.findall(REGEX_PURE_URL, link_60 or "")
+                    if links_60_visuais:
+                        placeholder_links_60.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_60_visuais]))
+
+                # Renderiza o bloco de comentários do Quesito 6.0
+                bloco_comentarios("6.0", res_data, ano_sel)
+
+                # Cálculo do preview de impacto visual na pontuação
+                v_atual_60 = st.session_state.get(chave_radio_60, v_salvo_60)
+                pts_atuais_60 = 20.0 if "Sim" in str(v_atual_60) else 0.0
+                
+                if v_atual_60 == "Selecione...":
+                    cor_txt_60 = "#6c757d"
+                elif pts_atuais_60 > 0:
+                    cor_txt_60 = "#28a745"
+                else:
+                    cor_txt_60 = "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_60}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 6.0: +{pts_atuais_60:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 6.0", key=f"btn_salvar_6_0_{ano_sel}", type="primary"):
+                    val_salvar = opcao_selecionada_60
+                    lnk_val = link_60.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_60, d60.get("comentario", ""))
+
+                    pts_calculados = 20.0 if "Sim" in str(val_salvar) else 0.0
+
+                    # Persistência via save_resp
+                    save_resp(
+                        qid="6.0",
+                        valor=val_salvar,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local
+                    res_data["6.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_calculados,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação para acionar modal de validação de link público
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_60_salva or "")]
+
+                    if lnk_val != evidencia_60_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_6_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 6.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 6.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_6_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
