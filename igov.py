@@ -3641,3 +3641,119 @@ def mostrar_formulario_igov():
         if "modal_aviso_link" in globals():
             modal_aviso_link("3.4", st.session_state.get(f"links_pendentes_3_4_{ano_sel}", []))
         st.session_state[f"gatilho_modal_3_4_{ano_sel}"] = False
+
+# =============================================================================
+    # QUESITO 3.5 • POLÍTICA DE BACKUP (MODELO PADRONIZADO iGov)
+    # =============================================================================
+    regex_pure_url = r'https?://[^\s<>"]+'
+
+    with st.container(key=f"container_bloco_igov_3_5_{ano_sel}", border=True):
+        with st.expander("📌 Quesito 3.5 - Política de Cópias de Segurança (Backup)", expanded=True):
+            st.subheader("3.5 • Política de Backup")
+            st.write("**A Prefeitura dispõe de política de cópias de segurança (backup) formalmente instituída como norma de cumprimento obrigatório?**")
+            st.caption("ℹ *Selecione a opção desejada, preencha o link de evidência e clique no botão 'Salvar Quesito 3.5'.*")
+
+            opc35 = {
+                "Selecione...": 0.0,
+                "Sim – 30": 30.0,
+                "Não – 00": 0.0
+            }
+            lista35 = list(opc35.keys())
+
+            # Recupera e trata o estado inicial do dicionário com segurança
+            d35 = res_data.get("3.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+            v_salvo_35 = d35.get("valor", "Selecione...")
+            evidencia_35_salva = d35.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_35 = f"r_35_select_{ano_sel}"
+            chave_link_35 = f"l_35_txt_area_{ano_sel}"
+            chave_coment_35 = f"coment_3.5_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                idx35 = lista35.index(v_salvo_35) if v_salvo_35 in lista35 else 0
+                st.radio(
+                    "Selecione o status da política:",
+                    options=lista35,
+                    index=idx35,
+                    key=chave_radio_35
+                )
+
+            with col2:
+                link_35 = st.text_area(
+                    "Link/Evidência (3.5):",
+                    value=evidencia_35_salva,
+                    key=chave_link_35,
+                    placeholder="Insira o link do normativo, portaria ou regulamento interno que formaliza a Política de Backup...",
+                    height=90
+                )
+
+                placeholder_links_35 = st.empty()
+                links_35_visuais = re.findall(regex_pure_url, link_35 or "")
+                if links_35_visuais:
+                    placeholder_links_35.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u}]({u})" for u in links_35_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("3.5", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 3.5", key=f"btn_salvar_3_5_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_35, v_salvo_35)
+                pts_35 = float(opc35.get(val_salvar, 0.0))
+                lnk_val = link_35.strip()
+
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_35, d35.get("comentario", ""))
+
+                # 2. Salva no banco de dados isolado do iGov (respostas_igov)
+                save_resp(
+                    qid="3.5",
+                    valor=val_salvar,
+                    pontos=pts_35,
+                    link=lnk_val,
+                    comentarios=comentario_para_salvar
+                )
+
+                # 3. Atualiza o dicionário local res_data
+                res_data["3.5"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_35,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação de links para gatilho do modal
+                links_atuais = re.findall(regex_pure_url, lnk_val or "")
+                links_antigos = re.findall(regex_pure_url, evidencia_35_salva or "")
+
+                if lnk_val != evidencia_35_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_5_{ano_sel}"] = True
+
+                # Limpa o cache para forçar a atualização imediata dos painéis
+                st.cache_data.clear()
+
+                st.toast("Resposta e comentário do Quesito 3.5 salvos com sucesso!", icon="✅")
+
+                # 5. FORÇA O RECARREGAMENTO DA TELA (Atualiza sidebar e painel)
+                st.rerun()
+
+            # Resumo dinâmico e impacto de pontuação
+            pts_atuais_35 = d35.get("pontos", 0.0)
+            cor_txt_35 = "#28a745" if pts_atuais_35 == 30.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_35}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 3.5: +{pts_atuais_35:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 3.5 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_3_5_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("3.5", st.session_state.get(f"links_pendentes_3_5_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_3_5_{ano_sel}"] = False
