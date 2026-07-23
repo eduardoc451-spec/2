@@ -1036,23 +1036,23 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     return buffer.getvalue()
 
 # =============================================================================
-# 4. SIDEBAR
+# 4. SIDEBAR - iGov
 # =============================================================================
 
-def zerar_questionario(ano):
-    """Deleta todas as respostas do ano selecionado no Neon PostgreSQL."""
+def zerar_questionario_igov(ano):
+    """Deleta todas as respostas do ano selecionado no Neon PostgreSQL para o iGov."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("DELETE FROM respostas WHERE ano = %s", (ano,))
+                cursor.execute("DELETE FROM respostas_igov WHERE ano = %s", (ano,))
         st.cache_data.clear()  # Limpa o cache após deletar
     except Exception as e:
-        st.error(f"Erro ao zerar questionário: {e}")
+        st.error(f"Erro ao zerar questionário iGov: {e}")
 
 # Janela pop-up de confirmação definida no escopo global
-@st.dialog("🔒 Confirmação de Segurança")
-def confirmar_zerar_dialog(ano):
-    st.warning(f"Você está prestes a apagar todas as respostas de {ano}. Esta ação é irreversível!")
+@st.dialog("🔒 Confirmação de Segurança - iGov")
+def confirmar_zerar_dialog_igov(ano):
+    st.warning(f"Você está prestes a apagar todas as respostas do iGov relativas a {ano}. Esta ação é irreversível!")
     
     senha = st.text_input("Digite a senha de administrador:", type="password")
     
@@ -1060,8 +1060,8 @@ def confirmar_zerar_dialog(ano):
     with col_Sim:
         if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
             if senha == "fidelios":
-                zerar_questionario(ano)
-                st.success(f"✅ Questionário de {ano} foi zerado!")
+                zerar_questionario_igov(ano)
+                st.success(f"✅ Questionário iGov de {ano} foi zerado com sucesso!")
                 st.rerun()
             else:
                 st.error("❌ Senha incorreta!")
@@ -1070,22 +1070,28 @@ def confirmar_zerar_dialog(ano):
             st.rerun()
 
 def render_sidebar():
-    st.sidebar.title("🛠️ Painel de Controle")
+    st.sidebar.title("🛠️ Painel iGov")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
-    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
+    ano_sel = st.sidebar.selectbox("Ano do Exercício:", anos, key="ano_referencia_igov")
 
-    res_data = load_respostas(ano_sel)
+    res_data = load_respostas_igov(ano_sel)
     total_pts = sum(item.get("pontos", 0) for item in res_data.values())
 
-    if total_pts <= 500:    faixa, cor = "C",  "red"
-    elif total_pts <= 599: faixa, cor = "C+", "orange"
-    elif total_pts <= 749: faixa, cor = "B",  "#d4d400"
-    elif total_pts <= 899: faixa, cor = "B+", "lightgreen"
-    else:                  faixa, cor = "A",  "green"
+    # Faixas de Maturidade do iGov
+    if total_pts <= 30:
+        faixa, cor = "Início / Crítico", "red"
+    elif total_pts <= 55:
+        faixa, cor = "Básico", "orange"
+    elif total_pts <= 75:
+        faixa, cor = "Intermediário", "#d4d400"
+    elif total_pts <= 90:
+        faixa, cor = "Aprimorado", "lightgreen"
+    else:
+        faixa, cor = "Excelência", "green"
 
-    st.sidebar.metric("Pontuação Total", f"{total_pts} pts")
+    st.sidebar.metric("Índice iGov Total", f"{total_pts:.1f} pts")
     st.sidebar.markdown(
-        f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>",
+        f"**Nível de Governança:** <br><span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
         unsafe_allow_html=True
     )
 
@@ -1093,38 +1099,38 @@ def render_sidebar():
     
     col1, col2 = st.sidebar.columns(2)
     
-    # Botão de Download direto (gera o PDF ao clicar, sem recarregar a tela antes)
+    # Botão de Download do Relatório do iGov
     with col1:
         st.download_button(
             label="📄 Baixar PDF",
-            data=gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa),
-            file_name=f"Relatorio_{ano_sel}.pdf",
+            data=gerar_relatorio_pdf_igov(res_data, ano_sel, total_pts, faixa),
+            file_name=f"Relatorio_iGov_{ano_sel}.pdf",
             mime="application/pdf",
             use_container_width=True
         )
 
-    # Botão para abrir o Modal de confirmação
+    # Botão para zerar dados do exercício selecionado
     with col2:
-        if st.button("🔄 Zerar", help="Limpar todas as respostas do ano selecionado", use_container_width=True):
-            confirmar_zerar_dialog(ano_sel)
+        if st.button("🔄 Zerar", help="Limpar todas as respostas iGov do ano selecionado", use_container_width=True):
+            confirmar_zerar_dialog_igov(ano_sel)
 
     return total_pts, res_data, ano_sel
 
 # =============================================================================
-# 5. GRÁFICOS COMPARATIVOS
+# 5. GRÁFICOS COMPARATIVOS - iGov
 # =============================================================================
 
-def get_faixa(total):
-    if total <= 500:  return "C"
-    if total <= 599:  return "C+"
-    if total <= 749:  return "B"
-    if total <= 899:  return "B+"
-    return "A"
+def get_faixa_igov(total):
+    if total <= 30:  return "Crítico"
+    if total <= 55:  return "Básico"
+    if total <= 75:  return "Intermediário"
+    if total <= 90:  return "Aprimorado"
+    return "Excelência"
 
 
 def calcular_pontos_por_categoria(res_data):
     resultado = {}
-    for cat_key, cat_info in CATEGORIAS_MAP.items():
+    for cat_key, cat_info in CATEGORIAS_IGOV_MAP.items():
         resultado[cat_key] = sum(
             res_data.get(qid, {}).get("pontos", 0) for qid in cat_info["qids"]
         )
@@ -1133,8 +1139,8 @@ def calcular_pontos_por_categoria(res_data):
 
 def calcular_max_por_categoria():
     resultado = {}
-    for cat_key, cat_info in CATEGORIAS_MAP.items():
-        resultado[cat_key] = sum(PONTUACOES_MAX.get(qid, 0) for qid in cat_info["qids"])
+    for cat_key, cat_info in CATEGORIAS_IGOV_MAP.items():
+        resultado[cat_key] = sum(PONTUACOES_MAX_IGOV.get(qid, 0) for qid in cat_info["qids"])
     return resultado
 
 
@@ -1144,29 +1150,34 @@ def grafico_comparativo_total(all_data):
     for ano in anos:
         res = all_data[ano]
         total = sum(v.get("pontos", 0) for k, v in res.items() if not k.startswith("COM_"))
-        faixa = get_faixa(total)
+        faixa = get_faixa_igov(total)
         totais.append(total)
         faixas.append(faixa)
-        cores.append(FAIXA_CORES[faixa])
+        cores.append(FAIXA_CORES_IGOV.get(faixa, "#0ea5e9"))
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
         x=[str(a) for a in anos],
         y=totais,
         marker_color=cores,
-        text=[f"{t} pts<br>Faixa {f}" for t, f in zip(totais, faixas)],
+        text=[f"{t:.1f} pts<br>{f}" for t, f in zip(totais, faixas)],
         textposition="outside",
         hovertemplate="<b>%{x}</b><br>%{text}<extra></extra>",
     ))
+    
+    # Linhas de referência de faixas iGov
     for y_val, label, cor in [
-        (500, "C→C+", "#f97316"), (600, "C+→B", "#eab308"),
-        (750, "B→B+", "#22c55e"), (900, "B+→A", "#16a34a")
+        (30, "Crítico → Básico", "#f97316"), 
+        (55, "Básico → Intermediário", "#eab308"),
+        (75, "Intermediário → Aprimorado", "#22c55e"), 
+        (90, "Aprimorado → Excelência", "#16a34a")
     ]:
         fig.add_hline(y=y_val, line_dash="dash", line_color=cor,
                       annotation_text=label, annotation_position="right")
+                      
     fig.update_layout(
-        title="Pontuação Total por Ano",
-        xaxis_title="Ano", yaxis_title="Pontos",
+        title="Evolução do Índice iGov por Ano",
+        xaxis_title="Ano", yaxis_title="Pontos / Índice",
         plot_bgcolor="white", paper_bgcolor="white",
         showlegend=False, height=400,
     )
@@ -1177,7 +1188,7 @@ def grafico_evolucao_categorias(all_data):
     anos = sorted(all_data.keys())
     CORES_CAT = ["#1e3a5f","#0ea5e9","#22c55e","#f97316","#ef4444","#8b5cf6","#ec4899","#6b7280"]
     fig = go.Figure()
-    for idx, (cat_key, cat_info) in enumerate(CATEGORIAS_MAP.items()):
+    for idx, (cat_key, cat_info) in enumerate(CATEGORIAS_IGOV_MAP.items()):
         valores = [
             sum(all_data.get(ano, {}).get(qid, {}).get("pontos", 0) for qid in cat_info["qids"])
             for ano in anos
@@ -1189,7 +1200,7 @@ def grafico_evolucao_categorias(all_data):
             marker=dict(size=7),
         ))
     fig.update_layout(
-        title="Evolução por Categoria ao Longo dos Anos",
+        title="Evolução das Dimensões de Governança ao Longo dos Anos",
         xaxis_title="Ano", yaxis_title="Pontos",
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(orientation="h", yanchor="bottom", y=-0.4),
@@ -1201,13 +1212,14 @@ def grafico_evolucao_categorias(all_data):
 def grafico_radar_categorias(res_data, ano):
     maximos = calcular_max_por_categoria()
     pontos  = calcular_pontos_por_categoria(res_data)
-    labels  = [CATEGORIAS_MAP[k]["label"] for k in CATEGORIAS_MAP]
+    labels  = [CATEGORIAS_IGOV_MAP[k]["label"] for k in CATEGORIAS_IGOV_MAP]
     valores_pct = [
-        round(max(0, pontos.get(k, 0) / maximos[k] * 100), 1) if maximos[k] > 0 else 0
-        for k in CATEGORIAS_MAP
+        round(max(0, pontos.get(k, 0) / maximos[k] * 100), 1) if maximos.get(k, 0) > 0 else 0
+        for k in CATEGORIAS_IGOV_MAP
     ]
     labels_fechado  = labels + [labels[0]]
     valores_fechado = valores_pct + [valores_pct[0]]
+    
     fig = go.Figure(go.Scatterpolar(
         r=valores_fechado, theta=labels_fechado,
         fill="toself", fillcolor="rgba(30,58,95,0.15)",
@@ -1215,7 +1227,7 @@ def grafico_radar_categorias(res_data, ano):
         hovertemplate="%{theta}: %{r:.1f}%<extra></extra>",
     ))
     fig.update_layout(
-        title=f"Radar de Categorias — {ano}",
+        title=f"Maturidade por Dimensão de Governança — {ano}",
         polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
         showlegend=False, height=420, paper_bgcolor="white",
     )
@@ -1223,11 +1235,11 @@ def grafico_radar_categorias(res_data, ano):
 
 
 def grafico_quesitos_barra(res_data, ano):
-    qids_pontuaveis = sorted([q for q, v in PONTUACOES_MAX.items() if v > 0])
+    qids_pontuaveis = sorted([q for q, v in PONTUACOES_MAX_IGOV.items() if v > 0])
     qids, obtido, maximo, cores = [], [], [], []
     for qid in qids_pontuaveis:
         pts = res_data.get(qid, {}).get("pontos", 0)
-        mx  = PONTUACOES_MAX[qid]
+        mx  = PONTUACOES_MAX_IGOV[qid]
         qids.append(qid)
         obtido.append(pts)
         maximo.append(mx)
@@ -1238,16 +1250,16 @@ def grafico_quesitos_barra(res_data, ano):
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
-        name="Máximo", x=maximo, y=qids, orientation="h",
+        name="Pontuação Máxima", x=maximo, y=qids, orientation="h",
         marker_color="rgba(200,200,200,0.35)", hoverinfo="skip",
     ))
     fig.add_trace(go.Bar(
-        name="Obtido", x=obtido, y=qids, orientation="h",
+        name="Pontuação Obtida", x=obtido, y=qids, orientation="h",
         marker_color=cores,
         hovertemplate="<b>%{y}</b><br>Obtido: %{x} pts<extra></extra>",
     ))
     fig.update_layout(
-        title=f"Pontuação por Quesito — {ano}",
+        title=f"Desempenho por Prática / Item — {ano}",
         barmode="overlay", xaxis_title="Pontos",
         plot_bgcolor="white", paper_bgcolor="white",
         height=max(500, len(qids) * 22),
@@ -1258,7 +1270,7 @@ def grafico_quesitos_barra(res_data, ano):
 
 
 def grafico_pontos_por_ano(all_data):
-    """Gráfico de barras vertical com pontos totais por ano."""
+    """Gráfico de barras vertical com índice total do iGov por ano."""
     anos = sorted(all_data.keys())
     totais = []
     cores = []
@@ -1268,27 +1280,27 @@ def grafico_pontos_por_ano(all_data):
         total = sum(v.get("pontos", 0) for k, v in res.items() if not k.startswith("COM_"))
         totais.append(total)
         
-        # Definir cor baseado na faixa
-        if total <= 500:   cores.append("#ef4444")  # C - Vermelho
-        elif total <= 599: cores.append("#f97316")  # C+ - Laranja
-        elif total <= 749: cores.append("#eab308")  # B - Amarelo
-        elif total <= 899: cores.append("#22c55e")  # B+ - Verde Claro
-        else:              cores.append("#16a34a")  # A - Verde
+        # Cor por faixa do iGov
+        if total <= 30:    cores.append("#ef4444")  # Crítico - Vermelho
+        elif total <= 55:  cores.append("#f97316")  # Básico - Laranja
+        elif total <= 75:  cores.append("#eab308")  # Intermediário - Amarelo
+        elif total <= 90:  cores.append("#22c55e")  # Aprimorado - Verde Claro
+        else:              cores.append("#16a34a")  # Excelência - Verde
     
     fig = go.Figure()
     fig.add_trace(go.Bar(
         x=[str(a) for a in anos],
         y=totais,
         marker_color=cores,
-        text=[f"{t} pts" for t in totais],
+        text=[f"{t:.1f} pts" for t in totais],
         textposition="outside",
-        hovertemplate="<b>Ano: %{x}</b><br>Pontos: %{y}<extra></extra>",
+        hovertemplate="<b>Ano: %{x}</b><br>iGov Total: %{y:.1f} pts<extra></extra>",
     ))
     
     fig.update_layout(
-        title="Pontuação Total por Ano",
-        xaxis_title="Ano",
-        yaxis_title="Pontos",
+        title="Índice iGov Histórico por Ano",
+        xaxis_title="Ano do Exercício",
+        yaxis_title="Pontuação iGov",
         plot_bgcolor="white",
         paper_bgcolor="white",
         showlegend=False,
@@ -1298,52 +1310,44 @@ def grafico_pontos_por_ano(all_data):
     return fig
 
 def render_graficos(res_data_atual, ano_sel):
-    st.header("📊 Gráfico de Pontuação")
+    st.header("📊 Painel de Análise do iGov")
     
-    all_data = get_all_years_data()
+    all_data = get_all_years_data_igov()
     
     if not all_data:
-        st.info("Nenhum dado registrado ainda. Preencha os quesitos para ver o gráfico.")
+        st.info("Nenhum dado do iGov registrado ainda. Preencha os itens para visualizar a análise.")
         return
 
     st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
 
 # =============================================================================
-# 6. FORMULÁRIO PRINCIPAL (CORRIGIDO)
+# 6. FORMULÁRIO PRINCIPAL - iGov
 # =============================================================================
 
 def mostrar_formulario_igov():
-    try:
-        # Tenta obter os dados da sidebar
-        dados_sidebar = render_sidebar()
+    dados_sidebar = render_sidebar()
+    
+    if dados_sidebar and len(dados_sidebar) == 3:
+        total_pts, res_data, ano_sel = dados_sidebar
+    else:
+        total_pts, res_data, ano_sel = 0, {}, "2026"
+
+    st.title(f"🏛️ Avaliação de Governança Pública (iGov) - {ano_sel}")
+
+    # -------------------------------------------------------------------------
+    # ABAS PRINCIPAIS
+    # -------------------------------------------------------------------------
+    aba_questionario, aba_graficos = st.tabs(["📋 Questionário iGov", "📊 Análise & Gráficos"])
+
+    with aba_questionario:
+        st.info("Responda aos itens abaixo para calcular o nível de maturidade e governança da instituição.")
         
-        # Garante que dados_sidebar seja válido e tenha 3 elementos
-        if dados_sidebar and isinstance(dados_sidebar, (tuple, list)) and len(dados_sidebar) == 3:
-            total_pts, res_data, ano_sel = dados_sidebar
-        else:
-            # Fallback seguro: garante ano como INTEIRO (2026) e dicionário para res_data
-            total_pts, res_data, ano_sel = 0.0, {}, 2026
+        # Exemplo de chamada para renderizar os itens do iGov:
+        # renderizar_questao_igov("1.1", res_data)
+        # renderizar_questao_igov("1.2", res_data)
 
-        # Garante que res_data não seja None
-        if res_data is None:
-            res_data = {}
-
-        st.title(f"🏙️ Preenchimento do IEG-M - {ano_sel}")
-
-        # --- AQUI VEM O RESTANTE DO SEU CÓDIGO DO FORMULÁRIO ---
-        # Exemplo de chamada das questões para evitar renderização vazia:
-        categoria_sel = st.selectbox(
-            "Selecione a Categoria:", 
-            options=list(CATEGORIAS_MAP.keys()), 
-            format_func=lambda x: CATEGORIAS_MAP[x]["label"]
-        )
-
-        for qid in CATEGORIAS_MAP[categoria_sel]["qids"]:
-            renderizar_questao(qid, res_data)
-
-    except Exception as e:
-        st.error("❌ Ocorreu um erro ao carregar o formulário!")
-        st.exception(e)  # Revela o erro e o Traceback completo diretamente na interface do Streamlit
+    with aba_graficos:
+        render_graficos(res_data, ano_sel)
 
     # -------------------------------------------------------------------------
     # ABAS PRINCIPAIS
