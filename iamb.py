@@ -9170,3 +9170,114 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("11.2", st.session_state.get(f"links_pendentes_11_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_2_{ano_sel}"] = False
 
+# =============================================================================
+        # QUESITO 11.3 • CRONOGRAMA DE METAS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q11_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 11.3 - Cronograma de Metas", expanded=True):
+                st.subheader("11.3 • Existência de Cronograma")
+                st.write("**Possui cronograma com as metas a serem cumpridas?**")
+
+                # Recupera os dados salvos no banco
+                d113 = res_data.get("11.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                opc113 = ["Selecione...", "Sim – 30", "Não – 00"]
+                v_salvo_113 = d113.get("valor", "Selecione...")
+                if v_salvo_113 not in opc113:
+                    v_salvo_113 = "Selecione..."
+                evidencia_113_salva = d113.get("link", "")
+
+                # Definindo chaves do Streamlit
+                chave_radio_113 = f"r113_in_{ano_sel}"
+                chave_link_113 = f"l113_in_{ano_sel}"
+                chave_coment_113 = f"coment_11.3_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    resp_113 = st.radio(
+                        "Selecione uma opção (11.3):",
+                        options=opc113,
+                        index=opc113.index(v_salvo_113),
+                        key=chave_radio_113
+                    )
+
+                    # Regra de pontuação do Quesito 11.3 (Sim = 30.0 pts; Outros = 0.0 pts)
+                    if "Sim" in resp_113:
+                        pts_exibido_113 = 30.0
+                        cor_metric = "#28a745"  # Verde
+                    else:
+                        pts_exibido_113 = 0.0
+                        cor_metric = "#6c757d"  # Cinza neutro
+
+                    st.metric(label="Impacto na Pontuação", value=f"{pts_exibido_113:.1f} pts")
+
+                with col2:
+                    lk113 = st.text_area(
+                        "Link/Evidência (11.3):",
+                        value=evidencia_113_salva,
+                        key=chave_link_113,
+                        placeholder="Inserir link demonstrando a seção/anexo do cronograma de metas do PGRCC...",
+                        height=125
+                    )
+                    placeholder_links_113 = st.empty()
+                    links_113_visuais = re.findall(REGEX_PURE_URL, lk113 or "")
+                    if links_113_visuais:
+                        placeholder_links_113.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_113_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 11.3
+                bloco_comentarios("11.3", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto
+                st.markdown(
+                    f"<span style='color:{cor_metric}; font-weight:bold;'>📊 Impacto 11.3: +{pts_exibido_113:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 11.3", key=f"btn_salvar_11_3_{ano_sel}", type="primary"):
+                    lnk_val = lk113.strip()
+                    val_sel = resp_113
+                    comentario_para_salvar = st.session_state.get(chave_coment_113, d113.get("comentario", ""))
+
+                    # Cálculo exato dos pontos para gravação
+                    pts_calculados = 30.0 if "Sim" in val_sel else 0.0
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="11.3",
+                        valor=val_sel,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["11.3"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calculados),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_113_salva or "")]
+
+                    if lnk_val != evidencia_113_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 11.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 11.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.3", st.session_state.get(f"links_pendentes_11_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_3_{ano_sel}"] = False
+
