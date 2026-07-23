@@ -768,10 +768,12 @@ def mostrar_formulario_gov():
     # -------------------------------------------------------------------------
     dados_sidebar = render_sidebar()
     
-    if dados_sidebar and len(dados_sidebar) == 3:
-        total_pts, res_data, ano_sel = dados_sidebar
+    if dados_sidebar and isinstance(dados_sidebar, dict):
+        ano_sel = dados_sidebar.get("ano", datetime.now().year)
+        res_data = dados_sidebar.get("respostas", {})
+        total_pts = dados_sidebar.get("total_pontos", 0.0)
     else:
-        total_pts, res_data, ano_sel = 0, {}, "2026"  # Valor padrão de fallback
+        total_pts, res_data, ano_sel = 0.0, {}, datetime.now().year
 
     st.title(f"💻 Governance & TI (i-Gov TI) - {ano_sel}")
 
@@ -905,7 +907,7 @@ def mostrar_formulario_gov():
 
         # Exposição da variável r10 para ser consultada em quesitos dependentes (Ex: 1.1, 1.2)
         r10 = v_salvo_10
-
+        
         # =============================================================================
         # QUESITO 1.1 • QUANTIDADE DA EQUIPE DE TIC (100% INDEPENDENTE VIA CALLBACKS)
         # =============================================================================
