@@ -10903,3 +10903,139 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.0", st.session_state.get(f"links_pendentes_13_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 13.1 • CARACTERÍSTICAS DO ATERRO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q13_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 13.1 - Características do Aterro", expanded=True):
+                st.subheader("13.1 • Lógica de Penalidade e Recuperação")
+                st.write("**Assinale as características do local de destinação final dos resíduos sólidos urbanos do município (aterro):**")
+
+                # Recuperação segura dos dados do banco
+                d131 = res_data.get("13.1") or {"valor": "[]", "pontos": -110.0, "link": "", "comentario": ""}
+                v_salvo_131 = d131.get("valor", "[]")
+                pts_salvos_131 = float(d131.get("pontos", -110.0))
+                evidencia_131_salva = d131.get("link", "")
+
+                # Converte o valor salvo de string para lista
+                try:
+                    import ast
+                    lista_salva_131 = ast.literal_eval(v_salvo_131) if isinstance(v_salvo_131, str) and v_salvo_131.startswith("[") else []
+                except Exception:
+                    lista_salva_131 = []
+
+                opts131 = [
+                    "Local da instalação foi planejado", "Capacidade do local é definida", 
+                    "Há desenvolvimento de células individuais", "Impermeabilização do solo", 
+                    "Total gestão do chorume", "Total gestão dos gases", 
+                    "Aplicação diária de camadas intermediárias e finais - cobertura do solo", 
+                    "Há compactação dos resíduos", "Há proteção vegetal (manutenção do paisagismo sobre as células de resíduos)", 
+                    "Há desenvolvimento e manutenção das vias de acesso do aterro", "Há cercas/muros ao redor do local do aterro", 
+                    "Há controle de acesso ao local do aterro", "Controle total do quantitativo de resíduos que entram no aterro", 
+                    "Controle total da procedência dos resíduos que entram no aterro", "Controle total da composição dos resíduos que entram no aterro", 
+                    "Não há coleta de resíduos por catadores dentro do aterro", "Não há comércio de resíduos dentro do aterro", 
+                    "Não há presença de animais domésticos e/or animais silvestres (urubus, garças, etc.)", 
+                    "Não há odores nem presença de moscas", "Não há queima de resíduos dentro do aterro", 
+                    "Conhecimento da data provável de fechamento do aterro", "Previsão de gerenciamento do aterro pós-fechamento", 
+                    "Outros"
+                ]
+
+                # Definindo chaves do Streamlit
+                chave_link_131 = f"l131_in_{ano_sel}"
+                chave_coment_131 = f"coment_13.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    # Renderização das opções (Checkboxes)
+                    for idx, opt in enumerate(opts131):
+                        st.checkbox(
+                            opt,
+                            value=(opt in lista_salva_131 or opt in str(v_salvo_131)),
+                            key=f"ck_131_{idx}_{ano_sel}"
+                        )
+
+                    # Exibição da métrica de impacto na pontuação
+                    st.metric(label="Impacto na Pontuação (Salvo)", value=f"{pts_salvos_121 if 'pts_salvos_121' in locals() else pts_salvos_131:.1f} pts")
+
+                with col2:
+                    lk131 = st.text_area(
+                        "Link/Evidência (13.1):",
+                        value=evidencia_131_salva,
+                        key=chave_link_131,
+                        placeholder="Inserir link da documentação das características do aterro...",
+                        height=200
+                    )
+                    placeholder_links_131 = st.empty()
+                    links_131_visuais = re.findall(REGEX_PURE_URL, lk131 or "")
+                    if links_131_visuais:
+                        placeholder_links_131.markdown(
+                            "**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_131_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 13.1
+                bloco_comentarios("13.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_impacto = "#28a745" if pts_salvos_131 == 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto 13.1: {pts_salvos_131:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 13.1", key=f"btn_salvar_13_1_{ano_sel}", type="primary"):
+                    # Cálculo de recuperação de pontos: base -110, soma +5 para cada item exceto "Outros"
+                    selecionados_131 = []
+                    pts_calculados_131 = -110.0
+
+                    for idx, opt in enumerate(opts131):
+                        if st.session_state.get(f"ck_131_{idx}_{ano_sel}", False):
+                            selecionados_131.append(opt)
+                            if opt != "Outros":
+                                pts_calculados_131 += 5.0
+
+                    # Limita pontuação dentro do intervalo válido [-110.0, 0.0]
+                    pts_calculados_131 = max(-110.0, min(0.0, pts_calculados_131))
+
+                    lnk_val = lk131.strip()
+                    val_str_131 = str(selecionados_131)
+                    comentario_para_salvar = st.session_state.get(chave_coment_131, d131.get("comentario", ""))
+
+                    # Persistência no banco via save_resp
+                    save_resp(
+                        qid="13.1",
+                        valor=val_str_131,
+                        pontos=float(pts_calculados_131),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização do estado local em memória
+                    res_data["13.1"] = {
+                        "valor": val_str_131,
+                        "pontos": float(pts_calculados_131),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_131_salva or "")]
+
+                    if lnk_val != evidencia_131_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 13.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 13.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_13_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = False
