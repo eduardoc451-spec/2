@@ -1235,7 +1235,7 @@ def mostrar_formulario_igov():
         st.info("Responda às questões da governança para atualizar a pontuação.")
 
         # =============================================================================
-        # QUESITO 1.0 • SETOR DE TIC (MODELO COMPLETO i-Cidade)
+        # QUESITO 1.0 • SETOR DE TIC (CORRIGIDO)
         # =============================================================================
         with st.container(key=f"container_bloco_igov_1_0_{ano_sel}", border=True):
             with st.expander("📌 Quesito 1.0 - Setor de Tecnologia da Informação e Comunicação", expanded=True):
@@ -1254,7 +1254,7 @@ def mostrar_formulario_igov():
                 }
 
                 # Recuperação do estado salvo no banco/dicionário
-                d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
+                d10 = res_data.get("1.0", {})
                 v_salvo_10 = d10.get("valor", "Selecione...")
 
                 # Definição das chaves únicas do Streamlit
@@ -1280,74 +1280,50 @@ def mostrar_formulario_igov():
                         "Link de Evidência / Lei de Criacao / Organograma (1.0):",
                         value=d10.get("link", ""),
                         key=chave_link_10,
-                        placeholder="Insira o link da lei de estrutura administrativa, organograma oficial ou portaria da equipe de TIC...",
+                        placeholder="Insira o link da lei de estrutura administrativa...",
                         height=100
                     )
                     
-                    # Exibição dinâmica dos links ativos digitados
                     placeholder_links_10 = st.empty()
                     regex_url = r'https?://[^\s<>"]+'
                     links_10_visuais = re.findall(regex_url, link_10 or "")
                     if links_10_visuais:
                         placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-                # Renderiza o bloco padrão de comentários se a função existir
                 if "bloco_comentarios" in globals():
                     bloco_comentarios("1.0", res_data)
 
+                # Cálculo dinâmico da pontuação atual selecionada na tela
+                pts_calculados_10 = opcoes_10.get(val_radio_10, 0.0)
+
                 # -----------------------------------------------------------------
-                # BOTÃO DE SALVAMENTO MANUAL
+                # BOTÃO DE SALVAMENTO MANUAL (CORRIGIDO)
                 # -----------------------------------------------------------------
                 if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
-                    pts_10 = opcoes_10.get(val_radio_10, 0.0)
                     comentarios_atuais = d10.get("comentarios", [])
                     
-                    # 1. Salva no banco PostgreSQL / Neon usando a função save_resp
+                    # Garantir que save_resp recebe o ID exato "1.0"
                     save_resp(
                         qid="1.0", 
                         valor=val_radio_10, 
-                        pontos=pts_10, 
+                        pontos=pts_calculados_10, 
                         link=link_10, 
                         comentarios=comentarios_atuais
                     )
                     
-                    # 2. Atualiza a memória local res_data e a sessão
-                    res_data["1.0"] = {
-                        "valor": val_radio_10, 
-                        "pontos": pts_10, 
-                        "link": link_10, 
-                        "comentarios": comentarios_atuais
-                    }
-                    st.session_state[f"respostas_igov_{ano_sel}"] = res_data
+                    # Limpa todo o cache do Streamlit para forçar a busca do banco Neon no rerun
+                    st.cache_data.clear()
 
-                    # 3. Validação de links para acionamento do modal de evidências
-                    links_atuais = re.findall(regex_url, link_10 or "")
-                    links_antigos = re.findall(regex_url, d10.get("link", "") or "")
-
-                    if link_10 != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
-                        st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
-                        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
-
-                    st.toast("Resposta do Quesito 1.0 salva com sucesso!", icon="✅")
+                    st.toast("Resposta do Quesito 1.0 salva no Neon com sucesso!", icon="✅")
                     st.rerun()
 
-                # Exibição visual da pontuação obtida
-                pts_atuais_10 = d10.get("pontos", 0.0)
-                cor_txt_10 = "#28a745" if pts_atuais_10 == 30.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
+                # Exibição visual da pontuação recalculada corretamente
+                cor_txt_10 = "#28a745" if pts_calculados_10 == 30.0 else ("#dc3545" if val_radio_10 != "Selecione..." else "#6c757d")
                 st.markdown(
                     f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
-                    f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
+                    f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_calculados_10:.1f} pontos</span>",
                     unsafe_allow_html=True
                 )
-
-        # Modal fora do container do quesito
-        if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-            if "modal_aviso_link" in globals():
-                modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
-            st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
-
-        # Exposição da variável r10 para ser consultada por quesitos dependentes abaixo
-        r10 = v_salvo_10
            
         # =============================================================================
         # QUESITO 1.1 • QUANTIDADE DA EQUIPE DE TIC (100% INDEPENDENTE VIA CALLBACKS)
