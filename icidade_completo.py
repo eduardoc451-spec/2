@@ -914,147 +914,139 @@ def gerar_relatorio_pdf(dados, ano, total, faixa):
     buffer.seek(0)
     return buffer.getvalue()
 
-import streamlit as st
-import plotly.graph_objects as go
-
 # =============================================================================
-# 4. SIDEBAR DO IGOV
-# =============================================================================
+    # 4. SIDEBAR DO I-CIDADE
+    # =============================================================================
 
-def zerar_questionario_igov(ano):
-    """Deleta todas as respostas do iGov para o ano selecionado no Neon PostgreSQL."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                # Ajuste o nome da tabela se no seu banco for 'respostas_igov' ou 'respostas'
-                cursor.execute("DELETE FROM respostas_igov WHERE ano = %s", (ano,))
-        st.cache_data.clear()  # Limpa o cache após deletar
-    except Exception as e:
-        st.error(f"Erro ao zerar formulário do iGov: {e}")
+    def zerar_questionario_cidade(ano):
+        """Deleta todas as respostas do i-Cidade para o ano selecionado no Neon PostgreSQL."""
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Tabela ajustada para 'respostas_icidade'
+                    cursor.execute("DELETE FROM respostas_icidade WHERE ano = %s", (ano,))
+            st.cache_data.clear()  # Limpa o cache após deletar
+        except Exception as e:
+            st.error(f"Erro ao zerar formulário do i-Cidade: {e}")
 
 
-# Dialog de confirmação com validação por senha
-@st.dialog("🔒 Confirmação de Segurança - iGov")
-def confirmar_zerar_dialog_igov(ano):
-    st.warning(f"Você está prestes a apagar todas as respostas do iGov do ano {ano}. Esta ação é irreversível!")
-    
-    senha = st.text_input("Digite a senha de administrador:", type="password")
-    
-    col_Sim, col_Nao = st.columns(2)
-    with col_Sim:
-        if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
-            if senha == "fidelios":
-                zerar_questionario_igov(ano)
-                st.success(f"✅ Formulário do iGov do ano {ano} foi zerado!")
+    # Dialog de confirmação com validação por senha
+    @st.dialog("🔒 Confirmação de Segurança - i-Cidade")
+    def confirmar_zerar_dialog_cidade(ano):
+        st.warning(f"Você está prestes a apagar todas as respostas do i-Cidade do ano {ano}. Esta ação é irreversível!")
+        
+        senha = st.text_input("Digite a senha de administrador:", type="password")
+        
+        col_Sim, col_Nao = st.columns(2)
+        with col_Sim:
+            if st.button("Confirmar e Zerar", type="primary", use_container_width=True):
+                if senha == "fidelios":
+                    zerar_questionario_cidade(ano)
+                    st.success(f"✅ Formulário do i-Cidade do ano {ano} foi zerado!")
+                    st.rerun()
+                else:
+                    st.error("❌ Senha incorreta!")
+        with col_Nao:
+            if st.button("Cancelar", use_container_width=True):
                 st.rerun()
-            else:
-                st.error("❌ Senha incorreta!")
-    with col_Nao:
-        if st.button("Cancelar", use_container_width=True):
-            st.rerun()
 
 
-def render_sidebar():
-    st.sidebar.title("🛠️ Painel de Controle - iGov")
-    
-    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
-    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_igov")
+    def render_sidebar():
+        st.sidebar.title("🛠️ Painel de Controle - i-Cidade")
+        
+        anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+        ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_icidade")
 
-    # Carrega dados específicos do iGov
-    res_data = load_respostas_igov(ano_sel) if 'load_respostas_igov' in globals() else load_respostas(ano_sel)
-    
-    # Cálculo da pontuação total
-    total_pts = sum(item.get("pontos", 0) for item in res_data.values() if isinstance(item, dict))
+        # Carrega dados específicos do i-Cidade
+        res_data = load_respostas_icidade(ano_sel) if 'load_respostas_icidade' in globals() else load_respostas(ano_sel)
+        
+        # Cálculo da pontuação total
+        total_pts = sum(item.get("pontos", 0) for item in res_data.values() if isinstance(item, dict))
 
-    # Regra de classificação de Faixa (Ajustada para o iGov)
-    if total_pts <= 500:
-        faixa, cor = "C", "red"
-    elif total_pts <= 599:
-        faixa, cor = "C+", "orange"
-    elif total_pts <= 749:
-        faixa, cor = "B", "#d4d400"
-    elif total_pts <= 899:
-        faixa, cor = "B+", "lightgreen"
-    else:
-        faixa, cor = "A", "green"
+        # Regra de classificação de Faixa (Ajustada para o i-Cidade)
+        if total_pts <= 500:
+            faixa, cor = "C", "red"
+        elif total_pts <= 599:
+            faixa, cor = "C+", "orange"
+        elif total_pts <= 749:
+            faixa, cor = "B", "#d4d400"
+        elif total_pts <= 899:
+            faixa, cor = "B+", "lightgreen"
+        else:
+            faixa, cor = "A", "green"
 
-    # Indicadores Visuais
-    st.sidebar.metric("Pontuação Total (iGov)", f"{total_pts:.1f} pts")
-    st.sidebar.markdown(
-        f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>",
-        unsafe_allow_html=True
-    )
-
-    st.sidebar.divider()
-    
-    col1, col2 = st.sidebar.columns(2)
-    
-    # Botão de Download em PDF
-    with col1:
-        pdf_bytes = gerar_relatorio_pdf_igov(res_data, ano_sel, total_pts, faixa) if 'gerar_relatorio_pdf_igov' in globals() else b""
-        st.download_button(
-            label="📄 Baixar PDF",
-            data=pdf_bytes,
-            file_name=f"Relatorio_iGov_{ano_sel}.pdf",
-            mime="application/pdf",
-            use_container_width=True
+        # Indicadores Visuais
+        st.sidebar.metric("Pontuação Total (i-Cidade)", f"{total_pts:.1f} pts")
+        st.sidebar.markdown(
+            f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>",
+            unsafe_allow_html=True
         )
 
-    # Botão para Zerar
-    with col2:
-        if st.button("🔄 Zerar", help="Limpar todas as respostas do iGov para o ano selecionado", use_container_width=True):
-            confirmar_zerar_dialog_igov(ano_sel)
-
-    return total_pts, res_data, ano_sel
-
-
-# =============================================================================
-# 6. FORMULÁRIO PRINCIPAL E ABAS (SEM ERRO NO WITH ABA_GRAF)
-# =============================================================================
-
-def mostrar_formulario_igov():
-    try:
-        # Obter dados da Sidebar
-        dados_sidebar = render_sidebar()
+        st.sidebar.divider()
         
-        if dados_sidebar and isinstance(dados_sidebar, (tuple, list)) and len(dados_sidebar) == 3:
-            total_pts, res_data, ano_sel = dados_sidebar
-        else:
-            total_pts, res_data, ano_sel = 0, {}, 2026
-
-        st.title(f"🏛️ Preenchimento do iGov - {ano_sel}")
-
-        # CRIAÇÃO DAS ABAS (Garante que as variáveis 'aba_form' e 'aba_graf' existam)
-        aba_form, aba_graf = st.tabs(["📝 Formulário de Preenchimento", "📊 Gráficos & Desempenho"])
-
-        with aba_form:
-            st.subheader("Quesitos do iGov")
-            # --- INSIRA AQUI O CÓDIGO DA SUA LISTA DE PERGUNTAS/FORMULÁRIO ---
-            st.info("Preencha os campos para calcular o índice de governança.")
-
-        with aba_graf:
-            st.subheader("Resultados e Comparativos")
-            # Chama a função de gráficos passando os dados carregados na sidebar
-            render_graficos(res_data, ano_sel)
-
-    except Exception as e:
-        st.error(f"❌ Erro ao renderizar a página do iGov: {e}")
-        st.exception(e)
-
-    # -------------------------------------------------------------------------
-    # ABAS PRINCIPAIS
-    # -------------------------------------------------------------------------
-    aba_questionario, aba_graficos = st.tabs(["📋 Questionário", "📊 Gráficos"])
-
-    with aba_questionario:
-        st.info("Preencha os quesitos abaixo usando o componente de renderização.")
+        col1, col2 = st.sidebar.columns(2)
         
-        # Exemplo de chamada utilizando a função otimizada de renderização/salvamento:
-        # renderizar_questao("1.0", res_data)
-        # renderizar_questao("1.3", res_data)
+        # Botão de Download em PDF
+        with col1:
+            pdf_bytes = gerar_relatorio_pdf_icidade(res_data, ano_sel, total_pts, faixa) if 'gerar_relatorio_pdf_icidade' in globals() else b""
+            st.download_button(
+                label="📄 Baixar PDF",
+                data=pdf_bytes,
+                file_name=f"Relatorio_iCidade_{ano_sel}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 
-    with aba_graficos:
-        render_graficos(res_data, ano_sel)
+        # Botão para Zerar
+        with col2:
+            if st.button("🔄 Zerar", help="Limpar todas as respostas do i-Cidade para o ano selecionado", use_container_width=True):
+                confirmar_zerar_dialog_cidade(ano_sel)
+
+        return total_pts, res_data, ano_sel
+
+
+    # =============================================================================
+    # 6. FORMULÁRIO PRINCIPAL E ABAS (i-Cidade)
+    # =============================================================================
+
+    def mostrar_formulario_cidade():
+        try:
+            # Obter dados da Sidebar
+            dados_sidebar = render_sidebar()
+            
+            if dados_sidebar and isinstance(dados_sidebar, (tuple, list)) and len(dados_sidebar) == 3:
+                total_pts, res_data, ano_sel = dados_sidebar
+            else:
+                total_pts, res_data, ano_sel = 0, {}, 2026
+
+            st.title(f"🏙️ Preenchimento do i-Cidade - {ano_sel}")
+
+            # CRIAÇÃO DAS ABAS
+            aba_form, aba_graf = st.tabs(["📝 Formulário de Preenchimento", "📊 Gráficos & Desempenho"])
+
+            with aba_form:
+                st.subheader("Quesitos do i-Cidade")
+                # --- INSIRA AQUI O CÓDIGO DA SUA LISTA DE PERGUNTAS/FORMULÁRIO ---
+                st.info("Preencha os campos para calcular o índice do i-Cidade.")
+                
+                # Exemplo de chamada utilizando a função otimizada de renderização/salvamento:
+                # renderizar_questao("1.0", res_data)
+                # renderizar_questao("1.3", res_data)
+
+            with aba_graf:
+                st.subheader("Resultados e Comparativos")
+                # Chama a função de gráficos passando os dados carregados na sidebar
+                if 'analyze_performance' in globals():
+                    analyze_performance(res_data, ano_sel)
+
+        except Exception as e:
+            st.error(f"❌ Erro ao renderizar a página do i-Cidade: {e}")
+            st.exception(e)
+
+    # Atalhos para garantir que o main.py encontre a função com qualquer um desses nomes
+    mostrar_formulario_icidade = mostrar_formulario_cidade
+    mostrar_formulario_igov = mostrar_formulario_cidade
+    
     # =============================================================================
     # QUESITO 1.0 • COORDENADORIA MUNICIPAL DE DEFESA CIVIL (COMPDEC)
     # =============================================================================
