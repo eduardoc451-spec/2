@@ -1418,7 +1418,7 @@ def confirmar_zerar_iplan_dialog(ano):
 
 def render_sidebar():
     st.sidebar.title("📊 Painel de Controle - iPLAN")
-    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
     
     # Seleção do ano de referência
     ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_iplan")
