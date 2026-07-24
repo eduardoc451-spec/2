@@ -4374,3 +4374,132 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 5.1.1 • PREVISÃO DE REPASSE DO ICMS ESTADUAL
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_estimativa_icms_5_1_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 5.1.1 - Previsão de Repasse do ICMS Estadual ({ano_sel})", expanded=True):
+                st.subheader("5.1.1 • Estimativa de Transferências Obrigatórias")
+                st.write("**A estimativa de transferências obrigatórias leva em consideração o cálculo de previsão de repasse do ICMS realizado periodicamente pela Fazenda Pública Estadual?**")
+                st.caption("ℹ *Selecione uma opção, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 5.1.1'.*")
+
+                opc511 = {
+                    "Selecione...": 0.0,
+                    "Sim, com reestimativa da receita prevista na LOA no decorrer da execução orçamentária-financeira – 02": 2.0,
+                    "Sim, somente para elaborar a LOA – 01": 1.0,
+                    "Não – 00": 0.0
+                }
+
+                # Resgate seguro dos dados
+                d511 = res_data.get("5.1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                valor_salvo_511 = d511.get("valor", "Selecione...")
+                evidencia_511_salva = d511.get("link", "")
+
+                # Resolução do índice selecionado
+                lista_opcoes_511 = list(opc511.keys())
+                idx511 = 0
+                if valor_salvo_511 in opc511:
+                    idx511 = lista_opcoes_511.index(valor_salvo_511)
+                elif valor_salvo_511:
+                    if "decorrer da execução" in valor_salvo_511:
+                        idx511 = lista_opcoes_511.index("Sim, com reestimativa da receita prevista na LOA no decorrer da execução orçamentária-financeira – 02")
+                    elif "somente para elaborar" in valor_salvo_511:
+                        idx511 = lista_opcoes_511.index("Sim, somente para elaborar a LOA – 01")
+                    elif "Não" in valor_salvo_511:
+                        idx511 = lista_opcoes_511.index("Não – 00")
+
+                # Chaves fixas por componente e ano
+                chave_radio_511 = f"r_5_1_1_{ano_sel}"
+                chave_link_511 = f"t_5_1_1_{ano_sel}"
+                chave_coment_511 = f"coment_5.1.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    sel_5_1_1 = st.radio(
+                        "Selecione a opção para o Quesito 5.1.1:",
+                        options=lista_opcoes_511,
+                        index=idx511,
+                        key=chave_radio_511,
+                        label_visibility="collapsed"
+                    )
+
+                with col2:
+                    link_evidencia_511 = st.text_area(
+                        "Link/Evidência (5.1.1):",
+                        value=evidencia_511_salva,
+                        key=chave_link_511,
+                        placeholder="Insira os links dos documentos comprobatórios sobre a estimativa do ICMS...",
+                        height=130
+                    )
+                    placeholder_links_511 = st.empty()
+                    links_511_visuais = re.findall(REGEX_PURE_URL, link_evidencia_511 or "")
+                    if links_511_visuais:
+                        placeholder_links_511.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_511_visuais]
+                            )
+                        )
+
+                # Renderização do bloco unificado de comentários
+                bloco_comentarios("5.1.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 5.1.1", key=f"btn_salvar_5_1_1_{ano_sel}", type="primary"):
+                    val_selecionado = st.session_state.get(chave_radio_511, "Selecione...")
+                    pts_finais_511 = opc511.get(val_selecionado, 0.0)
+                    lnk_val = link_evidencia_511.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_511, d511.get("comentario", ""))
+
+                    # Persistência na base de dados
+                    save_resp(
+                        qid="5.1.1",
+                        valor=val_selecionado,
+                        pontos=float(pts_finais_511),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização na estrutura global local
+                    res_data["5.1.1"] = {
+                        "valor": val_selecionado,
+                        "pontos": float(pts_finais_511),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_511_salva or "")]
+
+                    if lnk_val != evidencia_511_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 5.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição estilizada do impacto da pontuação
+                pts_atuais_511 = d511.get("pontos", 0.0)
+                val_atual_511 = d511.get("valor", "Selecione...")
+
+                if val_atual_511 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando seleção</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_511 = "#28a745" if pts_atuais_511 > 0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_511}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 5.1.1: {pts_atuais_511:.1f} pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS
+        if st.session_state.get(f"gatilho_modal_5_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.1.1", st.session_state.get(f"links_pendentes_5_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_1_1_{ano_sel}"] = False
