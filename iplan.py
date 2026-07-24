@@ -9186,3 +9186,151 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.5", st.session_state.get(f"links_pendentes_14_5_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_5_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 14.5.1 • ATIVIDADES DO PLANO OPERATIVO (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_atividades_plano_14_5_1_final_{ano_sel}", border=True):
+            with st.expander(f"🗂 Quesito 14.5.1 - Atividades Previstas no Plano Operativo ({ano_sel})", expanded=True):
+                st.subheader("14.5.1 • Atividades do Plano Operativo")
+                st.write(f"**Assinale as atividades previstas no Plano Operativo Anual em {ano_sel}:**")
+                st.caption("ℹ *A pontuação é calculada por faixas baseada na quantidade de itens selecionados (1-5: 1.0 pt | 6-10: 3.0 pts | 11+: 5.0 pts). Marque as opções, insira as evidências/comentários e clique em 'Salvar Questão 14.5.1'.*")
+
+                opcoes_1451 = [
+                    "Receitas", "Despesas", "Administração de pessoal", "Estoques e almoxarifados",
+                    "Administração do patrimônio",
+                    "Cumprimento das metas do PPA e a execução dos programas de governo e dos orçamentos (LOA e LDO)",
+                    "Cumprimento das metas fiscais, físicas e de resultados dos programas de governo, no que tange a eficiência, eficácia e efetividade",
+                    "Aplicação de recursos públicos por entidades de direito público",
+                    "Aplicação de recursos públicos por entidades de direito privado",
+                    "Os limites e condições para a inscrição de despesas em Restos a Pagar",
+                    "Cumprimento da legislação de licitações e fiscalização de contratos",
+                    "Cumprimento do limite de gastos totais dos legislativos municipais, inclusive no que se refere ao atingimento de metas fiscais (Gestão Fiscal)",
+                    "Transferência para o Legislativo Municipal (Repasses de Duodécimos)",
+                    "Contabilidade", "Transparência", "Lei de Acesso à Informação", "Outros"
+                ]
+
+                # Resgate seguro dos dados do 14.5.1
+                d1451 = res_data.get("14.5.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d1451 is None or not isinstance(d1451, dict):
+                    d1451 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_raw_1451 = d1451.get("valor", "[]")
+                try:
+                    lista_salva_1451 = json.loads(val_raw_1451) if isinstance(val_raw_1451, str) else val_raw_1451
+                    if not isinstance(lista_salva_1451, list):
+                        lista_salva_1451 = []
+                except Exception:
+                    try:
+                        lista_salva_1451 = eval(val_raw_1451) if isinstance(val_raw_1451, str) else []
+                        if not isinstance(lista_salva_1451, list):
+                            lista_salva_1451 = []
+                    except Exception:
+                        lista_salva_1451 = []
+
+                evidencia_1451_salva = d1451.get("link", "")
+
+                # Chaves estáticas limpas
+                chave_link_1451 = f"t_1451_{ano_sel}"
+                chave_coment_1451 = f"coment_14.5.1_{ano_sel}"
+
+                c1451_1, c1451_2 = st.columns([1, 1])
+
+                with c1451_1:
+                    st.markdown("**Selecione as atividades previstas:**")
+                    itens_selecionados_1451 = []
+                    for idx_item, item in enumerate(opcoes_1451):
+                        chk_key = f"chk_1451_{idx_item}_{ano_sel}"
+                        is_checked = st.checkbox(
+                            item,
+                            value=(item in lista_salva_1451),
+                            key=chk_key
+                        )
+                        if is_checked:
+                            itens_selecionados_1451.append(item)
+
+                with c1451_2:
+                    link_1451 = st.text_area(
+                        "Link/Evidência (14.5.1):",
+                        value=evidencia_1451_salva,
+                        key=chave_link_1451,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.5.1...",
+                        height=220
+                    )
+                    placeholder_links_1451 = st.empty()
+                    links_1451_visuais = re.findall(REGEX_PURE_URL, link_1451 or "")
+                    if links_1451_visuais:
+                        placeholder_links_1451.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1451_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.5.1
+                bloco_comentarios("14.5.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.5.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.5.1", key=f"btn_salvar_14_5_1_{ano_sel}", type="primary"):
+                    val_str_1451 = json.dumps(itens_selecionados_1451, ensure_ascii=False)
+                    qtd = len(itens_selecionados_1451)
+
+                    # Cálculo da pontuação por faixas
+                    if qtd == 0:
+                        pts_calc_1451 = 0.0
+                    elif 1 <= qtd <= 5:
+                        pts_calc_1451 = 1.0
+                    elif 6 <= qtd <= 10:
+                        pts_calc_1451 = 3.0
+                    else:
+                        pts_calc_1451 = 5.0
+
+                    lnk_val_1451 = link_1451.strip()
+                    comentario_para_salvar_1451 = st.session_state.get(chave_coment_1451, d1451.get("comentario", ""))
+
+                    # Persistência no banco de dados e sessão
+                    save_resp(
+                        qid="14.5.1",
+                        valor=val_str_1451,
+                        pontos=pts_calc_1451,
+                        link=lnk_val_1451,
+                        comentario=comentario_para_salvar_1451
+                    )
+                    res_data["14.5.1"] = {
+                        "valor": val_str_1451,
+                        "pontos": pts_calc_1451,
+                        "link": lnk_val_1451,
+                        "comentario": comentario_para_salvar_1451
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_1451 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1451_salva or "")]
+
+                    if lnk_val_1451 != evidencia_1451_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_5_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 14.5.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição da Pontuação e Contagem
+                qtd_atual = len(itens_selecionados_1451)
+                pts_atuais_1451 = d1451.get("pontos", 0.0)
+
+                if qtd_atual == 0:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma atividade selecionada no Quesito 14.5.1 (0.0 pontos)</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção salva com sucesso — {qtd_atual} atividade(s) selecionada(s) (Impacto: {pts_atuais_1451:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 14.5.1
+        if st.session_state.get(f"gatilho_modal_14_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.5.1", st.session_state.get(f"links_pendentes_14_5_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_5_1_{ano_sel}"] = False
