@@ -1346,150 +1346,288 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     buffer.seek(0)
     return buffer
 
+import json
+import logging
+import re
+from datetime import datetime
+
+import plotly.graph_objects as go
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+
 # =============================================================================
-# 3. INTERFACE E PAINEL LATERAL (STREAMLIT)
+# 4. SIDEBAR - i-Fiscal
 # =============================================================================
+
+
+def zerar_questionario_ifiscal(ano: int):
+    """Deleta todas as respostas do ano selecionado na tabela respostas_ifiscal."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM respostas_ifiscal WHERE ano = %s", (int(ano),)
+                )
+            conn.commit()
+        st.cache_data.clear()  # Limpa o cache após deletar
+    except Exception as e:
+        st.error(f"Erro ao zerar questionário i-Fiscal: {e}")
+
+
+@st.dialog("⚠️ Zerar Respostas do i-Fiscal")
+def confirmar_zerar_dialog(ano):
+    st.warning(
+        f"Tem certeza que deseja apagar TODAS as respostas do i-Fiscal para o ano {ano}?"
+    )
+    st.write(
+        "Esta ação é irreversível e excluirá os dados salvos no banco Neon."
+    )
+
+    # Campo para inserção da senha de confirmação
+    senha_digitada = st.text_input(
+        "Digite a senha de confirmação para prosseguir:",
+        type="password",
+        placeholder="Digite a senha...",
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(
+            "🔴 Sim, Zerar Tudo", type="primary", use_container_width=True
+        ):
+            if senha_digitada.strip() == "fidelios":
+                try:
+                    zerar_questionario_ifiscal(ano)
+
+                    # Limpa a sessão
+                    key_ano = f"respostas_ifiscal_{ano}"
+                    st.session_state[key_ano] = {}
+
+                    st.toast(
+                        "Respostas do i-Fiscal zeradas com sucesso!", icon="🗑️"
+                    )
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao zerar banco: {e}")
+            else:
+                st.error("🔒 Senha incorreta! Ação cancelada.")
+
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
 
 def render_sidebar():
-    st.sidebar.title("🛠️ Painel i-Fiscal")
-    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
-    
-    if "reset_ctr" not in st.session_state:
-        st.session_state["reset_ctr"] = 0
-        
-    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
-    res_data = load_respostas(ano_sel)
-    
-    total_pts = sum(float(item.get("pontos", 0)) for k, item in res_data.items() if not k.startswith("COM_") and float(item.get("pontos", 0)) > -100)
-    rebaixar = any(float(item.get("pontos", 0)) <= -100 for item in res_data.values())
-    
-    if total_pts <= 499:     faixa, cor = "C",  "#ef4444"
-    elif total_pts <= 599:   faixa, cor = "C+", "#f97316"
-    elif total_pts <= 749:   faixa, cor = "B",  "#eab308"
-    elif total_pts <= 899:   faixa, cor = "B+", "#22c55e"
-    else:                    faixa, cor = "A",  "#16a34a"
+    st.sidebar.title("🏛️ Painel de Controle - i-Fiscal")
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
 
-    if rebaixar:
-        faixas_ordem = ["C", "C+", "B", "B+", "A"]
-        idx_f = faixas_ordem.index(faixa)
-        faixa = faixas_ordem[max(0, idx_f - 1)]
-        cor = FAIXA_CORES[faixa]
-        st.sidebar.warning("⚠️ Faixa rebaixada por critério eliminatório.")
-
-    st.sidebar.metric("Pontuação Total", f"{total_pts:.1f} pts")
-    st.sidebar.markdown(f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>", unsafe_allow_html=True)
-    
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📄 Relatórios")
-    
-    try:
-        dados_historicos_brutos = get_all_years_data()
-    except Exception:
-        dados_historicos_brutos = {}
-        
-    historico_tratado = {}
-    if isinstance(dados_historicos_brutos, dict):
-        for ano_chave, valor_ano in dados_historicos_brutos.items():
-            try:
-                ano_int = int(str(ano_chave).strip()[:4])
-                historico_tratado[ano_int] = valor_ano
-            except (ValueError, TypeError):
-                continue
-
-    st.session_state.all_data = historico_tratado
-
-    pdf_buffer = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, historico_tratado)
-    
-    st.sidebar.download_button(
-        label="📥Relatório PDF i-Fiscal",
-        data=pdf_buffer.getvalue(),
-        file_name=f"Relatorio_i-Fiscal_{ano_sel}.pdf",
-        mime="application/pdf"
+    # Seleção do ano no session_state
+    ano_sel = st.sidebar.selectbox(
+        "Ano de Referência:", anos, key="ano_referencia_ifiscal"
     )
-    
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🔄 Zerar Questionário"):
-        with get_connection() as conn:
-            conn.execute("DELETE FROM respostas WHERE ano = ?", (ano_sel,))
-            conn.commit()
-            
-        chaves_para_preservar = ["ano_referencia_global", "reset_ctr", "current_page", "selected_dimension"]
-        for k in list(st.session_state.keys()):
-            if k in chaves_para_preservar or any(termo in k.lower() for termo in ["login", "auth", "user"]):
-                continue
-            del st.session_state[k]
-            
-        st.session_state["reset_ctr"] += 1
-        st.sidebar.success("Dados zerados com sucesso!")
-        st.rerun()
-        
+
+    res_data = load_respostas(ano_sel)
+    total_pts = sum(
+        item.get("pontos", 0.0)
+        for item in res_data.values()
+        if isinstance(item, dict)
+    )
+
+    # Régua de Classificação IEGM / i-Fiscal
+    if total_pts <= 500:
+        faixa, cor = "C", "red"
+    elif total_pts <= 599:
+        faixa, cor = "C+", "orange"
+    elif total_pts <= 749:
+        faixa, cor = "B", "#d4d400"
+    elif total_pts <= 899:
+        faixa, cor = "B+", "lightgreen"
+    else:
+        faixa, cor = "A", "green"
+
+    st.sidebar.metric("Pontuação Total i-Fiscal", f"{total_pts:.1f} pts")
+    st.sidebar.markdown(
+        f"**Faixa:** <span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
+        unsafe_allow_html=True,
+    )
+
+    st.sidebar.divider()
+
+    col1, col2 = st.sidebar.columns(2)
+
+    # Botão de Download direto
+    with col1:
+        # Tratamento para verificar se a função gerar_relatorio_ifiscal existe no escopo
+        pdf_bytes = b""
+        if "gerar_relatorio_ifiscal" in globals():
+            pdf_bytes = gerar_relatorio_ifiscal(
+                res_data, ano_sel=ano_sel, total_pts=total_pts
+            ).getvalue()
+
+        st.download_button(
+            label="📄 Baixar PDF",
+            data=pdf_bytes,
+            file_name=f"Relatorio_iFiscal_{ano_sel}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            disabled=(pdf_bytes == b""),
+        )
+
+    # Botão para abrir o Modal de confirmação
+    with col2:
+        if st.button(
+            "🔄 Zerar",
+            help="Limpar todas as respostas do ano selecionado",
+            use_container_width=True,
+        ):
+            confirmar_zerar_dialog(ano_sel)
+
     return total_pts, res_data, ano_sel
 
+
 # =============================================================================
-# 4. INTERFACE PRINCIPAL E FORMULÁRIO DINÂMICO (STREAMLIT)
+# 5. GRÁFICOS E HISTÓRICO - i-Fiscal
 # =============================================================================
+
+
+def get_all_years_data_ifiscal() -> dict:
+    """Busca o histórico de dados de todos os anos salvos na tabela respostas_ifiscal e session_state."""
+    all_data = {}
+
+    # 1. Carrega via Banco
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT DISTINCT ano FROM respostas_ifiscal ORDER BY ano"
+                )
+                anos_banco = [row[0] for row in cursor.fetchall()]
+                for a in anos_banco:
+                    all_data[a] = load_respostas(a)
+    except Exception as e:
+        logging.error(
+            f"Erro ao buscar histórico de anos i-Fiscal no banco: {e}"
+        )
+
+    # 2. Carrega via Session State (para capturar anos ainda não persistidos)
+    prefixo = "respostas_ifiscal_"
+    for key in st.session_state.keys():
+        if key.startswith(prefixo):
+            try:
+                ano = int(key.replace(prefixo, ""))
+                if ano not in all_data or not all_data[ano]:
+                    all_data[ano] = st.session_state[key]
+            except ValueError:
+                continue
+
+    return all_data
+
+
+def get_faixa_ifiscal(total):
+    if total <= 500:
+        return "C - Inefetivo"
+    if total <= 599:
+        return "C+ - Em Adequação"
+    if total <= 749:
+        return "B - Efetivo"
+    if total <= 899:
+        return "B+ - Muito Efetivo"
+    return "A - Altamente Efetivo"
+
+
+def grafico_pontos_por_ano(all_data):
+    """Gráfico de barras vertical com pontos totais por ano para o i-Fiscal."""
+    anos = sorted(all_data.keys())
+    totais = []
+    cores = []
+
+    for ano in anos:
+        res = all_data[ano]
+        total = sum(
+            v.get("pontos", 0.0)
+            for k, v in res.items()
+            if isinstance(v, dict) and not k.startswith("COM_")
+        )
+        totais.append(total)
+
+        if total <= 500:
+            cores.append("#ef4444")  # Vermelho
+        elif total <= 599:
+            cores.append("#f97316")  # Laranja
+        elif total <= 749:
+            cores.append("#eab308")  # Amarelo
+        elif total <= 899:
+            cores.append("#84cc16")  # Verde Claro
+        else:
+            cores.append("#16a34a")  # Verde Escuro
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=[str(a) for a in anos],
+            y=totais,
+            marker_color=cores,
+            text=[f"{t:.1f} pts" for t in totais],
+            textposition="outside",
+            hovertemplate="<b>Ano: %{x}</b><br>i-Fiscal Total: %{y:.1f} pts<extra></extra>",
+        )
+    )
+
+    fig.update_layout(
+        title="Índice Histórico i-Fiscal (Gestão Fiscal) por Exercício",
+        xaxis_title="Ano",
+        yaxis_title="Pontuação i-Fiscal",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        showlegend=False,
+        height=400,
+    )
+
+    return fig
+
+
+def render_graficos(res_data_atual, ano_sel):
+    st.header("📊 Painel de Análise do i-Fiscal")
+
+    all_data = get_all_years_data_ifiscal()
+
+    if not all_data:
+        st.info(
+            "Nenhum dado do i-Fiscal registrado ainda. Preencha os itens para visualizar os gráficos."
+        )
+        return
+
+    st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
+
+
+# =============================================================================
+# 6. FORMULÁRIO PRINCIPAL - i-Fiscal
+# =============================================================================
+
+
 def mostrar_formulario_ifiscal():
-    init_db()
     total_pts, res_data, ano_sel = render_sidebar()
-    
-    # 🔍 Definição do CTR estático para as chaves do formulário
-    ctr = "fiscal"
-    
-    # Estilização CSS mantendo o padrão i-Fiscal
-    st.markdown("""
-        <style>
-        .quesito-card { 
-            background-color: #f8f9fa;
-            padding: 18px;
-            border-left: 6px solid #001A4D;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            border: 1px solid #e0e0e0;
-        }
-        .section-header h3 {
-            color: #001A4D;
-            margin-top: 10px;
-            margin-bottom: 15px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
-    st.title(f"📋 Painel de Auditoria i-Fiscal - {ano_sel}")
-    
-    # 📑 Criação das abas estruturadas (Questionário e Gráficos)
-    aba_quest, aba_graf = st.tabs(["📋 Questionário", "📈 Gráficos"])
-    
-    # --- CONTEÚDO DA ABA QUESTIONÁRIO ---
+    st.title(f"🏛️ Gestão Fiscal e Financeira (i-Fiscal) - {ano_sel}")
+
+    aba_quest, aba_ext, aba_graf = st.tabs(
+        ["📋 Questionário i-Fiscal", "🌐 Dados Externos", "📊 Gráficos"]
+    )
+
     with aba_quest:
-        # -------------------------------------------------------------------------
-        # SEÇÃO 1: ADMINISTRAÇÃO TRIBUTÁRIA
-        # -------------------------------------------------------------------------
-        st.markdown('<div class="section-header"><h3>1. Administração Tributária</h3></div>', unsafe_allow_html=True)
+        st.info("Preencha as informações fiscais e financeiras do município.")
+        # Adicione os elementos do formulário de perguntas aqui
+
+    with aba_ext:
+        st.subheader("🌐 Indicadores e Dados Externos")
+        st.write(
+            "Visualização de dados importados de fontes governamentais externas (Siconfi, Finbra, etc.)."
+        )
+
+    with aba_graf:
+        render_graficos(res_data, ano_sel)
         
-        # Insira abaixo os seus quesitos da Seção 1 (ex: Quesito 1.0, 1.1, etc.)
-        # with st.container(border=True):
-        #     ...
-
         # =============================================================================
-        # GATILHOS DOS MODAIS AUTOMÁTICOS • GRUPO 1 (TODOS TOTALMENTE INDEPENDENTES)
-        # =============================================================================
-        if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-            modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
-            st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
-
-        if st.session_state.get(f"gatilho_modal_1_1_{ano_sel}", False):
-            modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
-            st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
-
-        if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
-            modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
-            st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
-
-        if st.session_state.get(f"gatilho_modal_1_3_{ano_sel}", False):
-            modal_aviso_link("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []))
-            st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = False
-
-# =============================================================================
         # QUESITO 1.0 • TOTALMENTE INDEPENDENTE
         # =============================================================================
         with st.container(key=f"bloco_isolado_q1_0_{ano_sel}_fiscal", border=True):
