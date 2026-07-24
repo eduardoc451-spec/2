@@ -1431,9 +1431,11 @@ def zerar_questionario_ifiscal(ano: int):
                     "DELETE FROM respostas_ifiscal WHERE ano = %s", (int(ano),)
                 )
             conn.commit()
-        st.cache_data.clear()  # Limpa o cache após deletar
+
+        # Limpa caches do Streamlit para evitar reaproveitar leituras antigas
+        st.cache_data.clear()
     except Exception as e:
-        st.error(f"Erro ao zerar questionário i-Fiscal: {e}")
+        st.error(f"Erro ao zerar questionário i-Fiscal no banco Neon: {e}")
 
 
 @st.dialog("⚠️ Zerar Respostas do i-Fiscal")
@@ -1459,18 +1461,29 @@ def confirmar_zerar_dialog(ano):
         ):
             if senha_digitada.strip() == "fidelios":
                 try:
+                    # 1. Apaga os dados na tabela do banco Neon
                     zerar_questionario_ifiscal(ano)
 
-                    # Limpa a sessão
+                    # 2. Reseta a chave principal do dicionário de respostas do ano
                     key_ano = f"respostas_ifiscal_{ano}"
                     st.session_state[key_ano] = {}
 
+                    # 3. Limpa todas as chaves de componentes (radio, inputs) vinculadas ao ano na sessão
+                    chaves_para_limpar = [
+                        k
+                        for k in st.session_state.keys()
+                        if str(ano) in k or k.endswith(f"_{ano}")
+                    ]
+                    for key in chaves_para_limpar:
+                        del st.session_state[key]
+
                     st.toast(
-                        "Respostas do i-Fiscal zeradas com sucesso!", icon="🗑️"
+                        f"Respostas do i-Fiscal ({ano}) zeradas com sucesso!",
+                        icon="🗑️",
                     )
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erro ao zerar banco: {e}")
+                    st.error(f"Erro ao zerar dados: {e}")
             else:
                 st.error("🔒 Senha incorreta! Ação cancelada.")
 
@@ -1519,7 +1532,6 @@ def render_sidebar():
 
     # Botão de Download direto
     with col1:
-        # Tratamento para verificar se a função gerar_relatorio_ifiscal existe no escopo
         pdf_bytes = b""
         if "gerar_relatorio_ifiscal" in globals():
             pdf_bytes = gerar_relatorio_ifiscal(
@@ -1556,7 +1568,7 @@ def get_all_years_data_ifiscal() -> dict:
     """Busca o histórico de dados de todos os anos salvos na tabela respostas_ifiscal e session_state."""
     all_data = {}
 
-    # 1. Carrega via Banco
+    # 1. Carrega via Banco PostgreSQL (Neon)
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -1571,9 +1583,9 @@ def get_all_years_data_ifiscal() -> dict:
             f"Erro ao buscar histórico de anos i-Fiscal no banco: {e}"
         )
 
-    # 2. Carrega via Session State (para capturar anos ainda não persistidos)
+    # 2. Carrega via Session State (captura dados dinâmicos em memória)
     prefixo = "respostas_ifiscal_"
-    for key in st.session_state.keys():
+    for key in list(st.session_state.keys()):
         if key.startswith(prefixo):
             try:
                 ano = int(key.replace(prefixo, ""))
