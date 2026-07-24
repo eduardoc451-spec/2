@@ -12354,3 +12354,89 @@ def mostrar_formulario_iamb():
                 st.cache_data.clear()
                 st.toast("Dados do Indicador A1 (ICTEM) salvos com sucesso!", icon="✅")
                 st.rerun()
+
+        # =============================================================================
+        # ITEM A2 • IQR - CETESB (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a2_{ano_sel}", border=True):
+            st.subheader("A2 • IQR (Índice de Qualidade de Aterro de Resíduos)")
+            st.caption(
+                "Dados provenientes da CETESB (Não sujeitos à validação municipal).\n\n"
+                "**Regra de Aplicação:**\n"
+                "- **Condições adequadas:** Mantém a classificação atual (0 pontos de penalidade).\n"
+                "- **Condições inadequadas:** Rebaixa o indicador **i-AMB** em **1 Faixa** no resultado final."
+            )
+
+            # Recuperação dos dados salvos no banco
+            d_a2 = res_data.get("A2") or {"valor": "Condições adequadas", "pontos": 0.0, "link": "Dados CETESB"}
+            v_salvo_a2 = d_a2.get("valor", "Condições adequadas")
+            pts_salvos_a2 = float(d_a2.get("pontos", 0.0))
+
+            # Opções disponíveis
+            opc_a2 = ["Condições adequadas", "Condições inadequadas"]
+            idx_a2 = opc_a2.index(v_salvo_a2) if v_salvo_a2 in opc_a2 else 0
+
+            # Definindo chave do Streamlit Session State
+            chave_a2 = f"ext_a2_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                v_a2 = st.selectbox(
+                    "Situação do Aterro de Resíduos (IQR):",
+                    options=opc_a2,
+                    index=idx_a2,
+                    key=chave_a2
+                )
+
+                # Métrica informativa do impacto
+                impacto_texto = "Sem penalidade" if v_a2 == "Condições adequadas" else "Rebaixa 1 Faixa"
+                st.metric(
+                    label="Impacto no i-AMB (Selecionado)",
+                    value=impacto_texto
+                )
+
+            with col2:
+                st.info(
+                    f"**Fonte dos Dados:** CETESB\n\n"
+                    f"**Situação Salva Anteriormente:** {v_salvo_a2}\n\n"
+                    f"**Impacto Salvo Anteriormente:** {'Sem penalidade' if v_salvo_a2 == 'Condições adequadas' else 'Rebaixa 1 Faixa'}"
+                )
+
+            # Alerta visual em caso de seleção de condição inadequada
+            if v_a2 == "Condições inadequadas":
+                st.warning("⚠️ **Atenção:** Selecionar 'Condições inadequadas' rebaixará o índice **i-AMB** em uma faixa inteira na apuração final!")
+
+            # Feedback visual dinâmico
+            cor_impacto = "#28a745" if v_a2 == "Condições adequadas" else "#dc3545"
+            st.markdown(
+                f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto Previsto para A2: {impacto_texto}</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Item A2 - IQR", key=f"btn_salvar_ext_a2_{ano_sel}", type="primary"):
+                val_a2_final = str(v_a2)
+                pts_a2_final = 0.0
+                fonte_link = "Dados CETESB"
+
+                # Persistência no banco de dados
+                save_resp(
+                    qid="A2",
+                    valor=val_a2_final,
+                    pontos=pts_a2_final,
+                    link=fonte_link
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A2"] = {
+                    "valor": val_a2_final,
+                    "pontos": pts_a2_final,
+                    "link": fonte_link
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Indicador A2 (IQR) salvos com sucesso!", icon="✅")
+                st.rerun()
