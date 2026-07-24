@@ -8550,3 +8550,143 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.4.4.2", st.session_state.get(f"links_pendentes_14_4_4_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_4_4_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 14.4.4.2.1 • QUANTITATIVOS INFORMADOS (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_quantitativos_14_4_4_2_1_final_{ano_sel}", border=True):
+            with st.expander(f"📊 Quesito 14.4.4.2.1 - Quantidade de Irregularidades Comunicadas ({ano_sel})", expanded=True):
+                st.subheader("14.4.4.2.1 • Quantitativos Informados")
+                st.write(f"**Informe a quantidade de irregularidades ou ilegalidades comunicadas em {ano_sel} ao:**")
+                st.caption("ℹ *Preencha os quantitativos, insira os links de evidência/comentários e clique em 'Salvar Questão 14.4.4.2.1'.*")
+
+                # Resgate seguro dos dados dos subquesitos compostos
+                d144421_tce = res_data.get("14.4.4.2.1_tcesp") or {"valor": "0", "pontos": 0.0, "link": "", "comentario": ""}
+                d144421_mp = res_data.get("14.4.4.2.1_mpsp") or {"valor": "0", "pontos": 0.0, "link": "", "comentario": ""}
+
+                if d144421_tce is None or not isinstance(d144421_tce, dict):
+                    d144421_tce = {"valor": "0", "pontos": 0.0, "link": "", "comentario": ""}
+                if d144421_mp is None or not isinstance(d144421_mp, dict):
+                    d144421_mp = {"valor": "0", "pontos": 0.0, "link": "", "comentario": ""}
+
+                # Valores numéricos iniciais
+                val_tce_str = str(d144421_tce.get("valor", "0"))
+                val_mp_str = str(d144421_mp.get("valor", "0"))
+
+                v_ini_tce = int(val_tce_str) if val_tce_str.isdigit() else 0
+                v_ini_mp = int(val_mp_str) if val_mp_str.isdigit() else 0
+
+                evidencia_144421_salva = d144421_tce.get("link", "") or d144421_mp.get("link", "")
+
+                # Chaves estáticas limpas sem injeção de estado dinâmico no nome da chave
+                chave_num_tce = f"n_144421_tce_{ano_sel}"
+                chave_num_mp = f"n_144421_mp_{ano_sel}"
+                chave_link_144421 = f"t_144421_{ano_sel}"
+                chave_coment_144421 = f"coment_14.4.4.2.1_{ano_sel}"
+
+                c144421_1, c144421_2 = st.columns([1, 1])
+
+                with c144421_1:
+                    c_sub_tce, c_sub_mp = st.columns(2)
+                    with c_sub_tce:
+                        v_input_tce = st.number_input(
+                            "TCESP:",
+                            min_value=0,
+                            step=1,
+                            value=v_ini_tce,
+                            key=chave_num_tce
+                        )
+                    with c_sub_mp:
+                        v_input_mp = st.number_input(
+                            "MPSP:",
+                            min_value=0,
+                            step=1,
+                            value=v_ini_mp,
+                            key=chave_num_mp
+                        )
+
+                with c144421_2:
+                    link_144421 = st.text_area(
+                        "Link/Evidência (14.4.4.2.1):",
+                        value=evidencia_144421_salva,
+                        key=chave_link_144421,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.4.4.2.1...",
+                        height=100
+                    )
+                    placeholder_links_144421 = st.empty()
+                    links_144421_visuais = re.findall(REGEX_PURE_URL, link_144421 or "")
+                    if links_144421_visuais:
+                        placeholder_links_144421.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_144421_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.4.4.2.1
+                bloco_comentarios("14.4.4.2.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.4.4.2.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.4.4.2.1", key=f"btn_salvar_14_4_4_2_1_{ano_sel}", type="primary"):
+                    val_para_salvar_tce = str(v_input_tce)
+                    val_para_salvar_mp = str(v_input_mp)
+                    lnk_val_144421 = link_144421.strip()
+                    comentario_para_salvar_144421 = st.session_state.get(
+                        chave_coment_144421,
+                        d144421_tce.get("comentario", "") or d144421_mp.get("comentario", "")
+                    )
+
+                    # Persistência unificada no banco/sessão para ambas as chaves
+                    save_resp(
+                        qid="14.4.4.2.1_tcesp",
+                        valor=val_para_salvar_tce,
+                        pontos=0.0,
+                        link=lnk_val_144421,
+                        comentario=comentario_para_salvar_144421
+                    )
+                    save_resp(
+                        qid="14.4.4.2.1_mpsp",
+                        valor=val_para_salvar_mp,
+                        pontos=0.0,
+                        link=lnk_val_144421,
+                        comentario=comentario_para_salvar_144421
+                    )
+
+                    res_data["14.4.4.2.1_tcesp"] = {
+                        "valor": val_para_salvar_tce,
+                        "pontos": 0.0,
+                        "link": lnk_val_144421,
+                        "comentario": comentario_para_salvar_144421
+                    }
+                    res_data["14.4.4.2.1_mpsp"] = {
+                        "valor": val_para_salvar_mp,
+                        "pontos": 0.0,
+                        "link": lnk_val_144421,
+                        "comentario": comentario_para_salvar_144421
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_144421 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_144421_salva or "")]
+
+                    if lnk_val_144421 != evidencia_144421_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_4_4_2_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_4_4_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Quantitativos da Questão 14.4.4.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status de Exibição do Quesito (Sem impacto direto de pontuação - Informativo)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"✅ Status: Quantitativos Registrados (TCESP: {v_input_tce} | MPSP: {v_input_mp}) — Impacto: 0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # Modal de Evidências do 14.4.4.2.1
+        if st.session_state.get(f"gatilho_modal_14_4_4_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.4.4.2.1", st.session_state.get(f"links_pendentes_14_4_4_2_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_4_4_2_1_{ano_sel}"] = False
