@@ -12263,8 +12263,6 @@ def mostrar_formulario_iamb():
                 modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = False
 
-with aba_ext:
-        st.header("📊 Dados Externos do Meio Ambiente")
 
         # =============================================================================
         # ITEM A1 • ICTEM - CETESB (Padrão iGov)
