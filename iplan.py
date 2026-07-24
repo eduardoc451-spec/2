@@ -1475,75 +1475,126 @@ def mostrar_formulario_plan():
         # O RESTO DO SEU ARQUIVO SEGUE AQUI PARA BAIXO NORMALMENTE...
         
         # =============================================================================
-        # BLOCO DE QUESITOS - 1.0 (I-PLAN)
+        # QUESITO 1.0 • PLANO DIRETOR MUNICIPAL (MODELO PADRONIZADO iPLAN)
         # =============================================================================
+        with st.container(key=f"container_bloco_iplan_1_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.0 - Existência e Vigência do Plano Diretor Municipal", expanded=True):
+                st.subheader("1.0 • Plano Diretor Municipal")
+                st.write(
+                    "**O município possui Plano Diretor aprovado por Lei Municipal e atualizado "
+                    "conforme as diretrizes do Estatuto da Cidade (Lei Federal nº 10.257/2001)?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.0' para registrar.*")
 
-        # =============================================================================
-        # QUESITO 1.0 • AUDIÊNCIAS PÚBLICAS ORÇAMENTÁRIAS
-        # =============================================================================
-        with st.container(key=f"container_bloco_audiencias_orcamentarias_1_0_final_{ano_sel}", border=True):
-            with st.expander(f"📌 Quesito 1.0 - Audiências Públicas Orçamentárias", expanded=True):
-                st.subheader("1.0 • Audiências Públicas Orçamentárias")
-                st.write("**A Prefeitura realizou audiências públicas para elaboração das peças orçamentárias?**")
-                st.caption("ℹ *Salvamento automático por callbacks nativos de estado com validação de link.*")
-                
-                opts_1_0 = {"Selecione...": 0.0, "Sim": 0.0, "Não": 0.0}
-                d10 = res_data.get("1.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-                if d10 is None: d10 = {"valor": "Selecione...", "pontos": 0.0, "link": ""}
-                
+                # Dicionário com Mapeamento de Opções e Pontuações do iPLAN (Máx 10.0 pts)
+                opcoes_10 = {
+                    "Selecione...": 0.0,
+                    "Sim, aprovado e atualizado há menos de 10 anos (10 pts)": 10.0,
+                    "Sim, mas desatualizado há mais de 10 anos (05 pts)": 5.0,
+                    "Não possui Plano Diretor (00 pts)": 0.0
+                }
+
+                # Estado inicial / persistente
+                d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
                 v_salvo_10 = d10.get("valor", "Selecione...")
-                chave_radio_10 = f"r_1_0_{v_salvo_10}_{ano_sel}"
 
-                regex_pure_url = r'(https?://[^\s<>"]+?)(?=[.,;:]?(\s|$))'
+                # Trata migração de legado caso no banco esteja salvo apenas texto simples
+                if v_salvo_10 == "Sim":
+                    v_salvo_10 = "Sim, aprovado e atualizado há menos de 10 anos (10 pts)"
+                elif v_salvo_10 == "Desatualizado":
+                    v_salvo_10 = "Sim, mas desatualizado há mais de 10 anos (05 pts)"
+                elif v_salvo_10 == "Não":
+                    v_salvo_10 = "Não possui Plano Diretor (00 pts)"
 
-                def cb_radio_1_0():
-                    val = st.session_state[chave_radio_10]
-                    pts = opts_1_0[val]
-                    lnk = st.session_state.get(f"t_1_0_{ano_sel}", d10.get("link", ""))
-                    save_resp("1.0", val, pts, lnk)
-                    res_data["1.0"] = {"valor": val, "pontos": pts, "link": lnk}
+                evidencia_10_salva = d10.get("link", "")
 
-                def cb_text_1_0():
-                    lnk = st.session_state[f"t_1_0_{ano_sel}"]
-                    val = st.session_state.get(chave_radio_10, d10.get("valor", "Selecione..."))
-                    pts = opts_1_0.get(val, 0.0)
-                    
-                    links_atuais = [u[0] for u in re.findall(regex_pure_url, lnk or "")]
-                    links_antigos = [u[0] for u in re.findall(regex_pure_url, d10.get("link", "") or "")]
-                    
-                    mudou_opcao_10 = val != d10.get("valor", "")
-                    mudou_link_10 = lnk != d10.get("link", "")
-                    
-                    if mudou_opcao_10 or mudou_link_10:
-                        save_resp("1.0", val, pts, lnk)
-                        res_data["1.0"] = {"valor": val, "pontos": pts, "link": lnk}
-                        
-                        if mudou_link_10 and links_atuais:
-                            if links_atuais != links_antigos:
-                                st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
-                                st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+                # Chaves fixas por componente e ano
+                chave_radio_10 = f"r_iplan_10_{ano_sel}"
+                chave_link_10 = f"l_iplan_10_txt_{ano_sel}"
+                chave_coment_10 = f"coment_1.0_{ano_sel}"  # Chave padrão do bloco_comentarios
 
                 c10_1, c10_2 = st.columns([1, 1])
                 with c10_1:
-                    lista_opcoes = list(opts_1_0.keys())
-                    idx_salvo = lista_opcoes.index(d10["valor"]) if d10["valor"] in opts_1_0 else 0
-                    sel_1_0 = st.radio("Selecione 1.0:", options=lista_opcoes, index=idx_salvo, key=chave_radio_10, on_change=cb_radio_1_0, label_visibility="collapsed")
-                    pts_1_0 = opts_1_0[sel_1_0]
-                    
-                with c10_2:
-                    link_1_0 = st.text_area("Link/Evidência (1.0):", value=d10.get("link", ""), key=f"t_1_0_{ano_sel}", on_change=cb_text_1_0, height=130)
-                    placeholder_links_10 = st.empty()
-                    links_1_0_visuais = [u[0] for u in re.findall(regex_pure_url, link_1_0 or "")]
-                    if links_1_0_visuais:
-                        placeholder_links_10.markdown(f"**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_1_0_visuais]))
-                
-                txt_score_10 = f"📊 Pontuação Aplicada no Quesito 1.0: {pts_1_0:.1f} pontos"
-                if sel_1_0 == "Selecione...": txt_score_10 += " (Aguardando seleção)"
-                st.code(txt_score_10, language="text")
-                bloco_comentarios("1.0", res_data)
+                    lista_opcoes_10 = list(opcoes_10.keys())
+                    idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
 
+                    val_radio_10 = st.radio(
+                        "Selecione a situação do Plano Diretor:",
+                        options=lista_opcoes_10,
+                        index=idx_10,
+                        key=chave_radio_10
+                    )
+
+                with c10_2:
+                    link_10 = st.text_area(
+                        "Link de Evidência / Lei do Plano Diretor (1.0):",
+                        value=evidencia_10_salva,
+                        key=chave_link_10,
+                        placeholder="Insira o link oficial da lei do Plano Diretor ou Diário Oficial...",
+                        height=100
+                    )
+                    placeholder_links_10 = st.empty()
+                    links_10_visuais = re.findall(REGEX_PURE_URL, link_10 or "")
+                    if links_10_visuais:
+                        placeholder_links_10.markdown("**🔗 Link ativo:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_iplan_1_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
+                    pts_10 = float(opcoes_10.get(val_salvar, 0.0))
+                    lnk_val = link_10.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp(
+                        qid="1.0",
+                        valor=val_salvar,
+                        pontos=pts_10,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_10,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
+
+                    if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_10 = d10.get("pontos", 0.0)
+                cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.0 (Fora do container principal)
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-            modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
 
