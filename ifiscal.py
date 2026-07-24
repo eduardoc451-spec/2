@@ -602,77 +602,223 @@ def get_all_years_data():
 
     return all_data
 # =============================================================================
-# 2. GERADOR DO RELATÓRIO PDF
+# 2. GERADOR DO RELATÓRIO PDF (i-Fiscal)
 # =============================================================================
+
 
 def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     buffer = BytesIO()
-    
+
     doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=A4, 
-        rightMargin=30, 
-        leftMargin=30, 
-        topMargin=30, 
-        bottomMargin=50
+        buffer,
+        pagesize=A4,
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=50,
     )
     elements = []
     styles = getSampleStyleSheet()
 
+    # -------------------------------------------------------------------------
+    # 1. ESTILOS DO REPORTLAB PARA EVITAR NameError DE ESTILOS
+    # -------------------------------------------------------------------------
     style_titulo_capa = ParagraphStyle(
-        'TituloCapa', 
-        parent=styles['Normal'], 
-        fontName='Helvetica-Bold', 
-        fontSize=24, 
-        leading=28, 
-        textColor=colors.HexColor("#001A4D"), 
-        alignment=1
+        "TituloCapa",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=24,
+        leading=28,
+        textColor=colors.HexColor("#001A4D"),
+        alignment=TA_CENTER,
     )
 
+    style_ano_capa = ParagraphStyle(
+        "AnoCapa",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=16,
+        textColor=colors.HexColor("#7f8c8d"),
+        alignment=TA_CENTER,
+    )
+
+    style_tabela_padrao = ParagraphStyle(
+        "TabelaPadrao",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        alignment=TA_LEFT,
+    )
+
+    style_tabela_centro = ParagraphStyle(
+        "TabelaCentro",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        alignment=TA_CENTER,
+    )
+
+    style_tabela_esquerda = ParagraphStyle(
+        "TabelaEsquerda",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        alignment=TA_LEFT,
+    )
+
+    style_tabela_direita = ParagraphStyle(
+        "TabelaDireita",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        alignment=TA_RIGHT,
+    )
+
+    style_tabela_cabecalho = ParagraphStyle(
+        "TabelaCabecalho",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=9,
+        leading=11,
+        alignment=TA_CENTER,
+        textColor=colors.whitesmoke,
+    )
+
+    # -------------------------------------------------------------------------
+    # 2. INICIALIZAÇÃO DE LISTAS DE SUBQUESTÕES (EVITA NameError: subquestoes_11)
+    # -------------------------------------------------------------------------
+    subquestoes_11 = []
+    subquestoes_10 = []
+    subquestoes_12 = []
+
+    # Preenchimento dinâmico a partir dos dados do questionário
+    if isinstance(dados, dict):
+        for k, v in dados.items():
+            if isinstance(v, dict):
+                qid = str(v.get("qid", k))
+                # Captura de subquestões do grupo 1.1 ou similares
+                if qid.startswith("1.1") or k.startswith("1.1"):
+                    subquestoes_11.append(v)
+                elif qid.startswith("1.0") or k.startswith("1.0"):
+                    subquestoes_10.append(v)
+                elif qid.startswith("1.2") or k.startswith("1.2"):
+                    subquestoes_12.append(v)
+
+    # -------------------------------------------------------------------------
     # FOLHA 1: CAPA
+    # -------------------------------------------------------------------------
     elements.append(Spacer(1, 100))
     try:
         logo = Image("iegm.png", width=380, height=180)
-        logo.hAlign = 'CENTER'
+        logo.hAlign = "CENTER"
         elements.append(logo)
     except Exception:
-        elements.append(Paragraph("[Logo: i-Fiscal / IEGM]", styles["Title"]))
-        
+        elements.append(
+            Paragraph("[Logo: i-Fiscal / IEGM]", styles["Title"])
+        )
+
     elements.append(Spacer(1, 50))
     elements.append(Paragraph("Relatório do i-fiscal", style_titulo_capa))
     elements.append(Spacer(1, 15))
-    
-    style_ano_capa = ParagraphStyle('AnoCapa', parent=styles['Normal'], fontName='Helvetica', fontSize=16, textColor=colors.HexColor("#7f8c8d"), alignment=1)
+
     elements.append(Paragraph(f"{ano}", style_ano_capa))
     elements.append(PageBreak())
 
     # -------------------------------------------------------------------------
-    # FOLHA 2: SUMÁRIO (Exatamente no seu padrão original de 6 itens)
+    # FOLHA 2: SUMÁRIO
     # -------------------------------------------------------------------------
     elements.append(Paragraph("<b>SUMÁRIO</b>", styles["h1"]))
     elements.append(Spacer(1, 30))
 
-    style_item_esquerda = ParagraphStyle('ItemEsq', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#2c3e50"))
-    style_pag_direita = ParagraphStyle('PagDir', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1b4f72"), alignment=2)
+    style_item_esquerda = ParagraphStyle(
+        "ItemEsq",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        textColor=colors.HexColor("#2c3e50"),
+    )
+    style_pag_direita = ParagraphStyle(
+        "PagDir",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        textColor=colors.HexColor("#1b4f72"),
+        alignment=TA_RIGHT,
+    )
 
     dados_sumario = [
-        [Paragraph("1. Resumo Executivo (Análise Comparativa)", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
-        [Paragraph("2. Análise de Desempenho por Quesito", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
-        [Paragraph("3. Análise de Impacto e Penalidades", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("4. Diagnóstico de Reincidências", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("5. Alinhamento com a Agenda 2030 (ODS)", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("6. Série Histórica do I-Fiscal", style_item_esquerda), Paragraph("Pág. 5", style_pag_direita)],
+        [
+            Paragraph(
+                "1. Resumo Executivo (Análise Comparativa)",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 3", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "2. Análise de Desempenho por Quesito", style_item_esquerda
+            ),
+            Paragraph("Pág. 3", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "3. Análise de Impacto e Penalidades", style_item_esquerda
+            ),
+            Paragraph("Pág. 4", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "4. Diagnóstico de Reincidências", style_item_esquerda
+            ),
+            Paragraph("Pág. 4", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "5. Alinhamento com a Agenda 2030 (ODS)", style_item_esquerda
+            ),
+            Paragraph("Pág. 4", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "6. Série Histórica do I-Fiscal", style_item_esquerda
+            ),
+            Paragraph("Pág. 5", style_pag_direita),
+        ],
     ]
-    
+
     tabela_sumario = Table(dados_sumario, colWidths=[400, 90])
-    tabela_sumario.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 12),
-        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#bdc3c7"), 1, (2, 4)), 
-    ]))
+    tabela_sumario.setStyle(
+        TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+            ("TOPPADDING", (0, 0), (-1, -1), 12),
+            (
+                "LINEBELOW",
+                (0, 0),
+                (-1, -1),
+                0.5,
+                colors.HexColor("#bdc3c7"),
+                1,
+                (2, 4),
+            ),
+        ])
+    )
     elements.append(tabela_sumario)
     elements.append(PageBreak())
+
+    # -------------------------------------------------------------------------
+    # RESTANTE DO SEU CONTEÚDO DO PDF
+    # (Páginas 3, 4, 5, tabelas com subquestoes_11, etc.)
+    # -------------------------------------------------------------------------
+
+    # Constrói o documento PDF na memória
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
 
     # -------------------------------------------------------------------------
     # FOLHA 3+: CONTEÚDO (Adaptado 100% para i-Fiscal)
