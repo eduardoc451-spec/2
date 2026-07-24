@@ -3958,3 +3958,154 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.2", st.session_state.get(f"links_pendentes_4_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 4.3 • PLANOS SETORIAIS INCORPORADOS NO PPA
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_planos_setoriais_4_3_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 4.3 - Planos Setoriais Incorporados no PPA ({ano_sel})", expanded=True):
+                st.subheader("4.3 • Planos Setoriais")
+                st.write("**Assinale os Planos Setoriais que foram incorporados no Plano Plurianual (PPA):**")
+                st.caption("ℹ *Selecione os planos aplicáveis, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 4.3'.*")
+
+                # Tabela oficial de pontuação dos planos setoriais
+                planos_pesos_43 = {
+                    "Plano Diretor – 00": 0.0,
+                    "Plano Municipal da Educação – 2,5": 2.5,
+                    "Plano Municipal pela Primeira Infância – 00": 0.0,
+                    "Plano Municipal da Saúde – 2,5": 2.5,
+                    "Plano de Mobilidade Urbana – 00": 0.0,
+                    "Plano de Saneamento Básico – 2,5": 2.5,
+                    "Plano de Resíduos Sólidos – 2,5": 2.5,
+                    "Plano de Contingência Municipal – PLANCON de Defesa Civil – 2,5": 2.5,
+                    "Plano Diretor de Tecnologia da Informação – 2,5": 2.5,
+                    "Não incorporou nenhum dos planos acima – -10 (perde 10 pontos)": -10.0
+                }
+
+                # Resgate seguro dos dados
+                d43 = res_data.get("4.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                try:
+                    lista_salva_43 = ast.literal_eval(d43.get("valor", "[]"))
+                    if not isinstance(lista_salva_43, list):
+                        lista_salva_43 = []
+                except Exception:
+                    lista_salva_43 = []
+
+                evidencia_43_salva = d43.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_link_43 = f"t_4_3_{ano_sel}"
+                chave_coment_43 = f"coment_4.3_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_atual_selecao_43 = []
+                    for idx, (plano, pt) in enumerate(planos_pesos_43.items()):
+                        key_chk = f"chk_43_{idx}_{ano_sel}"
+                        is_checked = st.checkbox(
+                            plano,
+                            value=(plano in lista_salva_43),
+                            key=key_chk
+                        )
+                        if is_checked:
+                            lista_atual_selecao_43.append(plano)
+
+                    # Regra de cálculo de pontuação
+                    if any("Não incorporou" in p for p in lista_atual_selecao_43):
+                        pts_calculados_43 = -10.0
+                    else:
+                        pts_calculados_43 = sum(planos_pesos_43[p] for p in lista_atual_selecao_43)
+
+                with col2:
+                    link_evidencia_43 = st.text_area(
+                        "Link/Evidência (4.3):",
+                        value=evidencia_43_salva,
+                        key=chave_link_43,
+                        placeholder="Insira os links dos documentos ou publicações dos planos setoriais incorporados...",
+                        height=260
+                    )
+                    placeholder_links_43 = st.empty()
+                    links_43_visuais = re.findall(REGEX_PURE_URL, link_evidencia_43 or "")
+                    if links_43_visuais:
+                        placeholder_links_43.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_43_visuais]
+                            )
+                        )
+
+                # Renderização do bloco unificado de comentários
+                bloco_comentarios("4.3", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 4.3", key=f"btn_salvar_4_3_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_43.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_43, d43.get("comentario", ""))
+
+                    # Recálculo definitivo para persistência
+                    if any("Não incorporou" in p for p in lista_atual_selecao_43):
+                        pts_finais_43 = -10.0
+                    else:
+                        pts_finais_43 = sum(planos_pesos_43[p] for p in lista_atual_selecao_43)
+
+                    valor_para_salvar = str(lista_atual_selecao_43)
+
+                    # Persistência na base de dados
+                    save_resp(
+                        qid="4.3",
+                        valor=valor_para_salvar,
+                        pontos=float(pts_finais_43),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização na estrutura global local
+                    res_data["4.3"] = {
+                        "valor": valor_para_salvar,
+                        "pontos": float(pts_finais_43),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_43_salva or "")]
+
+                    if lnk_val != evidencia_43_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 4.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição estilizada do impacto da pontuação
+                pts_atuais_43 = d43.get("pontos", 0.0)
+
+                if not lista_salva_43:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando seleção</span>", unsafe_allow_html=True)
+                else:
+                    if pts_atuais_43 < 0:
+                        cor_txt_43 = "#dc3545"
+                        sufixo_txt_43 = " (Penalidade aplicada)"
+                    elif pts_atuais_43 > 0:
+                        cor_txt_43 = "#28a745"
+                        sufixo_txt_43 = ""
+                    else:
+                        cor_txt_43 = "#6c757d"
+                        sufixo_txt_43 = ""
+
+                    st.markdown(
+                        f"<span style='color:{cor_txt_43}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 4.3: {pts_atuais_43:.1f} pontos{sufixo_txt_43}</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS
+        if st.session_state.get(f"gatilho_modal_4_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.3", st.session_state.get(f"links_pendentes_4_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_3_{ano_sel}"] = False
