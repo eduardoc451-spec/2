@@ -12158,3 +12158,44 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.1.4", st.session_state.get(f"links_pendentes_15_1_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_1_4_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 16.0 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        st.divider()
+        st.header("16.0 Impressões Finais")
+
+        with st.container(key=f"bloco_isolado_q16_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 16.0 - Impressões Finais", expanded=True):
+                st.subheader("16.0 • Considerações Finais")
+                st.write("**Deixe suas impressões finais sobre o preenchimento do questionário:**")
+                
+                # Resgate seguro utilizando a chave padrão ou a variante '_valor' se aplicável
+                d160 = res_data.get("16.0_valor", {"valor": "", "pontos": 0.0, "link": ""}) or {"valor": "", "pontos": 0.0, "link": ""}
+                v_salvo_160 = d160.get("valor", "")
+                evidencia_160_salva = d160.get("link", "")
+
+                def cb_160():
+                    val = st.session_state.get(f"t160_in_{ano_sel}", v_salvo_160).strip()
+                    lnk = st.session_state.get(f"l160_in_{ano_sel}", evidencia_160_salva).strip()
+                    
+                    # Salva a resposta de forma assíncrona
+                    save_resp("16.0_valor", val, 0.0, lnk)
+                    res_data["16.0_valor"] = {"valor": val, "pontos": 0.0, "link": lnk}
+                    
+                    # Validação e processamento do modal de links
+                    lk_at = re.findall(r'(https?://[^\s]+)', lnk or "")
+                    if lnk != evidencia_160_salva and lk_at and lk_at != re.findall(r'(https?://[^\s]+)', evidencia_160_salva or ""):
+                        st.session_state[f"links_pendentes_16_0_{ano_sel}"] = lk_at
+                        st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = True
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.text_area("Impressões Finais (16.0):", value=v_salvo_160, key=f"t160_in_{ano_sel}", on_change=cb_160, height=150)
+                with col2:
+                    lk160 = st.text_area("Link/Evidência (16.0):", value=evidencia_160_salva, key=f"l160_in_{ano_sel}", on_change=cb_160, height=150)
+                    if lk160: 
+                        st.markdown("**🔗 Ativos:** " + " | ".join([f"[{u}]({u})" for u in re.findall(r'(https?://[^\s]+)', lk160 or "")]))
+
+                st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto 16.0: 0.0 pontos aplicados</span>", unsafe_allow_html=True)
+                bloco_comentarios("16.0_valor", res_data, ano_sel)
