@@ -41,31 +41,58 @@ os.environ["PYTHONWARNINGS"] = "ignore"
 logging.getLogger("streamlit").setLevel(logging.ERROR)
 
 
+# Gerenciamento otimizado de pool de conexões Neon Postgres
+@st.cache_resource
+def get_db_pool():
+    """Cria e mantém um pool de conexões persistente com o Postgres Neon."""
+    try:
+        db_url = st.secrets["DATABASE_URL"]
+        return psycopg2.pool.ThreadedConnectionPool(minconn=1, maxconn=10, dsn=db_url)
+    except Exception as e:
+        logging.error(f"Erro ao inicializar pool de conexões: {e}")
+        st.error(f"Falha de conexão com o banco de dados Neon: {e}")
+        return None
+
+
 def get_connection():
-    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
+    """Obtém uma conexão a partir do pool gerenciado."""
+    connection_pool = get_db_pool()
+    if connection_pool:
+        return connection_pool.getconn()
     return psycopg2.connect(st.secrets["DATABASE_URL"])
+
+
+def release_connection(conn):
+    """Devolve a conexão ao pool com segurança."""
+    connection_pool = get_db_pool()
+    if connection_pool and conn:
+        connection_pool.putconn(conn)
 
 
 def init_db_iplan():
     """Cria a tabela respostas_iplan para o Módulo de Planejamento Urbano."""
+    conn = None
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS respostas_iplan (
-                        id SERIAL PRIMARY KEY,
-                        ano INT NOT NULL,
-                        quesito VARCHAR(50) NOT NULL,
-                        resposta TEXT,
-                        pontos DOUBLE PRECISION DEFAULT 0.0,
-                        detalhes JSONB DEFAULT '{}'::jsonb,
-                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT unq_ano_quesito_iplan UNIQUE(ano, quesito)
-                    );
-                """)
-            conn.commit()
+        conn = get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS respostas_iplan (
+                    id SERIAL PRIMARY KEY,
+                    ano INT NOT NULL,
+                    quesito VARCHAR(50) NOT NULL,
+                    resposta TEXT,
+                    pontos DOUBLE PRECISION DEFAULT 0.0,
+                    detalhes JSONB DEFAULT '{}'::jsonb,
+                    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT unq_ano_quesito_iplan UNIQUE(ano, quesito)
+                );
+            """)
+        conn.commit()
     except Exception as e:
         logging.error(f"Erro ao inicializar banco iPLAN: {e}")
+    finally:
+        if conn:
+            release_connection(conn)
 
 
 # Inicializa a tabela no carregamento do módulo
@@ -135,7 +162,9 @@ def modal_aviso_link(qid, links_encontrados):
     Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
     """)
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
+        st.session_state[f"aviso_link_exibido_{qid}"] = True
         st.rerun()
+
 # =============================================================================
 # 1. GESTÃO DE ESTADO E PERSISTÊNCIA (SESSION STATE + NEON POSTGRES) - iPLAN
 # =============================================================================
@@ -154,33 +183,41 @@ def load_respostas(ano: int = None) -> dict:
     
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
-        # Carrega do banco Neon
+        conn = None
         try:
-            with get_connection() as conn:
-                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                    cursor.execute(
-                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_iplan WHERE ano = %s",
-                        (int(ano),)
-                    )
-                    rows = cursor.fetchall()
-                    for r in rows:
-                        detalhes = r.get('detalhes') or {}
-                        if isinstance(detalhes, str):
-                            try:
-                                detalhes = json.loads(detalhes)
-                            except Exception:
-                                detalhes = {}
+            conn = get_connection()
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    "SELECT quesito, resposta, pontos, detalhes FROM respostas_iplan WHERE ano = %s",
+                    (int(ano),)
+                )
+                rows = cursor.fetchall()
+                for r in rows:
+                    detalhes = r.get('detalhes') or {}
+                    if isinstance(detalhes, str):
+                        try:
+                            detalhes = json.loads(detalhes)
+                        except Exception:
+                            detalhes = {}
 
-                        st.session_state[key_ano][str(r['quesito'])] = {
-                            "valor": r['resposta'] or "",
-                            "pontos": float(r['pontos'] or 0.0),
-                            "link": detalhes.get("link", ""),
-                            "comentarios": detalhes.get("comentarios", []),
-                            "comentario": detalhes.get("comentario", ""),
-                            "detalhes": detalhes
-                        }
+                    try:
+                        pts = float(r['pontos']) if r['pontos'] is not None else 0.0
+                    except (ValueError, TypeError):
+                        pts = 0.0
+
+                    st.session_state[key_ano][str(r['quesito'])] = {
+                        "valor": r['resposta'] or "",
+                        "pontos": pts,
+                        "link": detalhes.get("link", ""),
+                        "comentarios": detalhes.get("comentarios", []),
+                        "comentario": detalhes.get("comentario", ""),
+                        "detalhes": detalhes
+                    }
         except Exception as e:
             logging.error(f"Erro ao carregar respostas do banco iPLAN: {e}")
+        finally:
+            if conn:
+                release_connection(conn)
 
     return st.session_state[key_ano]
 
@@ -201,6 +238,12 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
     if not comentario:
         comentario = dados_atuais.get("comentario", "")
 
+    # Garantia de tratamento dos pontos
+    try:
+        pontos_float = float(pontos)
+    except (ValueError, TypeError):
+        pontos_float = 0.0
+
     # Monta o pacote JSON para a coluna 'detalhes'
     dados_detalhes = {
         "link": str(link or ""),
@@ -211,7 +254,7 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
     # 1. Atualiza Session State
     dados_salvar = {
         "valor": str(valor),
-        "pontos": float(pontos),
+        "pontos": pontos_float,
         "link": str(link or ""),
         "comentarios": comentarios,
         "comentario": str(comentario or ""),
@@ -221,31 +264,35 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
     st.session_state[key_ano][str(qid)] = dados_salvar
 
     # 2. Persiste no banco de dados Neon (UPSERT em respostas_iplan)
+    conn = None
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("""
-                    INSERT INTO respostas_iplan (ano, quesito, resposta, pontos, detalhes, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
-                    ON CONFLICT (ano, quesito) 
-                    DO UPDATE SET 
-                        resposta = EXCLUDED.resposta,
-                        pontos = EXCLUDED.pontos,
-                        detalhes = EXCLUDED.detalhes,
-                        atualizado_em = CURRENT_TIMESTAMP;
-                """, (
-                    int(ano_int),
-                    str(qid),
-                    str(valor),
-                    float(pontos),
-                    json.dumps(dados_detalhes)
-                ))
-            conn.commit()
-            return True
+        conn = get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO respostas_iplan (ano, quesito, resposta, pontos, detalhes, atualizado_em)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (ano, quesito) 
+                DO UPDATE SET 
+                    resposta = EXCLUDED.resposta,
+                    pontos = EXCLUDED.pontos,
+                    detalhes = EXCLUDED.detalhes,
+                    atualizado_em = CURRENT_TIMESTAMP;
+            """, (
+                int(ano_int),
+                str(qid),
+                str(valor),
+                pontos_float,
+                json.dumps(dados_detalhes)
+            ))
+        conn.commit()
+        return True
     except Exception as e:
         logging.error(f"Erro ao salvar resposta do iPLAN no banco Neon: {e}")
         st.error(f"Erro ao salvar no banco Neon: {e}")
         return False
+    finally:
+        if conn:
+            release_connection(conn)
 
 # =============================================================================
 # 2. COMPONENTE PARA RENDERIZAR E SALVAR QUESTÕES
@@ -256,8 +303,13 @@ def renderizar_questao(qid, res_data):
     dados_q = res_data.get(qid, {})
     
     val_existente = dados_q.get("valor", "")
-    pts_existente = float(dados_q.get("pontos", 0.0))
+    try:
+        pts_existente = float(dados_q.get("pontos", 0.0))
+    except (ValueError, TypeError):
+        pts_existente = 0.0
+        
     link_existente = dados_q.get("link", "")
+    max_pts = PONTUACOES_MAX_IPLAN.get(qid, 100.0)
     
     with st.container(border=True):
         st.markdown(f"#### Quesito Territorial: `{qid}`")
@@ -279,27 +331,32 @@ def renderizar_questao(qid, res_data):
 
         with col_meta:
             novos_pontos = st.number_input(
-                "Pontuação:", 
+                f"Pontuação (Máx: {max_pts}):", 
                 value=pts_existente, 
+                min_value=0.0,
+                max_value=float(max_pts),
+                step=0.5,
                 key=f"num_pts_iplan_{qid}"
             )
             
             st.markdown("<br>", unsafe_allow_html=True)
             
             if st.button("💾 Salvar Questão", key=f"btn_save_iplan_{qid}", type="primary", use_container_width=True):
-                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
+                links = re.findall(REGEX_PURE_URL, novo_valor) + re.findall(REGEX_PURE_URL, novo_link)
+                # Extrai apenas as URLs casadas
+                links_formatados = [l[0] if isinstance(l, tuple) else l for l in links]
                 
-                save_resp(
+                sucesso = save_resp(
                     qid=qid, 
                     valor=novo_valor, 
                     pontos=novos_pontos, 
                     link=novo_link
                 )
                 
-                st.toast(f"Quesito {qid} do iPLAN salvo com sucesso!", icon="✅")
-                
-                if links and "modal_aviso_link" in globals():
-                    modal_aviso_link(qid, links)
+                if sucesso:
+                    st.toast(f"Quesito {qid} do iPLAN salvo com sucesso!", icon="✅")
+                    if links_formatados and "modal_aviso_link" in globals():
+                        modal_aviso_link(qid, links_formatados)
 
         # Diálogo Interno (Comentários)
         bloco_comentarios(qid, res_data)
@@ -460,12 +517,16 @@ def analyze_performance(res_data):
         else:
             return "Baixa"
 
-    for qid, info in res_data.items():
-        if qid.startswith("COM_") or qid not in pontuacoes_ref:
-            continue
+    # Itera sobre todas as questões mapeadas no iPLAN para não ignorar quesitos não cadastrados no banco
+    for qid, max_pontos in pontuacoes_ref.items():
+        info = res_data.get(qid, {})
+        
+        try:
+            pontos_atuais = float(info.get("pontos", 0.0))
+        except (ValueError, TypeError):
+            pontos_atuais = 0.0
 
-        pontos_atuais = float(info.get("pontos", 0.0))
-        max_pontos = float(pontuacoes_ref[qid])
+        max_pontos = float(max_pontos)
 
         if pontos_atuais >= max_pontos:
             pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
@@ -488,7 +549,6 @@ def analyze_performance(res_data):
         criticos_negativos[rel].sort(key=lambda x: x[4], reverse=True)
 
     return pontos_fortes, criticos_zero, criticos_negativos
-
 
 # =============================================================================
 # 4. GERADOR DO RELATÓRIO PDF - i-PLAN (PLANEJAMENTO URBANO)
