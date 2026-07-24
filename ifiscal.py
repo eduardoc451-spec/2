@@ -1,15 +1,83 @@
-import streamlit as st
-import sqlite3
-import re
 import json
+import logging
+import os
+import re
+import sys
+import warnings
+from datetime import date, datetime
 from io import BytesIO
-from datetime import datetime, date
 
-# Importações essenciais do ReportLab para a geração do PDF do i-Fiscal
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import plotly.express as px
+import plotly.graph_objects as go
+import psycopg2
+from plotly.subplots import make_subplots
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+
+# Imports de componentes ReportLab para relatórios em PDF do iFiscal
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.shapes import Drawing, String
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+# -----------------------------------------------------------------------------
+# CONFIGURAÇÕES DE AMBIENTE E BANCO DE DADOS NEON
+# -----------------------------------------------------------------------------
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
+os.environ["PYTHONWARNINGS"] = "ignore"
+logging.getLogger("streamlit").setLevel(logging.ERROR)
+
+
+def get_connection():
+    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
+    return psycopg2.connect(st.secrets["DATABASE_URL"])
+
+
+def init_db():
+    """Cria a tabela respostas_ifiscal idêntica à estrutura configurada no Neon."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS respostas_ifiscal (
+                        id SERIAL PRIMARY KEY,
+                        ano INT NOT NULL,
+                        quesito VARCHAR(50) NOT NULL,
+                        resposta TEXT,
+                        pontos DOUBLE PRECISION DEFAULT 0.0,
+                        detalhes JSONB DEFAULT '{}'::jsonb,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT unq_ano_quesito_ifiscal UNIQUE(ano, quesito)
+                    );
+                """)
+            conn.commit()
+    except Exception as e:
+        logging.error(f"Erro ao inicializar banco iFiscal: {e}")
+
+
+# Inicializa a tabela no carregamento do módulo
+try:
+    init_db()
+except Exception as e:
+    logging.error(f"Erro no auto-init do iFiscal: {e}")
+
+# =============================================================================
+# REGEX DE VALIDAÇÃO
+# =============================================================================
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
 
 # =============================================================================
 # CONSTANTES GLOBAIS - MATRIZ DE QUESITOS OFICIAL DO I-FISCAL
@@ -115,7 +183,7 @@ TEXTO_PERGUNTAS = {
 }
 
 # =============================================================================
-# MODAL DE AVISO AUTOMÁTICO (CORRIGIDO PARA LINKS CLICÁVEIS)
+# MODAL DE AVISO AUTOMÁTICO
 # =============================================================================
 @st.dialog("⚠️ Atenção! Evidência em Link Externo")
 def modal_aviso_link(qid, links_encontrados):
@@ -131,7 +199,6 @@ def modal_aviso_link(qid, links_encontrados):
     """)
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}_fiscal"):
         st.rerun()
-
 # =============================================================================
 # 1. FUNÇÕES DE APOIO E BANCO DE DADOS (IEGM - I-FISCAL)
 # =============================================================================
