@@ -11926,6 +11926,158 @@ def mostrar_formulario_plan():
                 modal_aviso_link("P2", st.session_state.get(f"links_pendentes_p2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_p2_{ano_sel}"] = False
 
+        # =============================================================================
+        # INDICADOR P3 • PERCENTUAL DE ALTERAÇÃO DO PLANEJAMENTO INICIAL (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_indicador_p3_final_{ano_sel}", border=True):
+            with st.expander(f"📊 Indicador P3 - Percentual de Alteração do Planejamento Inicial", expanded=True):
+                st.subheader("P3 • Avaliação Orçamentária (LOA)")
+                st.write("**Informe os valores totais dos programas para cálculo do indicador P3:**")
+
+                st.info("""
+                ℹ️ **Regra de Pontuação (K = J / I):**
+                * 🔴 **K ≥ 1,3:** -30.0 pontos (Perde 30)
+                * 🟢 **0,9 < K < 1,3:** 0.0 ponto
+                * 🟡 **0,5 < K ≤ 0,9:** Graduação linear entre 0 e -30.0 pontos $\\rightarrow \\left(\\frac{0,9 - K}{0,4}\\right) \\times (-30)$
+                * 🔴 **K ≤ 0,5:** -30.0 pontos (Perde 30)
+                """)
+
+                # Recuperação segura dos dados salvos no banco
+                dP3 = res_data.get("P3") or {"valor": "{}", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_p3_salva = dP3.get("link", "")
+                pts_salvos_p3 = float(dP3.get("pontos", 0.0))
+
+                # Parseamento do dicionário de valores de P3
+                try:
+                    valores_p3 = ast.literal_eval(dP3.get("valor", "{}"))
+                    if not isinstance(valores_p3, dict):
+                        valores_p3 = {}
+                except Exception:
+                    valores_p3 = {}
+
+                v_j_salvo = float(valores_p3.get("J", 0.0))
+                v_i_salvo = float(valores_p3.get("I", 0.0))
+                v_k_salvo = float(valores_p3.get("K", 0.0))
+
+                # Chaves explícitas no Session State
+                chave_num_j_p3 = f"num_p3_j_{ano_sel}"
+                chave_num_i_p3 = f"num_p3_i_{ano_sel}"
+                chave_link_p3 = f"l_p3_txt_{ano_sel}"
+                chave_coment_p3 = f"coment_P3_exclusivo_{ano_sel}"
+
+                cP3_1, cP3_2 = st.columns([1, 1])
+
+                with cP3_1:
+                    num_j_p3 = st.number_input(
+                        "Valor Total Final dos Programas (J):",
+                        value=v_j_salvo,
+                        min_value=0.0,
+                        step=1000.0,
+                        format="%.2f",
+                        key=chave_num_j_p3
+                    )
+                    num_i_p3 = st.number_input(
+                        "Valor Total Inicial dos Programas (I):",
+                        value=v_i_salvo,
+                        min_value=0.0,
+                        step=1000.0,
+                        format="%.2f",
+                        key=chave_num_i_p3
+                    )
+
+                    # Exibição do valor de K armazenado
+                    st.metric(
+                        label="Resultado do Indicador Salvo (K = J / I)",
+                        value=f"{v_k_salvo:.4f}"
+                    )
+
+                with cP3_2:
+                    link_p3 = st.text_area(
+                        "Link de Evidência / Memória de Cálculo (P3):",
+                        value=evidencia_p3_salva,
+                        key=chave_link_p3,
+                        placeholder="Inserir justificativa, memória de cálculo e links de evidência...",
+                        height=155
+                    )
+                    placeholder_links_p3 = st.empty()
+                    links_p3_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_p3 or "")]
+                    if links_p3_visuais:
+                        placeholder_links_p3.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_p3_visuais])
+                        )
+
+                # Renderiza o bloco de comentários específico do Indicador P3
+                bloco_comentarios("P3_exclusivo", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_txt_p3 = "#28a745" if pts_salvos_p3 == 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_p3}; font-weight:bold;'>📊 Impacto de Pontuação no Indicador P3: {pts_salvos_p3:.2f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador P3", key=f"btn_salvar_p3_{ano_sel}", type="primary"):
+                    j_val = float(st.session_state.get(chave_num_j_p3, num_j_p3))
+                    i_val = float(st.session_state.get(chave_num_i_p3, num_i_p3))
+                    lnk_val = link_p3.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_p3, dP3.get("comentario", ""))
+
+                    # Regra de negócio: Cálculo da razão K e dos pontos
+                    if i_val > 0:
+                        k_calc = j_val / i_val
+                        if k_calc >= 1.3:
+                            pts_calc = -30.0
+                        elif 0.9 < k_calc < 1.3:
+                            pts_calc = 0.0
+                        elif 0.5 < k_calc <= 0.9:
+                            pts_calc = ((0.9 - k_calc) / 0.4) * (-30.0)
+                        else:  # k_calc <= 0.5
+                            pts_calc = -30.0
+                    else:
+                        k_calc = 0.0
+                        pts_calc = 0.0  # Evita divisão por zero ou dados inconsistentes
+
+                    dict_valores = {"J": j_val, "I": i_val, "K": round(k_calc, 4)}
+                    str_valores = str(dict_valores)
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="P3",
+                        valor=str_valores,
+                        pontos=float(pts_calc),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["P3"] = {
+                        "valor": str_valores,
+                        "pontos": float(pts_calc),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_p3_salva or "")]
+
+                    if lnk_val != evidencia_p3_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_p3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_p3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast(f"Indicador P3 salvo com sucesso! (K = {k_calc:.4f})", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL P3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_p3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("P3", st.session_state.get(f"links_pendentes_p3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_p3_{ano_sel}"] = False
+
 
 
 
