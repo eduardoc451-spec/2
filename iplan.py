@@ -4642,3 +4642,107 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 7.0 • ALTERAÇÕES ORÇAMENTÁRIAS POR DECRETO
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_alteracao_decreto_7_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 7.0 - Alteração Orçamentária por Decreto ({ano_sel})", expanded=True):
+                st.subheader("7.0 • Alterações Orçamentárias por Decreto")
+                st.write("**7.0 Houve alteração orçamentária decorrente de remanejamento, transposição ou transferência de uma categoria de programação para outra ou de um órgão para outro por decreto?**")
+                st.caption("ℹ *Selecione a resposta, informe a evidência e clique em 'Salvar Questão 7.0'.*")
+
+                opcoes_70 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+
+                # Resgate seguro dos dados de 7.0
+                d70 = res_data.get("7.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_70_salva = d70.get("link", "")
+                v_salvo_70 = d70.get("valor", "Selecione...")
+
+                # Chaves fixas por componente
+                chave_radio_70 = f"r_7_0_{ano_sel}"
+                chave_link_70 = f"t_7_0_{ano_sel}"
+                chave_coment_70 = f"coment_7.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_70 = list(opcoes_70.keys())
+                    idx70 = lista_opcoes_70.index(v_salvo_70) if v_salvo_70 in lista_opcoes_70 else 0
+
+                    sel_7_0 = st.radio(
+                        "Selecione a resposta para o Quesito 7.0:",
+                        options=lista_opcoes_70,
+                        index=idx70,
+                        key=chave_radio_70
+                    )
+
+                with col2:
+                    link_evidencia_70 = st.text_area(
+                        "Link/Evidência (7.0):",
+                        value=evidencia_70_salva,
+                        key=chave_link_70,
+                        placeholder="Insira os links dos decretos ou documentos comprobatórios...",
+                        height=120
+                    )
+                    placeholder_links_70 = st.empty()
+                    links_70_visuais = re.findall(REGEX_PURE_URL, link_evidencia_70 or "")
+                    if links_70_visuais:
+                        placeholder_links_70.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_70_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 7.0
+                bloco_comentarios("7.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 7.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 7.0", key=f"btn_salvar_7_0_{ano_sel}", type="primary"):
+                    val_70 = st.session_state.get(chave_radio_70, "Selecione...")
+                    lnk_val_70 = link_evidencia_70.strip()
+                    comentario_para_salvar_70 = st.session_state.get(chave_coment_70, d70.get("comentario", ""))
+
+                    save_resp(
+                        qid="7.0",
+                        valor=val_70,
+                        pontos=0.0,
+                        link=lnk_val_70,
+                        comentario=comentario_para_salvar_70
+                    )
+                    res_data["7.0"] = {
+                        "valor": val_70,
+                        "pontos": 0.0,
+                        "link": lnk_val_70,
+                        "comentario": comentario_para_salvar_70
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_70 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_70_salva or "")]
+
+                    if lnk_val_70 != evidencia_70_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 7.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status 7.0
+                if v_salvo_70 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Seleção pendente no Quesito 7.0</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação (Quesito 7.0): 0.0 pontos</span>", unsafe_allow_html=True)
+
+        # Modal de Evidências do 7.0
+        if st.session_state.get(f"gatilho_modal_7_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = False
