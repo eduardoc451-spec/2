@@ -4109,3 +4109,131 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.3", st.session_state.get(f"links_pendentes_4_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_3_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 5.0 • ESTUDO DE PREVISÃO DE RECEITAS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_previsao_receitas_5_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 5.0 - Estudo de Previsão de Receitas ({ano_sel})", expanded=True):
+                st.subheader("5.0 • Previsão de Receitas")
+                st.write(
+                    "**É realizado estudo/análise para previsão de receitas, no mínimo, anualmente? "
+                    "Aplicação de índice inflacionário ao valor arrecadado do exercício anterior NÃO é estudo/análise de previsão de receita.**"
+                )
+                st.caption("ℹ *Selecione a opção aplicável, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 5.0'.*")
+
+                opcoes_50 = {
+                    "Selecione...": 0.0,
+                    "Sim – 06": 6.0,
+                    "Não – 00": 0.0
+                }
+
+                # Resgate seguro dos dados
+                d50 = res_data.get("5.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_50 = d50.get("valor", "Selecione...")
+                evidencia_50_salva = d50.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_50 = f"r_5_0_{ano_sel}"
+                chave_link_50 = f"t_5_0_{ano_sel}"
+                chave_coment_50 = f"coment_5.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_50 = list(opcoes_50.keys())
+                    idx50 = 0
+                    if v_salvo_50 in opcoes_50:
+                        idx50 = lista_opcoes_50.index(v_salvo_50)
+                    elif v_salvo_50:
+                        if "Sim" in v_salvo_50:
+                            idx50 = lista_opcoes_50.index("Sim – 06")
+                        elif "Não" in v_salvo_50:
+                            idx50 = lista_opcoes_50.index("Não – 00")
+
+                    sel_5_0 = st.radio(
+                        "Selecione 5.0:",
+                        options=lista_opcoes_50,
+                        index=idx50,
+                        key=chave_radio_50,
+                        label_visibility="collapsed"
+                    )
+
+                with col2:
+                    link_evidencia_50 = st.text_area(
+                        "Link/Evidência (5.0):",
+                        value=evidencia_50_salva,
+                        key=chave_link_50,
+                        placeholder="Insira os links dos documentos ou estudos de previsão de receitas...",
+                        height=130
+                    )
+                    placeholder_links_50 = st.empty()
+                    links_50_visuais = re.findall(REGEX_PURE_URL, link_evidencia_50 or "")
+                    if links_50_visuais:
+                        placeholder_links_50.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_50_visuais]
+                            )
+                        )
+
+                # Renderização do bloco unificado de comentários
+                bloco_comentarios("5.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 5.0", key=f"btn_salvar_5_0_{ano_sel}", type="primary"):
+                    opcao_selecionada_50 = st.session_state.get(chave_radio_50, "Selecione...")
+                    pts_finais_50 = opcoes_50.get(opcao_selecionada_50, 0.0)
+                    lnk_val = link_evidencia_50.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_50, d50.get("comentario", ""))
+
+                    # Persistência na base de dados
+                    save_resp(
+                        qid="5.0",
+                        valor=opcao_selecionada_50,
+                        pontos=float(pts_finais_50),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização na estrutura global local
+                    res_data["5.0"] = {
+                        "valor": opcao_selecionada_50,
+                        "pontos": float(pts_finais_50),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_50_salva or "")]
+
+                    if lnk_val != evidencia_50_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 5.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição estilizada do impacto da pontuação
+                pts_atuais_50 = d50.get("pontos", 0.0)
+                opcao_salva_exibicao = d50.get("valor", "Selecione...")
+
+                if opcao_salva_exibicao == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando seleção</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_50 = "#28a745" if pts_atuais_50 > 0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_50}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 5.0: {pts_atuais_50:.1f} pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS
+        if st.session_state.get(f"gatilho_modal_5_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
