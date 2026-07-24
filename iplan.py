@@ -3595,3 +3595,141 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.1.1.1.1", st.session_state.get(f"links_pendentes_4_1_1_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_1_1_1_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 4.1.1.2 • PUBLICAÇÃO DOS RESULTADOS DA AVALIAÇÃO DO PPA
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_publicacao_resultados_4_1_1_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 4.1.1.2 - Publicação dos Resultados da Avaliação do PPA ({ano_sel})", expanded=True):
+                st.subheader("4.1.1.2 • Publicação dos Resultados")
+                st.write("**Houve publicação dos resultados da avaliação dos programas finalísticos do PPA?**")
+                st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 4.1.1.2'.*")
+
+                # Mapeamento oficial com pontuação padronizada no rótulo (Pontuação máxima: 4,0)
+                opcoes_4112 = {
+                    "Selecione...": 0.0,
+                    "Sim, para todos os programas finalísticos avaliados do PPA – 4,0 pontos": 4.0,
+                    "Sim, para a maior parte dos programas finalísticos avaliados – 3,0 pontos": 3.0,
+                    "Sim, para a menor parte dos programas finalísticos avaliados – 1,0 ponto": 1.0,
+                    "Não – 0,0 ponto": 0.0
+                }
+
+                # Resgate seguro dos dados e tratamento de versões legadas
+                d4112 = res_data.get("4.1.1.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_4112 = str(d4112.get("valor", "Selecione..."))
+                if "todos os" in val_salvo_4112.lower():
+                    val_salvo_4112 = "Sim, para todos os programas finalísticos avaliados do PPA – 4,0 pontos"
+                elif "maior parte" in val_salvo_4112.lower():
+                    val_salvo_4112 = "Sim, para a maior parte dos programas finalísticos avaliados – 3,0 pontos"
+                elif "menor parte" in val_salvo_4112.lower():
+                    val_salvo_4112 = "Sim, para a menor parte dos programas finalísticos avaliados – 1,0 ponto"
+                elif "não" in val_salvo_4112.lower():
+                    val_salvo_4112 = "Não – 0,0 ponto"
+                else:
+                    val_salvo_4112 = "Selecione..."
+
+                evidencia_4112_salva = d4112.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_4112 = f"r_4_1_1_2_{ano_sel}"
+                chave_link_4112 = f"t_4_1_1_2_{ano_sel}"
+                chave_coment_4112 = f"coment_4.1.1.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_4112 = list(opcoes_4112.keys())
+                    idx4112 = lista_opcoes_4112.index(val_salvo_4112) if val_salvo_4112 in lista_opcoes_4112 else 0
+
+                    val_selecionado_4112 = st.radio(
+                        "Selecione 4.1.1.2:",
+                        options=lista_opcoes_4112,
+                        index=idx4112,
+                        key=chave_radio_4112,
+                        label_visibility="collapsed"
+                    )
+                    pts_previstos_4112 = opcoes_4112[val_selecionado_4112]
+
+                with col2:
+                    link_evidencia_4112 = st.text_area(
+                        "Link/Evidência (4.1.1.2):",
+                        value=evidencia_4112_salva,
+                        key=chave_link_4112,
+                        placeholder="Insira os links dos locais onde os resultados da avaliação do PPA foram publicados...",
+                        height=140
+                    )
+                    placeholder_links_4112 = st.empty()
+                    links_4112_visuais = re.findall(REGEX_PURE_URL, link_evidencia_4112 or "")
+                    if links_4112_visuais:
+                        placeholder_links_4112.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_4112_visuais]
+                            )
+                        )
+
+                # Renderização do bloco unificado de comentários
+                bloco_comentarios("4.1.1.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 4.1.1.2", key=f"btn_salvar_4_1_1_2_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_4112.strip()
+
+                    # Captura o comentário do estado ou do repositório local
+                    comentario_para_salvar = st.session_state.get(chave_coment_4112, d4112.get("comentario", ""))
+
+                    # Gravação no banco de dados / estado global
+                    save_resp(
+                        qid="4.1.1.2",
+                        valor=val_selecionado_4112,
+                        pontos=pts_previstos_4112,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Regra de encadeamento/dependência: Se marcar "Não", reseta a subquestão descendente 4.1.1.2.1
+                    if "não" in val_selecionado_4112.lower():
+                        save_resp("4.1.1.2.1", "Não aplicável", 0.0, "", "")
+                        res_data["4.1.1.2.1"] = {"valor": "Não aplicável", "pontos": 0.0, "link": "", "comentario": ""}
+
+                    # Atualiza a estrutura local res_data
+                    res_data["4.1.1.2"] = {
+                        "valor": val_selecionado_4112,
+                        "pontos": pts_previstos_4112,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_4112_salva or "")]
+
+                    if lnk_val != evidencia_4112_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_1_1_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_1_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 4.1.1.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação
+                pts_atuais_4112 = d4112.get("pontos", 0.0)
+                val_atual_4112 = d4112.get("valor", "Selecione...")
+
+                if val_atual_4112 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_4112 = "#28a745" if pts_atuais_41112 > 0.0 else "#dc3545" if "não" in val_atual_4112.lower() else "#28a745"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_4112}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 4.1.1.2: {pts_atuais_4112:.1f} / 4.0 pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS
+        if st.session_state.get(f"gatilho_modal_4_1_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.1.1.2", st.session_state.get(f"links_pendentes_4_1_1_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_1_1_2_{ano_sel}"] = False
