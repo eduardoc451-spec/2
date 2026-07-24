@@ -2221,21 +2221,21 @@ def mostrar_formulario_plan():
                 st.write("**Houve a realização de consulta pública online para coleta de sugestões para a elaboração do PPA 2026-2029?**")
                 st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 2.0'.*")
 
-                # Mapeamento de Opções com a pontuação ao lado do texto
+                # Mapeamento com a pontuação formatada ao lado do rótulo da alternativa
                 opcoes20 = {
                     "Selecione...": 0.0, 
-                    "Sim (+6,0 pts)": 6.0, 
-                    "Não (0,0 pt)": 0.0
+                    "Sim – 6,0 pontos": 6.0, 
+                    "Não – 0,0 ponto": 0.0
                 }
 
-                # Resgate seguro de dados salvos e alinhamento com os novos rótulos
+                # Resgate seguro e mapeamento dos valores legados/existentes
                 d20 = res_data.get("2.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
 
                 val_salvo_20 = str(d20.get("valor", "Selecione..."))
                 if "Sim" in val_salvo_20:
-                    val_salvo_20 = "Sim (6,0 pts)"
+                    val_salvo_20 = "Sim – 6,0 pontos"
                 elif "Não" in val_salvo_20:
-                    val_salvo_20 = "Não (0,0 pt)"
+                    val_salvo_20 = "Não – 0,0 ponto"
                 else:
                     val_salvo_20 = "Selecione..."
 
