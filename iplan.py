@@ -63,10 +63,17 @@ def get_connection():
 
 
 def release_connection(conn):
-    """Devolve a conexão ao pool com segurança."""
+    """Devolve a conexão ao pool com segurança ou fecha se for avulsa."""
+    if not conn:
+        return
     connection_pool = get_db_pool()
-    if connection_pool and conn:
-        connection_pool.putconn(conn)
+    if connection_pool:
+        try:
+            connection_pool.putconn(conn)
+        except Exception:
+            conn.close()
+    else:
+        conn.close()
 
 
 def init_db_iplan():
@@ -93,6 +100,11 @@ def init_db_iplan():
     finally:
         if conn:
             release_connection(conn)
+
+
+# 💡 Alias para evitar 'NameError: name 'init_db' is not defined'
+# caso a função seja chamada como init_db() em mostrar_formulario_plan()
+init_db = init_db_iplan
 
 
 # Inicializa a tabela no carregamento do módulo
