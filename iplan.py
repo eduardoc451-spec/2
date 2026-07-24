@@ -10340,3 +10340,129 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.5", st.session_state.get(f"links_pendentes_15_5_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_5_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO MASTER 16.0 • CARTA DE SERVIÇO AO USUÁRIO (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_carta_master_16_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 16.0 - Elaboração da Carta de Serviços ({ano_sel})", expanded=True):
+                st.subheader("16.0 • Carta de Serviço ao Usuário")
+                st.write(f"**A prefeitura elaborou a \"Carta de Serviço ao Usuário\", que trata dos serviços prestados pelos seus órgãos e entidades, as formas de acesso a esses serviços e seus compromissos e padrões de qualidade de atendimento ao público, conforme artigo 7°, §§ 2º e 3º, da Lei Federal nº 13.460/2017?**")
+                st.caption("ℹ *Se modificado para 'Não', o quesito filho 16.1 será limpo e preenchido com 'XYZ' internamente, mantendo-se visível.*")
+
+                opc160 = {"Selecione...": 0.0, "Sim – 04": 4.0, "Não – 00": 0.0}
+
+                # Resgate seguro dos dados do 16.0
+                d160 = res_data.get("16.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d160 is None or not isinstance(d160, dict):
+                    d160 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_160 = d160.get("valor", "Selecione...")
+                evidencia_160_salva = d160.get("link", "")
+
+                # Chaves estáticas e limpas
+                chave_radio_160 = f"r_160_{ano_sel}"
+                chave_link_160 = f"l160_{ano_sel}"
+                chave_coment_160 = f"coment_16.0_{ano_sel}"
+
+                c160_1, c160_2 = st.columns([1, 1])
+
+                with c160_1:
+                    lista_opcoes_160 = list(opc160.keys())
+                    idx160 = lista_opcoes_160.index(val_salvo_160) if val_salvo_160 in opc160 else 0
+                    v160 = st.radio(
+                        "Selecione 16.0:",
+                        options=lista_opcoes_160,
+                        index=idx160,
+                        key=chave_radio_160,
+                        label_visibility="collapsed"
+                    )
+
+                with c160_2:
+                    link_160 = st.text_area(
+                        "Link/Evidência (16.0):",
+                        value=evidencia_160_salva,
+                        key=chave_link_160,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 16.0...",
+                        height=100
+                    )
+                    placeholder_links_160 = st.empty()
+                    links_160_visuais = re.findall(REGEX_PURE_URL, link_160 or "")
+                    if links_160_visuais:
+                        placeholder_links_160.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_160_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 16.0
+                bloco_comentarios("16.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 16.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 16.0", key=f"btn_salvar_16_0_{ano_sel}", type="primary"):
+                    val_para_salvar_160 = v160
+                    pts_calc_160 = opc160.get(val_para_salvar_160, 0.0)
+                    lnk_val_160 = link_160.strip()
+                    comentario_para_salvar_160 = st.session_state.get(chave_coment_160, d160.get("comentario", ""))
+
+                    # Persistência do Quesito Master 16.0
+                    save_resp(
+                        qid="16.0",
+                        valor=val_para_salvar_160,
+                        pontos=pts_calc_160,
+                        link=lnk_val_160,
+                        comentario=comentario_para_salvar_160
+                    )
+                    res_data["16.0"] = {
+                        "valor": val_para_salvar_160,
+                        "pontos": pts_calc_160,
+                        "link": lnk_val_160,
+                        "comentario": comentario_para_salvar_160
+                    }
+
+                    # Regra de Dependência: Se selecionado "Não", limpa e marca o filho 16.1 com "XYZ"
+                    if "Não" in val_para_salvar_160:
+                        comentario_161 = res_data.get("16.1", {}).get("comentario", "") if isinstance(res_data.get("16.1"), dict) else ""
+                        save_resp("16.1", "XYZ", 0.0, "", comentario_161)
+                        res_data["16.1"] = {
+                            "valor": "XYZ",
+                            "pontos": 0.0,
+                            "link": "",
+                            "comentario": comentario_161
+                        }
+                        # Sincroniza a chave do session_state do quesito filho se existir
+                        if f"q161_{ano_sel}" in st.session_state:
+                            st.session_state[f"q161_{ano_sel}"] = "XYZ"
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_160 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_160_salva or "")]
+
+                    if lnk_val_160 != evidencia_160_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_16_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 16.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Estado
+                pts_atuais_160 = d160.get("pontos", 0.0)
+
+                if val_salvo_160 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 16.0 (0.0 pontos)</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_160 = "#28a745" if pts_atuais_160 > 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_160}; font-weight:bold;'>"
+                        f"✅ Status: Opção '{val_salvo_160}' salva com sucesso (Impacto: {pts_atuais_160:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 16.0
+        if st.session_state.get(f"gatilho_modal_16_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = False
