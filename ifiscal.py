@@ -10,15 +10,18 @@ from io import BytesIO
 import plotly.express as px
 import plotly.graph_objects as go
 import psycopg2
+import streamlit as st
 from plotly.subplots import make_subplots
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
-import streamlit as st
 
-# Imports de componentes ReportLab para relatórios em PDF do iFiscal
+# =============================================================================
+# IMPORTS DO REPORTLAB (CORRIGIDOS COM ALINHAMENTOS ENUMS)
+# =============================================================================
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.shapes import Drawing, String
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT  # <-- Adicionado para alinhar células e textos
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import (
@@ -29,6 +32,36 @@ from reportlab.platypus import (
     Spacer,
     Table,
     TableStyle,
+)
+
+# =============================================================================
+# CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (iFiscal)
+# =============================================================================
+styles = getSampleStyleSheet()
+
+# Estilos de Tabela para Células (Centralizados, Esquerda, Direita)
+style_tabela_centro = ParagraphStyle(
+    "TabelaCentro",
+    parent=styles["Normal"],
+    alignment=TA_CENTER,
+    fontSize=9,
+    leading=11,
+)
+
+style_tabela_esquerda = ParagraphStyle(
+    "TabelaEsquerda",
+    parent=styles["Normal"],
+    alignment=TA_LEFT,
+    fontSize=9,
+    leading=11,
+)
+
+style_tabela_direita = ParagraphStyle(
+    "TabelaDireita",
+    parent=styles["Normal"],
+    alignment=TA_RIGHT,
+    fontSize=9,
+    leading=11,
 )
 
 # -----------------------------------------------------------------------------
