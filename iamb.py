@@ -122,14 +122,24 @@ def modal_aviso_link(qid, links_encontrados):
     """)
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
         st.rerun()
+import streamlit as st
+import json
+import logging
+import re
+from datetime import datetime
+from psycopg2.extras import RealDictCursor
 
 # =============================================================================
 # 1. GESTÃO DE ESTADO E PERSISTÊNCIA (SESSION STATE + NEON POSTGRES)
 # =============================================================================
 
 def get_ano_atual() -> int:
-    """Recupera o ano de referência ativo para o iAMB."""
-    return int(st.session_state.get("ano_referencia_iamb") or st.session_state.get("ano_referencia_global") or 2026)
+    """Recupera o ano de referência ativo para o iFiscal."""
+    return int(
+        st.session_state.get("ano_referencia_ifiscal")
+        or st.session_state.get("ano_referencia_global")
+        or 2026
+    )
 
 
 def load_respostas(ano: int = None) -> dict:
@@ -137,7 +147,7 @@ def load_respostas(ano: int = None) -> dict:
     if ano is None:
         ano = get_ano_atual()
     
-    key_ano = f"respostas_iamb_{ano}"
+    key_ano = f"respostas_ifiscal_{ano}"
     
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
@@ -146,7 +156,7 @@ def load_respostas(ano: int = None) -> dict:
             with get_connection() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(
-                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_iamb WHERE ano = %s",
+                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_ifiscal WHERE ano = %s",
                         (int(ano),)
                     )
                     rows = cursor.fetchall()
@@ -167,15 +177,15 @@ def load_respostas(ano: int = None) -> dict:
                             "detalhes": detalhes
                         }
         except Exception as e:
-            logging.error(f"Erro ao carregar respostas do banco iAMB: {e}")
+            logging.error(f"Erro ao carregar respostas do banco iFiscal: {e}")
 
     return st.session_state[key_ano]
 
 
 def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
-    """Salva/Atualiza respostas no st.session_state e sincroniza com a tabela respostas_iamb no Neon."""
+    """Salva/Atualiza respostas no st.session_state e sincroniza com a tabela respostas_ifiscal no Neon."""
     ano_int = get_ano_atual()
-    key_ano = f"respostas_iamb_{ano_int}"
+    key_ano = f"respostas_ifiscal_{ano_int}"
     
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
@@ -207,12 +217,12 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
     }
     st.session_state[key_ano][str(qid)] = dados_salvar
 
-    # 2. Persiste no banco de dados Neon (UPSERT nas colunas exatas da tabela respostas_iamb)
+    # 2. Persiste no banco de dados Neon (UPSERT nas colunas exatas da tabela respostas_ifiscal)
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas_iamb (ano, quesito, resposta, pontos, detalhes, atualizado_em)
+                    INSERT INTO respostas_ifiscal (ano, quesito, resposta, pontos, detalhes, atualizado_em)
                     VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (ano, quesito) 
                     DO UPDATE SET 
@@ -230,7 +240,7 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
             conn.commit()
             return True
     except Exception as e:
-        logging.error(f"Erro ao salvar resposta do iAMB no banco Neon: {e}")
+        logging.error(f"Erro ao salvar resposta do iFiscal no banco Neon: {e}")
         st.error(f"Erro ao salvar no banco Neon: {e}")
         return False
 
@@ -411,13 +421,13 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 st.rerun()
 
 # =============================================================================
-# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (iAMB)
+# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (iFiscal)
 # =============================================================================
 
 def get_all_years_data():
-    """Varre a sessão procurando por chaves do tipo respostas_iamb_<ano>."""
+    """Varre a sessão procurando por chaves do tipo respostas_ifiscal_<ano>."""
     all_data = {}
-    prefixo = "respostas_iamb_"
+    prefixo = "respostas_ifiscal_"
     
     for key in list(st.session_state.keys()):
         if key.startswith(prefixo):
@@ -431,7 +441,7 @@ def get_all_years_data():
 
 
 def analyze_performance(res_data):
-    """Mapeia os pontos fortes e fragilidades do ano atual no iAMB usando PONTUACOES_MAX_IAMB."""
+    """Mapeia os pontos fortes e fragilidades do ano atual no iFiscal usando PONTUACOES_MAX_IFISCAL."""
     pontos_fortes = []
     criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
     criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
@@ -446,11 +456,11 @@ def analyze_performance(res_data):
             return "Baixa"
 
     for qid, info in res_data.items():
-        if qid.startswith("COM_") or qid not in PONTUACOES_MAX_IAMB:
+        if qid.startswith("COM_") or qid not in PONTUACOES_MAX_IFISCAL:
             continue
 
         pontos_atuais = float(info.get("pontos", 0.0))
-        max_pontos = PONTUACOES_MAX_IAMB[qid]
+        max_pontos = PONTUACOES_MAX_IFISCAL[qid]
 
         if pontos_atuais == max_pontos:
             pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
