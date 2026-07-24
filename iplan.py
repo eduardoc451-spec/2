@@ -5447,3 +5447,135 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("9.1", st.session_state.get(f"links_pendentes_9_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 9.2 • ETAPAS DE GERENCIAMENTO DA ARF (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_etapas_riscos_9_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 9.2 - Etapas para Gerenciamento de Riscos Fiscais ({ano_sel})", expanded=True):
+                st.subheader("9.2 • Etapas de Gerenciamento da ARF")
+                st.write("**9.2 Assinale as etapas para gerenciamento dos riscos contidas no Anexo de Riscos Fiscais:**")
+                st.caption("ℹ *Selecione as etapas aplicáveis, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 9.2'.*")
+
+                etapas_risco_92 = {
+                    "Identificação do tipo de risco e da exposição ao risco – 0,5": 0.5,
+                    "Mensuração ou quantificação dessa exposição – 0,5": 0.5,
+                    "Estimativa do grau de tolerância das contas públicas ao comportamento frente ao risco – 0,5": 0.5,
+                    "Decisão estratégica sobre as opções para enfrentar o risco – 0,5": 0.5,
+                    "Implementação de condutas de mitigação do risco e de mecanismos de controle para prevenir perdas decorrentes do risco – 0,5": 0.5,
+                    "Monitoramento contínuo da exposição ao longo do tempo, preferencialmente através de sistemas institucionalizados (Controle Interno) – 01": 1.0
+                }
+
+                # Resgate seguro dos dados de 9.2
+                d92 = res_data.get("9.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d92 is None:
+                    d92 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                try:
+                    lista_salva_92 = ast.literal_eval(d92.get("valor", "[]"))
+                    if not isinstance(lista_salva_92, list):
+                        lista_salva_92 = []
+                except Exception:
+                    lista_salva_92 = []
+
+                evidencia_92_salva = d92.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_link_92 = f"t_9_2_{ano_sel}"
+                chave_coment_92 = f"coment_9.2_{ano_sel}"
+
+                c92_1, c92_2 = st.columns([1, 1])
+
+                with c92_1:
+                    st.write("**Selecione as etapas presentes:**")
+                    estados_checkboxes_92 = {}
+                    for idx, (item, pt) in enumerate(etapas_risco_92.items()):
+                        key_chk = f"chk_92_{idx}_{ano_sel}"
+                        estados_checkboxes_92[item] = st.checkbox(
+                            item,
+                            value=item in lista_salva_92,
+                            key=key_chk
+                        )
+
+                with c92_2:
+                    link_evidencia_92 = st.text_area(
+                        "Link/Evidência (9.2):",
+                        value=evidencia_92_salva,
+                        key=chave_link_92,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 9.2...",
+                        height=220
+                    )
+                    placeholder_links_92 = st.empty()
+                    links_92_visuais = re.findall(REGEX_PURE_URL, link_evidencia_92 or "")
+                    if links_92_visuais:
+                        placeholder_links_92.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_92_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 9.2
+                bloco_comentarios("9.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 9.2
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 9.2", key=f"btn_salvar_9_2_{ano_sel}", type="primary"):
+                    sel_atual_92 = []
+                    pts_calculados_92 = 0.0
+
+                    for item, pt in etapas_risco_92.items():
+                        if estados_checkboxes_92.get(item, False):
+                            sel_atual_92.append(item)
+                            pts_calculados_92 += pt
+
+                    lnk_val_92 = link_evidencia_92.strip()
+                    comentario_para_salvar_92 = st.session_state.get(chave_coment_92, d92.get("comentario", ""))
+
+                    save_resp(
+                        qid="9.2",
+                        valor=str(sel_atual_92),
+                        pontos=float(pts_calculados_92),
+                        link=lnk_val_92,
+                        comentario=comentario_para_salvar_92
+                    )
+                    res_data["9.2"] = {
+                        "valor": str(sel_atual_92),
+                        "pontos": float(pts_calculados_92),
+                        "link": lnk_val_92,
+                        "comentario": comentario_para_salvar_92
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_92 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_92_salva or "")]
+
+                    if lnk_val_92 != evidencia_92_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 9.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                pts_atuais_92 = d92.get("pontos", 0.0)
+                try:
+                    lista_verif_92 = ast.literal_eval(d92.get("valor", "[]"))
+                except Exception:
+                    lista_verif_92 = []
+
+                if not lista_verif_92:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma etapa selecionada no Quesito 9.2</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: {len(lista_verif_92)} etapa(s) salva(s) (Pontuação: {pts_atuais_92:.2f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 9.2
+        if st.session_state.get(f"gatilho_modal_9_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = False
