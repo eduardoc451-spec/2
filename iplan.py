@@ -7096,3 +7096,120 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.2", st.session_state.get(f"links_pendentes_13_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 13.3 • RETROALIMENTAÇÃO DO REPLANEJAMENTO (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_retroalimentacao_13_3_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.3 - Retroalimentação do Replanejamento Orçamentário ({ano_sel})", expanded=True):
+                st.subheader("13.3 • Retroalimentação para o Replanejamento")
+                st.write("**O acompanhamento e avaliação da execução orçamentária serve de retroalimentação para o replanejamento dos programas e metas das peças orçamentárias?**")
+                st.caption("ℹ *Selecione a opção desejada, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 13.3'.*")
+
+                opcoes_133 = {
+                    "Selecione...": 0.0,
+                    "Sim, com emissão de relatórios e ciência do prefeito – 20": 20.0,
+                    "Sim, com emissão de relatório e sem ciência do prefeito – 10": 10.0,
+                    "Sim, sem emissão de relatório e sem ciência do prefeito – 05": 5.0,
+                    "Não – 00": 0.0
+                }
+
+                # Resgate seguro dos dados do 13.3
+                d133 = res_data.get("13.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d133 is None:
+                    d133 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_133 = d133.get("valor", "Selecione...")
+                evidencia_133_salva = d133.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_133 = f"r_133_{ano_sel}"
+                chave_link_133 = f"t_133_{ano_sel}"
+                chave_coment_133 = f"coment_13.3_{ano_sel}"
+
+                c133_1, c133_2 = st.columns([1, 1])
+
+                with c133_1:
+                    lista_opcoes_133 = list(opcoes_133.keys())
+                    idx133 = lista_opcoes_133.index(val_salvo_133) if val_salvo_133 in lista_opcoes_133 else 0
+
+                    sel_radio_133 = st.radio(
+                        "Selecione 13.3:",
+                        options=lista_opcoes_133,
+                        index=idx133,
+                        key=chave_radio_133,
+                        label_visibility="collapsed"
+                    )
+
+                with c133_2:
+                    link_evidencia_133 = st.text_area(
+                        "Link/Evidência (13.3):",
+                        value=evidencia_133_salva,
+                        key=chave_link_133,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 13.3...",
+                        height=120
+                    )
+                    placeholder_links_133 = st.empty()
+                    links_133_visuais = re.findall(REGEX_PURE_URL, link_evidencia_133 or "")
+                    if links_133_visuais:
+                        placeholder_links_133.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_133_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 13.3
+                bloco_comentarios("13.3", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 13.3
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 13.3", key=f"btn_salvar_13_3_{ano_sel}", type="primary"):
+                    pts133_salvar = opcoes_133.get(sel_radio_133, 0.0)
+                    lnk_val_133 = link_evidencia_133.strip()
+                    comentario_para_salvar_133 = st.session_state.get(chave_coment_133, d133.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="13.3",
+                        valor=sel_radio_133,
+                        pontos=float(pts133_salvar),
+                        link=lnk_val_133,
+                        comentario=comentario_para_salvar_133
+                    )
+                    res_data["13.3"] = {
+                        "valor": sel_radio_133,
+                        "pontos": float(pts133_salvar),
+                        "link": lnk_val_133,
+                        "comentario": comentario_para_salvar_133
+                    }
+
+                    # Detecção de novos links para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_133 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_133_salva or "")]
+
+                    if lnk_val_133 != evidencia_133_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 13.3 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto da Pontuação
+                pts_atuais_133 = d133.get("pontos", 0.0)
+
+                if val_salvo_133 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 13.3</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção salva com sucesso (Impacto: {pts_atuais_133:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 13.3
+        if st.session_state.get(f"gatilho_modal_13_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.3", st.session_state.get(f"links_pendentes_13_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_3_{ano_sel}"] = False
