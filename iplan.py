@@ -2212,5 +2212,127 @@ def mostrar_formulario_plan():
                 modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
 
+        # -----------------------------------------------------------------------------
+        # QUESTÃO 2.0 - REALIZAÇÃO DA CONSULTA (PADRÃO REFINADO iPLAN)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_i_plan_2_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Questão 2.0 • Consulta Pública Online ({ano_sel})", expanded=True):
+                st.subheader("2.0 • Consulta Pública (I-PLAN)")
+                st.write("**Houve a realização de consulta pública online para coleta de sugestões para a elaboração do PPA 2026-2029?**")
+                st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 2.0'.*")
+
+                opcoes20 = {"Selecione...": 0.0, "Sim": 6.0, "Não": 0.0}
+
+                # Resgate seguro de dados salvos
+                d20 = res_data.get("2.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_20 = str(d20.get("valor", "Selecione..."))
+                if "Sim" in val_salvo_20:
+                    val_salvo_20 = "Sim"
+                elif "Não" in val_salvo_20:
+                    val_salvo_20 = "Não"
+                if val_salvo_20 not in opcoes20:
+                    val_salvo_20 = "Selecione..."
+
+                evidencia_20_salva = d20.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_20 = f"r_iplan_2_0_{ano_sel}"
+                chave_link_20 = f"txt_i_plan_20_{ano_sel}"
+                chave_coment_20 = f"coment_2.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_20 = list(opcoes20.keys())
+                    idx20 = lista_opcoes_20.index(val_salvo_20)
+                    
+                    val_selecionado_20 = st.radio(
+                        "Selecione 2.0:",
+                        options=lista_opcoes_20,
+                        index=idx20,
+                        key=chave_radio_20,
+                        label_visibility="collapsed"
+                    )
+                    pts_previstos_20 = opcoes20[val_selecionado_20]
+
+                with col2:
+                    link_evidencia_20 = st.text_area(
+                        "Link/Evidência (2.0):",
+                        value=evidencia_20_salva,
+                        key=chave_link_20,
+                        placeholder="Insira os links e documentos comprobatórios da consulta pública...",
+                        height=130
+                    )
+                    placeholder_links_20 = st.empty()
+                    links_2_0_visuais = re.findall(REGEX_PURE_URL, link_evidencia_20 or "")
+                    if links_2_0_visuais:
+                        placeholder_links_20.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_2_0_visuais]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários padronizado
+                bloco_comentarios("2.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 2.0", key=f"btn_salvar_iplan_2_0_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_20.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_20, d20.get("comentario", ""))
+
+                    # Salva no banco de dados
+                    save_resp(
+                        qid="2.0",
+                        valor=val_selecionado_20,
+                        pontos=pts_previstos_20,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["2.0"] = {
+                        "valor": val_selecionado_20,
+                        "pontos": pts_previstos_20,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_20_salva or "")]
+
+                    if lnk_val != evidencia_20_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_2_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 2.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_20 = d20.get("pontos", 0.0)
+                val_atual_20 = d20.get("valor", "Selecione...")
+
+                if val_atual_20 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_20 = "#28a745" if pts_atuais_20 > 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_20}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 2.0: {pts_atuais_20:.1f} / 6.0 pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL 2.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_2_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
+
 
 
