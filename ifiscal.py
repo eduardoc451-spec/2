@@ -39,31 +39,56 @@ from reportlab.platypus import (
 # =============================================================================
 styles = getSampleStyleSheet()
 
-# Estilos de Tabela para Células (Centralizados, Esquerda, Direita)
+# Estilo Padrão para Tabelas (Evita NameError: style_tabela_padrao)
+style_tabela_padrao = ParagraphStyle(
+    "TabelaPadrao",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_LEFT,
+)
+
+# Estilo Centralizado
 style_tabela_centro = ParagraphStyle(
     "TabelaCentro",
     parent=styles["Normal"],
-    alignment=TA_CENTER,
+    fontName="Helvetica",
     fontSize=9,
     leading=11,
+    alignment=TA_CENTER,
 )
 
+# Estilo Alinhado à Esquerda
 style_tabela_esquerda = ParagraphStyle(
     "TabelaEsquerda",
     parent=styles["Normal"],
-    alignment=TA_LEFT,
+    fontName="Helvetica",
     fontSize=9,
     leading=11,
+    alignment=TA_LEFT,
 )
 
+# Estilo Alinhado à Direita
 style_tabela_direita = ParagraphStyle(
     "TabelaDireita",
     parent=styles["Normal"],
-    alignment=TA_RIGHT,
+    fontName="Helvetica",
     fontSize=9,
     leading=11,
+    alignment=TA_RIGHT,
 )
 
+# Estilo para Cabeçalhos de Tabela
+style_tabela_cabecalho = ParagraphStyle(
+    "TabelaCabecalho",
+    parent=styles["Normal"],
+    fontName="Helvetica-Bold",
+    fontSize=9,
+    leading=11,
+    alignment=TA_CENTER,
+    textColor=colors.whitesmoke,
+)
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÕES DE AMBIENTE E BANCO DE DADOS NEON
 # -----------------------------------------------------------------------------
