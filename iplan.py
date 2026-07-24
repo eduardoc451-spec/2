@@ -10466,3 +10466,106 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 16.1 • PÁGINA ELETRÔNICA DA CARTA DE SERVIÇOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_pagina_carta_16_1_final_{ano_sel}", border=True):
+            with st.expander("🗂 Quesito 16.1 - Página Eletrônica de Divulgação da Carta", expanded=True):
+                st.subheader("16.1 • Página Eletrônica da Carta de Serviços")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação da \"Carta de Serviço ao Usuário\":**")
+                st.warning("⚠️ *Se não estiver disponível, insira exatamente o texto **XYZ**.*")
+
+                # Recuperação dos dados salvos no banco de dados
+                d161 = res_data.get("16.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_161 = d161.get("valor", "")
+                pts_salvos_161 = float(d161.get("pontos", 0.0))
+
+                # Definindo chaves do Streamlit Session State
+                chave_texto_161 = f"q161_{ano_sel}"
+                chave_coment_161 = f"coment_16.1_{ano_sel}"
+
+                c161_1, c161_2 = st.columns([1, 1])
+
+                with c161_1:
+                    v161 = st.text_input(
+                        "Página eletrônica (Link ou XYZ):",
+                        value=v_salvo_161,
+                        key=chave_texto_161,
+                        placeholder="https://... ou XYZ"
+                    )
+
+                    # Exibição da métrica do Quesito 16.1
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value=f"{pts_salvos_161:.1f} pts",
+                        delta="2.0 pts aplicáveis" if pts_salvos_161 > 0 else None
+                    )
+
+                with c161_2:
+                    placeholder_links_161 = st.empty()
+                    links_161_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v161 or "")]
+                    if links_161_visuais:
+                        placeholder_links_161.markdown(
+                            "**🔗 Links Ativos Detectados:** " + " | ".join([f"[{u}]({u})" for u in links_161_visuais])
+                        )
+                    else:
+                        placeholder_links_161.markdown("*Nenhum link ativo detectado no campo ou definido como XYZ.*")
+
+                # Renderiza o bloco de comentários do Quesito 16.1
+                bloco_comentarios("16.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_txt_161 = "#28a745" if pts_salvos_161 > 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_161}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 16.1: {pts_salvos_161:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 16.1", key=f"btn_salvar_16_1_{ano_sel}", type="primary"):
+                    val_161 = v161.strip()
+                    
+                    # Regra de pontuação: 2.0 pontos se preenchido e diferente de 'XYZ'
+                    pts_calculados_161 = 2.0 if val_161 and val_161.upper() != "XYZ" else 0.0
+                    
+                    # Evidência/link assume o próprio valor inserido se for uma URL válida
+                    link_161 = val_161 if re.findall(REGEX_PURE_URL, val_161) else ""
+                    comentario_para_salvar = st.session_state.get(chave_coment_161, d161.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="16.1",
+                        valor=val_161,
+                        pontos=float(pts_calculados_161),
+                        link=link_161,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário em memória
+                    res_data["16.1"] = {
+                        "valor": val_161,
+                        "pontos": float(pts_calculados_161),
+                        "link": link_161,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, val_161 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_161 or "")]
+
+                    if val_161 != v_salvo_161 and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_16_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_16_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Página Eletrônica do Quesito 16.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 16.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_16_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.1", st.session_state.get(f"links_pendentes_16_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_16_1_{ano_sel}"] = False
