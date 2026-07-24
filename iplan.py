@@ -9468,3 +9468,109 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.0", st.session_state.get(f"links_pendentes_15_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO TEXTO 15.1 • INSTRUMENTO NORMATIVO DE CRIAÇÃO (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_norma_ouvidoria_15_1_final_{ano_sel}", border=True):
+            with st.expander(f"🗂 Quesito 15.1 - Instrumento Normativo de Criação ({ano_sel})", expanded=True):
+                st.subheader("15.1 • Instrumento Normativo")
+                st.write(f"**Informe o instrumento normativo de criação da ouvidoria pública, número e data da publicação em {ano_sel}:**")
+                st.info("ℹ️ *Caso não esteja disponível na internet, recomendamos anexar o Instrumento Normativo no Sistema de Questionários.*")
+
+                # Resgate seguro dos dados do 15.1
+                d151 = res_data.get("15.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                if d151 is None or not isinstance(d151, dict):
+                    d151 = {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_151 = d151.get("valor", "")
+                evidencia_151_salva = d151.get("link", "")
+
+                # Chaves estáticas e limpas
+                chave_input_151 = f"q151_{ano_sel}"
+                chave_link_151 = f"l151_{ano_sel}"
+                chave_coment_151 = f"coment_15.1_{ano_sel}"
+
+                c151_1, c151_2 = st.columns([1, 1])
+
+                with c151_1:
+                    v_input_151 = st.text_input(
+                        "Instrumento, número e data:",
+                        value=val_salvo_151,
+                        key=chave_input_151,
+                        placeholder="Ex: Lei Municipal nº 1.234, de 10/05/2020"
+                    )
+
+                with c151_2:
+                    link_151 = st.text_area(
+                        "Link/Evidência (15.1):",
+                        value=evidencia_151_salva,
+                        key=chave_link_151,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 15.1...",
+                        height=100
+                    )
+                    placeholder_links_151 = st.empty()
+                    links_151_visuais = re.findall(REGEX_PURE_URL, link_151 or "")
+                    if links_151_visuais:
+                        placeholder_links_151.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_151_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 15.1
+                bloco_comentarios("15.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 15.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 15.1", key=f"btn_salvar_15_1_{ano_sel}", type="primary"):
+                    val_para_salvar_151 = v_input_151.strip()
+                    pts_calc_151 = 0.0
+                    lnk_val_151 = link_151.strip()
+                    comentario_para_salvar_151 = st.session_state.get(chave_coment_151, d151.get("comentario", ""))
+
+                    # Persistência no banco de dados e sessão
+                    save_resp(
+                        qid="15.1",
+                        valor=val_para_salvar_151,
+                        pontos=pts_calc_151,
+                        link=lnk_val_151,
+                        comentario=comentario_para_salvar_151
+                    )
+                    res_data["15.1"] = {
+                        "valor": val_para_salvar_151,
+                        "pontos": pts_calc_151,
+                        "link": lnk_val_151,
+                        "comentario": comentario_para_salvar_151
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_151 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_151_salva or "")]
+
+                    if lnk_val_151 != evidencia_151_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 15.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição da Informação do Quesito
+                pts_atuais_151 = d151.get("pontos", 0.0)
+
+                if not v_input_151.strip():
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma informação preenchida no Quesito 15.1 (0.0 pontos)</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Informação salva com sucesso (Impacto: {pts_atuais_151:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 15.1
+        if st.session_state.get(f"gatilho_modal_15_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.1", st.session_state.get(f"links_pendentes_15_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_1_{ano_sel}"] = False
