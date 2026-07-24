@@ -1,49 +1,122 @@
-import warnings
-# Filtra qualquer aviso que mencione o parâmetro antigo do Streamlit
-warnings.filterwarnings("ignore", message=".*use_container_width.*")
-warnings.filterwarnings("ignore", category=UserWarning)
-
-import streamlit as st
-import re
-import sqlite3
 import json
-import ast
+import logging
+import os
+import re
+import sys
+import warnings
+from datetime import date, datetime
 from io import BytesIO
-from datetime import datetime, date
 
-# Bibliotecas para o PDF (Requer: pip install reportlab)
-from reportlab.lib import colors as rl_colors  # Ajustado para casar com o rl_colors do seu código
-from reportlab.lib import colors  # Mantido caso use 'colors.white' em outro ponto
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
-from reportlab.graphics.shapes import Drawing, String
-from reportlab.graphics.charts.barcharts import VerticalBarChart
-from reportlab.lib.pagesizes import A4
-
-# Bibliotecas para os Gráficos (Requer: pip install plotly)
-import plotly.graph_objects as go
 import plotly.express as px
+import plotly.graph_objects as go
+import psycopg2
 from plotly.subplots import make_subplots
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+
+# Imports de componentes ReportLab para relatórios em PDF do iPLAN
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+# -----------------------------------------------------------------------------
+# CONFIGURAÇÕES DE AMBIENTE E BANCO DE DADOS NEON
+# -----------------------------------------------------------------------------
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
+os.environ["PYTHONWARNINGS"] = "ignore"
+logging.getLogger("streamlit").setLevel(logging.ERROR)
+
+
+def get_connection():
+    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
+    return psycopg2.connect(st.secrets["DATABASE_URL"])
+
+
+def init_db_iplan():
+    """Cria a tabela respostas_iplan para o Módulo de Planejamento Urbano."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS respostas_iplan (
+                        id SERIAL PRIMARY KEY,
+                        ano INT NOT NULL,
+                        quesito VARCHAR(50) NOT NULL,
+                        resposta TEXT,
+                        pontos DOUBLE PRECISION DEFAULT 0.0,
+                        detalhes JSONB DEFAULT '{}'::jsonb,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT unq_ano_quesito_iplan UNIQUE(ano, quesito)
+                    );
+                """)
+            conn.commit()
+    except Exception as e:
+        logging.error(f"Erro ao inicializar banco iPLAN: {e}")
+
+
+# Inicializa a tabela no carregamento do módulo
+try:
+    init_db_iplan()
+except Exception as e:
+    logging.error(f"Erro no auto-init do iPLAN: {e}")
 
 # =============================================================================
-# CONSTANTES GLOBAIS
+# REGEX DE VALIDAÇÃO
+# =============================================================================
+REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
+
+# =============================================================================
+# CONSTANTES GLOBAIS - IPLAN (PLANEJAMENTO URBANO E TERRITORIAL)
 # =============================================================================
 
-CATEGORIAS_MAP = {
-    "planejamento": {"label": "Planejamento e Orçamento", "qids": ["1.0", "1.1", "1.2", "1.3", "1.3.1", "1.4", "2.0", "2.1", "3.0", "3.1", "3.1.1", "3.2", "4.0", "4.1", "4.1.1", "4.1.1.1", "4.1.1.1.1", "4.1.1.2", "4.1.1.2.1", "4.2", "4.3"]},
-    "receita":       {"label": "Receita e LDO", "qids": ["5.0", "5.1", "5.1.1", "5.2", "6.0", "7.0", "7.1", "8.0", "8.1", "8.2", "9.0", "9.1", "9.2"]},
-    "compatibilidade": {"label": "Compatibilidade e Créditos", "qids": ["10.0", "11.0", "11.1"]},
-    "estrutura":     {"label": "Estrutura e Acompanhamento", "qids": ["12.0", "12.1", "12.1.1", "12.1.2", "13.0", "13.1", "13.1.1", "13.1.1.1", "13.2", "13.3"]},
-    "controle":      {"label": "Controle Interno", "qids": ["14.0", "14.1", "14.2", "14.3", "14.4", "14.4.1", "14.4.2", "14.4.3", "14.4.4", "14.4.4.1", "14.4.4.2", "14.4.4.2.1", "14.4.5", "14.4.5.1", "14.4.5.1.1", "14.5", "14.5.1"]},
-    "ouvidoria":     {"label": "Ouvidoria e Transparência", "qids": ["15.0", "15.1", "15.2", "15.3", "15.4", "15.4.1", "15.4.2", "15.5", "16.0", "16.1", "16.2", "16.3", "16.3.1", "16.3.2", "17.0", "17.1", "17.2"]},
-    "plano_diretor": {"label": "Plano Diretor", "qids": ["18.0", "18.1", "19.0"]},
+CATEGORIAS_MAP_IPLAN = {
+    "plano_diretor": {
+        "label": "Plano Diretor e Legislação Correlata", 
+        "qids": ["1.0", "1.1", "1.2", "1.3", "1.4", "2.0", "2.1", "2.2"]
+    },
+    "uso_solo": {
+        "label": "Uso, Ocupação e Parcelamento do Solo", 
+        "qids": ["3.0", "3.1", "3.2", "3.3", "4.0", "4.1", "4.2"]
+    },
+    "habitacao": {
+        "label": "Habitação de Interesse Social e Regularização Fundiária", 
+        "qids": ["5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
+    },
+    "mobilidade": {
+        "label": "Mobilidade e Acessibilidade Urbana", 
+        "qids": ["7.0", "7.1", "7.2", "8.0", "8.1", "8.2", "8.3"]
+    },
+    "gestao_territorial": {
+        "label": "Sistema de Informações e Gestão Territorial", 
+        "qids": ["9.0", "9.1", "9.2", "10.0", "10.1", "10.2"]
+    },
+    "participacao_transparencia": {
+        "label": "Gestão Democrática e Participação Social", 
+        "qids": ["11.0", "11.1", "11.2", "12.0", "12.1"]
+    }
 }
 
-PONTUACOES_MAX = {
-    "1.1": 3, "1.2": 2, "1.3.1": 3, "1.4": 4, "2.0": 6, "2.1": 2, "3.1": 14, "3.2": 10, "4.0": 10, "4.1": 15, "4.1.1": 10, "4.1.1.1": 7, "4.1.1.1.1": 60, "4.1.1.2": 4, "4.2": 25, "4.3": 15,
-    "5.0": 6, "5.1": 4, "5.1.1": 2, "5.2": 6, "6.0": 3, "8.2": 3.5, "9.2": 3.5, "10.0": 17, "11.1": 6, "13.1": 6, "13.1.1": 3, "13.1.1.1": 2, "13.2": 4, "13.3": 20,
-    "14.3": 15, "14.4": 0.5, "14.4.1": 5, "14.4.2": 6, "14.4.3": 5, "14.4.4": 6, "14.4.5": 5, "14.4.5.1": 6, "14.5.1": 5,
-    "16.0": 4, "16.1": 2, "16.2": 2, "16.3": 4, "17.0": 4
+PONTUACOES_MAX_IPLAN = {
+    "1.1": 10.0, "1.2": 15.0, "1.3": 10.0, "1.4": 5.0, "2.0": 10.0, "2.1": 10.0, "2.2": 10.0,
+    "3.1": 15.0, "3.2": 10.0, "3.3": 5.0, "4.1": 10.0, "4.2": 10.0,
+    "5.1": 20.0, "5.2": 15.0, "5.3": 15.0, "6.1": 10.0,
+    "7.1": 15.0, "7.2": 10.0, "8.1": 10.0, "8.2": 10.0, "8.3": 5.0,
+    "9.1": 15.0, "9.2": 10.0, "10.1": 10.0, "10.2": 10.0,
+    "11.1": 10.0, "11.2": 10.0, "12.1": 10.0
 }
 
 # =============================================================================
@@ -63,7 +136,6 @@ def modal_aviso_link(qid, links_encontrados):
     """)
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
         st.rerun()
-
 # =============================================================================
 # 1. FUNÇÕES DE APOIO E BANCO DE DADOS (IEGM - I-PLAN)
 # =============================================================================
