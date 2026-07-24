@@ -5849,3 +5849,147 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 11.1 • PERCENTUAL DE CRÉDITO SUPLEMENTAR (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_suplementar_11_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 11.1 - Percentual Autorizado para Crédito Adicional Suplementar ({ano_sel})", expanded=True):
+                st.subheader("11.1 • Percentual de Crédito Suplementar")
+                st.write("**Qual o percentual autorizado na Lei Orçamentária Anual (LOA) para abertura de crédito adicional suplementar?**")
+                st.caption("ℹ *Informe os percentuais, links comprobatórios e comentários, e clique em 'Salvar Questão 11.1'.*")
+
+                # Resgate seguro dos dados do 11.1
+                d111 = res_data.get("11.1") or {"valor": "0.0|0.0", "pontos": 0.0, "link": "", "comentario": ""}
+                if d111 is None:
+                    d111 = {"valor": "0.0|0.0", "pontos": 0.0, "link": "", "comentario": ""}
+
+                try:
+                    string_valores = d111.get("valor", "0.0|0.0")
+                    if "|" not in string_valores:
+                        string_valores = f"{string_valores}|0.0"
+                    v_loa_salvo, v_inf_salvo = string_valores.split("|")
+                    val_loa_inicial = float(v_loa_salvo)
+                    val_inf_inicial = float(v_inf_salvo)
+                except Exception:
+                    val_loa_inicial = 0.0
+                    val_inf_inicial = 0.0
+
+                evidencia_111_salva = d111.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_num_loa = f"q111_loa_{ano_sel}"
+                chave_num_inf = f"q111_inf_{ano_sel}"
+                chave_link_111 = f"t_11_1_{ano_sel}"
+                chave_coment_111 = f"coment_11.1_{ano_sel}"
+
+                c111_1, c111_2 = st.columns([1, 1])
+
+                with c111_1:
+                    val_loa_input = st.number_input(
+                        "Percentual autorizado na LOA (%):",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=val_loa_inicial,
+                        step=0.01,
+                        format="%.2f",
+                        key=chave_num_loa
+                    )
+                    val_inf_input = st.number_input(
+                        "Informe a inflação oficial do período (%):",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=val_inf_inicial,
+                        step=0.01,
+                        format="%.2f",
+                        key=chave_num_inf
+                    )
+
+                with c111_2:
+                    link_evidencia_111 = st.text_area(
+                        "Link/Evidência (11.1):",
+                        value=evidencia_111_salva,
+                        key=chave_link_111,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 11.1...",
+                        height=140
+                    )
+                    placeholder_links_111 = st.empty()
+                    links_111_visuais = re.findall(REGEX_PURE_URL, link_evidencia_111 or "")
+                    if links_111_visuais:
+                        placeholder_links_111.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_111_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 11.1
+                bloco_comentarios("11.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 11.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 11.1", key=f"btn_salvar_11_1_{ano_sel}", type="primary"):
+                    v_loa = float(val_loa_input)
+                    v_inf = float(val_inf_input)
+
+                    # Lógica de negócio e pontuação
+                    if v_loa == 0.0 and v_inf == 0.0:
+                        pts_111 = 0.0
+                    else:
+                        pts_111 = 6.0 if v_loa <= v_inf else 0.0
+
+                    valor_composto_111 = f"{v_loa}|{v_inf}"
+                    lnk_val_111 = link_evidencia_111.strip()
+                    comentario_para_salvar_111 = st.session_state.get(chave_coment_111, d111.get("comentario", ""))
+
+                    save_resp(
+                        qid="11.1",
+                        valor=valor_composto_111,
+                        pontos=float(pts_111),
+                        link=lnk_val_111,
+                        comentario=comentario_para_salvar_111
+                    )
+                    res_data["11.1"] = {
+                        "valor": valor_composto_111,
+                        "pontos": float(pts_111),
+                        "link": lnk_val_111,
+                        "comentario": comentario_para_salvar_111
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_111 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_111_salva or "")]
+
+                    if lnk_val_111 != evidencia_111_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 11.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto da Pontuação
+                v111_salvo = val_loa_inicial
+                inf111_salvo = val_inf_inicial
+                pts_salvos_111 = d111.get("pontos", 0.0)
+
+                if v111_salvo == 0.0 and inf111_salvo == 0.0:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento dos campos no Quesito 11.1</span>", unsafe_allow_html=True)
+                elif v111_salvo <= inf111_salvo:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Salvo com Sucesso - Pontuação: {pts_salvos_111:.1f} pontos (% LOA [{v111_salvo:.2f}%] ≤ Inflação [{inf111_salvo:.2f}%])</span>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"❌ Status: Salvo com Sucesso - Pontuação: {pts_salvos_111:.1f} pontos (% LOA [{v111_salvo:.2f}%] > Inflação [{inf111_salvo:.2f}%])</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 11.1
+        if st.session_state.get(f"gatilho_modal_11_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.1", st.session_state.get(f"links_pendentes_11_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = False
