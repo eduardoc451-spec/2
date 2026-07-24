@@ -6981,3 +6981,118 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.1.1.1", st.session_state.get(f"links_pendentes_13_1_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_1_1_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 13.2 • ACOMPANHAMENTO MENSAL (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_acompanhamento_13_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.2 - Acompanhamento Mensal com Participação do Prefeito ({ano_sel})", expanded=True):
+                st.subheader("13.2 • Acompanhamento Mensal")
+                st.write("**Houve acompanhamento mensal da execução orçamentária com participação do Prefeito?**")
+                st.caption("ℹ *Selecione a opção desejada, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 13.2'.*")
+
+                opcoes_132 = {
+                    "Selecione...": 0.0,
+                    "Sim – 04": 4.0,
+                    "Não – 00": 0.0
+                }
+
+                # Resgate seguro dos dados do 13.2
+                d132 = res_data.get("13.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d132 is None:
+                    d132 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_132 = d132.get("valor", "Selecione...")
+                evidencia_132_salva = d132.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_132 = f"r_132_{ano_sel}"
+                chave_link_132 = f"t_132_{ano_sel}"
+                chave_coment_132 = f"coment_13.2_{ano_sel}"
+
+                c132_1, c132_2 = st.columns([1, 1])
+
+                with c132_1:
+                    lista_opcoes_132 = list(opcoes_132.keys())
+                    idx132 = lista_opcoes_132.index(val_salvo_132) if val_salvo_132 in lista_opcoes_132 else 0
+
+                    sel_radio_132 = st.radio(
+                        "Selecione 13.2:",
+                        options=lista_opcoes_132,
+                        index=idx132,
+                        key=chave_radio_132,
+                        label_visibility="collapsed"
+                    )
+
+                with c132_2:
+                    link_evidencia_132 = st.text_area(
+                        "Link/Evidência (13.2):",
+                        value=evidencia_132_salva,
+                        key=chave_link_132,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 13.2...",
+                        height=100
+                    )
+                    placeholder_links_132 = st.empty()
+                    links_132_visuais = re.findall(REGEX_PURE_URL, link_evidencia_132 or "")
+                    if links_132_visuais:
+                        placeholder_links_132.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_132_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 13.2
+                bloco_comentarios("13.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 13.2
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 13.2", key=f"btn_salvar_13_2_{ano_sel}", type="primary"):
+                    pts132_salvar = opcoes_132.get(sel_radio_132, 0.0)
+                    lnk_val_132 = link_evidencia_132.strip()
+                    comentario_para_salvar_132 = st.session_state.get(chave_coment_132, d132.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="13.2",
+                        valor=sel_radio_132,
+                        pontos=float(pts132_salvar),
+                        link=lnk_val_132,
+                        comentario=comentario_para_salvar_132
+                    )
+                    res_data["13.2"] = {
+                        "valor": sel_radio_132,
+                        "pontos": float(pts132_salvar),
+                        "link": lnk_val_132,
+                        "comentario": comentario_para_salvar_132
+                    }
+
+                    # Detecção de novos links para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_132 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_132_salva or "")]
+
+                    if lnk_val_132 != evidencia_132_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 13.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto da Pontuação
+                pts_atuais_132 = d132.get("pontos", 0.0)
+
+                if val_salvo_132 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 13.2</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção salva com sucesso (Impacto: {pts_atuais_132:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 13.2
+        if st.session_state.get(f"gatilho_modal_13_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.2", st.session_state.get(f"links_pendentes_13_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_2_{ano_sel}"] = False
