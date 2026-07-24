@@ -5336,3 +5336,114 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 9.1 • URL DO ANEXO DE RISCOS FISCAIS (TEXT INPUT COM REGRA XYZ)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_url_riscos_9_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 9.1 - Link Eletrônico do Anexo de Riscos Fiscais ({ano_sel})", expanded=True):
+                st.subheader("9.1 • URL do Anexo de Riscos Fiscais")
+                st.write("**9.1 Informe a página eletrônica (link na internet) de divulgação do Anexo de Riscos Fiscais (digite XYZ se não estiver disponível):**")
+                st.caption("ℹ *Insira o link direto ou a sigla 'XYZ'. Preencha os links comprobatórios e comentários, e clique em 'Salvar Questão 9.1'.*")
+
+                # Resgate seguro dos dados de 9.1
+                d91 = res_data.get("9.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_91_salva = d91.get("link", "")
+                v_salvo_91 = d91.get("valor", "")
+
+                # Chaves fixas por componente e ano
+                chave_input_91 = f"inp_91_{ano_sel}"
+                chave_link_91 = f"t_9_1_{ano_sel}"
+                chave_coment_91 = f"coment_9.1_{ano_sel}"
+
+                c91_1, c91_2 = st.columns([1, 1])
+
+                with c91_1:
+                    url_91 = st.text_input(
+                        "Página eletrônica (link):",
+                        value=v_salvo_91,
+                        key=chave_input_91,
+                        placeholder="http://... ou XYZ"
+                    )
+
+                with c91_2:
+                    link_evidencia_91 = st.text_area(
+                        "Link/Evidência (9.1):",
+                        value=evidencia_91_salva,
+                        key=chave_link_91,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 9.1...",
+                        height=100
+                    )
+                    placeholder_links_91 = st.empty()
+                    links_91_visuais = re.findall(REGEX_PURE_URL, link_evidencia_91 or "")
+                    if links_91_visuais:
+                        placeholder_links_91.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_91_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 9.1
+                bloco_comentarios("9.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 9.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 9.1", key=f"btn_salvar_9_1_{ano_sel}", type="primary"):
+                    val_input_91 = st.session_state.get(chave_input_91, "").strip()
+                    lnk_val_91 = link_evidencia_91.strip()
+                    comentario_para_salvar_91 = st.session_state.get(chave_coment_91, d91.get("comentario", ""))
+
+                    # Regra de pontuação: XYZ penaliza em -10.0
+                    pts_91 = -10.0 if val_input_91.upper() == "XYZ" else 0.0
+
+                    save_resp(
+                        qid="9.1",
+                        valor=val_input_91,
+                        pontos=float(pts_91),
+                        link=lnk_val_91,
+                        comentario=comentario_para_salvar_91
+                    )
+                    res_data["9.1"] = {
+                        "valor": val_input_91,
+                        "pontos": float(pts_91),
+                        "link": lnk_val_91,
+                        "comentario": comentario_para_salvar_91
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_91 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_91_salva or "")]
+
+                    if lnk_val_91 != evidencia_91_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 9.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                v91_check = d91.get("valor", "").strip()
+                pts_atuais_91 = d91.get("pontos", 0.0)
+
+                if not v91_check:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento da URL/XYZ no Quesito 9.1</span>", unsafe_allow_html=True)
+                elif v91_check.upper() == "XYZ":
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"❌ Status: Anexo Não Disponível (Penalidade: {pts_atuais_91:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Link do Anexo Salvo (Sem penalidades / Impacto: {pts_atuais_91:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 9.1
+        if st.session_state.get(f"gatilho_modal_9_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.1", st.session_state.get(f"links_pendentes_9_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = False
