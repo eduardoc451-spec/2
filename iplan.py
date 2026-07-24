@@ -5579,3 +5579,151 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 10.0 • COMPATIBILIDADE LOA X PPA X LDO (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_compatibilidade_10_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 10.0 - Itens de Compatibilidade Orçamentária ({ano_sel})", expanded=True):
+                st.subheader("10.0 • Compatibilidade LOA x PPA x LDO")
+                st.write("**10.0 Assinale os itens capazes de atestar a compatibilidade entre a LOA, PPA e LDO:**")
+                st.caption("ℹ *Selecione as opções aplicáveis, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 10.0'.*")
+
+                compatibilidades_100 = {
+                    "Programas constantes do PPA constam na LOA – 01": 1.0,
+                    "Programas e ações constantes da LDO constam da LOA – 02": 2.0,
+                    "As receitas e despesas da LOA são compatíveis com o Resultado Primário da LDO, incluindo, no máximo, a variação da inflação do interregno temporal dos referidos projetos de lei – 02": 2.0,
+                    "O Resultado Nominal constante da LDO consta da LOA, com variação de no máximo a variação da inflação do interregno temporal dos referidos projetos de lei – 02": 2.0,
+                    "A estimativa de renúncia fiscal prevista na LDO coincide com o estimado na LOA com variação limitada à variação da inflação – 02": 2.0,
+                    "A estimativa de receita e respectivos critérios presentes na LOA são compatíveis com os previstos na LDO em relação à receita de IPTU – 02": 2.0,
+                    "A estimativa de receita e respectivos critérios presentes na LOA são compatíveis com os previstos na LDO em relação à receita de ISSQN – 02": 2.0,
+                    "A estimativa de receita e respectivos critérios presentes na LOA são compatíveis com os previstos na LDO em relação à receita de ITBI – 02": 2.0,
+                    "Os investimentos, parte das despesas de capital, previstas na LOA e LDO are compatíveis com as previsões do PPA – 02": 2.0,
+                    "A LDO e a LOA não são compatíveis com o PPA – -10 (perde 10 pontos)": -10.0
+                }
+
+                # Resgate seguro dos dados do 10.0
+                d100 = res_data.get("10.0") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d100 is None:
+                    d100 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                try:
+                    lista_salva_100 = ast.literal_eval(d100.get("valor", "[]"))
+                    if not isinstance(lista_salva_100, list):
+                        lista_salva_100 = []
+                except Exception:
+                    lista_salva_100 = []
+
+                evidencia_100_salva = d100.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_link_100 = f"t_10_0_{ano_sel}"
+                chave_coment_100 = f"coment_10.0_{ano_sel}"
+
+                c100_1, c100_2 = st.columns([1, 1])
+
+                with c100_1:
+                    st.write("**Selecione os itens verificados:**")
+                    estados_checkboxes_100 = {}
+                    for idx, (item, pt) in enumerate(compatibilidades_100.items()):
+                        key_chk = f"chk_100_{idx}_{ano_sel}"
+                        estados_checkboxes_100[item] = st.checkbox(
+                            item,
+                            value=item in lista_salva_100,
+                            key=key_chk
+                        )
+
+                with c100_2:
+                    link_evidencia_100 = st.text_area(
+                        "Link/Evidência (10.0):",
+                        value=evidencia_100_salva,
+                        key=chave_link_100,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 10.0...",
+                        height=250
+                    )
+                    placeholder_links_100 = st.empty()
+                    links_100_visuais = re.findall(REGEX_PURE_URL, link_evidencia_100 or "")
+                    if links_100_visuais:
+                        placeholder_links_100.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_100_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 10.0
+                bloco_comentarios("10.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 10.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 10.0", key=f"btn_salvar_10_0_{ano_sel}", type="primary"):
+                    sel_atual_100 = []
+                    pts_calculados_100 = 0.0
+                    flag_anulacao = False
+
+                    for item, pt in compatibilidades_100.items():
+                        if estados_checkboxes_100.get(item, False):
+                            sel_atual_100.append(item)
+                            if "não são compatíveis" in item:
+                                flag_anulacao = True
+                            pts_calculados_100 += pt
+
+                    # Regra de penalidade anulatória
+                    pts_finais_100 = -10.0 if flag_anulacao else pts_calculados_100
+
+                    lnk_val_100 = link_evidencia_100.strip()
+                    comentario_para_salvar_100 = st.session_state.get(chave_coment_100, d100.get("comentario", ""))
+
+                    save_resp(
+                        qid="10.0",
+                        valor=str(sel_atual_100),
+                        pontos=float(pts_finais_100),
+                        link=lnk_val_100,
+                        comentario=comentario_para_salvar_100
+                    )
+                    res_data["10.0"] = {
+                        "valor": str(sel_atual_100),
+                        "pontos": float(pts_finais_100),
+                        "link": lnk_val_100,
+                        "comentario": comentario_para_salvar_100
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_100 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_100_salva or "")]
+
+                    if lnk_val_100 != evidencia_100_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_10_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 10.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                pts_atuais_100 = d100.get("pontos", 0.0)
+                try:
+                    lista_verif_100 = ast.literal_eval(d100.get("valor", "[]"))
+                except Exception:
+                    lista_verif_100 = []
+
+                if not lista_verif_100:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhum item selecionado no Quesito 10.0</span>", unsafe_allow_html=True)
+                elif any("não são compatíveis" in item for item in lista_verif_100):
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"❌ Status: Incompatibilidade Declarada (Penalidade: {pts_atuais_100:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: {len(lista_verif_100)} item(ns) de compatibilidade salvo(s) (Pontuação: {pts_atuais_100:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 10.0
+        if st.session_state.get(f"gatilho_modal_10_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.0", st.session_state.get(f"links_pendentes_10_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = False
