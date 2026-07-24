@@ -13070,3 +13070,122 @@ def mostrar_formulario_iamb():
                 st.cache_data.clear()
                 st.toast("Dados do Indicador A4.1.3 (Massa de Resíduos) salvos com sucesso!", icon="✅")
                 st.rerun()
+
+        # =============================================================================
+        # QUESITO A4.1.4 • DRENAGEM E ÁGUAS PLUVIAIS - SINISA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a414_{ano_sel}", border=True):
+            st.subheader("QUESITO A4.1.4 • Drenagem e Manejo de Águas Pluviais Urbanas")
+            st.caption("Dados oficiais provenientes do SINISA (Não sujeitos à validação municipal direta).")
+
+            # Recuperação e parsing dos dados salvos no banco ("taxa1|taxa2|taxa3")
+            dA414 = res_data.get("A4.1.4") or {"valor": "0.0|0.0|0.0", "pontos": 0.0, "link": ""}
+            val_salvo_str = str(dA414.get("valor", "0.0|0.0|0.0"))
+            pts_salvos_a414 = float(dA414.get("pontos", 0.0))
+            link_salvo_a414 = str(dA414.get("link", ""))
+
+            # Desserialização segura dos 3 valores
+            try:
+                t_pav_salvo, t_red_salvo, p_risco_salvo = map(float, val_salvo_str.split("|"))
+            except Exception:
+                t_pav_salvo, t_red_salvo, p_risco_salvo = 0.0, 0.0, 0.0
+
+            # Definição das chaves do Session State
+            k_pav = f"qA414_pav_{ano_sel}"
+            k_red = f"qA414_red_{ano_sel}"
+            k_risco = f"qA414_risco_{ano_sel}"
+            k_link = f"lA414_evid_unique_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            # -----------------------------------------------------------------
+            # COLUNA 1: INDICADORES E ENTRADAS NUMÉRICAS
+            # -----------------------------------------------------------------
+            with col1:
+                st.markdown("#### 🌊 Indicadores de Infraestrutura e Risco")
+
+                v_pav = st.number_input(
+                    "Taxa de cobertura de pavimentação e meio-fio (%):",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=t_pav_salvo,
+                    step=0.1,
+                    key=k_pav
+                )
+
+                v_red = st.number_input(
+                    "Taxa de cobertura de vias com redes/canais subterrâneos (%):",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=t_red_salvo,
+                    step=0.1,
+                    key=k_red
+                )
+
+                v_risco = st.number_input(
+                    "Parcela de domicílios em situação de risco de inundação (%):",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=p_risco_salvo,
+                    step=0.1,
+                    key=k_risco
+                )
+
+                # Cálculo ou fixação da pontuação do quesito
+                ptsA414 = 0.0
+
+                st.metric(
+                    label="Pontuação do Quesito A4.1.4",
+                    value=f"{ptsA414:.1f} pts"
+                )
+
+            # -----------------------------------------------------------------
+            # COLUNA 2: HISTÓRICO E EVIDÊNCIA / LINK
+            # -----------------------------------------------------------------
+            with col2:
+                st.markdown("#### 🔗 Evidência e Fontes")
+                lA414 = st.text_area(
+                    "Link/Evidência (A4.1.4):",
+                    value=link_salvo_a414,
+                    height=180,
+                    key=k_link
+                )
+
+                st.info(
+                    f"**Fonte dos Dados:** SINISA\n\n"
+                    f"**Valores Salvos Anteriormente:**\n"
+                    f"- Pavimentação: {t_pav_salvo:.1f}%\n"
+                    f"- Redes Subterrâneas: {t_red_salvo:.1f}%\n"
+                    f"- Risco de Inundação: {p_risco_salvo:.1f}%\n\n"
+                    f"**Pontuação Salva:** {pts_salvos_a414:.1f} pts"
+                )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito A4.1.4", key=f"btn_salvar_ext_a414_{ano_sel}", type="primary"):
+                valores_consolidados = f"{v_pav}|{v_red}|{v_risco}"
+                pts_a414_final = float(ptsA414)
+                link_a414_final = lA414.strip()
+
+                # Persistência no banco de dados
+                save_resp(
+                    qid="A4.1.4",
+                    valor=valores_consolidados,
+                    pontos=pts_a414_final,
+                    link=link_a414_final
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A4.1.4"] = {
+                    "valor": valores_consolidados,
+                    "pontos": pts_a414_final,
+                    "link": link_a414_final
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Quesito A4.1.4 (Drenagem) salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            # Bloco de comentários do quesito
+            bloco_comentarios("A4.1.4", res_data)
