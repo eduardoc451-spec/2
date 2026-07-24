@@ -13189,3 +13189,103 @@ def mostrar_formulario_iamb():
 
             # Bloco de comentários do quesito
             bloco_comentarios("A4.1.4", res_data)
+
+        # =============================================================================
+        # QUESITO A5 • TAXA DE LIMPEZA URBANA E RESÍDUOS SÓLIDOS - SINISA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a5_{ano_sel}", border=True):
+            st.subheader("QUESITO A5 • Taxa / Tarifa de Manejo de Resíduos Sólidos")
+            st.write("**Foi instituída taxa / tarifa de cobrança dos serviços de limpeza urbana e manejo de resíduos sólidos?**")
+            st.caption("Dados oficiais provenientes do SINISA (Não sujeitos à validação municipal direta).")
+
+            # Recuperação dos dados salvos no banco
+            dA5 = res_data.get("A5") or {"valor": "Não foi informado", "pontos": 0.0, "link": ""}
+            val_salvo_a5 = str(dA5.get("valor", "Não foi informado"))
+            pts_salvos_a5 = float(dA5.get("pontos", 0.0))
+            link_salvo_a5 = str(dA5.get("link", ""))
+
+            # Opções textuais conforme o enunciado do SINISA
+            optsA5 = [
+                "Sim",
+                "Não",
+                "Não foi informado"
+            ]
+
+            # Identifica o índice salvo para manter a seleção do usuário
+            idx_salvoA5 = optsA5.index(val_salvo_a5) if val_salvo_a5 in optsA5 else 2
+
+            # Definindo chaves do Streamlit Session State
+            k_radio_a5 = f"qA5_radio_unique_{ano_sel}"
+            k_link_a5 = f"lA5_evid_unique_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            # -----------------------------------------------------------------
+            # COLUNA 1: SELEÇÃO DA RESPOSTA E PONTUAÇÃO
+            # -----------------------------------------------------------------
+            with col1:
+                st.markdown("#### 📋 Seleção do Indicador")
+
+                selA5 = st.radio(
+                    "Selecione uma opção:",
+                    options=optsA5,
+                    index=idx_salvoA5,
+                    key=k_radio_a5
+                )
+
+                # Pontuação neutra conforme regra do quesito
+                ptsA5 = 0.0
+
+                st.metric(
+                    label="Pontuação do Quesito A5",
+                    value=f"{ptsA5:.1f} pts"
+                )
+
+            # -----------------------------------------------------------------
+            # COLUNA 2: HISTÓRICO E EVIDÊNCIA / LINK
+            # -----------------------------------------------------------------
+            with col2:
+                st.markdown("#### 🔗 Evidência e Fontes")
+
+                lA5 = st.text_area(
+                    "Link/Evidência (A5):",
+                    value=link_salvo_a5,
+                    height=120,
+                    key=k_link_a5
+                )
+
+                st.info(
+                    f"**Fonte dos Dados:** SINISA\n\n"
+                    f"**Opção Salva Anteriormente:** {val_salvo_a5}\n\n"
+                    f"**Pontuação Salva:** {pts_salvos_a5:.1f} pts"
+                )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito A5", key=f"btn_salvar_ext_a5_{ano_sel}", type="primary"):
+                val_a5_final = selA5
+                pts_a5_final = float(ptsA5)
+                link_a5_final = lA5.strip()
+
+                # Persistência no banco de dados
+                save_resp(
+                    qid="A5",
+                    valor=val_a5_final,
+                    pontos=pts_a5_final,
+                    link=link_a5_final
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A5"] = {
+                    "valor": val_a5_final,
+                    "pontos": pts_a5_final,
+                    "link": link_a5_final
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Quesito A5 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            # Bloco de comentários do quesito
+            bloco_comentarios("A5", res_data)
