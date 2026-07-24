@@ -13289,3 +13289,94 @@ def mostrar_formulario_iamb():
 
             # Bloco de comentários do quesito
             bloco_comentarios("A5", res_data)
+
+        # =============================================================================
+        # ITEM A6 • UTILIZAÇÃO DE BALANÇA - SINISA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a6_{ano_sel}", border=True):
+            st.subheader("A6 • Utilização de Balança")
+            st.caption(
+                "Dados oficiais provenientes do SINISA (Não sujeitos à validação municipal direta).\n\n"
+                "**Regra de Pontuação:** A utilização de balança para pesagem rotineira concede **5,0 pontos**; caso contrário, **0,0 ponto**."
+            )
+
+            # Recuperação dos dados salvos no banco
+            d_a6 = res_data.get("A6") or {"valor": "Não", "pontos": 0.0, "link": "SINISA"}
+            val_salvo_a6 = str(d_a6.get("valor", "Não"))
+            pts_salvos_a6 = float(d_a6.get("pontos", 0.0))
+
+            # Opções textuais disponíveis
+            opc_a6 = ["Sim", "Não", "Não foi informado"]
+            idx_a6 = opc_a6.index(val_salvo_a6) if val_salvo_a6 in opc_a6 else 1
+
+            # Definindo chave do Streamlit Session State
+            k_select_a6 = f"ext_a6_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            # -----------------------------------------------------------------
+            # COLUNA 1: SELEÇÃO DO INDICADOR E PONTUAÇÃO
+            # -----------------------------------------------------------------
+            with col1:
+                st.markdown("#### ⚖️ Pesagem Rotineira")
+
+                v_a6 = st.selectbox(
+                    "Utiliza balança para pesagem rotineira?",
+                    options=opc_a6,
+                    index=idx_a6,
+                    key=k_select_a6
+                )
+
+                # Regra de pontuação: 5.0 para 'Sim', 0.0 para os demais
+                pts_a6 = 5.0 if v_a6 == "Sim" else 0.0
+
+                st.metric(
+                    label="Pontuação do Item A6",
+                    value=f"{pts_a6:.1f} / 5.0 pts"
+                )
+
+            # -----------------------------------------------------------------
+            # COLUNA 2: HISTÓRICO E INFORMAÇÕES
+            # -----------------------------------------------------------------
+            with col2:
+                st.markdown("#### ℹ️ Informações de Registro")
+
+                st.info(
+                    f"**Fonte dos Dados:** SINISA\n\n"
+                    f"**Opção Salva Anteriormente:** {val_salvo_a6}\n\n"
+                    f"**Pontuação Salva:** {pts_salvos_a6:.1f} pts"
+                )
+
+            # Feedback visual dinâmico do impacto
+            cor_impacto = "#28a745" if pts_a6 > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto Previsto para Item A6: {pts_a6:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Item A6", key=f"btn_salvar_ext_a6_{ano_sel}", type="primary"):
+                fonte_link = "SINISA"
+                val_a6_final = v_a6
+                pts_a6_final = float(pts_a6)
+
+                # Persistência no banco de dados
+                save_resp(
+                    qid="A6",
+                    valor=val_a6_final,
+                    pontos=pts_a6_final,
+                    link=fonte_link
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A6"] = {
+                    "valor": val_a6_final,
+                    "pontos": pts_a6_final,
+                    "link": fonte_link
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Item A6 (Balança) salvos com sucesso!", icon="✅")
+                st.rerun()
