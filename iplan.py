@@ -2591,3 +2591,130 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 3.1 - ALINHAMENTO COM PLANOS FEDERAIS/ESTADUAIS (PADRÃO REFINADO iPLAN)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_abordagem_diagnostico_3_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Questão 3.1 • Alinhamento com Planos Federais/Estaduais ({ano_sel})", expanded=True):
+                st.subheader("3.1 • Alinhamento com Planos Federais/Estaduais")
+                st.write("**3.1 A abordagem do diagnóstico levou em conta algum plano do governo federal e/ou estadual?**")
+                st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 3.1'.*")
+
+                # Mapeamento oficial com pontuação ao lado do rótulo
+                opcoes31 = {
+                    "Selecione...": 0.0, 
+                    "Sim – 14,0 pontos": 14.0, 
+                    "Não – 0,0 ponto": 0.0
+                }
+
+                # Resgate seguro e mapeamento dos valores legados/existentes
+                d31 = res_data.get("3.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_31 = str(d31.get("valor", "Selecione..."))
+                if "Sim" in val_salvo_31:
+                    val_salvo_31 = "Sim – 14,0 pontos"
+                elif "Não" in val_salvo_31:
+                    val_salvo_31 = "Não – 0,0 ponto"
+                else:
+                    val_salvo_31 = "Selecione..."
+
+                evidencia_31_salva = d31.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_31 = f"r_iplan_3_1_{ano_sel}"
+                chave_link_31 = f"txt_i_plan_31_{ano_sel}"
+                chave_coment_31 = f"coment_3.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_31 = list(opcoes31.keys())
+                    idx31 = lista_opcoes_31.index(val_salvo_31) if val_salvo_31 in lista_opcoes_31 else 0
+                    
+                    val_selecionado_31 = st.radio(
+                        "Selecione 3.1:",
+                        options=lista_opcoes_31,
+                        index=idx31,
+                        key=chave_radio_31,
+                        label_visibility="collapsed"
+                    )
+                    pts_previstos_31 = opcoes31[val_selecionado_31]
+
+                with col2:
+                    link_evidencia_31 = st.text_area(
+                        "Link/Evidência (3.1):",
+                        value=evidencia_31_salva,
+                        key=chave_link_31,
+                        placeholder="Insira os links e documentos comprobatórios do alinhamento com planos...",
+                        height=130
+                    )
+                    placeholder_links_31 = st.empty()
+                    links_3_1_visuais = re.findall(REGEX_PURE_URL, link_evidencia_31 or "")
+                    if links_3_1_visuais:
+                        placeholder_links_31.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_3_1_visuais]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários padronizado
+                bloco_comentarios("3.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 3.1", key=f"btn_salvar_iplan_3_1_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_31.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_31, d31.get("comentario", ""))
+
+                    # Salva no banco de dados
+                    save_resp(
+                        qid="3.1",
+                        valor=val_selecionado_31,
+                        pontos=pts_previstos_31,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["3.1"] = {
+                        "valor": val_selecionado_31,
+                        "pontos": pts_previstos_31,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_31_salva or "")]
+
+                    if lnk_val != evidencia_31_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_31 = d31.get("pontos", 0.0)
+                val_atual_31 = d31.get("valor", "Selecione...")
+
+                if val_atual_31 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_31 = "#28a745" if pts_atuais_31 > 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_31}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 3.1: {pts_atuais_31:.1f} / 14.0 pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL 3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
