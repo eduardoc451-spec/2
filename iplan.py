@@ -10174,3 +10174,169 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.4.2", st.session_state.get(f"links_pendentes_15_4_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_4_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO MULTISSELEÇÃO SUBTRATIVO 15.5 • DIVULGAÇÃO E MOBILIZAÇÃO SOCIAL (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_mobilizacao_15_5_final_{ano_sel}", border=True):
+            with st.expander(f"🗂 Quesito 15.5 - Iniciativas de Divulgação e Mobilização Social ({ano_sel})", expanded=True):
+                st.subheader("15.5 • Divulgação e Mobilização Social")
+                st.write(f"**Assinale as iniciativas de divulgação e mobilização social das ouvidorias em {ano_sel}:**")
+                st.caption("ℹ *Cada item do bloco penalizável ausente subtrai -0.5 pontos da nota total.*")
+
+                itens_penalizaveis_155 = [
+                    "Link da página eletrônica da ouvidoria no sítio da Prefeitura Municipal",
+                    "Utilização de outras plataformas digitais para a divulgação da missão, do modo de trabalho das ouvidorias e incentivando a participação popular. Ex.: instagram, facebook, twiter etc."
+                ]
+
+                itens_neutros_155 = [
+                    "Realização de palestras para grupos e instituições. Ex.: escolas, igrejas, associações civis, outros grupos organizados etc.",
+                    "Realização de eventos que estimulem a participação e coleta das demandas sociais. Ex.: realização de audiências públicas para divulgação dos trabalhos desempenhados pela ouvidoria e ouvir as demandas da população."
+                ]
+
+                # Resgate seguro dos dados do 15.5
+                d155 = res_data.get("15.5") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d155 is None or not isinstance(d155, dict):
+                    d155 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_155 = d155.get("valor", "[]")
+                evidencia_155_salva = d155.get("link", "")
+
+                # Desserialização segura do valor salvo
+                try:
+                    if isinstance(val_salvo_155, str):
+                        lista_salva_155 = json.loads(val_salvo_155)
+                    elif isinstance(val_salvo_155, list):
+                        lista_salva_155 = val_salvo_155
+                    else:
+                        lista_salva_155 = []
+                except Exception:
+                    try:
+                        lista_salva_155 = eval(val_salvo_155) if isinstance(val_salvo_155, str) else []
+                    except Exception:
+                        lista_salva_155 = []
+
+                if not isinstance(lista_salva_155, list):
+                    lista_salva_155 = []
+
+                # Chaves estáticas e limpas
+                chave_link_155 = f"l155_{ano_sel}"
+                chave_coment_155 = f"coment_15.5_{ano_sel}"
+
+                c155_1, c155_2 = st.columns([1, 1])
+
+                with c155_1:
+                    dict_chk_penalizaveis_155 = {}
+                    st.markdown("**Itens de Preenchimento Obrigatório (Sujeitos a Perda):**")
+                    for idx, item in enumerate(itens_penalizaveis_155):
+                        dict_chk_penalizaveis_155[item] = st.checkbox(
+                            item,
+                            value=item in lista_salva_155,
+                            key=f"chk_155_pen_{idx}_{ano_sel}"
+                        )
+
+                    dict_chk_neutros_155 = {}
+                    st.markdown("**Iniciativas Complementares (Neutras):**")
+                    for idx, item in enumerate(itens_neutros_155):
+                        dict_chk_neutros_155[item] = st.checkbox(
+                            item,
+                            value=item in lista_salva_155,
+                            key=f"chk_155_neu_{idx}_{ano_sel}"
+                        )
+
+                    chk_outras_155 = st.checkbox(
+                        "Outras",
+                        value="Outras" in lista_salva_155,
+                        key=f"chk_155_outras_{ano_sel}"
+                    )
+
+                with c155_2:
+                    link_155 = st.text_area(
+                        "Link/Evidência (15.5):",
+                        value=evidencia_155_salva,
+                        key=chave_link_155,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 15.5...",
+                        height=200
+                    )
+                    placeholder_links_155 = st.empty()
+                    links_155_visuais = re.findall(REGEX_PURE_URL, link_155 or "")
+                    if links_155_visuais:
+                        placeholder_links_155.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_155_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 15.5
+                bloco_comentarios("15.5", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 15.5
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 15.5", key=f"btn_salvar_15_5_{ano_sel}", type="primary"):
+                    itens_checados_155 = []
+
+                    # Coleta dos itens penalizáveis marcados
+                    for item, checado in dict_chk_penalizaveis_155.items():
+                        if checado:
+                            itens_checados_155.append(item)
+
+                    # Coleta dos itens neutros marcados
+                    for item, checado in dict_chk_neutros_155.items():
+                        if checado:
+                            itens_checados_155.append(item)
+
+                    # Coleta de 'Outras'
+                    if chk_outras_155:
+                        itens_checados_155.append("Outras")
+
+                    # Cálculo da penalidade subtrativa: -0.5 para cada item penalizável ausente
+                    ausentes_155 = sum(1 for x in itens_penalizaveis_155 if x not in itens_checados_155)
+                    pts_calc_155 = -(ausentes_155 * 0.5)
+
+                    str_lista_155 = json.dumps(itens_checados_155, ensure_ascii=False)
+                    lnk_val_155 = link_155.strip()
+                    comentario_para_salvar_155 = st.session_state.get(chave_coment_155, d155.get("comentario", ""))
+
+                    # Persistência no banco de dados e sessão
+                    save_resp(
+                        qid="15.5",
+                        valor=str_lista_155,
+                        pontos=pts_calc_155,
+                        link=lnk_val_155,
+                        comentario=comentario_para_salvar_155
+                    )
+                    res_data["15.5"] = {
+                        "valor": str_lista_155,
+                        "pontos": pts_calc_155,
+                        "link": lnk_val_155,
+                        "comentario": comentario_para_salvar_155
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_155 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_155_salva or "")]
+
+                    if lnk_val_155 != evidencia_155_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_5_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 15.5 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Estado
+                pts_atuais_155 = d155.get("pontos", 0.0)
+                cor_txt_155 = "#28a745" if pts_atuais_155 == 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_155}; font-weight:bold;'>"
+                    f"✅ Status: Opções salvas com sucesso (Impacto: {pts_atuais_155:.2f} pontos)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # Modal de Evidências do 15.5
+        if st.session_state.get(f"gatilho_modal_15_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.5", st.session_state.get(f"links_pendentes_15_5_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_5_{ano_sel}"] = False
