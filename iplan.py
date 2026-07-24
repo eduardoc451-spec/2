@@ -11487,3 +11487,123 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.0", st.session_state.get(f"links_pendentes_18_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO DATA FILHO 18.1 • DATA DE ATUALIZAÇÃO DO PLANO DIREITOR (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_data_plano_18_1_final_{ano_sel}", border=True):
+            with st.expander("📅 Quesito 18.1 - Data de Atualização do Plano Diretor", expanded=True):
+                st.subheader("18.1 • Última Atualização")
+                st.write("**Informe a data da última atualização do Plano Diretor:**")
+                st.info("ℹ️ **Fórmula de Cálculo:**\n* 📅 **Até 31/12/2015:** -10.0 pontos.\n* 📅 **A partir de 01/01/2016:** 0.0 ponto.")
+
+                # Recuperação segura dos dados salvos no banco
+                d181 = res_data.get("18.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_181 = d181.get("valor", "")
+                pts_salvos_181 = float(d181.get("pontos", 0.0))
+                evidencia_181_salva = d181.get("link", "")
+
+                # Parseamento seguro da data armazenada
+                try:
+                    dt_inicial_181 = datetime.strptime(v_salvo_181, "%Y-%m-%d").date() if v_salvo_181 else date.today()
+                except Exception:
+                    dt_inicial_181 = date.today()
+
+                # Chaves explícitas no Session State
+                chave_date_181 = f"dt181_{ano_sel}"
+                chave_link_181 = f"l181_{ano_sel}"
+                chave_coment_181 = f"coment_18.1_exclusivo_g8_{ano_sel}"
+
+                c181_1, c181_2 = st.columns([1, 1])
+
+                with c181_1:
+                    dt_sel_181 = st.date_input(
+                        "Data da última atualização:",
+                        value=dt_inicial_181,
+                        key=chave_date_181,
+                        format="DD/MM/YYYY"
+                    )
+
+                    # Exibição da métrica de impacto da pontuação salva
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value=f"{pts_salvos_181:.1f} pts",
+                        delta="-10.0 pts aplicados" if pts_salvos_181 == -10.0 else None
+                    )
+
+                with c181_2:
+                    link_181 = st.text_area(
+                        "Justificativa / Link de Evidência (18.1):",
+                        value=evidencia_181_salva,
+                        key=chave_link_181,
+                        placeholder="Inserir justificativa e link da norma de atualização...",
+                        height=100
+                    )
+                    placeholder_links_181 = st.empty()
+                    links_181_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_181 or "")]
+                    if links_181_visuais:
+                        placeholder_links_181.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_181_visuais])
+                        )
+
+                # Renderiza o bloco de comentários específico do Quesito 18.1
+                bloco_comentarios("18.1_exclusivo_g8", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_txt_181 = "#dc3545" if pts_salvos_181 == -10.0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_txt_181}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 18.1: {pts_salvos_181:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 18.1", key=f"btn_salvar_18_1_{ano_sel}", type="primary"):
+                    dt_informada = st.session_state.get(chave_date_181, dt_sel_181)
+                    
+                    # Regra de negócio: Cálculo do impacto de pontos com base na data
+                    pts_calculados_181 = -10.0 if dt_informada <= date(2015, 12, 31) else 0.0
+                    
+                    str_data_salvar = str(dt_informada)
+                    lnk_val = link_181.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_181, d181.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="18.1",
+                        valor=str_data_salvar,
+                        pontos=float(pts_calculados_181),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["18.1"] = {
+                        "valor": str_data_salvar,
+                        "pontos": float(pts_calculados_181),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_181_salva or "")]
+
+                    if lnk_val != evidencia_181_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_18_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_18_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 18.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 18.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_18_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.1", st.session_state.get(f"links_pendentes_18_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_18_1_{ano_sel}"] = False
+
+
+
+
