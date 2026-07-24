@@ -6743,3 +6743,129 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 13.1.1 • RELATÓRIOS QUADRIMESTRAIS (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_relatorios_13_1_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.1.1 - Elaboração de Relatórios Quadrimestrais ({ano_sel})", expanded=True):
+                st.subheader("13.1.1 • Relatórios Quadrimestrais")
+                st.write("**Foram elaborados os Relatórios Quadrimestrais das metas fiscais para as audiências públicas?**")
+                st.caption("ℹ *Selecione as opções cabíveis, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 13.1.1'.*")
+
+                opc1311 = {
+                    "Relatório da Audiência pública do 1º Quadrimestre – 01": 1.0,
+                    "Relatório da Audiência pública do 2º Quadrimestre – 01": 1.0,
+                    "Relatório da Audiência pública do 3º Quadrimestre – 01": 1.0,
+                    "Não elaborou relatório de nenhuma audiência pública quadrimestral – 00": 0.0
+                }
+
+                # Resgate seguro dos dados do 13.1.1
+                d1311 = res_data.get("13.1.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d1311 is None:
+                    d1311 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_1311 = d1311.get("valor", "[]")
+                evidencia_1311_salva = d1311.get("link", "")
+
+                # Desserialização segura da lista salva
+                try:
+                    lista_salva_1311 = ast.literal_eval(val_salvo_1311)
+                    if not isinstance(lista_salva_1311, list):
+                        lista_salva_1311 = []
+                except Exception:
+                    lista_salva_1311 = []
+
+                # Chaves fixas por componente e ano
+                chave_link_1311 = f"t_1311_{ano_sel}"
+                chave_coment_1311 = f"coment_13.1.1_{ano_sel}"
+
+                c1311_1, c1311_2 = st.columns([1, 1])
+
+                with c1311_1:
+                    sel1311_atuais = []
+                    for idx, (opt, pt) in enumerate(opc1311.items()):
+                        v_antigo = opt in lista_salva_1311
+                        chave_ck = f"ck_1311_opt_{idx}_{ano_sel}"
+                        v_novo = st.checkbox(opt, value=v_antigo, key=chave_ck)
+                        if v_novo:
+                            sel1311_atuais.append(opt)
+
+                with c1311_2:
+                    link_evidencia_1311 = st.text_area(
+                        "Link/Evidência (13.1.1):",
+                        value=evidencia_1311_salva,
+                        key=chave_link_1311,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 13.1.1...",
+                        height=140
+                    )
+                    placeholder_links_1311 = st.empty()
+                    links_1311_visuais = re.findall(REGEX_PURE_URL, link_evidencia_1311 or "")
+                    if links_1311_visuais:
+                        placeholder_links_1311.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1311_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 13.1.1
+                bloco_comentarios("13.1.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 13.1.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 13.1.1", key=f"btn_salvar_13_1_1_{ano_sel}", type="primary"):
+                    # Cálculo da regra de negócio no momento do salvamento
+                    if any("Não elaborou" in p for p in sel1311_atuais):
+                        pts1311_salvar = 0.0
+                    else:
+                        pts1311_salvar = sum(opc1311[p] for p in sel1311_atuais)
+
+                    str_sel1311_salvar = str(sel1311_atuais)
+                    lnk_val_1311 = link_evidencia_1311.strip()
+                    comentario_para_salvar_1311 = st.session_state.get(chave_coment_1311, d1311.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="13.1.1",
+                        valor=str_sel1311_salvar,
+                        pontos=float(pts1311_salvar),
+                        link=lnk_val_1311,
+                        comentario=comentario_para_salvar_1311
+                    )
+                    res_data["13.1.1"] = {
+                        "valor": str_sel1311_salvar,
+                        "pontos": float(pts1311_salvar),
+                        "link": lnk_val_1311,
+                        "comentario": comentario_para_salvar_1311
+                    }
+
+                    # Detecção de novos links para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_1311 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1311_salva or "")]
+
+                    if lnk_val_1311 != evidencia_1311_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 13.1.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto da Pontuação
+                pts_atuais_1311 = d1311.get("pontos", 0.0)
+
+                if val_salvo_1311 == "[]" or not lista_salva_1311:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 13.1.1</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção(ões) salva(s) com sucesso (Impacto: {pts_atuais_1311:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 13.1.1
+        if st.session_state.get(f"gatilho_modal_13_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.1.1", st.session_state.get(f"links_pendentes_13_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_1_1_{ano_sel}"] = False
