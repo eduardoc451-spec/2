@@ -12440,3 +12440,93 @@ def mostrar_formulario_iamb():
                 st.cache_data.clear()
                 st.toast("Dados do Indicador A2 (IQR) salvos com sucesso!", icon="✅")
                 st.rerun()
+
+        # =============================================================================
+        # ITEM A3 • IQT - CETESB (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a3_{ano_sel}", border=True):
+            st.subheader("A3 • IQT (Índice de Qualidade de Estações de Transbordo)")
+            st.caption(
+                "Dados provenientes da CETESB (Não sujeitos à validação municipal).\n\n"
+                "**Regra de Pontuação:**\n"
+                "- **De 7,1 a 10,0 (Condições adequadas):** 0 pontos\n"
+                "- **De 0,0 a 7,0 (Condições inadequadas):** -50 pontos (perde 50 pontos)"
+            )
+
+            # Recuperação dos dados salvos no banco
+            d_a3 = res_data.get("A3") or {"valor": 10.0, "pontos": 0.0, "link": "Dados CETESB"}
+            v_salvo_a3 = float(d_a3.get("valor", 10.0))
+            pts_salvos_a3 = float(d_a3.get("pontos", 0.0))
+
+            # Definindo chave do Streamlit Session State
+            chave_a3 = f"ext_a3_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                v_a3 = st.number_input(
+                    "Informe o valor do IQT (0.0 a 10.0):",
+                    min_value=0.0,
+                    max_value=10.0,
+                    value=v_salvo_a3,
+                    step=0.1,
+                    key=chave_a3
+                )
+
+                # Cálculo dinâmico de status e pontuação
+                status_a3 = "Condições adequadas" if v_a3 > 7.0 else "Condições inadequadas"
+                pts_a3_calc = 0.0 if v_a3 > 7.0 else -50.0
+
+                # Exibição da métrica com a pontuação calculada
+                st.metric(
+                    label="Impacto na Pontuação (Calculado)",
+                    value=f"{pts_a3_calc:.1f} pts",
+                    delta=status_a3,
+                    delta_color="normal" if v_a3 > 7.0 else "inverse"
+                )
+
+            with col2:
+                status_salvo = "Condições adequadas" if v_salvo_a3 > 7.0 else "Condições inadequadas"
+                st.info(
+                    f"**Fonte dos Dados:** CETESB\n\n"
+                    f"**Valor Salvo Anteriormente:** {v_salvo_a3:.1f} ({status_salvo})\n\n"
+                    f"**Impacto Salvo Anteriormente:** {pts_salvos_a3:.1f} pts"
+                )
+
+            # Alerta visual para condições inadequadas
+            if v_a3 <= 7.0:
+                st.warning("⚠️ **Atenção:** Pontuações de IQT menores ou iguais a 7,0 indicam condições inadequadas e aplicam uma penalidade de **-50 pontos**.")
+
+            # Feedback visual dinâmico
+            cor_impacto = "#28a745" if pts_a3_calc == 0.0 else "#dc3545"
+            st.markdown(
+                f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto Previsto para A3: {pts_a3_calc:.1f} pontos ({status_a3})</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Item A3 - IQT", key=f"btn_salvar_ext_a3_{ano_sel}", type="primary"):
+                val_a3_final = float(v_a3)
+                pts_a3_final = float(pts_a3_calc)
+                fonte_link = "Dados CETESB"
+
+                # Persistência no banco de dados
+                save_resp(
+                    qid="A3",
+                    valor=val_a3_final,
+                    pontos=pts_a3_final,
+                    link=fonte_link
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A3"] = {
+                    "valor": val_a3_final,
+                    "pontos": pts_a3_final,
+                    "link": fonte_link
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Indicador A3 (IQT) salvos com sucesso!", icon="✅")
+                st.rerun()
