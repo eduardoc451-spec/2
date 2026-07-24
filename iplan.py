@@ -3192,3 +3192,136 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.1", st.session_state.get(f"links_pendentes_4_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 4.1.1 • AVALIAÇÃO DE PROGRAMAS FINALÍSTICOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_avaliacao_programas_4_1_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 4.1.1 - Avaliação da Implementação dos Programas Finalísticos ({ano_sel})", expanded=True):
+                st.subheader("4.1.1 • Avaliação de Programas Finalísticos")
+                st.write("**Houve avaliação da implementação dos programas finalísticos em relação a seus indicadores, objetivos e metas?**")
+                st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 4.1.1'.*")
+
+                # Mapeamento oficial com pontuação padronizada no rótulo
+                opcoes_411 = {
+                    "Selecione...": 0.0,
+                    "Sim, para todos os programas finalísticos monitorados – 10,0 pontos": 10.0,
+                    "Sim, para a maior parte dos programas finalísticos monitorados – 7,0 pontos": 7.0,
+                    "Sim, para a menor parte dos programas finalísticos monitorados – 3,0 pontos": 3.0,
+                    "Não houve avaliação – 0,0 ponto": 0.0
+                }
+
+                # Resgate seguro dos dados e tratamento de versões legadas
+                d411 = res_data.get("4.1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_411 = str(d411.get("valor", "Selecione..."))
+                if "todos os" in val_salvo_411.lower():
+                    val_salvo_411 = "Sim, para todos os programas finalísticos monitorados – 10,0 pontos"
+                elif "maior parte" in val_salvo_411.lower():
+                    val_salvo_411 = "Sim, para a maior parte dos programas finalísticos monitorados – 7,0 pontos"
+                elif "menor parte" in val_salvo_411.lower():
+                    val_salvo_411 = "Sim, para a menor parte dos programas finalísticos monitorados – 3,0 pontos"
+                elif "não houve" in val_salvo_411.lower():
+                    val_salvo_411 = "Não houve avaliação – 0,0 ponto"
+                else:
+                    val_salvo_411 = "Selecione..."
+
+                evidencia_411_salva = d411.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_411 = f"r_4_1_1_{ano_sel}"
+                chave_link_411 = f"t_4_1_1_{ano_sel}"
+                chave_coment_411 = f"coment_4.1.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_411 = list(opcoes_411.keys())
+                    idx411 = lista_opcoes_411.index(val_salvo_411) if val_salvo_411 in lista_opcoes_411 else 0
+
+                    val_selecionado_411 = st.radio(
+                        "Selecione 4.1.1:",
+                        options=lista_opcoes_411,
+                        index=idx411,
+                        key=chave_radio_411,
+                        label_visibility="collapsed"
+                    )
+                    pts_previstos_411 = opcoes_411[val_selecionado_411]
+
+                with col2:
+                    link_evidencia_411 = st.text_area(
+                        "Link/Evidência (4.1.1):",
+                        value=evidencia_411_salva,
+                        key=chave_link_411,
+                        placeholder="Insira os links e documentos comprobatórios referentes à avaliação dos programas...",
+                        height=140
+                    )
+                    placeholder_links_411 = st.empty()
+                    links_411_visuais = re.findall(REGEX_PURE_URL, link_evidencia_411 or "")
+                    if links_411_visuais:
+                        placeholder_links_411.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_411_visuais]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários padronizado
+                bloco_comentarios("4.1.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 4.1.1", key=f"btn_salvar_4_1_1_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_411.strip()
+
+                    # Captura o comentário atualizado via session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_411, d411.get("comentario", ""))
+
+                    # Salva no banco de dados / estado global
+                    save_resp(
+                        qid="4.1.1",
+                        valor=val_selecionado_411,
+                        pontos=pts_previstos_411,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza a estrutura local res_data
+                    res_data["4.1.1"] = {
+                        "valor": val_selecionado_411,
+                        "pontos": pts_previstos_411,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_411_salva or "")]
+
+                    if lnk_val != evidencia_411_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 4.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação
+                pts_atuais_411 = d411.get("pontos", 0.0)
+                val_atual_411 = d411.get("valor", "Selecione...")
+
+                if val_atual_411 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_411 = "#28a745" if pts_atuais_411 > 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_411}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 4.1.1: {pts_atuais_411:.1f} / 10.0 pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS (Executado fora do container do componente)
+        if st.session_state.get(f"gatilho_modal_4_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.1.1", st.session_state.get(f"links_pendentes_4_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_1_1_{ano_sel}"] = False
