@@ -7213,3 +7213,120 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.3", st.session_state.get(f"links_pendentes_13_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_3_{ano_sel}"] = False
+
+        # =============================================================================
+        # SEÇÃO 14: SISTEMA DE CONTROLE INTERNO
+        # =============================================================================
+
+        # --- QUESITO 14.0 • TOTALMENTE INDEPENDENTE (BLINDADO COM O PADRÃO 1.0) ---
+        with st.container(key=f"container_bloco_controle_interno_14_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 14.0 - Instituição e Regulamentação do Sistema de Controle Interno ({ano_sel})", expanded=True):
+                st.subheader("14.0 • Sistema de Controle Interno")
+                st.write("**Houve a instituição e regulamentação das operações do Sistema de Controle Interno?**")
+                st.caption("ℹ *Selecione a opção desejada, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 14.0'.*")
+
+                opcoes_140 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+
+                # Resgate seguro dos dados do 14.0
+                d140 = res_data.get("14.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d140 is None:
+                    d140 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_140 = d140.get("valor", "Selecione...")
+                evidencia_140_salva = d140.get("link", "")
+
+                # Chaves estáticas e seguras por componente e ano
+                chave_radio_140 = f"r_140_{ano_sel}"
+                chave_link_140 = f"t_140_{ano_sel}"
+                chave_coment_140 = f"coment_14.0_{ano_sel}"
+
+                c140_1, c140_2 = st.columns([1, 1])
+
+                with c140_1:
+                    lista_opcoes_140 = list(opcoes_140.keys())
+                    idx140 = lista_opcoes_140.index(val_salvo_140) if val_salvo_140 in lista_opcoes_140 else 0
+
+                    sel_radio_140 = st.radio(
+                        "Selecione 14.0:",
+                        options=lista_opcoes_140,
+                        index=idx140,
+                        key=chave_radio_140,
+                        label_visibility="collapsed"
+                    )
+
+                with c140_2:
+                    link_evidencia_140 = st.text_area(
+                        "Link/Evidência (14.0):",
+                        value=evidencia_140_salva,
+                        key=chave_link_140,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.0...",
+                        height=100
+                    )
+                    placeholder_links_140 = st.empty()
+                    links_140_visuais = re.findall(REGEX_PURE_URL, link_evidencia_140 or "")
+                    if links_140_visuais:
+                        placeholder_links_140.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_140_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.0
+                bloco_comentarios("14.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.0", key=f"btn_salvar_14_0_{ano_sel}", type="primary"):
+                    pts140_salvar = opcoes_140.get(sel_radio_140, 0.0)
+                    lnk_val_140 = link_evidencia_140.strip()
+                    comentario_para_salvar_140 = st.session_state.get(chave_coment_140, d140.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="14.0",
+                        valor=sel_radio_140,
+                        pontos=float(pts140_salvar),
+                        link=lnk_val_140,
+                        comentario=comentario_para_salvar_140
+                    )
+                    res_data["14.0"] = {
+                        "valor": sel_radio_140,
+                        "pontos": float(pts140_salvar),
+                        "link": lnk_val_140,
+                        "comentario": comentario_para_salvar_140
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_140 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_140_salva or "")]
+
+                    if lnk_val_140 != evidencia_140_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 14.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_140 = d140.get("pontos", 0.0)
+
+                if val_salvo_140 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 14.0</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção salva com sucesso (Impacto: {pts_atuais_140:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 14.0
+        if st.session_state.get(f"gatilho_modal_14_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.0", st.session_state.get(f"links_pendentes_14_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = False
