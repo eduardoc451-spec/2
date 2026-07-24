@@ -12917,3 +12917,156 @@ def mostrar_formulario_iamb():
                 st.cache_data.clear()
                 st.toast("Dados do Indicador A4.1.2 (Coleta de Resíduos) salvos com sucesso!", icon="✅")
                 st.rerun()
+
+        # =============================================================================
+        # ITEM A4.1.3 • MASSA DE RESÍDUOS SÓLIDOS - SINISA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a413_{ano_sel}", border=True):
+            st.subheader("A4.1.3 • Massa de Resíduos Sólidos (SINISA)")
+            st.caption(
+                "Dados provenientes do SINISA (Não sujeitos à validação municipal).\n\n"
+                "**Regras de Pontuação (Até 22.0 pts no total):**\n"
+                "- **Massa Coletada por Dia (kg/hab/dia):** Pontuação de 0,0 a 10,0 pts conforme redução de geração per capita.\n"
+                "- **Massa Recuperada de Recicláveis por Ano (kg/hab/ano):** Pontuação de 0,0 a 12,0 pts conforme aumento do recolhimento."
+            )
+
+            # Recuperação dos dados salvos no banco
+            d_m_dia = res_data.get("A4.1.3_massa_dia") or {"valor": 1.5, "pontos": 0.0, "link": "SINISA"}
+            d_m_ano = res_data.get("A4.1.3_massa_ano") or {"valor": 0.0, "pontos": 0.0, "link": "SINISA"}
+
+            v_salvo_m_dia = float(d_m_dia.get("valor", 1.5))
+            pts_salvos_m_dia = float(d_m_dia.get("pontos", 0.0))
+
+            v_salvo_m_ano = float(d_m_ano.get("valor", 0.0))
+            pts_salvos_m_ano = float(d_m_ano.get("pontos", 0.0))
+
+            # Definindo chaves do Streamlit Session State
+            chave_m_dia = f"ext_m_dia_{ano_sel}"
+            chave_m_ano = f"ext_m_ano_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            # -----------------------------------------------------------------
+            # INDICADOR 1: MASSA DIA
+            # -----------------------------------------------------------------
+            with col1:
+                st.markdown("#### 🗑️ Massa Coletada Domiciliar (Dia)")
+                m_dia = st.number_input(
+                    "Massa coletada urbana (kg/hab/dia):",
+                    min_value=0.0,
+                    max_value=10.0,
+                    value=v_salvo_m_dia,
+                    step=0.01,
+                    key=chave_m_dia
+                )
+
+                # Cálculo dinâmico da pontuação para Massa Dia
+                if m_dia > 1.0:
+                    pts_m_dia = 0.0
+                elif 0.99 < m_dia <= 1.0:
+                    pts_m_dia = ((1.0 - m_dia) / 0.01 * 2.0) + 1.0
+                elif 0.90 < m_dia <= 0.99:
+                    pts_m_dia = ((0.99 - m_dia) / 0.09 * 3.0) + 5.0
+                elif 0.70 < m_dia <= 0.90:
+                    pts_m_dia = ((0.90 - m_dia) / 0.2 * 2.0) + 7.0
+                else:
+                    pts_m_dia = 10.0
+
+                st.caption(f"Pontuação Calculada (Massa Dia): **{pts_m_dia:.2f} / 10.00 pts**")
+
+            # -----------------------------------------------------------------
+            # INDICADOR 2: MASSA ANO (RECICLÁVEIS)
+            # -----------------------------------------------------------------
+            with col2:
+                st.markdown("#### ♻️ Material Reciclável Recuperado (Ano)")
+                m_ano = st.number_input(
+                    "Massa recuperada per capita (kg/hab/ano):",
+                    min_value=0.0,
+                    max_value=500.0,
+                    value=v_salvo_m_ano,
+                    step=0.1,
+                    key=chave_m_ano
+                )
+
+                # Cálculo dinâmico da pontuação para Massa Ano
+                if m_ano > 73.0:
+                    pts_m_ano = 12.0
+                elif 36.5 < m_ano <= 73.0:
+                    pts_m_ano = ((m_ano - 36.5) / 36.5 * 2.0) + 5.0
+                elif 20.0 < m_ano <= 36.5:
+                    pts_m_ano = ((m_ano - 20.0) / 16.5 * 2.0) + 3.0
+                elif 8.0 < m_ano <= 20.0:
+                    pts_m_ano = (m_ano - 8.0) / 12.0 * 3.0
+                else:
+                    pts_m_ano = 0.0
+
+                st.caption(f"Pontuação Calculada (Recicláveis): **{pts_m_ano:.2f} / 12.00 pts**")
+
+            # -----------------------------------------------------------------
+            # RESUMO E MÉTRICA COMBINADA DO ITEM A4.1.3
+            # -----------------------------------------------------------------
+            st.divider()
+            total_calculado_a413 = pts_m_dia + pts_m_ano
+            total_salvo_a413 = pts_salvos_m_dia + pts_salvos_m_ano
+
+            col_m1, col_m2 = st.columns([1, 1])
+            with col_m1:
+                st.metric(
+                    label="Impacto Total Calculado para A4.1.3",
+                    value=f"{total_calculado_a413:.2f} / 22.0 pts"
+                )
+            with col_m2:
+                st.info(
+                    f"**Fonte dos Dados:** SINISA\n\n"
+                    f"**Pontuação Salva Anteriormente:** {total_salvo_a413:.2f} pts "
+                    f"*(Dia: {pts_salvos_m_dia:.2f} | Ano: {pts_salvos_m_ano:.2f})*"
+                )
+
+            # Feedback visual dinâmico
+            cor_impacto = "#28a745" if total_calculado_a413 > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto Previsto Total para A4.1.3: {total_calculado_a413:.2f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Todos os Dados do Item A4.1.3", key=f"btn_salvar_ext_a413_{ano_sel}", type="primary"):
+                fonte_link = "SINISA"
+
+                val_m_dia_final = float(m_dia)
+                pts_m_dia_final = float(pts_m_dia)
+
+                val_m_ano_final = float(m_ano)
+                pts_m_ano_final = float(pts_m_ano)
+
+                # Persistência no banco de dados para os dois indicadores
+                save_resp(
+                    qid="A4.1.3_massa_dia",
+                    valor=val_m_dia_final,
+                    pontos=pts_m_dia_final,
+                    link=fonte_link
+                )
+                save_resp(
+                    qid="A4.1.3_massa_ano",
+                    valor=val_m_ano_final,
+                    pontos=pts_m_ano_final,
+                    link=fonte_link
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A4.1.3_massa_dia"] = {
+                    "valor": val_m_dia_final,
+                    "pontos": pts_m_dia_final,
+                    "link": fonte_link
+                }
+                res_data["A4.1.3_massa_ano"] = {
+                    "valor": val_m_ano_final,
+                    "pontos": pts_m_ano_final,
+                    "link": fonte_link
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Indicador A4.1.3 (Massa de Resíduos) salvos com sucesso!", icon="✅")
+                st.rerun()
