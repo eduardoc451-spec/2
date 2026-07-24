@@ -1497,27 +1497,103 @@ def confirmar_zerar_dialog_ifiscal(ano):
 
 
 # =============================================================================
-# 2. SIDEBAR - iFiscal
+# 4. SIDEBAR E ZERAR - i-Fiscal
 # =============================================================================
 
 
-def render_sidebar_ifiscal():
-    st.sidebar.title("💰 Painel de Controle - iFiscal")
+def zerar_questionario_ifiscal(ano: int):
+    """Deleta todas as respostas do ano selecionado na tabela respostas_ifiscal."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM respostas_ifiscal WHERE ano = %s", (int(ano),)
+                )
+            conn.commit()
+
+        # Limpa o cache do Streamlit para forçar a re-leitura do banco
+        st.cache_data.clear()
+    except Exception as e:
+        st.error(f"Erro ao zerar questionário i-Fiscal no banco Neon: {e}")
+
+
+@st.dialog("⚠️ Zerar Respostas do i-Fiscal")
+def confirmar_zerar_dialog(ano):
+    st.warning(
+        f"Tem certeza que deseja apagar TODAS as respostas do i-Fiscal para o ano {ano}?"
+    )
+    st.write(
+        "Esta ação é irreversível e excluirá os dados salvos no banco Neon."
+    )
+
+    # Campo para inserção da senha de confirmação
+    senha_digitada = st.text_input(
+        "Digite a senha de confirmação para prosseguir:",
+        type="password",
+        placeholder="Digite a senha...",
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(
+            "🔴 Sim, Zerar Tudo", type="primary", use_container_width=True
+        ):
+            if senha_digitada.strip() == "fidelios":
+                try:
+                    # 1. Apaga no banco de dados
+                    zerar_questionario_ifiscal(ano)
+
+                    # 2. Reseta a chave primária no session_state
+                    key_ano = f"respostas_ifiscal_{ano}"
+                    st.session_state[key_ano] = {}
+
+                    # 3. Limpa todas as chaves de inputs e widgets associadas ao ano no session_state
+                    chaves_para_limpar = [
+                        k
+                        for k in st.session_state.keys()
+                        if str(ano) in k or k.endswith(f"_{ano}")
+                    ]
+                    for key in chaves_para_limpar:
+                        if key != "ano_referencia_ifiscal":
+                            del st.session_state[key]
+
+                    st.toast(
+                        f"Respostas do i-Fiscal ({ano}) zeradas com sucesso!",
+                        icon="🗑️",
+                    )
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao zerar dados: {e}")
+            else:
+                st.error("🔒 Senha incorreta! Ação cancelada.")
+
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+def render_sidebar():
+    st.sidebar.title("🏛️ Painel de Controle - i-Fiscal")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
 
+    # Seleção do ano no session_state
     ano_sel = st.sidebar.selectbox(
         "Ano de Referência:", anos, key="ano_referencia_ifiscal"
     )
 
-    # Carrega dados atualizados (do banco ou do estado)
-    res_data = load_respostas_ifiscal(ano_sel)
+    # Função de carregamento das respostas
+    res_data = (
+        load_respostas_ifiscal(ano_sel)
+        if "load_respostas_ifiscal" in globals()
+        else load_respostas(ano_sel)
+    )
     total_pts = sum(
         item.get("pontos", 0.0)
         for item in res_data.values()
         if isinstance(item, dict)
     )
 
-    # Régua IEGM / iFiscal
+    # Régua de Classificação IEGM / i-Fiscal
     if total_pts <= 500:
         faixa, cor = "C", "red"
     elif total_pts <= 599:
@@ -1529,7 +1605,7 @@ def render_sidebar_ifiscal():
     else:
         faixa, cor = "A", "green"
 
-    st.sidebar.metric("Pontuação Total iFiscal", f"{total_pts:.1f} pts")
+    st.sidebar.metric("Pontuação Total i-Fiscal", f"{total_pts:.1f} pts")
     st.sidebar.markdown(
         f"**Faixa:** <span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
         unsafe_allow_html=True,
@@ -1539,12 +1615,15 @@ def render_sidebar_ifiscal():
 
     col1, col2 = st.sidebar.columns(2)
 
+    # Botão de Download direto
     with col1:
         pdf_bytes = b""
-        if "gerar_relatorio_pdf_ifiscal" in globals():
-            pdf_bytes = gerar_relatorio_pdf_ifiscal(
-                res_data, ano_sel, total_pts, faixa
-            )
+        if "gerar_relatorio_ifiscal" in globals():
+            pdf_bytes = gerar_relatorio_ifiscal(
+                res_data, ano_sel=ano_sel, total_pts=total_pts
+            ).getvalue()
+        elif "gerar_relatorio_pdf" in globals():
+            pdf_bytes = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
 
         st.download_button(
             label="📄 Baixar PDF",
@@ -1555,27 +1634,28 @@ def render_sidebar_ifiscal():
             disabled=(pdf_bytes == b""),
         )
 
+    # Botão para abrir o Modal de confirmação
     with col2:
         if st.button(
             "🔄 Zerar",
-            help="Limpar todas as respostas do iFiscal para este ano",
+            help="Limpar todas as respostas do ano selecionado",
             use_container_width=True,
         ):
-            confirmar_zerar_dialog_ifiscal(ano_sel)
+            confirmar_zerar_dialog(ano_sel)
 
     return total_pts, res_data, ano_sel
 
 
 # =============================================================================
-# 3. GRÁFICOS E HISTÓRICO - iFiscal
+# 5. GRÁFICOS E HISTÓRICO - i-Fiscal
 # =============================================================================
 
 
 def get_all_years_data_ifiscal() -> dict:
-    """Busca histórico de dados de todos os anos da tabela respostas_ifiscal."""
+    """Busca o histórico de dados de todos os anos salvos na tabela respostas_ifiscal e session_state."""
     all_data = {}
 
-    # 1. Consulta o Banco PostgreSQL
+    # 1. Carrega via Banco PostgreSQL (Neon)
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -1584,11 +1664,17 @@ def get_all_years_data_ifiscal() -> dict:
                 )
                 anos_banco = [row[0] for row in cursor.fetchall()]
                 for a in anos_banco:
-                    all_data[a] = load_respostas_ifiscal(a)
+                    all_data[a] = (
+                        load_respostas_ifiscal(a)
+                        if "load_respostas_ifiscal" in globals()
+                        else load_respostas(a)
+                    )
     except Exception as e:
-        logging.error(f"Erro ao buscar histórico do iFiscal no banco: {e}")
+        logging.error(
+            f"Erro ao buscar histórico de anos i-Fiscal no banco: {e}"
+        )
 
-    # 2. Complementa via Session State (evitando RuntimeError de mutação)
+    # 2. Carrega via Session State (captura dados dinâmicos em memória)
     prefixo = "respostas_ifiscal_"
     for key in list(st.session_state.keys()):
         if key.startswith(prefixo):
@@ -1602,8 +1688,8 @@ def get_all_years_data_ifiscal() -> dict:
     return all_data
 
 
-def grafico_pontos_por_ano_ifiscal(all_data):
-    """Gráfico de barras vertical com histórico de pontos do iFiscal."""
+def grafico_pontos_por_ano(all_data):
+    """Gráfico de barras vertical com pontos totais por ano para o i-Fiscal."""
     anos = sorted(all_data.keys())
     totais = []
     cores = []
@@ -1636,14 +1722,14 @@ def grafico_pontos_por_ano_ifiscal(all_data):
             marker_color=cores,
             text=[f"{t:.1f} pts" for t in totais],
             textposition="outside",
-            hovertemplate="<b>Ano: %{x}</b><br>iFiscal Total: %{y:.1f} pts<extra></extra>",
+            hovertemplate="<b>Ano: %{x}</b><br>i-Fiscal Total: %{y:.1f} pts<extra></extra>",
         )
     )
 
     fig.update_layout(
-        title="Histórico iFiscal (Gestão Fiscal e Financeira)",
+        title="Índice Histórico i-Fiscal (Gestão Fiscal) por Exercício",
         xaxis_title="Ano",
-        yaxis_title="Pontuação iFiscal",
+        yaxis_title="Pontuação i-Fiscal",
         plot_bgcolor="white",
         paper_bgcolor="white",
         showlegend=False,
@@ -1653,17 +1739,19 @@ def grafico_pontos_por_ano_ifiscal(all_data):
     return fig
 
 
-def render_graficos_ifiscal(res_data_atual, ano_sel):
-    st.header("📊 Painel de Análise - iFiscal")
+def render_graficos(res_data_atual, ano_sel):
+    st.header("📊 Painel de Análise do i-Fiscal")
+
     all_data = get_all_years_data_ifiscal()
 
     if not all_data:
-        st.info("Nenhum dado do iFiscal registrado ainda.")
+        st.info(
+            "Nenhum dado do i-Fiscal registrado ainda. Preencha os itens para visualizar os gráficos."
+        )
         return
 
-    st.plotly_chart(
-        grafico_pontos_por_ano_ifiscal(all_data), use_container_width=True
-    )
+    st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
+
 
 # =============================================================================
 # 6. FORMULÁRIO PRINCIPAL - i-Fiscal
@@ -1691,6 +1779,3 @@ def mostrar_formulario_ifiscal():
 
     with aba_graf:
         render_graficos(res_data, ano_sel)
-        
-        
-
