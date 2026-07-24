@@ -4746,3 +4746,127 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 7.1 • CLASSIFICAÇÃO FUNCIONAL DA DESPESA
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_alteracao_decreto_7_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 7.1 - Classificação Funcional das Alterações ({ano_sel})", expanded=True):
+                st.subheader("7.1 • Classificação Funcional da Despesa")
+                st.write("**7.1 Assinale a classificação funcional da despesa, objeto de alterações orçamentárias decorrentes de remanejamento, transposição e transferências realizadas por decreto:**")
+                st.caption("ℹ *Selecione as funções afetadas, informe a evidência e clique em 'Salvar Questão 7.1'.*")
+
+                funcs_alt_71 = {
+                    "10 - Saúde – -05 (perde 05 pontos)": -5.0,
+                    "12 - Educação – -05 (perde 05 pontos)": -5.0,
+                    "17 - Saneamento – -05 (perde 05 pontos)": -5.0,
+                    "19 - Ciência e Tecnologia – 00": 0.0,
+                    "26 - Transporte – -05 (perde 05 pontos)": -5.0,
+                    "Outras – -05 (perde 05 pontos)": -5.0
+                }
+
+                # Resgate seguro dos dados de 7.1
+                d71 = res_data.get("7.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_71_salva = d71.get("link", "")
+
+                try:
+                    lista_salva_71 = ast.literal_eval(d71.get("valor", "[]"))
+                    if not isinstance(lista_salva_71, list):
+                        lista_salva_71 = []
+                except Exception:
+                    lista_salva_71 = []
+
+                chave_link_71 = f"t_7_1_{ano_sel}"
+                chave_coment_71 = f"coment_7.1_{ano_sel}"
+
+                col1_71, col2_71 = st.columns([1, 1])
+
+                with col1_71:
+                    st.markdown("**Selecione uma ou mais funções afetadas:**")
+                    for idx, (item_texto, pt) in enumerate(funcs_alt_71.items()):
+                        key_chk_71 = f"chk_71_{idx}_{ano_sel}"
+                        st.checkbox(
+                            item_texto,
+                            value=item_texto in lista_salva_71,
+                            key=key_chk_71
+                        )
+
+                with col2_71:
+                    link_evidencia_71 = st.text_area(
+                        "Link/Evidência (7.1):",
+                        value=evidencia_71_salva,
+                        key=chave_link_71,
+                        placeholder="Insira os links comprobatórios referente às funções selecionadas...",
+                        height=150
+                    )
+                    placeholder_links_71 = st.empty()
+                    links_71_visuais = re.findall(REGEX_PURE_URL, link_evidencia_71 or "")
+                    if links_71_visuais:
+                        placeholder_links_71.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_71_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 7.1
+                bloco_comentarios("7.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 7.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 7.1", key=f"btn_salvar_7_1_{ano_sel}", type="primary"):
+                    lnk_val_71 = link_evidencia_71.strip()
+                    comentario_para_salvar_71 = st.session_state.get(chave_coment_71, d71.get("comentario", ""))
+
+                    itens_selecionados_71 = []
+                    pts_calculados_71 = 0.0
+
+                    for idx, (item_texto, pt) in enumerate(funcs_alt_71.items()):
+                        key_chk_71 = f"chk_71_{idx}_{ano_sel}"
+                        if st.session_state.get(key_chk_71, False):
+                            itens_selecionados_71.append(item_texto)
+                            pts_calculados_71 += pt
+
+                    str_valor_71 = str(itens_selecionados_71)
+
+                    save_resp(
+                        qid="7.1",
+                        valor=str_valor_71,
+                        pontos=float(pts_calculados_71),
+                        link=lnk_val_71,
+                        comentario=comentario_para_salvar_71
+                    )
+                    res_data["7.1"] = {
+                        "valor": str_valor_71,
+                        "pontos": float(pts_calculados_71),
+                        "link": lnk_val_71,
+                        "comentario": comentario_para_salvar_71
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_71 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_71_salva or "")]
+
+                    if lnk_val_71 != evidencia_71_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 7.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status / Impacto 7.1
+                pts_atuais_71 = d71.get("pontos", 0.0)
+                cor_txt_71 = "#dc3545" if pts_atuais_71 < 0 else "#28a745"
+                sufixo_pen = " (Penalidades aplicadas)" if pts_atuais_71 < 0 else ""
+                st.markdown(
+                    f"<span style='color:{cor_txt_71}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação (Quesito 7.1): {pts_atuais_71:.1f} pontos{sufixo_pen}</span>",
+                    unsafe_allow_html=True
+                )
+
+        # Modal de Evidências do 7.1
+        if st.session_state.get(f"gatilho_modal_7_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False
