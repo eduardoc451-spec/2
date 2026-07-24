@@ -7945,3 +7945,122 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.4.1", st.session_state.get(f"links_pendentes_14_4_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_4_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 14.4.2 • TREINAMENTO DO QUADRO FUNCIONAL (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_treinamento_14_4_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 14.4.2 - Treinamento do Quadro Funcional ({ano_sel})", expanded=True):
+                st.subheader("14.4.2 • Treinamento Periódico")
+                st.write("**O quadro funcional do Sistema de Controle Interno recebe treinamento específico para execução das atividades inerentes ao cargo?** *(Treinamento periódico pelo menos 1 vez ao ano)*")
+                st.caption("ℹ *Selecione uma opção, insira os links de evidência/comentários e clique em 'Salvar Questão 14.4.2'.*")
+
+                opcoes_1442 = {
+                    "Selecione...": 0.0,
+                    "Sim – 06": 6.0,
+                    "Não – 00": 0.0
+                }
+
+                # Resgate seguro dos dados do 14.4.2
+                d1442 = res_data.get("14.4.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d1442 is None or not isinstance(d1442, dict):
+                    d1442 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_1442 = d1442.get("valor", "Selecione...")
+                if val_salvo_1442 not in opcoes_1442:
+                    val_salvo_1442 = "Selecione..."
+
+                evidencia_1442_salva = d1442.get("link", "")
+
+                # Chaves estáticas
+                chave_radio_1442 = f"r_1442_{ano_sel}"
+                chave_link_1442 = f"t_1442_{ano_sel}"
+                chave_coment_1442 = f"coment_14.4.2_{ano_sel}"
+
+                lista_opcoes_1442 = list(opcoes_1442.keys())
+                idx_1442 = lista_opcoes_1442.index(val_salvo_1442)
+
+                c1442_1, c1442_2 = st.columns([1, 1])
+
+                with c1442_1:
+                    v_input_1442 = st.radio(
+                        "Selecione 14.4.2:",
+                        options=lista_opcoes_1442,
+                        index=idx_1442,
+                        key=chave_radio_1442,
+                        label_visibility="collapsed"
+                    )
+
+                with c1442_2:
+                    link_1442 = st.text_area(
+                        "Link/Evidência (14.4.2):",
+                        value=evidencia_1442_salva,
+                        key=chave_link_1442,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.4.2...",
+                        height=120
+                    )
+                    placeholder_links_1442 = st.empty()
+                    links_1442_visuais = re.findall(REGEX_PURE_URL, link_1442 or "")
+                    if links_1442_visuais:
+                        placeholder_links_1442.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1442_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.4.2
+                bloco_comentarios("14.4.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.4.2
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.4.2", key=f"btn_salvar_14_4_2_{ano_sel}", type="primary"):
+                    val_para_salvar_1442 = v_input_1442
+                    pts_calc_1442 = opcoes_1442.get(val_para_salvar_1442, 0.0)
+                    lnk_val_1442 = link_1442.strip()
+                    comentario_para_salvar_1442 = st.session_state.get(chave_coment_1442, d1442.get("comentario", ""))
+
+                    # Persistência principal no banco/sessão
+                    save_resp(
+                        qid="14.4.2",
+                        valor=val_para_salvar_1442,
+                        pontos=pts_calc_1442,
+                        link=lnk_val_1442,
+                        comentario=comentario_para_salvar_1442
+                    )
+                    res_data["14.4.2"] = {
+                        "valor": val_para_salvar_1442,
+                        "pontos": pts_calc_1442,
+                        "link": lnk_val_1442,
+                        "comentario": comentario_para_salvar_1442
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_1442 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1442_salva or "")]
+
+                    if lnk_val_1442 != evidencia_1442_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_4_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_4_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 14.4.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_1442 = d1442.get("pontos", 0.0)
+
+                if v_input_1442 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 14.4.2</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção salva com sucesso (Impacto: {pts_atuais_1442:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 14.4.2
+        if st.session_state.get(f"gatilho_modal_14_4_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.4.2", st.session_state.get(f"links_pendentes_14_4_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_4_2_{ano_sel}"] = False
