@@ -200,175 +200,206 @@ def modal_aviso_link(qid, links_encontrados):
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}_fiscal"):
         st.rerun()
 # =============================================================================
-# 1. FUNÇÕES DE APOIO E BANCO DE DADOS (IEGM - I-FISCAL)
+# 1. FUNÇÕES DE APOIO E BANCO DE DADOS NEON (IEGM - I-FISCAL)
 # =============================================================================
 
+import json
+import logging
+from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+
+
 def get_connection():
-    # Conecta no banco de dados isolado e específico do I-FISCAL
-    return sqlite3.connect("dados_ifiscal.db", check_same_thread=False)
+    """Conecta no banco PostgreSQL hospedado no Neon."""
+    return psycopg2.connect(st.secrets["DATABASE_URL"], sslmode="require")
+
 
 def init_db():
-    """Cria as tabelas do banco de dados com migração automática e suporte a comentários estruturados em JSON."""
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        
-        # 1. Cria a tabela base estruturada
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS respostas (
-                id TEXT NOT NULL,
-                ano INTEGER NOT NULL,
-                valor TEXT,
-                pontos REAL DEFAULT 0,
-                link TEXT,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id, ano)
-            )
-        """)
-        
-        # 2. PRAGMA para checar quais colunas realmente existem no arquivo físico do banco do I-FISCAL
-        cursor.execute("PRAGMA table_info(respostas)")
-        colunas_existentes = [row[1] for row in cursor.fetchall()]
-        
-        # 3. Força a migração da coluna de comentários em JSON se não existir
-        if "comentarios" not in colunas_existentes:
-            try:
-                cursor.execute("ALTER TABLE respostas ADD COLUMN comentarios TEXT")
-            except sqlite3.OperationalError:
-                pass
-                
-        # 4. Garante que a coluna 'atualizado_em' esteja com o nome perfeito
-        if "atualizado_em" not in colunas_existentes:
-            try:
-                cursor.execute("ALTER TABLE respostas ADD COLUMN atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-            except sqlite3.OperationalError:
-                pass
-                
-        # 5. Garante a coluna criado_em
-        if "criado_em" not in colunas_existentes:
-            try:
-                cursor.execute("ALTER TABLE respostas ADD COLUMN criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-            except sqlite3.OperationalError:
-                pass
-                
-        conn.commit()
+    """Cria a tabela no Neon se não existir e garante as colunas necessárias."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                # 1. Cria a tabela base no PostgreSQL
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS respostas (
+                        id VARCHAR(100) NOT NULL,
+                        ano INT NOT NULL,
+                        valor TEXT,
+                        pontos NUMERIC DEFAULT 0,
+                        link TEXT,
+                        comentarios TEXT,
+                        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (id, ano)
+                    );
+                """)
+
+                # 2. Garante colunas adicionais de forma segura (Postgres permite IF NOT EXISTS)
+                cursor.execute(
+                    "ALTER TABLE respostas ADD COLUMN IF NOT EXISTS comentarios TEXT;"
+                )
+                cursor.execute(
+                    "ALTER TABLE respostas ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
+                )
+                cursor.execute(
+                    "ALTER TABLE respostas ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
+                )
+
+            conn.commit()
+    except Exception as e:
+        logging.error(f"Erro ao inicializar banco Neon (I-FISCAL): {e}")
+
 
 def load_respostas(ano):
+    init_db()
     dados_ano = {}
     try:
         with get_connection() as conn:
-            cursor = conn.execute(
-                "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = ?", (ano,)
-            )
-            for row in cursor.fetchall():
-                comentarios_lista = []
-                if row[4]:
-                    try:
-                        comentarios_lista = json.loads(row[4])
-                    except Exception:
-                        comentarios_lista = []
-                        
-                dados_ano[row[0]] = {
-                    "valor": row[1], 
-                    "pontos": row[2], 
-                    "link": row[3],
-                    "comentarios": comentarios_lista
-                }
-    except Exception:
-        pass
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
+                    (int(ano),),
+                )
+                rows = cursor.fetchall()
+
+                for row in rows:
+                    qid, valor, pontos, link, comentarios_raw = row
+                    comentarios_lista = []
+                    if comentarios_raw:
+                        try:
+                            comentarios_lista = json.loads(comentarios_raw)
+                        except Exception:
+                            comentarios_lista = []
+
+                    dados_ano[qid] = {
+                        "valor": valor,
+                        "pontos": float(pontos) if pontos is not None else 0.0,
+                        "link": link,
+                        "comentarios": comentarios_lista,
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao carregar respostas do Neon: {e}")
+
     return dados_ano
+
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
     ano_sel = st.session_state.get("ano_referencia_global")
     if not ano_sel:
         return
-    
+
     comentarios_json = None
     if comentarios is not None:
         comentarios_json = json.dumps(comentarios, ensure_ascii=False)
     else:
         dados_atuais = load_respostas(ano_sel)
         if qid in dados_atuais:
-            comentarios_json = json.dumps(dados_atuais[qid].get("comentarios", []), ensure_ascii=False)
+            comentarios_json = json.dumps(
+                dados_atuais[qid].get("comentarios", []), ensure_ascii=False
+            )
 
     try:
         timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     except AttributeError:
         import datetime as dt_modulo
-        timestamp_atual = dt_modulo.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        timestamp_atual = dt_modulo.datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
     try:
         with get_connection() as conn:
-            conn.execute("""
-                INSERT OR REPLACE INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (qid, ano_sel, str(valor), float(pontos), str(link), comentarios_json, timestamp_atual))
+            with conn.cursor() as cursor:
+                # Sintaxe PostgreSQL para INSERT OR REPLACE (UPSERT)
+                cursor.execute(
+                    """
+                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id, ano) DO UPDATE SET
+                        valor = EXCLUDED.valor,
+                        pontos = EXCLUDED.pontos,
+                        link = EXCLUDED.link,
+                        comentarios = EXCLUDED.comentarios,
+                        atualizado_em = EXCLUDED.atualizado_em;
+                """,
+                    (
+                        qid,
+                        int(ano_sel),
+                        str(valor),
+                        float(pontos),
+                        str(link),
+                        comentarios_json,
+                        timestamp_atual,
+                    ),
+                )
             conn.commit()
-    except sqlite3.OperationalError as e:
-        if "no column named atualizado_em" in str(e):
-            try:
-                with get_connection() as conn:
-                    conn.execute("ALTER TABLE respostas ADD COLUMN atualizado_em TEXT")
-                    conn.commit()
-                save_resp(qid, valor, pontos, link, comentarios)
-            except Exception as ex:
-                st.error(f"Erro crítico ao tentar corrigir estrutura: {ex}")
-        else:
-            st.error(f"Erro operacional no banco do I-FISCAL: {e}")
     except Exception as e:
-        st.error(f"Erro ao salvar {qid}: {e}")
+        st.error(f"Erro ao salvar {qid} no Neon: {e}")
+
 
 def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
-    """
-    Gera o diálogo interno avançado com histórico retrátil, status em realtime
+    """Gera o diálogo interno avançado com histórico retrátil, status em realtime
+
     e controle individual de remoção por lixeira para o módulo I-FISCAL.
     """
     import datetime as dt_modulo
+
     ano_atual_padrao = dt_modulo.date.today().year
 
     ano_sel = st.session_state.get("ano_referencia_global", ano_atual_padrao)
-    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
-    
+    usuario_atual = st.session_state.get(
+        "username", st.session_state.get("usuario", "Usuário Anônimo")
+    )
+
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
     key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
-    
+
     if key_estado_limpar not in st.session_state:
         st.session_state[key_estado_limpar] = False
-        
+
     st.markdown("---")
-    
+
     dados_questao = res_data.get(questao_id, {})
     historico = dados_questao.get("comentarios", [])
-    
+
     status_global = "Resolvido"
     for com in historico:
         if "status_definido" in com:
             status_global = com["status_definido"]
-            
-    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
-    
-    with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
-        
-        st.markdown("<b style='font-size: 13px;'>Status Atual do Quesito:</b>", unsafe_allow_html=True)
+
+    badge_status = (
+        "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+    )
+
+    with st.expander(
+        f"💬 Diálogo Interno {id_chave} | Status: {badge_status}",
+        expanded=(status_global == "Pendente"),
+    ):
+        st.markdown(
+            "<b style='font-size: 13px;'>Status Atual do Quesito:</b>",
+            unsafe_allow_html=True,
+        )
         opcoes_status = ["Resolvido", "Pendente"]
         idx_status_atual = opcoes_status.index(status_global)
-        
+
         novo_status_clicado = st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
             index=idx_status_atual,
             horizontal=True,
             key=f"rad_status_{id_chave}_{ano_sel}",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
-        
+
         if novo_status_clicado != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
                 "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
-                "status_definido": novo_status_clicado
+                "status_definido": novo_status_clicado,
             }
             historico.append(log_mudanca)
             save_resp(
@@ -376,26 +407,28 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                 valor=dados_questao.get("valor", ""),
                 pontos=dados_questao.get("pontos", 0.0),
                 link=dados_questao.get("link", ""),
-                comentarios=historico
+                comentarios=historico,
             )
             st.rerun()
 
-        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True
+        )
 
         if historico:
             for idx, com in enumerate(historico):
                 col_balao, col_lixeira = st.columns([11, 1])
-                
+
                 with col_balao:
-                    if "Sistema /" in com['autor']:
+                    if "Sistema /" in com["autor"]:
                         st.markdown(
                             f"""
                             <div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
                                 <span style="font-size: 11px; color: #6c757d; font-style: italic;">{com['autor']} - {com['data']}</span>
                                 <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057; font-style: italic;">{com['texto']}</p>
                             </div>
-                            """, 
-                            unsafe_allow_html=True
+                            """,
+                            unsafe_allow_html=True,
                         )
                     else:
                         st.markdown(
@@ -405,82 +438,111 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                                 <span style="font-size: 10px; color: #999; margin-left: 10px;">{com['data']}</span>
                                 <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{com['texto']}</p>
                             </div>
-                            """, 
-                            unsafe_allow_html=True
+                            """,
+                            unsafe_allow_html=True,
                         )
-                
+
                 with col_lixeira:
-                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                    if st.button("🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}", help="Excluir este comentário"):
+                    st.markdown(
+                        "<div style='margin-top: 10px;'></div>",
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "🗑️",
+                        key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}",
+                        help="Excluir este comentário",
+                    ):
                         historico.pop(idx)
                         save_resp(
                             qid=questao_id,
                             valor=dados_questao.get("valor", ""),
                             pontos=dados_questao.get("pontos", 0.0),
                             link=dados_questao.get("link", ""),
-                            comentarios=historico
+                            comentarios=historico,
                         )
                         st.rerun()
-                        
+
             st.markdown("<br>", unsafe_allow_html=True)
         else:
-            st.markdown("<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>", unsafe_allow_html=True)
-            
-        st.markdown("<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>", unsafe_allow_html=True)
-        
+            st.markdown(
+                "<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            "<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>",
+            unsafe_allow_html=True,
+        )
+
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
-            
-        novo_texto = st.text_area("Digite sua mensagem:", key=key_texto, height=80, label_visibility="collapsed")
-        
+
+        novo_texto = st.text_area(
+            "Digite sua mensagem:",
+            key=key_texto,
+            height=80,
+            label_visibility="collapsed",
+        )
+
         col_btn1, _ = st.columns([1, 3])
         with col_btn1:
-            if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
+            if st.button(
+                "Postar Comentário",
+                key=f"btn_com_{id_chave}_{ano_sel}",
+                type="primary",
+            ):
                 if novo_texto.strip():
                     nova_mensagem = {
                         "autor": usuario_atual,
                         "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "texto": novo_texto.strip(),
-                        "status_definido": status_global
+                        "status_definido": status_global,
                     }
                     historico.append(nova_mensagem)
                     save_resp(
-                        qid=questao_id, 
-                        valor=dados_questao.get("valor", ""), 
-                        pontos=dados_questao.get("pontos", 0.0), 
+                        qid=questao_id,
+                        valor=dados_questao.get("valor", ""),
+                        pontos=dados_questao.get("pontos", 0.0),
                         link=dados_questao.get("link", ""),
-                        comentarios=historico
+                        comentarios=historico,
                     )
                     st.session_state[key_estado_limpar] = True
                     st.rerun()
 
-def get_all_years_data():
-    all_data = {}
-    with get_connection() as conn:
-        cursor = conn.execute(
-            "SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC"
-        )
-        for row in cursor.fetchall():
-            qid, ano, valor, pontos, link, comentarios_raw = row
-            
-            comentarios_lista = []
-            if comentarios_raw:
-                try:
-                    comentarios_lista = json.loads(comentarios_raw)
-                except Exception:
-                    comentarios_lista = []
-                    
-            if ano not in all_data:
-                all_data[ano] = {}
-            all_data[ano][qid] = {
-                "valor": valor, 
-                "pontos": pontos, 
-                "link": link, 
-                "comentarios": comentarios_lista
-            }
-    return all_data
 
+def get_all_years_data():
+    init_db()
+    all_data = {}
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC"
+                )
+                rows = cursor.fetchall()
+                for row in rows:
+                    qid, ano, valor, pontos, link, comentarios_raw = row
+
+                    comentarios_lista = []
+                    if comentarios_raw:
+                        try:
+                            comentarios_lista = json.loads(comentarios_raw)
+                        except Exception:
+                            comentarios_lista = []
+
+                    if ano not in all_data:
+                        all_data[ano] = {}
+                    all_data[ano][qid] = {
+                        "valor": valor,
+                        "pontos": float(pontos) if pontos is not None else 0.0,
+                        "link": link,
+                        "comentarios": comentarios_lista,
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao buscar histórico no Neon: {e}")
+
+    return all_data
 # =============================================================================
 # 2. GERADOR DO RELATÓRIO PDF
 # =============================================================================
