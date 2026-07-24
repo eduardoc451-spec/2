@@ -11604,6 +11604,105 @@ def mostrar_formulario_plan():
                 modal_aviso_link("18.1", st.session_state.get(f"links_pendentes_18_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_18_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO INFORMATIVO TEXTUAL 19.0 • FEEDBACK SOBRE O QUESTIONÁRIO (Padrão iGov)
+        # =============================================================================
+        st.markdown("---", unsafe_allow_html=True)
+        with st.container(key=f"container_bloco_feedback_19_0_final_{ano_sel}", border=True):
+            with st.expander("💬 Quesito 19.0 - Encerramento e Feedback", expanded=True):
+                st.subheader("19.0 • Feedback sobre o Questionário")
+                st.write("**Gostaria de registrar suas impressões, comentários e sugestões a respeito do presente questionário?**")
+
+                # Recuperação segura dos dados salvos no banco
+                d190 = res_data.get("19.0") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_190_salva = d190.get("link", "") or d190.get("valor", "")
+
+                # Chaves explícitas no Session State
+                chave_link_190 = f"l190_text_{ano_sel}"
+                chave_coment_190 = f"coment_19.0_exclusivo_g19_{ano_sel}"
+
+                c190_1, c190_2 = st.columns([1, 1])
+
+                with c190_1:
+                    st.info(
+                        "💡 **Quesito Informativo**\n\n"
+                        "Este espaço é destinado à melhoria contínua dos nossos processos. "
+                        "Suas respostas não alteram a nota final do município."
+                    )
+
+                    # Exibição da métrica informativa (0.0 pts)
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value="0.0 pts",
+                        delta=None
+                    )
+
+                with c190_2:
+                    link_190 = st.text_area(
+                        "Utilize o espaço abaixo para registrar suas observações:",
+                        value=evidencia_190_salva,
+                        key=chave_link_190,
+                        placeholder="Digite aqui suas observações, críticas ou sugestões...",
+                        height=140
+                    )
+                    placeholder_links_190 = st.empty()
+                    links_190_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_190 or "")]
+                    if links_190_visuais:
+                        placeholder_links_190.markdown(
+                            "**🔗 Links Detectados:** " + " | ".join([f"[{u}]({u})" for u in links_190_visuais])
+                        )
+
+                # Renderiza o bloco de comentários específico do Quesito 19.0
+                bloco_comentarios("19.0_exclusivo_g19", res_data, ano_sel)
+
+                # Feedback visual dinâmico
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 19.0: 0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 19.0", key=f"btn_salvar_19_0_{ano_sel}", type="primary"):
+                    lnk_val = link_190.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_190, d190.get("comentario", ""))
+
+                    # Persistência no banco de dados (valor e link recebem o texto por ser quesito textual)
+                    save_resp(
+                        qid="19.0",
+                        valor=lnk_val,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["19.0"] = {
+                        "valor": lnk_val,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_190_salva or "")]
+
+                    if lnk_val != evidencia_190_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_19_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_19_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Feedback do Quesito 19.0 salvo com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 19.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_19_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.0", st.session_state.get(f"links_pendentes_19_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_19_0_{ano_sel}"] = False
+
 
 
 
