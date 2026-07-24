@@ -89,111 +89,75 @@ style_tabela_cabecalho = ParagraphStyle(
     alignment=TA_CENTER,
     textColor=colors.whitesmoke,
 )
+import json
+import logging
+import re
+import warnings
+from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import streamlit as st
+
 # -----------------------------------------------------------------------------
-# CONFIGURAÇÕES DE AMBIENTE E BANCO DE DADOS NEON
+# CONFIGURAÇÕES INICIAIS E SUPRESSÃO DE WARNINGS
 # -----------------------------------------------------------------------------
-warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
-os.environ["STREAMLIT_LOGGER_LEVEL"] = "error"
-os.environ["PYTHONWARNINGS"] = "ignore"
 logging.getLogger("streamlit").setLevel(logging.ERROR)
 
-
-def get_connection():
-    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
-    return psycopg2.connect(st.secrets["DATABASE_URL"])
-
-
-def init_db():
-    """Cria a tabela respostas_ifiscal idêntica à estrutura configurada no Neon."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS respostas_ifiscal (
-                        id SERIAL PRIMARY KEY,
-                        ano INT NOT NULL,
-                        quesito VARCHAR(50) NOT NULL,
-                        resposta TEXT,
-                        pontos DOUBLE PRECISION DEFAULT 0.0,
-                        detalhes JSONB DEFAULT '{}'::jsonb,
-                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT unq_ano_quesito_ifiscal UNIQUE(ano, quesito)
-                    );
-                """)
-            conn.commit()
-    except Exception as e:
-        logging.error(f"Erro ao inicializar banco iFiscal: {e}")
-
-
-# Inicializa a tabela no carregamento do módulo
-try:
-    init_db()
-except Exception as e:
-    logging.error(f"Erro no auto-init do iFiscal: {e}")
-
 # =============================================================================
-# REGEX DE VALIDAÇÃO
+# REGEX DE VALIDAÇÃO E CONSTANTES GLOBAIS
 # =============================================================================
 REGEX_PURE_URL = r'((https?://[^\s<>"]+))'
 
-# =============================================================================
-# CONSTANTES GLOBAIS - MATRIZ DE QUESITOS OFICIAL DO I-FISCAL
-# =============================================================================
-
 FAIXA_CORES = {
-    "C": "#ef4444", 
-    "C+": "#f97316", 
-    "B": "#eab308", 
-    "B+": "#22c55e", 
-    "A": "#16a34a"
+    "C": "#ef4444",
+    "C+": "#f97316",
+    "B": "#eab308",
+    "B+": "#22c55e",
+    "A": "#16a34a",
 }
 
 CATEGORIAS_MAP = {
     "infraestrutura": {
-        "label": "Infraestrutura e Setor Fiscal", 
-        "qids": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.5.1"]
+        "label": "Infraestrutura e Setor Fiscal",
+        "qids": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.5.1"],
     },
     "planejamento": {
-        "label": "Planejamento e Diretrizes Orçamentárias", 
-        "qids": ["2.0", "3.0", "4.3"]
+        "label": "Planejamento e Diretrizes Orçamentárias",
+        "qids": ["2.0", "3.0", "4.3"],
     },
     "transparencia_gov": {
-        "label": "Transparência Fiscal e Governo Digital", 
-        "qids": ["5.0", "5.3", "5.4", "6.0"]
+        "label": "Transparência Fiscal e Governo Digital",
+        "qids": ["5.0", "5.3", "5.4", "6.0"],
     },
     "sistemas_gestao": {
-        "label": "Sistemas de Gestão Financeira e Operações", 
-        "qids": ["8.0", "8.1", "8.2", "9.4", "9.4.1", "11.0", "13.0", "13.3"]
+        "label": "Sistemas de Gestão Financeira e Operações",
+        "qids": ["8.0", "8.1", "8.2", "9.4", "9.4.1", "11.0", "13.0", "13.3"],
     },
     "seguranca_processos": {
-        "label": "Segurança da Informação e Processos Fiscais", 
-        "qids": ["18.1", "19.0", "19.1", "20.0", "20.1", "21.0", "22.0"]
+        "label": "Segurança da Informação e Processos Fiscais",
+        "qids": ["18.1", "19.0", "19.1", "20.0", "20.1", "21.0", "22.0"],
     },
     "auditoria_final": {
-        "label": "Quesitos de Auditoria Final (Bloco F)", 
+        "label": "Quesitos de Auditoria Final (Bloco F)",
         "qids": [
-            "F1", "F2", "F3", "F4", "F5", "F8", "F10", 
-            "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F20"
-        ]
+            "F1", "F2", "F3", "F4", "F5", "F8", "F10",
+            "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F20",
+        ],
     },
 }
 
 PONTUACOES_MAX = {
-    # Quesitos Numéricos
     "1.1": 0.5, "1.2": 1.5, "1.3": 10.0, "1.4": 3.0, "1.5": 5.0, "1.5.1": 5.0,
-    "2.0": 4.0, "3.0": 30.0, "4.3": 5.0, 
-    "5.0": 3.0, "5.3": 3.0, "5.4": 6.0, "6.0": 2.0, 
-    "8.0": 1.0, "8.1": 2.0, "8.2": 15.0, "9.4": 2.0, "9.4.1": 3.0, "11.0": 3.0, "13.0": 1.0, "13.3": 9.0, 
+    "2.0": 4.0, "3.0": 30.0, "4.3": 5.0,
+    "5.0": 3.0, "5.3": 3.0, "5.4": 6.0, "6.0": 2.0,
+    "8.0": 1.0, "8.1": 2.0, "8.2": 15.0, "9.4": 2.0, "9.4.1": 3.0, "11.0": 3.0, "13.0": 1.0, "13.3": 9.0,
     "18.1": 15.0, "19.0": 3.0, "19.1": 3.0, "20.0": 3.0, "20.1": 6.0, "21.0": 3.0, "22.0": 3.0,
-    
-    # Quesitos de Bloco F
-    "F1": 75.0, "F2": 75.0, "F3": 100.0, "F4": 25.0, "F5": 25.0, 
-    "F8": 75.0, "F10": 75.0, "F12": 50.0, "F13": 50.0, "F14": 50.0, 
-    "F15": 25.0, "F16": 25.0, "F17": 75.0, "F18": 75.0, "F20": 50.0
+    "F1": 75.0, "F2": 75.0, "F3": 100.0, "F4": 25.0, "F5": 25.0,
+    "F8": 75.0, "F10": 75.0, "F12": 50.0, "F13": 50.0, "F14": 50.0,
+    "F15": 25.0, "F16": 25.0, "F17": 75.0, "F18": 75.0, "F20": 50.0,
 }
 
-# TEXTOS ENXUTOS PARA OS CARD DE PERGUNTAS DO FORMULÁRIO
 TEXTO_PERGUNTAS = {
     "1.1": "A estrutura de fiscalização tributária municipal conta com corpo técnico próprio?",
     "1.2": "As instalações e equipamentos do setor de arrecadação atendem à demanda operacional?",
@@ -237,7 +201,7 @@ TEXTO_PERGUNTAS = {
     "F16": "Créditos Adicionais: Abertura de créditos suplementares sem a existência de recursos disponíveis?",
     "F17": "Fundo de Previdência: Existência de repasses atrasados ou insuficientes ao RPPS municipal?",
     "F18": "Educação/Saúde: Descumprimento das aplicações mínimas constitucionais em MDE ou ASPS?",
-    "F20": "Dívida Ativa Inerte: Ausência absoluta de cobrança judicial que resulte em prescrição de débitos?"
+    "F20": "Dívida Ativa Inerte: Ausência absoluta de cobrança judicial que resulte em prescrição de débitos?",
 }
 
 # =============================================================================
@@ -246,40 +210,30 @@ TEXTO_PERGUNTAS = {
 @st.dialog("⚠️ Atenção! Evidência em Link Externo")
 def modal_aviso_link(qid, links_encontrados):
     st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    
     for lk in links_encontrados:
         st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
-        
+
     st.markdown("""
     **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
-    
+
     Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
     """)
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}_fiscal"):
         st.rerun()
+
 # =============================================================================
-# 1. FUNÇÕES DE APOIO E BANCO DE DADOS NEON (IEGM - I-FISCAL)
+# BANCO DE DADOS NEON (UNIFICADO)
 # =============================================================================
-
-import json
-import logging
-from datetime import datetime
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import streamlit as st
-
-
 def get_connection():
-    """Conecta no banco PostgreSQL hospedado no Neon."""
+    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
     return psycopg2.connect(st.secrets["DATABASE_URL"], sslmode="require")
 
 
 def init_db():
-    """Cria a tabela no Neon se não existir e garante as colunas necessárias."""
+    """Inicializa a tabela unificada no PostgreSQL."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                # 1. Cria a tabela base no PostgreSQL
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS respostas (
                         id VARCHAR(100) NOT NULL,
@@ -293,25 +247,18 @@ def init_db():
                         PRIMARY KEY (id, ano)
                     );
                 """)
-
-                # 2. Garante colunas adicionais de forma segura (Postgres permite IF NOT EXISTS)
-                cursor.execute(
-                    "ALTER TABLE respostas ADD COLUMN IF NOT EXISTS comentarios TEXT;"
-                )
-                cursor.execute(
-                    "ALTER TABLE respostas ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
-                )
-                cursor.execute(
-                    "ALTER TABLE respostas ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
-                )
-
             conn.commit()
     except Exception as e:
-        logging.error(f"Erro ao inicializar banco Neon (I-FISCAL): {e}")
+        logging.error(f"Erro ao inicializar banco Neon: {e}")
+
+# Executa criação ao importar o módulo
+try:
+    init_db()
+except Exception as e:
+    logging.error(f"Erro na inicialização automática do BD: {e}")
 
 
 def load_respostas(ano):
-    init_db()
     dados_ano = {}
     try:
         with get_connection() as conn:
@@ -321,15 +268,12 @@ def load_respostas(ano):
                     (int(ano),),
                 )
                 rows = cursor.fetchall()
-
                 for row in rows:
                     qid, valor, pontos, link, comentarios_raw = row
-                    comentarios_lista = []
-                    if comentarios_raw:
-                        try:
-                            comentarios_lista = json.loads(comentarios_raw)
-                        except Exception:
-                            comentarios_lista = []
+                    try:
+                        comentarios_lista = json.loads(comentarios_raw) if comentarios_raw else []
+                    except Exception:
+                        comentarios_lista = []
 
                     dados_ano[qid] = {
                         "valor": valor,
@@ -339,7 +283,6 @@ def load_respostas(ano):
                     }
     except Exception as e:
         logging.error(f"Erro ao carregar respostas do Neon: {e}")
-
     return dados_ano
 
 
@@ -348,49 +291,24 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
     if not ano_sel:
         return
 
-    comentarios_json = None
-    if comentarios is not None:
-        comentarios_json = json.dumps(comentarios, ensure_ascii=False)
-    else:
-        dados_atuais = load_respostas(ano_sel)
-        if qid in dados_atuais:
-            comentarios_json = json.dumps(
-                dados_atuais[qid].get("comentarios", []), ensure_ascii=False
-            )
-
-    try:
-        timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    except AttributeError:
-        import datetime as dt_modulo
-
-        timestamp_atual = dt_modulo.datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+    comentarios_json = json.dumps(comentarios, ensure_ascii=False) if comentarios is not None else "[]"
+    timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                # Sintaxe PostgreSQL para INSERT OR REPLACE (UPSERT)
                 cursor.execute(
                     """
-                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em) 
+                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id, ano) DO UPDATE SET
                         valor = EXCLUDED.valor,
                         pontos = EXCLUDED.pontos,
                         link = EXCLUDED.link,
-                        comentarios = EXCLUDED.comentarios,
+                        comentarios = COALESCE(EXCLUDED.comentarios, respostas.comentarios),
                         atualizado_em = EXCLUDED.atualizado_em;
-                """,
-                    (
-                        qid,
-                        int(ano_sel),
-                        str(valor),
-                        float(pontos),
-                        str(link),
-                        comentarios_json,
-                        timestamp_atual,
-                    ),
+                    """,
+                    (qid, int(ano_sel), str(valor), float(pontos), str(link), comentarios_json, timestamp_atual),
                 )
             conn.commit()
     except Exception as e:
@@ -398,18 +316,9 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
 
 
 def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
-    """Gera o diálogo interno avançado com histórico retrátil, status em realtime
-
-    e controle individual de remoção por lixeira para o módulo I-FISCAL.
-    """
-    import datetime as dt_modulo
-
-    ano_atual_padrao = dt_modulo.date.today().year
-
-    ano_sel = st.session_state.get("ano_referencia_global", ano_atual_padrao)
-    usuario_atual = st.session_state.get(
-        "username", st.session_state.get("usuario", "Usuário Anônimo")
-    )
+    """Gera o diálogo interno com histórico e gerenciamento de comentários."""
+    ano_sel = st.session_state.get("ano_referencia_global", datetime.now().year)
+    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
 
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
@@ -419,7 +328,6 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
         st.session_state[key_estado_limpar] = False
 
     st.markdown("---")
-
     dados_questao = res_data.get(questao_id, {})
     historico = dados_questao.get("comentarios", [])
 
@@ -428,18 +336,13 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
         if "status_definido" in com:
             status_global = com["status_definido"]
 
-    badge_status = (
-        "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
-    )
+    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
 
     with st.expander(
         f"💬 Diálogo Interno {id_chave} | Status: {badge_status}",
         expanded=(status_global == "Pendente"),
     ):
-        st.markdown(
-            "<b style='font-size: 13px;'>Status Atual do Quesito:</b>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<b style='font-size: 13px;'>Status Atual do Quesito:</b>", unsafe_allow_html=True)
         opcoes_status = ["Resolvido", "Pendente"]
         idx_status_atual = opcoes_status.index(status_global)
 
@@ -469,14 +372,11 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
             )
             st.rerun()
 
-        st.markdown(
-            "<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True
-        )
+        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
         if historico:
             for idx, com in enumerate(historico):
                 col_balao, col_lixeira = st.columns([11, 1])
-
                 with col_balao:
                     if "Sistema /" in com["autor"]:
                         st.markdown(
@@ -492,7 +392,7 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                         st.markdown(
                             f"""
                             <div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e88e5;">
-                                <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">{com['autor']}</span> 
+                                <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">{com['autor']}</span>
                                 <span style="font-size: 10px; color: #999; margin-left: 10px;">{com['data']}</span>
                                 <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{com['texto']}</p>
                             </div>
@@ -501,15 +401,8 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                         )
 
                 with col_lixeira:
-                    st.markdown(
-                        "<div style='margin-top: 10px;'></div>",
-                        unsafe_allow_html=True,
-                    )
-                    if st.button(
-                        "🗑️",
-                        key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}",
-                        help="Excluir este comentário",
-                    ):
+                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                    if st.button("🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}", help="Excluir este comentário"):
                         historico.pop(idx)
                         save_resp(
                             qid=questao_id,
@@ -519,75 +412,50 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                             comentarios=historico,
                         )
                         st.rerun()
-
-            st.markdown("<br>", unsafe_allow_html=True)
         else:
-            st.markdown(
-                "<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>",
-                unsafe_allow_html=True,
-            )
+            st.markdown("<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>", unsafe_allow_html=True)
 
-        st.markdown(
-            "<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>", unsafe_allow_html=True)
 
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
 
-        novo_texto = st.text_area(
-            "Digite sua mensagem:",
-            key=key_texto,
-            height=80,
-            label_visibility="collapsed",
-        )
+        novo_texto = st.text_area("Digite sua mensagem:", key=key_texto, height=80, label_visibility="collapsed")
 
-        col_btn1, _ = st.columns([1, 3])
-        with col_btn1:
-            if st.button(
-                "Postar Comentário",
-                key=f"btn_com_{id_chave}_{ano_sel}",
-                type="primary",
-            ):
-                if novo_texto.strip():
-                    nova_mensagem = {
-                        "autor": usuario_atual,
-                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "texto": novo_texto.strip(),
-                        "status_definido": status_global,
-                    }
-                    historico.append(nova_mensagem)
-                    save_resp(
-                        qid=questao_id,
-                        valor=dados_questao.get("valor", ""),
-                        pontos=dados_questao.get("pontos", 0.0),
-                        link=dados_questao.get("link", ""),
-                        comentarios=historico,
-                    )
-                    st.session_state[key_estado_limpar] = True
-                    st.rerun()
+        if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
+            if novo_texto.strip():
+                nova_mensagem = {
+                    "autor": usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": novo_texto.strip(),
+                    "status_definido": status_global,
+                }
+                historico.append(nova_mensagem)
+                save_resp(
+                    qid=questao_id,
+                    valor=dados_questao.get("valor", ""),
+                    pontos=dados_questao.get("pontos", 0.0),
+                    link=dados_questao.get("link", ""),
+                    comentarios=historico,
+                )
+                st.session_state[key_estado_limpar] = True
+                st.rerun()
 
 
 def get_all_years_data():
-    init_db()
     all_data = {}
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC"
-                )
+                cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC")
                 rows = cursor.fetchall()
                 for row in rows:
                     qid, ano, valor, pontos, link, comentarios_raw = row
-
-                    comentarios_lista = []
-                    if comentarios_raw:
-                        try:
-                            comentarios_lista = json.loads(comentarios_raw)
-                        except Exception:
-                            comentarios_lista = []
+                    try:
+                        comentarios_lista = json.loads(comentarios_raw) if comentarios_raw else []
+                    except Exception:
+                        comentarios_lista = []
 
                     if ano not in all_data:
                         all_data[ano] = {}
@@ -599,7 +467,6 @@ def get_all_years_data():
                     }
     except Exception as e:
         logging.error(f"Erro ao buscar histórico no Neon: {e}")
-
     return all_data
 # =============================================================================
 # 2. GERADOR DO RELATÓRIO PDF (i-Fiscal)
