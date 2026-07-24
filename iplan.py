@@ -2718,3 +2718,76 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 3.1.1 • DESCRIÇÃO DOS PROGRAMAS UTILIZADOS (CONDICIONAL AO 3.1)
+        # -----------------------------------------------------------------------------
+        val_31_parent = res_data.get("3.1", {}).get("valor", "")
+        if "Sim" in str(val_31_parent):
+            with st.container(key=f"container_bloco_i_plan_3_1_1_{ano_sel}", border=True):
+                with st.expander(f"📝 Questão 3.1.1 • Descrição dos Programas Utilizados ({ano_sel})", expanded=True):
+                    st.subheader("3.1.1 • Detalhamento dos Programas")
+                    st.write("**Descreva os programas utilizados:**")
+                    st.caption("ℹ *Preencha a descrição dos programas, adicione seus comentários e clique em 'Salvar Questão 3.1.1'.*")
+
+                    # Resgate seguro dos dados da questão 3.1.1
+                    d311 = res_data.get("3.1.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                    desc_311_salva = d311.get("valor", "")
+
+                    # Chaves fixas por componente e ano
+                    chave_txt_311 = f"txt_i_plan_311_{ano_sel}"
+                    chave_coment_311 = f"coment_3.1.1_{ano_sel}"
+
+                    desc_programas_311 = st.text_area(
+                        "Descrição dos programas:",
+                        value=desc_311_salva,
+                        key=chave_txt_311,
+                        placeholder="Informe os detalhes dos programas federais e/ou estaduais utilizados no diagnóstico...",
+                        height=130,
+                        label_visibility="collapsed"
+                    )
+
+                    # Renderiza o bloco de comentários padronizado
+                    bloco_comentarios("3.1.1", res_data, ano_sel)
+
+                    # -----------------------------------------------------------------
+                    # BOTÃO DE SALVAMENTO MANUAL
+                    # -----------------------------------------------------------------
+                    if st.button("💾 Salvar Questão 3.1.1", key=f"btn_salvar_iplan_3_1_1_{ano_sel}", type="primary"):
+                        txt_val = desc_programas_311.strip()
+
+                        # Captura o comentário do session_state
+                        comentario_para_salvar = st.session_state.get(chave_coment_311, d311.get("comentario", ""))
+
+                        # Salva no banco de dados (Questão descritiva possui 0.0 pontos e sem link obrigatório)
+                        save_resp(
+                            qid="3.1.1",
+                            valor=txt_val,
+                            pontos=0.0,
+                            link="",
+                            comentario=comentario_para_salvar
+                        )
+
+                        # Atualiza o dicionário local res_data
+                        res_data["3.1.1"] = {
+                            "valor": txt_val,
+                            "pontos": 0.0,
+                            "link": "",
+                            "comentario": comentario_para_salvar
+                        }
+
+                        st.cache_data.clear()
+                        st.toast("Descrição e comentários da Questão 3.1.1 salvos com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Resumo dinâmico de preenchimento
+                    val_atual_311 = d311.get("valor", "")
+                    if not val_atual_311.strip():
+                        st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento</span>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(
+                            "<span style='color:#28a745; font-weight:bold;'>"
+                            "✅ Questão 3.1.1 preenchida e gravada</span>",
+                            unsafe_allow_html=True
+                        )
