@@ -10933,3 +10933,98 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("16.3.1", st.session_state.get(f"links_pendentes_16_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_3_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 16.3.2 • ENDEREÇO ELETRÔNICO DA NORMA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_url_norma_16_3_2_final_{ano_sel}", border=True):
+            with st.expander("🔗 Quesito 16.3.2 - Endereço Eletrônico da Regulamentação", expanded=True):
+                st.subheader("16.3.2 • Endereço Eletrônico da Norma")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação do instrumento normativo que regulamentou a 'Carta de Serviço ao Usuário':**")
+                st.warning("⚠️ *Se não estiver disponível na internet, insira exatamente o texto **XYZ** no campo abaixo.*")
+
+                # Recuperação segura dos dados salvos no banco
+                d1632 = res_data.get("16.3.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_1632 = d1632.get("valor", "")
+
+                # Chaves explícitas no Session State
+                chave_input_1632 = f"q1632_{ano_sel}"
+                chave_coment_1632 = f"coment_16.3.2_{ano_sel}"
+
+                c1632_1, c1632_2 = st.columns([1, 1])
+
+                with c1632_1:
+                    v_campo_1632 = st.text_input(
+                        "Página eletrônica (Link ou XYZ) do instrumento:",
+                        value=v_salvo_1632,
+                        key=chave_input_1632,
+                        placeholder="Ex: https://... ou XYZ"
+                    )
+
+                    # Exibição da métrica informativa (0.0 pts)
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value="0.0 pts",
+                        delta=None
+                    )
+
+                with c1632_2:
+                    placeholder_links_1632 = st.empty()
+                    links_1632_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_campo_1632 or "")]
+                    if links_1632_visuais:
+                        placeholder_links_1632.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_1632_visuais])
+                        )
+                    else:
+                        placeholder_links_1632.markdown("*Nenhum link ativo detectado no campo.*")
+
+                # Renderiza o bloco de comentários do Quesito 16.3.2
+                bloco_comentarios("16.3.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 16.3.2: 0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 16.3.2", key=f"btn_salvar_16_3_2_{ano_sel}", type="primary"):
+                    v_txt = st.session_state.get(chave_input_1632, v_campo_1632).strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_1632, d1632.get("comentario", ""))
+
+                    # No quesito 16.3.2, o valor do texto informado atua simultaneamente como link/evidência
+                    save_resp(
+                        qid="16.3.2",
+                        valor=v_txt,
+                        pontos=0.0,
+                        link=v_txt,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["16.3.2"] = {
+                        "valor": v_txt,
+                        "pontos": 0.0,
+                        "link": v_txt,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_txt or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_1632 or "")]
+
+                    if v_txt != v_salvo_1632 and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_16_3_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_16_3_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 16.3.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 16.3.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_16_3_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.3.2", st.session_state.get(f"links_pendentes_16_3_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_16_3_2_{ano_sel}"] = False
