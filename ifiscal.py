@@ -780,381 +780,523 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements.append(tabela_pen)
     elements.append(Spacer(1, 15))
 
-    # -------------------------------------------------------------------------
-    # 4. DIAGNÓSTICO DE REINCIDÊNCIAS 
-    # -------------------------------------------------------------------------
-    elements.append(Paragraph("<b>4. DIAGNÓSTICO DE REINCIDÊNCIAS </b>", styles["h2"]))
+   # =========================================================================
+    # 3. ANÁLISE DE IMPACTO E PENALIDADES (EFICIÊNCIA PREVENTIVA)
+    # =========================================================================
+    elements.append(Paragraph('<b>3. ANÁLISE DE IMPACTO E PENALIDADES (EFICIÊNCIA PREVENTIVA)</b>', styles['h2']))
     elements.append(Spacer(1, 6))
-    
+
+    PENALIDADES_MAX = {
+        '7.2': -3.0,
+        '8.3': -15.0,
+        '9.6': -30.0,
+        '10.3': -5.0,
+        '12.1': -10.0,
+        '12.2': -5.0,
+        '12.3': -5.0,
+        '12.3.1': -5.0,
+        '12.5.2': -10.0,
+        '16': -10.0,
+        '16.3': -5.0,
+        '17.0': -5.0,
+        '23.0': -30.0,
+        '24.1': -30.0,
+        '25.1': -25.0,
+        'F6': -20.0,
+        'F7': -10.0,
+        'F9': -10.0,
+        'F21': -50.0,
+        'F22': -5.0,
+    }
+
+    dados_penalidades = dados.copy() if isinstance(dados, dict) else {}
     reincidencias_detectadas = []
-    
-    # IMPORTANTE: Use o dicionário PONTUACOES_MAX definido globalmente no seu sistema i-Fiscal
-    # para validar os tetos oficiais de cada quesito de nota real.
-    tetos_referencia = PONTUACOES_MAX if 'PONTUACOES_MAX' in globals() else {}
-    
-    for qid, info_atual in dados.items():
-        # Ignora comentários e chaves que não sejam dicionários válidos
-        if qid.startswith("COM_") or not isinstance(info_atual, dict): 
+
+    # 🛠️ CORREÇÃO: Se não existir no dicionário, assume 0.0 pontos (não houve penalidade)
+    for qid_pen, val_max in PENALIDADES_MAX.items():
+        if qid_pen not in dados_penalidades:
+            dados_penalidades[qid_pen] = {
+                'pontos': 0.0,
+                'valor': 'Não aplicável / Ocultado por condicional',
+                'link': '',
+            }
+
+    lista_penalidades = []
+
+    for qid, pen_max in PENALIDADES_MAX.items():
+        if qid in dados_penalidades:
+            info = dados_penalidades[qid]
+            nota_real = float(info.get('pontos', 0.0))
+
+            # Garante que apenas valores negativos (penalidades reais) entrem no cálculo do risco
+            nota_risco = nota_real if nota_real <= 0.0 else 0.0
+
+            if pen_max != 0:
+                eficiencia_preventiva = (1.0 - (nota_risco / pen_max)) * 100.0
+            else:
+                eficiencia_preventiva = 100.0
+
+            eficiencia_preventiva = max(0.0, min(eficiencia_preventiva, 100.0))
+
+            lista_penalidades.append({
+                'qid': qid,
+                'nota_real': nota_real,
+                'pen_max': pen_max,
+                'eficiencia': eficiencia_preventiva,
+                'valor': info.get('valor', ''),
+                'link': info.get('link', ''),
+            })
+
+            if eficiencia_preventiva < 100.0 and isinstance(dados_ano_anterior, dict) and qid in dados_ano_anterior:
+                info_ant = dados_ano_anterior[qid]
+                nota_real_ant = float(info_ant.get('pontos', 0.0)) if isinstance(info_ant, dict) else 0.0
+                if nota_real == nota_real_ant:
+                    reincidencias_detectadas.append({
+                        'qid': qid,
+                        'tipo': 'Penalidade Aplicada',
+                        'detalhe': f'Impacto Recorrente de Penalidade de {nota_real:.1f} pts',
+                        'ant': f'{nota_real_ant:.1f} pts',
+                        'atual': f'{nota_real:.1f} pts',
+                    })
+
+    if lista_penalidades:
+        data_penalidades = [[
+            Paragraph('Quesito', style_th),
+            Paragraph('Penalidade Aplicada', style_th),
+            Paragraph('Pior Cenário', style_th),
+            Paragraph('Eficiência Preventiva', style_th),
+            Paragraph('Status de Risco', style_th),
+        ]]
+
+        def ordenar_quesitos(x):
+            limpo = ''.join(c for c in x['qid'] if c.isdigit() or c == '.')
+            partes = [int(i) for i in limpo.split('.') if i.isdigit()]
+            return partes if partes else [999]
+
+        for item in sorted(lista_penalidades, key=ordenar_quesitos):
+            # Formatação para não exibir "-0.0 pts" caso o valor venha flutuante negativo zerado
+            valor_nota = 0.0 if abs(item['nota_real']) < 0.01 else item['nota_real']
+
+            nota_txt = f'{valor_nota:.1f} pts'
+            teto_txt = f"{item['pen_max']:.1f} pts"
+            ef_txt = f"{item['eficiencia']:.1f}%"
+
+            if item['eficiencia'] >= 100.0:
+                status = "<font color='#2e7d32'><b>Risco Mitigado</b></font>"
+            elif item['eficiencia'] <= 0.0:
+                status = "<font color='#c0392b'><b>Impacto Máximo</b></font>"
+            else:
+                status = "<font color='#d35400'><b>Impacto Parcial</b></font>"
+
+            data_penalidades.append([
+                Paragraph(item['qid'], style_tabela_centro),
+                Paragraph(nota_txt, style_tabela_centro),
+                Paragraph(teto_txt, style_tabela_centro),
+                Paragraph(ef_txt, style_tabela_centro),
+                Paragraph(status, style_tabela_padrao),
+            ])
+
+        tabela_pen = Table(data_penalidades, colWidths=[70, 110, 80, 115, 125])
+        tabela_pen.setStyle(
+            TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1b4f72')),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#1b4f72')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ])
+        )
+        elements.append(tabela_pen)
+        elements.append(Spacer(1, 15))
+
+    # =========================================================================
+    # 4. DIAGNÓSTICO DE REINCIDÊNCIAS
+    # =========================================================================
+    elements.append(Paragraph('<b>4. DIAGNÓSTICO DE REINCIDÊNCIAS </b>', styles['h2']))
+    elements.append(Spacer(1, 6))
+
+    TETOS_VALIDOS = {
+        '1.1.2': 20,
+        '1.1.3': 5,
+        '1.2': 20,
+        '2.0': 10,
+        '2.1': 50,
+        '3.0': 10,
+        '3.1': 20,
+        '4.0': 20,
+        '5.2.1': 20,
+        '6.0': 20,
+        '6.1': 50,
+        '6.2': 25,
+        '7.2': 2,
+        '7.3': 10,
+        '7.3.1': 20,
+        '7.4': 10,
+        '7.4.1': 20,
+        '7.5': 30,
+        '7.7': 30,
+        '7.8': 20,
+        '7.8.1': 50,
+        '7.9': 3,
+        '8.2': 2,
+        '8.3': 10,
+        '8.4': 20,
+        '8.4.1': 10,
+        '8.4.2': 30,
+        '8.4.3': 50,
+        '9.2': 100,
+        '9.3': 5,
+        '9.3.1': 5,
+        '11.2': 2,
+        '11.3': 30,
+        '11.3.2': 20,
+        '11.3.3': 40,
+        '11.5': 10,
+        '12.1': 54,
+        '14.3': 30,
+        '15': 2,
+        '15.1': 3,
+        'A4.1.1': 90,
+        'A4.1.2': 20,
+        'A4.1.3': 22,
+        'A6': 5,
+    }
+
+    dados_analise_reinc = dados.copy() if isinstance(dados, dict) else {}
+
+    if subquestoes_11:
+        for sub_id in subquestoes_11:
+            if resposta_11_nao or (sub_id not in dados_analise_reinc):
+                dados_analise_reinc[sub_id] = {'pontos': 0.0, 'valor': 'Não', 'link': ''}
+
+    for qid, info_atual in dados_analise_reinc.items():
+        if qid.startswith('COM_') or not isinstance(info_atual, dict):
             continue
-            
-        # Só avalia se o quesito pertencer à lista de pontuações oficiais do i-Fiscal
-        if qid not in tetos_referencia:
+
+        qid_str = str(qid).strip()
+
+        if qid_str.startswith('A4.1.1_'):
+            chave_mae = 'A4.1.1'
+        elif qid_str.startswith('A4.1.2_'):
+            chave_mae = 'A4.1.2'
+        elif qid_str.startswith('A4.1.3_'):
+            chave_mae = 'A4.1.3'
+        else:
+            chave_mae = qid_str
+
+        if chave_mae not in TETOS_VALIDOS:
             continue
-            
-        pts_maximo = float(tetos_referencia[qid])
-        pts_obtidos_atual = float(info_atual.get("pontos", 0.0))
-        
-        # Só analisa se o teto for válido e se houve falha real no ano atual (eficiência menor que 50%)
+
+        pts_maximo = float(TETOS_VALIDOS[chave_mae])
+        pts_obtidos_atual = float(info_atual.get('pontos', 0.0))
+
         if pts_maximo > 0 and (pts_obtidos_atual / pts_maximo) * 100 < 50.0:
-            # Busca o mesmo quesito no ano anterior
             info_ant = dados_ano_anterior.get(qid, {}) if isinstance(dados_ano_anterior, dict) else {}
-            pts_obtidos_ant = float(info_ant.get("pontos", 0.0)) if isinstance(info_ant, dict) else 0.0
-            
-            # Se também falhou no ano anterior (eficiência menor que 50%), temos uma Reincidência Crônica
+            pts_obtidos_ant = float(info_ant.get('pontos', 0.0)) if isinstance(info_ant, dict) else 0.0
+
             if (pts_obtidos_ant / pts_maximo) * 100 < 50.0:
-                # Define a categoria dinamicamente com base no perfil do quesito no i-Fiscal
-                qid_str = str(qid).strip().upper()
-                if qid_str.startswith("7") or qid_str.startswith("8") or qid_str.startswith("9"):
-                    origem = "Gestão Orçamentária"
-                elif qid_str.startswith("10") or qid_str.startswith("12") or qid_str.startswith("16"):
-                    origem = "Planejamento e Execução"
-                elif qid_str.startswith("F"):
-                    origem = "Controle Fiscal / Receita"
+                origem = 'Gestão Ambiental Geral'
+                if 'CATEGORIAS_MAP' in globals():
+                    for cat_chave, cat_info in CATEGORIAS_MAP.items():
+                        if chave_mae in cat_info.get('qids', []):
+                            origem = cat_info.get('label', 'Outros')
+                            break
                 else:
-                    origem = "Administração Financeira"
-                    
+                    if (
+                        chave_mae.startswith('1.')
+                        or chave_mae.startswith('2.')
+                        or chave_mae.startswith('3.')
+                    ):
+                        origem = 'Planejamento e Infraestrutura'
+                    elif chave_mae.startswith('7.') or chave_mae.startswith('8.'):
+                        origem = 'Resíduos e Saneamento'
+                    elif chave_mae.startswith('11.') or chave_mae.startswith('12.'):
+                        origem = 'Biodiversidade e Água'
+                    elif chave_mae.startswith('A4'):
+                        origem = 'Indicadores SINISA'
+
                 reincidencias_detectadas.append({
-                    "qid": qid,
-                    "tipo": origem,
-                    "detalhe": "Ineficiência Crônica de Desempenho (Abaixo de 50% por 2 anos)",
-                    "ant": f"{pts_obtidos_ant:.1f} pts",
-                    "atual": f"{pts_obtidos_atual:.1f} pts"
+                    'qid': qid_str,
+                    'tipo': origem,
+                    'detalhe': 'Ineficiência Crônica de Desempenho (Eficiência inferior a 50% por 2 anos)',
+                    'ant': f'{pts_obtidos_ant:.1f} / {pts_maximo:.1f} pts',
+                    'atual': f'{pts_obtidos_atual:.1f} / {pts_maximo:.1f} pts',
                 })
 
     if reincidencias_detectadas:
-        data_reinc = [["Quesito", "Origem da Falha", "Impacto Histórico", "Exercício Anterior", "Exercício Atual"]]
-        
-        # Ordenação segura para o i-Fiscal (suporta quesitos numéricos como '7.2' e alfanuméricos como 'F6')
-        def extrair_chave_ordenacao(item):
-            partes = []
-            for p in item["qid"].split('.'):
-                if p.isdigit():
-                    partes.append(int(p))
-                else:
-                    # Se for letra (ex: 'F6'), converte para ordinais para ordenar corretamente
-                    partes.append(sum(ord(char) for char in p))
-            return partes
+        data_reinc = [[
+            Paragraph('Quesito', style_th),
+            Paragraph('Origem da Falha', style_th),
+            Paragraph('Impacto Histórico', style_th),
+            Paragraph('Exercício Anterior', style_th),
+            Paragraph('Exercício Atual', style_th),
+        ]]
 
-        for reinc in sorted(reincidencias_detectadas, key=extrair_chave_ordenacao): 
+        def ordenacao_segura(x):
+            limpo = ''.join(c for c in x['qid'].split('_')[0] if c.isdigit() or c == '.')
+            partes = [int(i) for i in limpo.split('.') if i.isdigit()]
+            return partes if partes else [999]
+
+        for reinc in sorted(reincidencias_detectadas, key=ordenacao_segura):
             data_reinc.append([
-                reinc["qid"], 
-                reinc["tipo"], 
-                Paragraph(f"<b>{reinc['detalhe']}</b>", styles["Normal"]), 
-                reinc["ant"], 
-                reinc["atual"]
+                Paragraph(reinc['qid'], style_tabela_centro),
+                Paragraph(reinc['tipo'], style_tabela_centro),
+                Paragraph(f"<b>{reinc['detalhe']}</b>", style_tabela_padrao),
+                Paragraph(reinc['ant'], style_tabela_centro),
+                Paragraph(reinc['atual'], style_tabela_centro),
             ])
-            
-        tabela_reinc = Table(data_reinc, colWidths=[65, 125, 160, 75, 65])
-        tabela_reinc.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#c0392b")), 
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke), 
-            ("ALIGN", (0, 0), (-1, 0), "CENTER"), 
-            ("ALIGN", (0, 1), (1, -1), "CENTER"), 
-            ("ALIGN", (3, 1), (-1, -1), "CENTER"), 
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#c0392b")), 
-            ("FONTSIZE", (0, 0), (-1, -1), 9), 
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
+
+        tabela_reinc = Table(data_reinc, colWidths=[65, 115, 170, 75, 65])
+        tabela_reinc.setStyle(
+            TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#c0392b')),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#c0392b')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ])
+        )
         elements.append(tabela_reinc)
-    else: 
-        elements.append(Paragraph("<font color='#28a745'><b>✅ Nenhuma reincidência ativa detectada. O município corrigiu ou mitigou os gargalos fiscais do ano anterior.</b></font>", styles["Normal"]))
-        
+    else:
+        elements.append(
+            Paragraph(
+                "<font color='#2e7d32'><b>✅ Nenhuma reincidência ativa detectada. O município corrigiu ou mitigou as falhas do ano anterior.</b></font>",
+                styles['Normal'],
+            )
+        )
+
     elements.append(Spacer(1, 15))
 
     # -------------------------------------------------------------------------
-    # --- TÓPICO 5: ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU) ---
+    # 5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU)
     # -------------------------------------------------------------------------
-    import reportlab.lib.colors as rl_colors
-
-    elements.append(Paragraph("<b>5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU)</b>", styles["h2"]))
+    elements.append(Paragraph('<b>5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU)</b>', styles['h2']))
     elements.append(Spacer(1, 6))
 
-    # 🛠️ CORREÇÃO: Adicionado o parâmetro ignorar_filtros para aceitar qualquer resposta no 9.5
     def calcular_percentual_checklist(resposta_bruta, total_itens, ignorar_filtros=False):
-        if not resposta_bruta: 
+        if not resposta_bruta:
             return 0.0
-        
-        if str(resposta_bruta).startswith("["):
+
+        if str(resposta_bruta).startswith('['):
             try:
-                import ast
                 itens_lista = ast.literal_eval(str(resposta_bruta))
                 if isinstance(itens_lista, list):
                     if ignorar_filtros:
                         itens_validos = [str(i).strip() for i in itens_lista if i]
                     else:
-                        itens_validos = [str(i).strip().lower() for i in itens_lista if i and "outros" not in str(i).lower() and "não" not in str(i).lower()]
+                        itens_validos = [
+                            str(i).strip().lower()
+                            for i in itens_lista
+                            if i and 'outros' not in str(i).lower() and 'não' not in str(i).lower()
+                        ]
                     return min((len(itens_validos) / total_itens) * 100.0, 100.0) if total_itens > 0 else 0.0
             except Exception:
                 pass
-                
-        itens = [i.strip() for i in str(resposta_bruta).split(",") if i.strip()]
+
+        itens = [i.strip() for i in str(resposta_bruta).split(',') if i.strip()]
         if not ignorar_filtros:
-            itens = [i for i in itens if "outros" not in i.lower() and "não" not in i.lower()]
+            itens = [i for i in itens if 'outros' not in i.lower() and 'não' not in i.lower()]
         return min((len(itens) / total_itens) * 100.0, 100.0) if total_itens > 0 else 0.0
 
-    # Dicionário parametrizado atualizado com as metas ODS do i-Fiscal
     REGRAS_ODS = {
-        "1.0": {"metas": "17.1", "total_chk": 0},
-        "1.1": {"metas": "17.1", "total_chk": 0},
-        "1.3": {"metas": "17.1", "total_chk": 0},
-        "1.4": {"metas": "16.5, 17.1", "total_chk": 0},
-        "1.5": {"metas": "16.5", "total_chk": 0},         
-        "1.5.1": {"metas": "16.5", "total_chk": 0},       
-        "2.0": {"metas": "16.5", "total_chk": 0},         
-        "3.0": {"metas": "17.1", "total_chk": 0},
-        "3.1": {"metas": "17.1", "total_chk": 8},   
-        "4.0": {"metas": "17.1", "total_chk": 0},
-        "5.0": {"metas": "17.1", "total_chk": 0},
-        "7.0": {"metas": "17.1", "total_chk": 0},
-        "7.3": {"metas": "10.4, 17.1", "total_chk": 5}, 
-        "8.0": {"metas": "17.1", "total_chk": 0},
-        "8.1": {"metas": "17.1", "total_chk": 0},
-        "8.2": {"metas": "17.1", "total_chk": 0},
-        "8.3": {"metas": "16.6, 16.10", "total_chk": 0},  
-        "9.0": {"metas": "17.1", "total_chk": 0},
-        "9.3": {"metas": "17.1", "total_chk": 0},         
-        "9.4": {"metas": "17.1", "total_chk": 0},
-        "9.5": {"metas": "17.1", "total_chk": 3},   # Múltipla escolha (3 opções)
-        "9.6": {"metas": "10.4, 17.1", "total_chk": 0},
-        "10.0": {"metas": "17.1", "total_chk": 0},
-        "10.3": {"metas": "17.1", "total_chk": 0},
-        "11.0": {"metas": "17.1", "total_chk": 0},
-        "12.0": {"metas": "10.4, 16.6, 17.1", "total_chk": 0},
-        "13.0": {"metas": "16.6, 16.7, 17.1", "total_chk": 0},
-        "16": {"metas": "16.6, 17.1", "total_chk": 0},
-        "17.0": {"metas": "17.1", "total_chk": 0},
-        "18.0": {"metas": "16.6, 16.10", "total_chk": 0}, 
-        "21.0": {"metas": "16.5, 16.6", "total_chk": 0},  
-        "22.0": {"metas": "16.5, 16.6", "total_chk": 0},  
-        "23.0": {"metas": "17.1", "total_chk": 0},
-        "25.0": {"metas": "17.1", "total_chk": 0}
+        '1.0': {'metas': '17.1', 'total_chk': 0},
+        '1.1': {'metas': '17.1', 'total_chk': 0},
+        '1.3': {'metas': '17.1', 'total_chk': 0},
+        '1.4': {'metas': '16.5, 17.1', 'total_chk': 0},
+        '1.5': {'metas': '16.5', 'total_chk': 0},
+        '1.5.1': {'metas': '16.5', 'total_chk': 0},
+        '2.0': {'metas': '16.5', 'total_chk': 0},
+        '3.0': {'metas': '17.1', 'total_chk': 0},
+        '3.1': {'metas': '17.1', 'total_chk': 8},
+        '4.0': {'metas': '17.1', 'total_chk': 0},
+        '5.0': {'metas': '17.1', 'total_chk': 0},
+        '7.0': {'metas': '17.1', 'total_chk': 0},
+        '7.3': {'metas': '10.4, 17.1', 'total_chk': 5},
+        '8.0': {'metas': '17.1', 'total_chk': 0},
+        '8.1': {'metas': '17.1', 'total_chk': 0},
+        '8.2': {'metas': '17.1', 'total_chk': 0},
+        '8.3': {'metas': '16.6, 16.10', 'total_chk': 0},
+        '9.0': {'metas': '17.1', 'total_chk': 0},
+        '9.3': {'metas': '17.1', 'total_chk': 0},
+        '9.4': {'metas': '17.1', 'total_chk': 0},
+        '9.5': {'metas': '17.1', 'total_chk': 3},  # Múltipla escolha (3 opções)
+        '9.6': {'metas': '10.4, 17.1', 'total_chk': 0},
+        '10.0': {'metas': '17.1', 'total_chk': 0},
+        '10.3': {'metas': '17.1', 'total_chk': 0},
+        '11.0': {'metas': '17.1', 'total_chk': 0},
+        '12.0': {'metas': '10.4, 16.6, 17.1', 'total_chk': 0},
+        '13.0': {'metas': '16.6, 16.7, 17.1', 'total_chk': 0},
+        '16': {'metas': '16.6, 17.1', 'total_chk': 0},
+        '17.0': {'metas': '17.1', 'total_chk': 0},
+        '18.0': {'metas': '16.6, 16.10', 'total_chk': 0},
+        '21.0': {'metas': '16.5, 16.6', 'total_chk': 0},
+        '22.0': {'metas': '16.5, 16.6', 'total_chk': 0},
+        '23.0': {'metas': '17.1', 'total_chk': 0},
+        '25.0': {'metas': '17.1', 'total_chk': 0},
     }
 
     analise_ods = []
-    
-    dados_reference = None
-    for nome_var in ['dados', 'res_data', 'respostas', 'dados_municipio']:
-        if nome_var in locals():
-            dados_reference = locals()[nome_var]
-            break
-
-    if dados_reference is None:
-        try: dados_reference = dados
-        except NameError:
-            try: dados_reference = res_data
-            except NameError: dados_reference = {}
+    dados_reference = dados if isinstance(dados, dict) else {}
 
     for qid, config in REGRAS_ODS.items():
-        info = dados_reference.get(qid, {}) if isinstance(dados_reference, dict) else {"valor": "Não Respondido"}
+        info = dados_reference.get(qid, {}) if isinstance(dados_reference, dict) else {'valor': 'Não Respondido'}
         if not isinstance(info, dict):
-            info = {"valor": str(info)}
-            
-        resp = str(info.get("valor", "")).strip()
+            info = {'valor': str(info)}
+
+        resp = str(info.get('valor', '')).strip()
         resp_l = resp.lower()
-        
-        if not resp or resp_l == "não respondido" or resp == "[]": 
+
+        if not resp or resp_l == 'não respondido' or resp == '[]':
             continue
-            
-        # Avaliação do status e cálculo de percentual
-        if config["total_chk"] > 0 or qid == "9.5":
-            total_opcoes = 3 if qid == "9.5" else config["total_chk"]
-            # 🛠️ CORREÇÃO: Passa ignorar_filtros=True se for o quesito 9.5
-            is_95 = (qid == "9.5")
+
+        if config['total_chk'] > 0 or qid == '9.5':
+            total_opcoes = 3 if qid == '9.5' else config['total_chk']
+            is_95 = qid == '9.5'
             pct = calcular_percentual_checklist(resp, total_opcoes, ignorar_filtros=is_95)
-            status = f"{pct:.1f}% Atendido"
+            status = f'{pct:.1f}% Atendido'
         else:
-            # Regras de avaliação lógica customizadas para cada cenário do i-Fiscal
-            if qid in ["9.6", "12.0"]:
-                if "não" in resp_l:
-                    status = "Atendido"
-                else:
-                    status = "Não Atendido"
-            elif qid == "8.2":
-                if "sistema automatizado" in resp_l or "manualmente" in resp_l:
-                    status = "Atendido"
-                else:
-                    status = "Não Atendido"
-            elif qid == "8.3":
-                if "sim, sem restrição" in resp_l or "sem restrição - 00" in resp_l:
-                    status = "Atendido"
-                else:
-                    status = "Não Atendido"
-            elif qid == "9.3":
-                opcoes_validas = ["site da prefeitura", "órgão fazendário", "orgao fazendario", "cartório autorizado", "cartorio autorizado", "outros"]
-                if any(opc in resp_l for opc in opcoes_validas):
-                    status = "Atendido"
-                else:
-                    status = "Não Atendido"
-            elif qid == "17.0":
-                if "todas as ações" in resp_l:
-                    status = "Atendido"
-                else:
-                    status = "Não Atendido"
-            elif qid == "23.0":
-                if "dentro do prazo" in resp_l:
-                    status = "Atendido"
-                else:
-                    status = "Não Atendido"
+            if qid in ['9.6', '12.0']:
+                status = 'Atendido' if 'não' in resp_l else 'Não Atendido'
+            elif qid == '8.2':
+                status = (
+                    'Atendido' if ('sistema automatizado' in resp_l or 'manualmente' in resp_l) else 'Não Atendido'
+                )
+            elif qid == '8.3':
+                status = (
+                    'Atendido'
+                    if ('sim, sem restrição' in resp_l or 'sem restrição - 00' in resp_l)
+                    else 'Não Atendido'
+                )
+            elif qid == '9.3':
+                opcoes_validas = [
+                    'site da prefeitura',
+                    'órgão fazendário',
+                    'orgao fazendario',
+                    'cartório autorizado',
+                    'cartorio autorizado',
+                    'outros',
+                ]
+                status = 'Atendido' if any(opc in resp_l for opc in opcoes_validas) else 'Não Atendido'
+            elif qid == '17.0':
+                status = 'Atendido' if 'todas as ações' in resp_l else 'Não Atendido'
+            elif qid == '23.0':
+                status = 'Atendido' if 'dentro do prazo' in resp_l else 'Não Atendido'
             else:
-                if "sim" in resp_l or "parcialmente" in resp_l or "integralmente" in resp_l:
-                    status = "Atendido"
-                else:
-                    status = "Não Atendido"
+                status = (
+                    'Atendido'
+                    if ('sim' in resp_l or 'parcialmente' in resp_l or 'integralmente' in resp_l)
+                    else 'Não Atendido'
+                )
 
         exibicao_resp = resp
-        if exibicao_resp.startswith("["):
-            exibicao_resp = exibicao_resp.replace("[", "").replace("]", "").replace("'", "").replace('"', '')
+        if exibicao_resp.startswith('['):
+            exibicao_resp = exibicao_resp.replace('[', '').replace(']', '').replace("'", '').replace('"', '')
 
         analise_ods.append({
-            "qid": qid,
-            "status": status,
-            "metas": config["metas"],
-            "resp": exibicao_resp[:45] + "..." if len(exibicao_resp) > 45 else exibicao_resp
+            'qid': qid,
+            'status': status,
+            'metas': config['metas'],
+            'resp': exibicao_resp[:45] + '...' if len(exibicao_resp) > 45 else exibicao_resp,
         })
 
     if analise_ods:
-        data_ods = [["Quesito", "Resposta Informada", "Vínculo Metas ODS", "Status de Cumprimento"]]
-        style_td_ods = ParagraphStyle('TdOds', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, alignment=1)
-        
+        data_ods = [['Quesito', 'Resposta Informada', 'Vínculo Metas ODS', 'Status de Cumprimento']]
+        style_td_ods = ParagraphStyle(
+            'TdOds', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, alignment=1
+        )
+
         def chave_ordenacao_ods(item):
             partes = []
-            for p in item["qid"].split('.'):
+            for p in item['qid'].split('.'):
                 if p.isdigit():
                     partes.append(int(p))
                 else:
                     partes.append(sum(ord(char) for char in p))
             return partes
-        
+
         for item in sorted(analise_ods, key=chave_ordenacao_ods):
-            st_txt = item["status"]
-            
-            if "Não Atendido" in st_txt:
+            st_txt = item['status']
+
+            if 'Não Atendido' in st_txt:
                 st_p = Paragraph(f"<font color='#dc3545'><b>{st_txt}</b></font>", style_td_ods)
-            elif "Atendido" in st_txt and "%" not in st_txt:
+            elif 'Atendido' in st_txt and '%' not in st_txt:
                 st_p = Paragraph(f"<font color='#28a745'><b>{st_txt}</b></font>", style_td_ods)
             else:
                 st_p = Paragraph(f"<font color='#007bff'><b>{st_txt}</b></font>", style_td_ods)
-                
-            data_ods.append([
-                item["qid"], 
-                Paragraph(item["resp"], styles["Normal"]), 
-                item["metas"], 
-                st_p
-            ])
-            
+
+            data_ods.append(
+                [item['qid'], Paragraph(item['resp'], styles['Normal']), item['metas'], st_p]
+            )
+
         tabela_ods = Table(data_ods, colWidths=[60, 200, 115, 110])
-        tabela_ods.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), rl_colors.HexColor("#0f9d58")), 
-            ("TEXTCOLOR", (0, 0), (-1, 0), rl_colors.whitesmoke), 
-            ("ALIGN", (0, 0), (0, -1), "CENTER"), 
-            ("ALIGN", (2, 0), (3, -1), "CENTER"),
-            ("GRID", (0, 0), (-1, -1), 0.5, rl_colors.HexColor("#0f9d58")), 
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
+        tabela_ods.setStyle(
+            TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), rl_colors.HexColor('#0f9d58')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), rl_colors.whitesmoke),
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (2, 0), (3, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, rl_colors.HexColor('#0f9d58')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ])
+        )
         elements.append(tabela_ods)
         elements.append(Spacer(1, 15))
 
     # -------------------------------------------------------------------------
-    # 📊 6. SÉRIE HISTÓRICA DO I-FISCAL (CONSOLIDADO FINAL)
+    # 📊 6. SÉRIE HISTÓRICA DO IAMB (CONSOLIDADO FINAL)
     # -------------------------------------------------------------------------
-    # IMPORTS LOCAIS SEGUROS (Evita conflitos de escopo global no ReportLab)
-    from reportlab.graphics.shapes import Drawing, String
-    from reportlab.graphics.charts.barcharts import VerticalBarChart
-    import reportlab.lib.colors as rl_colors
-
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph("<b>6. SÉRIE HISTÓRICA DO I-FISCAL (CONSOLIDADO FINAL)</b>", styles["h2"]))
+    elements.append(Paragraph('<b>6. SÉRIE HISTÓRICA DO IAMB (CONSOLIDADO FINAL)</b>', styles['h2']))
     elements.append(Spacer(1, 10))
 
     anos_serie = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
     valores_serie = []
-    
-    # 🕵️‍♂️ Captura dinâmica do ANO para evitar conflito de nomenclatura
-    ano_reference = None
-    for nome_var in ['ano_sel', 'ano_atual', 'ano', 'exercicio']:
-        if nome_var in locals():
-            ano_reference = locals()[nome_var]
-            break
-    if ano_reference is None:
-        ano_reference = 2026
 
-    # 🕵️‍♂️ Captura dinâmica da NOTA ATUAL DO COMPILADOR
-    nota_reference = 0.0
-    for nome_var in ['total_pts', 'nota_atual', 'pontuacao_final']:
-        if nome_var in locals():
-            try:
-                nota_reference = float(locals()[nome_var])
-                break
-            except (ValueError, TypeError):
-                continue
+    ano_reference = ano_sel if ano_sel else 2026
+    nota_reference = float(total_pts) if total_pts else 0.0
 
-    import streamlit as st
-
-    # Função auxiliar interna para calcular a nota líquida real (Pontos Positivos + Penalidades Negativas)
-    def calcular_nota_liquida_fiscal(dicionario_dados):
-        if not dicionario_dados or not isinstance(dicionario_dados, dict):
-            return 0.0
-        soma_positivos = 0.0
-        soma_penalidades = 0.0
-        for qid_h, info_h in dicionario_dados.items():
-            if isinstance(info_h, dict) and not qid_h.startswith("COM_"):
-                try:
-                    val = float(info_h.get("pontos", 0.0))
-                    if val > 0:
-                        soma_positivos += val
-                    else:
-                        soma_penalidades += val  # Acumula as penalidades do Tópico 3
-                except (ValueError, TypeError):
-                    continue
-        # A nota final do i-Fiscal é a composição de suas entregas mitigada pelo impacto do risco
-        return max(0.0, min(soma_positivos + soma_penalidades, 1000.0))
-
-    # Montagem dos dados do gráfico integrando as fontes do i-Fiscal
+    # Montagem do array de dados para o Gráfico
     for a in anos_serie:
-        # 1. Se for o ano selecionado atualmente no formulário
-        if a == ano_reference: 
-            if nota_reference > 0.0:
-                valores_serie.append(min(nota_reference, 1000.0))
-            elif 'dados_reference' in locals() and dados_reference:
-                valores_serie.append(calcular_nota_liquida_fiscal(dados_reference))
-            else:
-                valores_serie.append(0.0)
-                
-        # 2. Se o ano estiver salvo no dicionário "all_data" passado por parâmetro
-        elif 'all_data' in locals() and all_data and a in all_data:
+        if a == 0 or a == '0':
+            valores_serie.append(0.0)
+        elif a == ano_reference:
+            valores_serie.append(
+                min(nota_reference, 100.0) if nota_reference <= 100.0 else min(nota_reference, 1000.0)
+            )
+        elif all_data and a in all_data:
             dados_ano = all_data[a]
             if isinstance(dados_ano, dict):
-                valores_serie.append(calcular_nota_liquida_fiscal(dados_ano))
+                pontos_ano = float(
+                    sum(
+                        info_h.get('pontos', 0.0)
+                        for qid_h, info_h in dados_ano.items()
+                        if isinstance(info_h, dict) and not qid_h.startswith('COM_')
+                    )
+                )
+                valores_serie.append(pontos_ano)
             else:
-                valores_serie.append(min(max(float(dados_ano), 0.0), 1000.0))
-
-        # 3. Fallback: Se o ano estiver salvo no histórico do session_state do Streamlit
-        elif hasattr(st, 'session_state') and 'all_data' in st.session_state and a in st.session_state.all_data:
+                valores_serie.append(float(dados_ano))
+        elif st and hasattr(st, 'session_state') and 'all_data' in st.session_state and a in st.session_state.all_data:
             dados_ano = st.session_state.all_data[a]
             if isinstance(dados_ano, dict):
-                valores_serie.append(calcular_nota_liquida_fiscal(dados_ano))
+                pontos_ano = float(
+                    sum(
+                        info_h.get('pontos', 0.0)
+                        for qid_h, info_h in dados_ano.items()
+                        if isinstance(info_h, dict) and not qid_h.startswith('COM_')
+                    )
+                )
+                valores_serie.append(pontos_ano)
             else:
-                valores_serie.append(min(max(float(dados_ano), 0.0), 1000.0))
-                
-        # 4. Se não encontrar o histórico do exercício, deixa zerado
-        else: 
+                valores_serie.append(float(dados_ano))
+        else:
             valores_serie.append(0.0)
 
-    # Configuração da Área de Desenho do Gráfico
+    max_escala = 1000 if any(v > 100 for v in valores_serie) else 100
+    passo_escala = 200 if max_escala == 1000 else 20
+
     desenho_grafico = Drawing(480, 165)
     bc = VerticalBarChart()
     bc.x = 45
@@ -1166,34 +1308,40 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     bc.categoryAxis.labels.fontSize = 9
     bc.categoryAxis.labels.fontName = 'Helvetica-Bold'
     bc.categoryAxis.labels.dy = -10
-    
-    # Escala baseada nas regras de pontuação do i-Fiscal (0 a 1000 pontos)
+
     bc.valueAxis.valueMin = 0
-    bc.valueAxis.valueMax = 1000
-    bc.valueAxis.valueStep = 200
+    bc.valueAxis.valueMax = max_escala
+    bc.valueAxis.valueStep = passo_escala
     bc.valueAxis.labels.fontSize = 8
-    
-    # 🔥 ATIVAÇÃO DOS RÓTULOS (EXIBE A PONTUAÇÃO EXATA SOBRE CADA BARRA)
+
     bc.barLabels.nudge = 8
     bc.barLabels.fontSize = 8
     bc.barLabels.fontName = 'Helvetica-Bold'
     bc.barLabelFormat = '%.1f'
-    
-    # Customização visual alinhada à paleta corporativa de auditoria do i-Fiscal
-    bc.bars[0].fillColor = rl_colors.HexColor("#1b4f72")
-    bc.bars[0].strokeColor = rl_colors.HexColor("#2c3e50")
+
+    bc.bars[0].fillColor = rl_colors.HexColor('#1b4f72')
+    bc.bars[0].strokeColor = rl_colors.HexColor('#2c3e50')
     bc.bars[0].strokeWidth = 0.5
 
-    # Título do Gráfico
-    desenho_grafico.add(String(240, 150, "Série Histórica do Desempenho i-Fiscal", textAnchor='middle', fontName='Helvetica-Bold', fontSize=12, fillColor=rl_colors.HexColor("#2c3e50")))
+    desenho_grafico.add(
+        String(
+            240,
+            150,
+            'Série Histórica de Evolução do iAMB',
+            textAnchor='middle',
+            fontName='Helvetica-Bold',
+            fontSize=12,
+            fillColor=rl_colors.HexColor('#2c3e50'),
+        )
+    )
     desenho_grafico.add(bc)
-    
+
     elements.append(desenho_grafico)
     elements.append(Spacer(1, 15))
 
-    # =============================================================================
-    # --- FECHAMENTO E RETORNO SEGURO DO RELATÓRIO (FIM DA FUNÇÃO) ---
-    # =============================================================================
+    # =========================================================================
+    # GERAÇÃO E RETORNO SEGURO DO BUFFER
+    # =========================================================================
     doc.build(elements)
     buffer.seek(0)
     return buffer
