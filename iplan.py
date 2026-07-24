@@ -2085,5 +2085,132 @@ def mostrar_formulario_plan():
                 modal_aviso_link("1.3.1", st.session_state.get(f"links_pendentes_1_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_3_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 1.4 • ELEMENTOS DE PLANEJAMENTO DAS AUDIÊNCIAS (MODELO PADRONIZADO iPLAN)
+        # =============================================================================
+        with st.container(key=f"container_bloco_iplan_1_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.4 - Elementos de Planejamento e Organização", expanded=True):
+                st.subheader("1.4 • Elementos de Planejamento e Organização")
+                st.write("**Assinale os elementos considerados no processo de planejamento e organização das audiências públicas:**")
+                st.caption("ℹ *Selecione os itens aplicáveis, informe o link de evidência, adicione seus comentários e clique em 'Salvar Quesito 1.4'.*")
+
+                elementos = {
+                    "Estabelecimento da Pauta – 0,5": 0.5,
+                    "Disponibilização prévia de material de apoio a respeito dos temas a serem debatidos – 0,5": 0.5,
+                    "Convocação contendo o dia, horário e o local através dos jornais, das rádios, do Portal da Prefeitura e outras plataformas digitais. Ex.: Instagram, Facebook etc. – 0,5": 0.5,
+                    "Planejamento logístico. Ex.: localização do ambiente, acomodações adequadas aos participantes, regulação e testagem dos equipamentos eletrônicos (som, vídeo e iluminação), verificação dos equipamentos relacionados a transmissão das audiências etc. – 1,0": 1.0,
+                    "Indicação de mediador qualificado – 0,5": 0.5,
+                    "Estabelecimento da abordagem de interação – 0,5": 0.5,
+                    "Definição de mecanismos de avaliação – 0,5": 0.5,
+                    "Elaboração e divulgação do Relatório contendo a análise das demandas e sugestões coletadas – 1,0": 1.0
+                }
+
+                # Estado inicial / persistente
+                d14 = res_data.get("1.4") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                try:
+                    lista_salva_14 = ast.literal_eval(d14.get("valor", "[]"))
+                    if not isinstance(lista_salva_14, list):
+                        lista_salva_14 = []
+                except Exception:
+                    lista_salva_14 = []
+
+                evidencia_14_salva = d14.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_link_14 = f"l_iplan_14_txt_{ano_sel}"
+                chave_coment_14 = f"coment_1.4_{ano_sel}"
+
+                c14_1, c14_2 = st.columns([1, 1])
+
+                with c14_1:
+                    selecionados_14 = []
+                    pts_previsto_14 = 0.0
+                    for item_nome, peso_item in elementos.items():
+                        is_checked = item_nome in lista_salva_14
+                        chk = st.checkbox(
+                            item_nome,
+                            value=is_checked,
+                            key=f"chk_iplan_1_4_{item_nome}_{ano_sel}"
+                        )
+                        if chk:
+                            selecionados_14.append(item_nome)
+                            pts_previsto_14 += peso_item
+
+                with c14_2:
+                    link_evidencia_14 = st.text_area(
+                        "Link/Evidência (1.4):",
+                        value=evidencia_14_salva,
+                        key=chave_link_14,
+                        placeholder="Insira os links e documentos comprobatórios dos elementos de planejamento...",
+                        height=220
+                    )
+                    placeholder_links_14 = st.empty()
+                    links_14_visuais = re.findall(REGEX_PURE_URL, link_evidencia_14 or "")
+                    if links_14_visuais:
+                        placeholder_links_14.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_14_visuais]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários padronizado
+                bloco_comentarios("1.4", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.4", key=f"btn_salvar_iplan_1_4_{ano_sel}", type="primary"):
+                    str_selecionados_14 = str(selecionados_14)
+                    lnk_val = link_evidencia_14.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_14, d14.get("comentario", ""))
+
+                    # Salva no banco de dados
+                    save_resp(
+                        qid="1.4",
+                        valor=str_selecionados_14,
+                        pontos=pts_previsto_14,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.4"] = {
+                        "valor": str_selecionados_14,
+                        "pontos": pts_previsto_14,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_14_salva or "")]
+
+                    if lnk_val != evidencia_14_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 1.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_14 = d14.get("pontos", 0.0)
+                cor_txt_14 = "#28a745" if pts_atuais_14 > 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_14}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.4: {pts_atuais_14:.1f} / 5.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
+
 
 
