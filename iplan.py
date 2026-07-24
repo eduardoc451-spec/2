@@ -8815,3 +8815,129 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.4.5", st.session_state.get(f"links_pendentes_14_4_5_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_4_5_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 14.4.5.1 • PROVIDÊNCIAS DETERMINADAS PELO PREFEITO (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_providencias_14_4_5_1_final_{ano_sel}", border=True):
+            with st.expander(f"📋 Quesito 14.4.5.1 - Providências Determinadas pelo Prefeito ({ano_sel})", expanded=True):
+                st.subheader("14.4.5.1 • Providências Determinadas")
+                st.write(f"**Com base no relatório do Controle Interno, o Prefeito determinou as providências cabíveis diante das irregularidades e ilegalidades apontadas em {ano_sel}?**")
+                st.caption("ℹ *Selecione uma opção, insira os links de evidência/comentários e clique em 'Salvar Questão 14.4.5.1'.*")
+
+                opcoes_14451 = {
+                    "Selecione...": 0.0,
+                    "Sim - de todos os apontamentos – 06": 6.0,
+                    "Sim - de parte dos apontamentos – 02": 2.0,
+                    "Não – 00": 0.0,
+                    "Não foram relatadas irregularidades – 06": 6.0
+                }
+
+                # Resgate seguro dos dados do 14.4.5.1
+                d14451 = res_data.get("14.4.5.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d14451 is None or not isinstance(d14451, dict):
+                    d14451 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_14451 = d14451.get("valor", "Selecione...")
+                if val_salvo_14451 not in opcoes_14451:
+                    val_salvo_14451 = "Selecione..."
+
+                evidencia_14451_salva = d14451.get("link", "")
+
+                # Chaves estáticas limpas sem injeção de estado no nome
+                chave_radio_14451 = f"r_14451_{ano_sel}"
+                chave_link_14451 = f"t_14451_{ano_sel}"
+                chave_coment_14451 = f"coment_14.4.5.1_{ano_sel}"
+
+                lista_opcoes_14451 = list(opcoes_14451.keys())
+                idx14451 = lista_opcoes_14451.index(val_salvo_14451)
+
+                c14451_1, c14451_2 = st.columns([1, 1])
+
+                with c14451_1:
+                    v_input_14451 = st.radio(
+                        "Selecione 14.4.5.1:",
+                        options=lista_opcoes_14451,
+                        index=idx14451,
+                        key=chave_radio_14451,
+                        label_visibility="collapsed"
+                    )
+
+                with c14451_2:
+                    link_14451 = st.text_area(
+                        "Link/Evidência (14.4.5.1):",
+                        value=evidencia_14451_salva,
+                        key=chave_link_14451,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.4.5.1...",
+                        height=120
+                    )
+                    placeholder_links_14451 = st.empty()
+                    links_14451_visuais = re.findall(REGEX_PURE_URL, link_14451 or "")
+                    if links_14451_visuais:
+                        placeholder_links_14451.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_14451_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.4.5.1
+                bloco_comentarios("14.4.5.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.4.5.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.4.5.1", key=f"btn_salvar_14_4_5_1_{ano_sel}", type="primary"):
+                    val_para_salvar_14451 = v_input_14451
+                    pts_calc_14451 = opcoes_14451.get(val_para_salvar_14451, 0.0)
+                    lnk_val_14451 = link_14451.strip()
+                    comentario_para_salvar_14451 = st.session_state.get(chave_coment_14451, d14451.get("comentario", ""))
+
+                    # Persistência principal no banco/sessão
+                    save_resp(
+                        qid="14.4.5.1",
+                        valor=val_para_salvar_14451,
+                        pontos=pts_calc_14451,
+                        link=lnk_val_14451,
+                        comentario=comentario_para_salvar_14451
+                    )
+                    res_data["14.4.5.1"] = {
+                        "valor": val_para_salvar_14451,
+                        "pontos": pts_calc_14451,
+                        "link": lnk_val_14451,
+                        "comentario": comentario_para_salvar_14451
+                    }
+
+                    # Cascata de limpeza para o subquesito filho (14.4.5.1.1) caso não haja providências de parte/todos ou se resetar
+                    if val_para_salvar_14451 in ["Não – 00", "Não foram relatadas irregularidades – 06", "Selecione..."]:
+                        save_resp(qid="14.4.5.1.1", valor="Selecione...", pontos=0.0, link="", comentario="")
+                        res_data["14.4.5.1.1"] = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_14451 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_14451_salva or "")]
+
+                    if lnk_val_14451 != evidencia_14451_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_4_5_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_4_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 14.4.5.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_14451 = d14451.get("pontos", 0.0)
+
+                if v_input_14451 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 14.4.5.1</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção salva com sucesso (Impacto: {pts_atuais_14451:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 14.4.5.1
+        if st.session_state.get(f"gatilho_modal_14_4_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.4.5.1", st.session_state.get(f"links_pendentes_14_4_5_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_4_5_1_{ano_sel}"] = False
