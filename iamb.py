@@ -12262,3 +12262,97 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = False
+
+with aba_ext:
+        st.header("📊 Dados Externos do Meio Ambiente")
+
+        # =============================================================================
+        # ITEM A1 • ICTEM - CETESB (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a1_{ano_sel}", border=True):
+            st.subheader("A1 • ICTEM (Indicador de Coleta e Tratabilidade de Esgoto)")
+            st.caption(
+                "Dados provenientes da CETESB (Não sujeitos à validação municipal).\n\n"
+                "**Regra de Pontuação:**\n"
+                "- ICTEM ≥ 7,5: **0 pontos**\n"
+                "- 5,0 < ICTEM < 7,5: **-50 pontos**\n"
+                "- 2,5 < ICTEM ≤ 5,0: **-150 pontos**\n"
+                "- ICTEM ≤ 2,5: **-200 pontos**"
+            )
+
+            # Recuperação dos dados salvos no banco
+            d_a1 = res_data.get("A1") or {"valor": 10.0, "pontos": 0.0, "link": "Dados CETESB"}
+            v_salvo_a1 = float(d_a1.get("valor", 10.0))
+            pts_salvos_a1 = float(d_a1.get("pontos", 0.0))
+
+            # Definindo chave do Streamlit Session State
+            chave_a1 = f"ext_a1_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                v_a1 = st.number_input(
+                    "Informe o valor do ICTEM (0.0 a 10.0):",
+                    min_value=0.0,
+                    max_value=10.0,
+                    value=v_salvo_a1,
+                    step=0.1,
+                    key=chave_a1
+                )
+
+                # Cálculo dinâmico da pontuação baseado na regra de negócio
+                if v_a1 >= 7.5:
+                    pts_a1_calc = 0.0
+                elif 5.0 < v_a1 < 7.5:
+                    pts_a1_calc = -50.0
+                elif 2.5 < v_a1 <= 5.0:
+                    pts_a1_calc = -150.0
+                else:
+                    pts_a1_calc = -200.0
+
+                # Exibição da métrica com a pontuação calculada dinamicamente
+                st.metric(
+                    label="Impacto na Pontuação (Calculado)",
+                    value=f"{pts_a1_calc:.1f} pts"
+                )
+
+            with col2:
+                st.info(
+                    f"**Fonte dos Dados:** CETESB\n\n"
+                    f"**Valor Salvo Anteriormente:** {v_salvo_a1:.1f}\n\n"
+                    f"**Impacto Salvo Anteriormente:** {pts_salvos_a1:.1f} pts"
+                )
+
+            # Feedback visual dinâmico
+            cor_impacto = "#28a745" if pts_a1_calc == 0.0 else "#dc3545"
+            st.markdown(
+                f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto Previsto para A1: {pts_a1_calc:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Item A1 - ICTEM", key=f"btn_salvar_ext_a1_{ano_sel}", type="primary"):
+                val_a1_final = float(v_a1)
+                pts_a1_final = float(pts_a1_calc)
+                fonte_link = "Dados CETESB"
+
+                # Persistência no banco de dados
+                save_resp(
+                    qid="A1",
+                    valor=val_a1_final,
+                    pontos=pts_a1_final,
+                    link=fonte_link
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A1"] = {
+                    "valor": val_a1_final,
+                    "pontos": pts_a1_final,
+                    "link": fonte_link
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Indicador A1 (ICTEM) salvos com sucesso!", icon="✅")
+                st.rerun()
