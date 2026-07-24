@@ -1725,5 +1725,135 @@ def mostrar_formulario_plan():
                 modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 1.2 • DIA E HORÁRIO DAS AUDIÊNCIAS PÚBLICAS (MODELO PADRONIZADO iPLAN)
+        # =============================================================================
+        with st.container(key=f"container_bloco_iplan_1_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.2 - Dia e Horário de Realização das Audiências Públicas", expanded=True):
+                st.subheader("1.2 • Dia e Horário das Audiências Públicas de Planejamento Urbano")
+                st.write(
+                    "**Assinale os dias e horários em que são realizadas as audiências públicas "
+                    "para debates de planos, leis de zoneamento ou projetos urbanísticos:**"
+                )
+                st.caption("ℹ *Marque os horários praticados, insira o link das atas/editais e clique em 'Salvar Quesito 1.2'.*")
+
+                # Mapeamento de Opções e Pontuações (Máximo acumulado = 4.0 pts)
+                horarios_12 = {
+                    "Dia de semana em horário comercial (ex: 8h às 18h) – 0,0 pt": 0.0,
+                    "Dia de semana após horário comercial (ex: após às 18h) – 2,0 pts": 2.0,
+                    "Aos sábados, domingos e feriados – 2,0 pts": 2.0
+                }
+
+                # Estado inicial / persistente
+                d12 = res_data.get("1.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                # Tratamento seguro da lista de marcados recuperada do banco
+                raw_valor_12 = d12.get("valor", "[]")
+                try:
+                    lista_salva_12 = ast.literal_eval(raw_valor_12) if isinstance(raw_valor_12, str) else raw_valor_12
+                    if not isinstance(lista_salva_12, list):
+                        lista_salva_12 = []
+                except Exception:
+                    lista_salva_12 = []
+
+                evidencia_12_salva = d12.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_link_12 = f"l_iplan_12_txt_{ano_sel}"
+                chave_coment_12 = f"coment_1.2_{ano_sel}"
+
+                c12_1, c12_2 = st.columns([1, 1])
+
+                with c12_1:
+                    st.write("**Selecione os períodos utilizados:**")
+                    itens_selecionados_12 = []
+                    pts_calculados_12 = 0.0
+
+                    for item_nome, item_pts in horarios_12.items():
+                        chk_inicial = item_nome in lista_salva_12
+                        chk_val = st.checkbox(
+                            item_nome,
+                            value=chk_inicial,
+                            key=f"chk_iplan_1_2_{item_nome}_{ano_sel}"
+                        )
+                        if chk_val:
+                            itens_selecionados_12.append(item_nome)
+                            pts_calculados_12 += item_pts
+
+                    # Limita a pontuação acumulada ao teto do quesito (4.0 pts)
+                    if pts_calculados_12 > 4.0:
+                        pts_calculados_12 = 4.0
+
+                with c12_2:
+                    link_12 = st.text_area(
+                        "Link de Evidência / Editais e Atas de Audiências (1.2):",
+                        value=evidencia_12_salva,
+                        key=chave_link_12,
+                        placeholder="Insira o link oficial do diário oficial, convocatórias ou atas de audiência...",
+                        height=130
+                    )
+                    placeholder_links_12 = st.empty()
+                    links_12_visuais = re.findall(REGEX_PURE_URL, link_12 or "")
+                    if links_12_visuais:
+                        placeholder_links_12.markdown("**🔗 Links ativos:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_12_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.2", key=f"btn_salvar_iplan_1_2_{ano_sel}", type="primary"):
+                    val_str_12 = str(itens_selecionados_12)
+                    lnk_val = link_12.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_12, d12.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp(
+                        qid="1.2",
+                        valor=val_str_12,
+                        pontos=pts_calculados_12,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.2"] = {
+                        "valor": val_str_12,
+                        "pontos": pts_calculados_12,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_12_salva or "")]
+
+                    if lnk_val != evidencia_12_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_12 = d12.get("pontos", 0.0)
+                cor_txt_12 = "#28a745" if pts_atuais_12 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_12}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.2: +{pts_atuais_12:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
+
 
 
