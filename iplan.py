@@ -3458,3 +3458,140 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.1.1.1", st.session_state.get(f"links_pendentes_4_1_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_1_1_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 4.1.1.1.1 • ASPECTOS ANALISADOS NA AVALIAÇÃO DO PPA
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_aspectos_ppa_4_1_1_1_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 4.1.1.1.1 - Aspectos Analisados no Acompanhamento ({ano_sel})", expanded=True):
+                st.subheader("4.1.1.1.1 • Aspectos Analisados no Acompanhamento")
+                st.write("**Assinale os aspectos analisados no processo de acompanhamento e avaliação do PPA:**")
+                st.caption("ℹ *Marque os aspectos aplicáveis, forneça o link/evidência, inclua seus comentários e clique no botão 'Salvar Questão 4.1.1.1.1'.*")
+
+                # Mapeamento oficial de aspectos com pontuação (Soma máxima: 60,0)
+                aspectos_41111 = {
+                    "Percepção de coerência, em todos os programas, do necessário encadeamento lógico-causal entre os insumos que mobiliza, os produtos/ações que gera, os resultados que provoca e os impactos esperados pela sociedade – 20,0 pontos": 20.0,
+                    "Análise quanto a se Programas, Metas e Ações são mensurados por um ou mais indicadores próprios e adequados, e que permitam aferir a situação atual (aquela que se pretende modificar) e os avanços obtidos ao longo da execução do programa (em direção àquela mudança pretendida) – 20,0 pontos": 20.0,
+                    "Avaliação entre os produtos ofertados à população e as reais demandas da sociedade, coletadas, principalmente, nas audiências públicas realizadas e nos demais instrumentos de diagnóstico dos problemas, necessidades e deficiências do município – 20,0 pontos": 20.0,
+                    "Outros – 0,0 ponto": 0.0
+                }
+
+                # Resgate seguro e desserialização dos dados da questão
+                d41111 = res_data.get("4.1.1.1.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_raw_41111 = d41111.get("valor", "[]")
+                try:
+                    lista_salva_41111 = ast.literal_eval(val_raw_41111) if isinstance(val_raw_41111, str) else val_raw_41111
+                    if not isinstance(lista_salva_41111, list):
+                        lista_salva_41111 = []
+                except Exception:
+                    lista_salva_41111 = []
+
+                evidencia_41111_salva = d41111.get("link", "")
+
+                # Chaves padronizadas por ano de exercício
+                chave_link_41111 = f"t_4_1_1_1_1_{ano_sel}"
+                chave_coment_41111 = f"coment_4.1.1.1.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.markdown("**Selecione os itens verificados:**")
+                    selecionados_41111 = []
+                    pts_calculados_41111 = 0.0
+
+                    # Renderização dinâmica das opções com identificação parcial para dados legados
+                    for idx, (asp_texto, asp_pontos) in enumerate(aspectos_41111.items()):
+                        key_chk = f"chk_41111_{idx}_{ano_sel}"
+                        
+                        # Verifica marcadores salvos no banco ou no estado
+                        is_checked_default = any(
+                            (asp_texto == item) or (asp_texto[:25].lower() in str(item).lower())
+                            for item in lista_salva_41111
+                        )
+
+                        chk_valor = st.checkbox(
+                            asp_texto,
+                            value=is_checked_default,
+                            key=key_chk
+                        )
+
+                        if chk_valor:
+                            selecionados_41111.append(asp_texto)
+                            pts_calculados_41111 += asp_pontos
+
+                with col2:
+                    link_evidencia_41111 = st.text_area(
+                        "Link/Evidência (4.1.1.1.1):",
+                        value=evidencia_41111_salva,
+                        key=chave_link_41111,
+                        placeholder="Insira os links dos documentos que comprovam a análise dos aspectos do PPA...",
+                        height=180
+                    )
+                    placeholder_links_41111 = st.empty()
+                    links_41111_visuais = re.findall(REGEX_PURE_URL, link_evidencia_41111 or "")
+                    if links_41111_visuais:
+                        placeholder_links_41111.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_41111_visuais]
+                            )
+                        )
+
+                # Renderização do bloco unificado de comentários
+                bloco_comentarios("4.1.1.1.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 4.1.1.1.1", key=f"btn_salvar_4_1_1_1_1_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_41111.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_41111, d41111.get("comentario", ""))
+                    str_selecionados = str(selecionados_41111)
+
+                    # Gravação no banco de dados e atualização local
+                    save_resp(
+                        qid="4.1.1.1.1",
+                        valor=str_selecionados,
+                        pontos=pts_calculados_41111,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    res_data["4.1.1.1.1"] = {
+                        "valor": str_selecionados,
+                        "pontos": pts_calculados_41111,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de alteração em links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_41111_salva or "")]
+
+                    if lnk_val != evidencia_4111_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_1_1_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_1_1_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opções, evidências e comentários da Questão 4.1.1.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status e totalização de pontos
+                pts_atuais_41111 = float(d41111.get("pontos", 0.0))
+                val_atual_41111 = d41111.get("valor", "[]")
+
+                if val_atual_41111 == "[]" or not selecionados_41111:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nítida ausência de seleção de aspectos (0,0 pontos)</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_41111 = "#28a745" if pts_atuais_41111 > 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_41111}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 4.1.1.1.1: {pts_atuais_41111:.1f} / 60.0 pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS
+        if st.session_state.get(f"gatilho_modal_4_1_1_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.1.1.1.1", st.session_state.get(f"links_pendentes_4_1_1_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_1_1_1_1_{ano_sel}"] = False
