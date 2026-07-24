@@ -2221,17 +2221,22 @@ def mostrar_formulario_plan():
                 st.write("**Houve a realização de consulta pública online para coleta de sugestões para a elaboração do PPA 2026-2029?**")
                 st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 2.0'.*")
 
-                opcoes20 = {"Selecione...": 0.0, "Sim": 6.0, "Não": 0.0}
+                # Mapeamento de Opções com a pontuação ao lado do texto
+                opcoes20 = {
+                    "Selecione...": 0.0, 
+                    "Sim (+6,0 pts)": 6.0, 
+                    "Não (0,0 pt)": 0.0
+                }
 
-                # Resgate seguro de dados salvos
+                # Resgate seguro de dados salvos e alinhamento com os novos rótulos
                 d20 = res_data.get("2.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
 
                 val_salvo_20 = str(d20.get("valor", "Selecione..."))
                 if "Sim" in val_salvo_20:
-                    val_salvo_20 = "Sim"
+                    val_salvo_20 = "Sim (6,0 pts)"
                 elif "Não" in val_salvo_20:
-                    val_salvo_20 = "Não"
-                if val_salvo_20 not in opcoes20:
+                    val_salvo_20 = "Não (0,0 pt)"
+                else:
                     val_salvo_20 = "Selecione..."
 
                 evidencia_20_salva = d20.get("link", "")
@@ -2333,6 +2338,3 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
-
-
-
