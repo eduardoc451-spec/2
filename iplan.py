@@ -2791,3 +2791,137 @@ def mostrar_formulario_plan():
                             "✅ Questão 3.1.1 preenchida e gravada</span>",
                             unsafe_allow_html=True
                         )
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 3.2 • DIAGNÓSTICO PRÉVIO DOS PROGRAMAS DO PPA (PADRÃO REFINADO iPLAN)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_i_plan_3_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Questão 3.2 • Diagnóstico Prévio do PPA ({ano_sel})", expanded=True):
+                st.subheader("3.2 • Diagnóstico Prévio")
+                st.write("**Os programas do PPA 2026-2029 tiveram diagnóstico prévio?**")
+                st.caption("ℹ *Obs: Os Planos Municipais Setoriais (Educação, Saúde, Saneamento Básico etc.) somente podem ser considerados se neles houver evidências do levantamento formal dos problemas.*")
+                st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 3.2'.*")
+
+                # Mapeamento oficial com pontuação padronizada ao lado do rótulo
+                opcoes32 = {
+                    "Selecione...": 0.0,
+                    "Sim, para todos os programas PPA – 10,0 pontos": 10.0,
+                    "Sim, para a maior parte dos programas do PPA – 5,0 pontos": 5.0,
+                    "Sim, para a menor parte dos programas do PPA – 3,0 pontos": 3.0,
+                    "Não – 0,0 ponto": 0.0
+                }
+
+                # Resgate seguro e mapeamento dos valores existentes/legados
+                d32 = res_data.get("3.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_32 = str(d32.get("valor", "Selecione..."))
+                if "todos" in val_salvo_32.lower():
+                    val_salvo_32 = "Sim, para todos os programas PPA – 10,0 pontos"
+                elif "maior parte" in val_salvo_32.lower():
+                    val_salvo_32 = "Sim, para a maior parte dos programas do PPA – 5,0 pontos"
+                elif "menor parte" in val_salvo_32.lower():
+                    val_salvo_32 = "Sim, para a menor parte dos programas do PPA – 3,0 pontos"
+                elif "Não" in val_salvo_32:
+                    val_salvo_32 = "Não – 0,0 ponto"
+                else:
+                    val_salvo_32 = "Selecione..."
+
+                evidencia_32_salva = d32.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_32 = f"r_iplan_3_2_{ano_sel}"
+                chave_link_32 = f"txt_i_plan_32_{ano_sel}"
+                chave_coment_32 = f"coment_3.2_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_32 = list(opcoes32.keys())
+                    idx32 = lista_opcoes_32.index(val_salvo_32) if val_salvo_32 in lista_opcoes_32 else 0
+
+                    val_selecionado_32 = st.radio(
+                        "Selecione 3.2:",
+                        options=lista_opcoes_32,
+                        index=idx32,
+                        key=chave_radio_32,
+                        label_visibility="collapsed"
+                    )
+                    pts_previstos_32 = opcoes32[val_selecionado_32]
+
+                with col2:
+                    link_evidencia_32 = st.text_area(
+                        "Link/Evidência (3.2):",
+                        value=evidencia_32_salva,
+                        key=chave_link_32,
+                        placeholder="Insira os links e documentos comprobatórios do diagnóstico prévio do PPA...",
+                        height=140
+                    )
+                    placeholder_links_32 = st.empty()
+                    links_3_2_visuais = re.findall(REGEX_PURE_URL, link_evidencia_32 or "")
+                    if links_3_2_visuais:
+                        placeholder_links_32.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_3_2_visuais]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários padronizado
+                bloco_comentarios("3.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 3.2", key=f"btn_salvar_iplan_3_2_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_32.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_32, d32.get("comentario", ""))
+
+                    # Salva no banco de dados
+                    save_resp(
+                        qid="3.2",
+                        valor=val_selecionado_32,
+                        pontos=pts_previstos_32,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["3.2"] = {
+                        "valor": val_selecionado_32,
+                        "pontos": pts_previstos_32,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_32_salva or "")]
+
+                    if lnk_val != evidencia_32_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 3.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_32 = d32.get("pontos", 0.0)
+                val_atual_32 = d32.get("valor", "Selecione...")
+
+                if val_atual_32 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_32 = "#28a745" if pts_atuais_32 > 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_32}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 3.2: {pts_atuais_32:.1f} / 10.0 pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL 3.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.2", st.session_state.get(f"links_pendentes_3_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_3_2_{ano_sel}"] = False
