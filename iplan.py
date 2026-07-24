@@ -4503,3 +4503,142 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.1.1", st.session_state.get(f"links_pendentes_5_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_1_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 6.0 • ITENS QUE A LDO DISPÕE
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_itens_ldo_6_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 6.0 - Itens que a LDO Dispõe ({ano_sel})", expanded=True):
+                st.subheader("6.0 • Disposições da LDO")
+                st.write("**Assinale os itens que a LDO dispõe:**")
+                st.caption("ℹ *Selecione os itens correspondentes, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 6.0'.*")
+
+                itens_ldo_60 = {
+                    "Custos estimados, indicadores e metas físicas que se correlacionam com as ações do governo municipal – 0,5": 0.5,
+                    "Critérios para limitação desempenho e movimentação financeira; ressalvados os pagamentos do serviço da dívida, os relativos à inovação e ao desenvolvimento científico e tecnológico custeadas por fundo criado para tal finalidade. – 0,5": 0.5,
+                    "Critérios para repasses a entidades do terceiro setor – 00": 0.0,
+                    "Critérios para ajuda financeira a entidades da Administração indireta – 00": 0.0,
+                    "Critérios para o Poder Executivo estabelecer a programação financeira mensal para todo o Município, nele incluído a Câmara – 01": 1.0,
+                    "Percentual da Receita Corrente Líquida que será retido, na peça orçamentária, enquanto Reserva de Contingência, destinada a passivos contingentes e outros riscos fiscais – 01": 1.0,
+                    "Critérios para contratação de horas extras quando o Poder superar o limite prudencial para pessoal: Executivo, 51,30% da RCL; Legislativo, 5,7% da RCL – 0,5": 0.5,
+                    "Determinação do índice de preços para atualização monetária do principal da Dívida Mobiliária Refinanciada – 00": 0.0,
+                    "Autorização para o Município auxiliar o custeio de despesas próprias do Estado e da União – 00": 0.0,
+                    "Requisitos para início de novos projetos, após o adequado atendimento/manutenção dos que estão em andamento – 0,5": 0.5,
+                    "Dispor sobre pagamento de servidor ou empregado público com recursos vinculados à parceria firmada com o terceiro setor – 00": 0.0
+                }
+
+                # Resgate seguro dos dados
+                d60 = res_data.get("6.0") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                evidencia_60_salva = d60.get("link", "")
+
+                try:
+                    lista_salva_60 = ast.literal_eval(d60.get("valor", "[]"))
+                    if not isinstance(lista_salva_60, list):
+                        lista_salva_60 = []
+                except Exception:
+                    lista_salva_60 = []
+
+                # Chaves fixas por componente e ano
+                chave_link_60 = f"t_6_0_{ano_sel}"
+                chave_coment_60 = f"coment_6.0_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.write("**Itens Selecionáveis:**")
+                    # Renderização individual dos Checkboxes
+                    for idx, (item_texto, pt) in enumerate(itens_ldo_60.items()):
+                        key_chk = f"chk_60_{idx}_{ano_sel}"
+                        st.checkbox(
+                            item_texto,
+                            value=item_texto in lista_salva_60,
+                            key=key_chk
+                        )
+
+                with col2:
+                    link_evidencia_60 = st.text_area(
+                        "Link/Evidência (6.0):",
+                        value=evidencia_60_salva,
+                        key=chave_link_60,
+                        placeholder="Insira os links dos documentos comprobatórios dos itens dispostos na LDO...",
+                        height=250
+                    )
+                    placeholder_links_60 = st.empty()
+                    links_60_visuais = re.findall(REGEX_PURE_URL, link_evidencia_60 or "")
+                    if links_60_visuais:
+                        placeholder_links_60.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_60_visuais]
+                            )
+                        )
+
+                # Renderização do bloco unificado de comentários
+                bloco_comentarios("6.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 6.0", key=f"btn_salvar_6_0_{ano_sel}", type="primary"):
+                    itens_selecionados_60 = []
+                    pts_calculados_60 = 0.0
+
+                    # Varredura dos estados dos checkboxes no session_state
+                    for idx, (item_texto, pt) in enumerate(itens_ldo_60.items()):
+                        key_chk = f"chk_60_{idx}_{ano_sel}"
+                        if st.session_state.get(key_chk, False):
+                            itens_selecionados_60.append(item_texto)
+                            pts_calculados_60 += pt
+
+                    str_valor_60 = str(itens_selecionados_60)
+                    lnk_val = link_evidencia_60.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_60, d60.get("comentario", ""))
+
+                    # Persistência na base de dados
+                    save_resp(
+                        qid="6.0",
+                        valor=str_valor_60,
+                        pontos=float(pts_calculados_60),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização na estrutura global local
+                    res_data["6.0"] = {
+                        "valor": str_valor_60,
+                        "pontos": float(pts_calculados_60),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_60_salva or "")]
+
+                    if lnk_val != evidencia_60_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_6_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 6.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição estilizada do impacto da pontuação
+                pts_atuais_60 = d60.get("pontos", 0.0)
+                valor_salvo_60_str = d60.get("valor", "[]")
+
+                if valor_salvo_60_str == "[]" or not valor_salvo_60_str:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_60 = "#28a745" if pts_atuais_60 > 0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_60}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 6.0: {pts_atuais_60:.2f} pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS
+        if st.session_state.get(f"gatilho_modal_6_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
