@@ -10830,3 +10830,106 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("16.3", st.session_state.get(f"links_pendentes_16_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_3_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 16.3.1 • DETALHES DO INSTRUMENTO NORMATIVO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_norma_detalhe_16_3_1_final_{ano_sel}", border=True):
+            with st.expander("📑 Quesito 16.3.1 - Detalhes do Instrumento Normativo", expanded=True):
+                st.subheader("16.3.1 • Dados do Instrumento")
+                st.write("**Informe o instrumento normativo que regulamentou a 'Carta de Serviço ao Usuário', Número e Data da publicação:**")
+                st.info("ℹ️ *Caso não esteja disponível na internet, recomendamos anexar o Instrumento Normativo de regulamentação no Sistema de Questionários.*")
+
+                # Recuperação segura dos dados do banco
+                d1631 = res_data.get("16.3.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_1631 = d1631.get("valor", "")
+                evidencia_1631_salva = d1631.get("link", "")
+
+                # Chaves explícitas no Session State
+                chave_input_1631 = f"q1631_{ano_sel}"
+                chave_link_1631 = f"l1631_{ano_sel}"
+                chave_coment_1631 = f"coment_16.3.1_{ano_sel}"
+
+                c1631_1, c1631_2 = st.columns([1, 1])
+
+                with c1631_1:
+                    val_input_1631 = st.text_input(
+                        "Instrumento normativo, número e data:",
+                        value=v_salvo_1631,
+                        key=chave_input_1631,
+                        placeholder="Ex: Decreto nº 1.234/2023, publicado em 15/03/2023"
+                    )
+
+                    # Exibição da métrica informativa (0.0 pts)
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value="0.0 pts",
+                        delta=None
+                    )
+
+                with c1631_2:
+                    link_1631 = st.text_area(
+                        "Link/Evidência (16.3.1):",
+                        value=evidencia_1631_salva,
+                        key=chave_link_1631,
+                        placeholder="Inserir link(s) comprobatório(s)...",
+                        height=100
+                    )
+                    placeholder_links_1631 = st.empty()
+                    links_1631_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_1631 or "")]
+                    if links_1631_visuais:
+                        placeholder_links_1631.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_1631_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 16.3.1
+                bloco_comentarios("16.3.1", res_data, ano_sel)
+
+                # Feedback visual dinâmico
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 16.3.1: 0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 16.3.1", key=f"btn_salvar_16_3_1_{ano_sel}", type="primary"):
+                    texto_norma = st.session_state.get(chave_input_1631, val_input_1631).strip()
+                    lnk_val = link_1631.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_1631, d1631.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="16.3.1",
+                        valor=texto_norma,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local
+                    res_data["16.3.1"] = {
+                        "valor": texto_norma,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1631_salva or "")]
+
+                    if lnk_val != evidencia_1631_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_16_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_16_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 16.3.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 16.3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_16_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.3.1", st.session_state.get(f"links_pendentes_16_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_16_3_1_{ano_sel}"] = False
