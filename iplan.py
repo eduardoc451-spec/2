@@ -7330,3 +7330,132 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.0", st.session_state.get(f"links_pendentes_14_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 14.1 • INSTRUMENTO NORMATIVO DE REGULAMENTAÇÃO (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_regulamentacao_14_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 14.1 - Instrumento Normativo de Regulamentação ({ano_sel})", expanded=True):
+                st.subheader("14.1 • Instrumento Normativo")
+                st.write("**Informe o instrumento normativo de regulamentação do Sistema de Controle Interno, Número e Data da publicação:**")
+                st.caption("ℹ *Preencha os campos abaixo, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 14.1'.*")
+
+                # Resgate seguro dos dados do 14.1
+                d141 = res_data.get("14.1") or {"valor": "||", "pontos": 0.0, "link": "", "comentario": ""}
+                if d141 is None:
+                    d141 = {"valor": "||", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_141 = d141.get("valor", "||")
+                evidencia_141_salva = d141.get("link", "")
+
+                # Decomposição segura do valor composto
+                try:
+                    partes_141 = val_salvo_141.split("|")
+                    inst_inicial = partes_141[0] if len(partes_141) > 0 else ""
+                    num_inicial = partes_141[1] if len(partes_141) > 1 else ""
+                    data_inicial = partes_141[2] if len(partes_141) > 2 else ""
+                except Exception:
+                    inst_inicial, num_inicial, data_inicial = "", "", ""
+
+                # Chaves estáticas e seguras por componente e ano
+                chave_inst_141 = f"q141_inst_{ano_sel}"
+                chave_num_141 = f"q141_num_{ano_sel}"
+                chave_data_141 = f"q141_data_{ano_sel}"
+                chave_link_141 = f"t_141_{ano_sel}"
+                chave_coment_141 = f"coment_14.1_{ano_sel}"
+
+                c141_1, c141_2 = st.columns([1, 1])
+
+                with c141_1:
+                    v_inst_input = st.text_input(
+                        "Instrumento Normativo (Ex: Lei, Decreto):",
+                        value=inst_inicial,
+                        key=chave_inst_141,
+                        placeholder="Ex: Lei Municipal, Decreto..."
+                    )
+                    v_num_input = st.text_input(
+                        "Número do instrumento:",
+                        value=num_inicial,
+                        key=chave_num_141,
+                        placeholder="Ex: 1234/2023"
+                    )
+                    v_data_input = st.text_input(
+                        "Data da publicação (DD/MM/AAAA):",
+                        value=data_inicial,
+                        key=chave_data_141,
+                        placeholder="Ex: 15/03/2023"
+                    )
+
+                with c141_2:
+                    link_evidencia_141 = st.text_area(
+                        "Link/Evidência (14.1):",
+                        value=evidencia_141_salva,
+                        key=chave_link_141,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.1...",
+                        height=210
+                    )
+                    placeholder_links_141 = st.empty()
+                    links_141_visuais = re.findall(REGEX_PURE_URL, link_evidencia_141 or "")
+                    if links_141_visuais:
+                        placeholder_links_141.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_141_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.1
+                bloco_comentarios("14.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.1", key=f"btn_salvar_14_1_{ano_sel}", type="primary"):
+                    valor_composto = f"{v_inst_input.strip()}|{v_num_input.strip()}|{v_data_input.strip()}"
+                    lnk_val_141 = link_evidencia_141.strip()
+                    comentario_para_salvar_141 = st.session_state.get(chave_coment_141, d141.get("comentario", ""))
+
+                    # Persistência no banco/sessão (impacto 0.0 pontos)
+                    save_resp(
+                        qid="14.1",
+                        valor=valor_composto,
+                        pontos=0.0,
+                        link=lnk_val_141,
+                        comentario=comentario_para_salvar_141
+                    )
+                    res_data["14.1"] = {
+                        "valor": valor_composto,
+                        "pontos": 0.0,
+                        "link": lnk_val_141,
+                        "comentario": comentario_para_salvar_141
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_141 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_141_salva or "")]
+
+                    if lnk_val_141 != evidencia_141_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 14.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_141 = d141.get("pontos", 0.0)
+                tem_preenchimento = any([v_inst_input.strip(), v_num_input.strip(), v_data_input.strip()])
+
+                if not tem_preenchimento:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhum dado do instrumento normativo informado no Quesito 14.1</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Instrumento normativo salvo com sucesso (Impacto: {pts_atuais_141:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 14.1
+        if st.session_state.get(f"gatilho_modal_14_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.1", st.session_state.get(f"links_pendentes_14_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_1_{ano_sel}"] = False
