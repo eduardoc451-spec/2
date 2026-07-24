@@ -12637,3 +12637,192 @@ def mostrar_formulario_iamb():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("A4.1", st.session_state.get(f"links_pendentes_A4_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_A4_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # ITEM A4.1.1 • SANEAMENTO - SINISA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a411_{ano_sel}", border=True):
+            st.subheader("A4.1.1 • Abastecimento, Esgotamento e Perdas (SINISA)")
+            st.caption("Indicadores oficiais extraídos do SINISA. Não sujeitos à validação municipal direta.")
+
+            # Recuperação dos dados salvos no banco para os 5 sub-itens
+            d_agua = res_data.get("A4.1.1_agua") or {"valor": 0.0, "pontos": 0.0, "link": "SINISA"}
+            d_perda = res_data.get("A4.1.1_perdas") or {"valor": 0.0, "pontos": 0.0, "link": "SINISA"}
+            d_esg = res_data.get("A4.1.1_esgoto") or {"valor": 0.0, "pontos": 0.0, "link": "SINISA"}
+            d_trat = res_data.get("A4.1.1_trat") or {"valor": 0.0, "pontos": 0.0, "link": "SINISA"}
+            d_trat_c = res_data.get("A4.1.1_trat_cons") or {"valor": 0.0, "pontos": 0.0, "link": "SINISA"}
+
+            # Chaves do Streamlit Session State
+            k_agua = f"ext_agua_{ano_sel}"
+            k_perda = f"ext_perda_{ano_sel}"
+            k_esg = f"ext_esg_{ano_sel}"
+            k_trat = f"ext_trat_{ano_sel}"
+            k_trat_c = f"ext_trat_c_{ano_sel}"
+
+            col_sub1, col_sub2 = st.columns([1, 1])
+
+            # -----------------------------------------------------------------
+            # SEÇÃO 1: ÁGUA E PERDAS
+            # -----------------------------------------------------------------
+            with col_sub1:
+                st.markdown("#### 🚰 Abastecimento de Água e Perdas")
+                
+                # 1. Percentual de Atendimento de Água
+                p_agua = st.number_input(
+                    "% População atendida com abastecimento de água:",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=float(d_agua.get("valor", 0.0)),
+                    step=0.1,
+                    key=k_agua
+                )
+                pts_agua = 0.0
+                if p_agua == 100.0:
+                    pts_agua = 20.0
+                elif 99.0 < p_agua < 100.0:
+                    pts_agua = ((p_agua - 99.0) / 1.0 * 10.0) + 10.0
+                elif 90.0 < p_agua <= 99.0:
+                    pts_agua = (p_agua - 90.0) / 9.0 * 10.0
+
+                st.caption(f"Pontuação Obtida (Água): **{pts_agua:.2f} / 20.00 pts**")
+
+                st.divider()
+
+                # 2. Percentual de Perdas na Distribuição
+                p_perda = st.number_input(
+                    "% Perdas na distribuição de água:",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=float(d_perda.get("valor", 0.0)),
+                    step=0.1,
+                    key=k_perda
+                )
+                pts_perda = 0.0
+                if p_perda == 0.0:
+                    pts_perda = 0.0
+                elif 0.0 < p_perda <= 10.0:
+                    pts_perda = (p_perda / 10.0) * (-5.0)
+                elif 10.0 < p_perda <= 20.0:
+                    pts_perda = ((p_perda - 10.0) / 10.0 * (-2.0)) - 5.0
+                else:
+                    pts_perda = -10.0
+
+                if pts_perda < 0:
+                    st.caption(f"⚠️ Penalidade (Perdas): **:red[{pts_perda:.2f} pts]** (Máx: -10.00 pts)")
+                else:
+                    st.caption("Penalidade (Perdas): **0.00 pts** (Sem perdas)")
+
+            # -----------------------------------------------------------------
+            # SEÇÃO 2: ESGOTAMENTO SANITÁRIO
+            # -----------------------------------------------------------------
+            with col_sub2:
+                st.markdown("#### 🚽 Esgotamento Sanitário")
+
+                # 3. Coleta de Esgoto
+                p_esg = st.number_input(
+                    "% População atendida com coleta de esgoto:",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=float(d_esg.get("valor", 0.0)),
+                    step=0.1,
+                    key=k_esg
+                )
+                pts_esg = 0.0
+                if p_esg == 100.0:
+                    pts_esg = 20.0
+                elif 90.0 < p_esg < 100.0:
+                    pts_esg = ((p_esg - 90.0) / 10.0 * 10.0) + 10.0
+                elif 80.0 < p_esg <= 90.0:
+                    pts_esg = (p_esg - 80.0) / 10.0 * 10.0
+
+                st.caption(f"Pontuação Obtida (Coleta): **{pts_esg:.2f} / 20.00 pts**")
+
+                st.divider()
+
+                # 4. Tratamento de Esgoto
+                p_trat = st.number_input(
+                    "% Índice de tratamento de esgoto:",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=float(d_trat.get("valor", 0.0)),
+                    step=0.1,
+                    key=k_trat
+                )
+                pts_trat = 0.0
+                if p_trat == 100.0:
+                    pts_trat = 20.0
+                elif 90.0 < p_trat < 100.0:
+                    pts_trat = ((p_trat - 90.0) / 10.0 * 10.0) + 10.0
+                elif 80.0 < p_trat <= 90.0:
+                    pts_trat = (p_trat - 80.0) / 10.0 * 10.0
+
+                st.caption(f"Pontuação Obtida (Tratamento): **{pts_trat:.2f} / 20.00 pts**")
+
+                st.divider()
+
+                # 5. Esgoto Tratado Ref. Água Consumida
+                p_trat_c = st.number_input(
+                    "% Esgoto tratado referido à água consumida:",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=float(d_trat_c.get("valor", 0.0)),
+                    step=0.1,
+                    key=k_trat_c
+                )
+                pts_trat_c = 0.0
+                if p_trat_c == 100.0:
+                    pts_trat_c = 30.0
+                elif 90.0 < p_trat_c < 100.0:
+                    pts_trat_c = ((p_trat_c - 90.0) / 10.0 * 10.0) + 10.0
+                elif 80.0 < p_trat_c <= 90.0:
+                    pts_trat_c = (p_trat_c - 80.0) / 10.0 * 10.0
+
+                st.caption(f"Pontuação Obtida (Trat. Ref. Consumo): **{pts_trat_c:.2f} / 30.00 pts**")
+
+            # -----------------------------------------------------------------
+            # RESUMO E MÉTRICA TOTAL DO ITEM A4.1.1
+            # -----------------------------------------------------------------
+            st.divider()
+            total_calculado_a411 = pts_agua + pts_perda + pts_esg + pts_trat + pts_trat_c
+            total_salvo_a411 = (
+                float(d_agua.get("pontos", 0.0)) +
+                float(d_perda.get("pontos", 0.0)) +
+                float(d_esg.get("pontos", 0.0)) +
+                float(d_trat.get("pontos", 0.0)) +
+                float(d_trat_c.get("pontos", 0.0))
+            )
+
+            col_m1, col_m2 = st.columns([1, 1])
+            with col_m1:
+                st.metric(
+                    label="Pontuação Total Calculada A4.1.1 (Líquida)",
+                    value=f"{total_calculado_a411:.2f} pts",
+                    delta=f"Perdas: {pts_perda:.2f} pts" if pts_perda < 0 else None,
+                    delta_color="inverse"
+                )
+            with col_m2:
+                st.info(f"**Pontuação Total Salva Anteriormente:** {total_salvo_a411:.2f} pts")
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Todos os Dados do Item A4.1.1", key=f"btn_salvar_ext_a411_{ano_sel}", type="primary"):
+                fonte_link = "SINISA"
+
+                # Persistência no banco para os 5 sub-itens
+                save_resp("A4.1.1_agua", float(p_agua), float(pts_agua), fonte_link)
+                save_resp("A4.1.1_perdas", float(p_perda), float(pts_perda), fonte_link)
+                save_resp("A4.1.1_esgoto", float(p_esg), float(pts_esg), fonte_link)
+                save_resp("A4.1.1_trat", float(p_trat), float(pts_trat), fonte_link)
+                save_resp("A4.1.1_trat_cons", float(p_trat_c), float(pts_trat_c), fonte_link)
+
+                # Atualização do dicionário em memória
+                res_data["A4.1.1_agua"] = {"valor": float(p_agua), "pontos": float(pts_agua), "link": fonte_link}
+                res_data["A4.1.1_perdas"] = {"valor": float(p_perda), "pontos": float(pts_perda), "link": fonte_link}
+                res_data["A4.1.1_esgoto"] = {"valor": float(p_esg), "pontos": float(pts_esg), "link": fonte_link}
+                res_data["A4.1.1_trat"] = {"valor": float(p_trat), "pontos": float(pts_trat), "link": fonte_link}
+                res_data["A4.1.1_trat_cons"] = {"valor": float(p_trat_c), "pontos": float(pts_trat_c), "link": fonte_link}
+
+                st.cache_data.clear()
+                st.toast("Todos os indicadores de Saneamento do Item A4.1.1 foram salvos com sucesso!", icon="✅")
+                st.rerun()
