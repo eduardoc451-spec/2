@@ -12078,6 +12078,122 @@ def mostrar_formulario_plan():
                 modal_aviso_link("P3", st.session_state.get(f"links_pendentes_p3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_p3_{ano_sel}"] = False
 
+        # =============================================================================
+        # INDICADOR P4 • PONTUALIDADE NA ENTREGA DE DOCUMENTOS (AUDESP) (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_indicador_p4_final_{ano_sel}", border=True):
+            with st.expander(f"📊 Indicador P4 - Pontualidade na Entrega de Documentos (Peças de Planejamento)", expanded=True):
+                st.subheader("P4 • Dados Extraídos do Sistema AUDESP")
+                st.write("**Os documentos relativos às peças de planejamento (Atas de audiência de avaliação do cumprimento metas, Relatório de Atividades, PPA, LDO e LOA) são entregues no prazo ao Tribunal de Contas do Estado de São Paulo?**")
+
+                # Mapeamento oficial com pontuações explícitas nas strings das opções
+                opcoes_p4 = {
+                    "Selecione...": 0.0,
+                    "Documentos relativos às Peças de Planejamento entregues no prazo – 150 pontos": 150.0,
+                    "Documentos relativos às Peças de Planejamento entregues fora do prazo ou não entregue – 00 pontos": 0.0
+                }
+
+                # Recuperação segura dos dados salvos no banco
+                dP4 = res_data.get("P4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_p4 = dP4.get("valor", "Selecione...")
+                pts_salvos_p4 = float(dP4.get("pontos", 0.0))
+                evidencia_p4_salva = dP4.get("link", "")
+
+                # Chaves explícitas no Session State
+                chave_radio_p4 = f"r_p4_{ano_sel}"
+                chave_link_p4 = f"l_p4_txt_{ano_sel}"
+                chave_coment_p4 = f"coment_P4_exclusivo_{ano_sel}"
+
+                c_p4_1, c_p4_2 = st.columns([1, 1])
+
+                with c_p4_1:
+                    lista_opcoes_p4 = list(opcoes_p4.keys())
+                    idx_p4 = lista_opcoes_p4.index(v_salvo_p4) if v_salvo_p4 in lista_opcoes_p4 else 0
+
+                    st.radio(
+                        "Status de entrega AUDESP (P4):",
+                        options=lista_opcoes_p4,
+                        index=idx_p4,
+                        key=chave_radio_p4,
+                        label_visibility="collapsed"
+                    )
+
+                    # Exibição da métrica de pontuação salva
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value=f"{pts_salvos_p4:.1f} pts",
+                        delta=None
+                    )
+
+                with c_p4_2:
+                    link_p4 = st.text_area(
+                        "Link de Evidência / Recibo AUDESP (P4):",
+                        value=evidencia_p4_salva,
+                        key=chave_link_p4,
+                        placeholder="Inserir link de evidência ou recibo da AUDESP...",
+                        height=100
+                    )
+                    placeholder_links_p4 = st.empty()
+                    links_p4_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_p4 or "")]
+                    if links_p4_visuais:
+                        placeholder_links_p4.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_p4_visuais])
+                        )
+
+                # Renderiza o bloco de comentários específico do Indicador P4
+                bloco_comentarios("P4_exclusivo", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_txt_p4 = "#28a745" if pts_salvos_p4 == 150.0 else ("#dc3545" if v_salvo_p4 != "Selecione..." else "#6c757d")
+                st.markdown(
+                    f"<span style='color:{cor_txt_p4}; font-weight:bold;'>📊 Impacto de Pontuação no Indicador P4: {pts_salvos_p4:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador P4", key=f"btn_salvar_p4_{ano_sel}", type="primary"):
+                    val_sel = st.session_state.get(chave_radio_p4, v_salvo_p4)
+                    pts_calc = opcoes_p4.get(val_sel, 0.0)
+                    lnk_val = link_p4.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_p4, dP4.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="P4",
+                        valor=val_sel,
+                        pontos=float(pts_calc),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["P4"] = {
+                        "valor": val_sel,
+                        "pontos": float(pts_calc),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_p4_salva or "")]
+
+                    if lnk_val != evidencia_p4_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_p4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_p4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast(f"Indicador P4 salvo com sucesso! ({pts_calc:.1f} pts)", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL P4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_p4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("P4", st.session_state.get(f"links_pendentes_p4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_p4_{ano_sel}"] = False
+
 
 
 
