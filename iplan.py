@@ -3059,3 +3059,136 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 4.1 • ARTICULAÇÃO DE PROGRAMAS FINALÍSTICOS (PADRÃO REFINADO iPLAN)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_articulacao_programas_4_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Questão 4.1 • Articulação de Programas Finalísticos ({ano_sel})", expanded=True):
+                st.subheader("4.1 • Articulação de Programas Finalísticos")
+                st.write("**Os programas finalísticos articulam um conjunto de ações que concorrem para um objetivo comum preestabelecido, visando à solução de um problema ou necessidade da sociedade?**")
+                st.caption("ℹ *Selecione a opção desejada, informe o link de evidência, adicione seus comentários e clique em 'Salvar Questão 4.1'.*")
+
+                # Mapeamento oficial com pontuação padronizada ao lado do rótulo
+                opcoes41 = {
+                    "Selecione...": 0.0,
+                    "Todos os programas finalísticos – 15,0 pontos": 15.0,
+                    "A maior parte dos programas finalísticos – 10,0 pontos": 10.0,
+                    "A menor parte dos programas finalísticos – 5,0 pontos": 5.0,
+                    "Nenhum programa finalístico – 0,0 ponto": 0.0
+                }
+
+                # Resgate seguro e tratamento de legados
+                d41 = res_data.get("4.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_41 = str(d41.get("valor", "Selecione..."))
+                if "todos os" in val_salvo_41.lower():
+                    val_salvo_41 = "Todos os programas finalísticos – 15,0 pontos"
+                elif "maior parte" in val_salvo_41.lower():
+                    val_salvo_41 = "A maior parte dos programas finalísticos – 10,0 pontos"
+                elif "menor parte" in val_salvo_41.lower():
+                    val_salvo_41 = "A menor parte dos programas finalísticos – 5,0 pontos"
+                elif "nenhum" in val_salvo_41.lower():
+                    val_salvo_41 = "Nenhum programa finalístico – 0,0 ponto"
+                else:
+                    val_salvo_41 = "Selecione..."
+
+                evidencia_41_salva = d41.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_41 = f"r_iplan_4_1_{ano_sel}"
+                chave_link_41 = f"txt_i_plan_41_{ano_sel}"
+                chave_coment_41 = f"coment_4.1_{ano_sel}"
+
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    lista_opcoes_41 = list(opcoes41.keys())
+                    idx41 = lista_opcoes_41.index(val_salvo_41) if val_salvo_41 in lista_opcoes_41 else 0
+
+                    val_selecionado_41 = st.radio(
+                        "Selecione 4.1:",
+                        options=lista_opcoes_41,
+                        index=idx41,
+                        key=chave_radio_41,
+                        label_visibility="collapsed"
+                    )
+                    pts_previstos_41 = opcoes41[val_selecionado_41]
+
+                with col2:
+                    link_evidencia_41 = st.text_area(
+                        "Link/Evidência (4.1):",
+                        value=evidencia_41_salva,
+                        key=chave_link_41,
+                        placeholder="Insira os links e documentos comprobatórios sobre a articulação dos programas...",
+                        height=140
+                    )
+                    placeholder_links_41 = st.empty()
+                    links_41_visuais = re.findall(REGEX_PURE_URL, link_evidencia_41 or "")
+                    if links_41_visuais:
+                        placeholder_links_41.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_41_visuais]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários padronizado
+                bloco_comentarios("4.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 4.1", key=f"btn_salvar_iplan_4_1_{ano_sel}", type="primary"):
+                    lnk_val = link_evidencia_41.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_41, d41.get("comentario", ""))
+
+                    # Salva no banco de dados
+                    save_resp(
+                        qid="4.1",
+                        valor=val_selecionado_41,
+                        pontos=pts_previstos_41,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["4.1"] = {
+                        "valor": val_selecionado_41,
+                        "pontos": pts_previstos_41,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_41_salva or "")]
+
+                    if lnk_val != evidencia_41_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários da Questão 4.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_41 = d41.get("pontos", 0.0)
+                val_atual_41 = d41.get("valor", "Selecione...")
+
+                if val_atual_41 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Aguardando preenchimento</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_41 = "#28a745" if pts_atuais_41 > 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_41}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação na Questão 4.1: {pts_atuais_41:.1f} / 15.0 pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL 4.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_4_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.1", st.session_state.get(f"links_pendentes_4_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = False
