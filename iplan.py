@@ -4975,3 +4975,117 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("8.0", st.session_state.get(f"links_pendentes_8_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 8.1 • LINK DE DIVULGAÇÃO DAS METAS FISCAIS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_url_metas_8_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 8.1 - Link de Divulgação das Metas Fiscais ({ano_sel})", expanded=True):
+                st.subheader("8.1 • URL do Anexo de Metas Fiscais")
+                st.write("**8.1 Informe a página eletrônica (link na internet) de divulgação do Anexo de Metas Fiscais (XYZ se não disponível):**")
+                st.caption("ℹ *Informe o link da página eletrônica ou 'XYZ' se não estiver disponível, preencha a evidência/comentários e clique em 'Salvar Questão 8.1'.*")
+
+                # Resgate seguro dos dados de 8.1
+                d81 = res_data.get("8.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_81_salva = d81.get("link", "")
+                v_salvo_81 = d81.get("valor", "")
+
+                # Chaves fixas por componente e ano
+                chave_input_81 = f"inp_81_{ano_sel}"
+                chave_link_81 = f"t_8_1_{ano_sel}"
+                chave_coment_81 = f"coment_8.1_{ano_sel}"
+
+                c81_1, c81_2 = st.columns([1, 1])
+
+                with c81_1:
+                    val_8_1 = st.text_input(
+                        "Página eletrônica (link ou XYZ):",
+                        value=v_salvo_81,
+                        key=chave_input_81,
+                        placeholder="http://... ou XYZ"
+                    )
+
+                with c81_2:
+                    link_evidencia_81 = st.text_area(
+                        "Link/Evidência (8.1):",
+                        value=evidencia_81_salva,
+                        key=chave_link_81,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 8.1...",
+                        height=100
+                    )
+                    placeholder_links_81 = st.empty()
+                    links_81_visuais = re.findall(REGEX_PURE_URL, link_evidencia_81 or "")
+                    if links_81_visuais:
+                        placeholder_links_81.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_81_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 8.1
+                bloco_comentarios("8.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 8.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 8.1", key=f"btn_salvar_8_1_{ano_sel}", type="primary"):
+                    val_input_81 = st.session_state.get(chave_input_81, "").strip()
+                    lnk_val_81 = link_evidencia_81.strip()
+                    comentario_para_salvar_81 = st.session_state.get(chave_coment_81, d81.get("comentario", ""))
+
+                    # Regra de pontuação
+                    if val_input_81.upper() == "XYZ":
+                        pts_81 = -10.0
+                    else:
+                        pts_81 = 0.0
+
+                    save_resp(
+                        qid="8.1",
+                        valor=val_input_81,
+                        pontos=float(pts_81),
+                        link=lnk_val_81,
+                        comentario=comentario_para_salvar_81
+                    )
+                    res_data["8.1"] = {
+                        "valor": val_input_81,
+                        "pontos": float(pts_81),
+                        "link": lnk_val_81,
+                        "comentario": comentario_para_salvar_81
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_81 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_81_salva or "")]
+
+                    if lnk_val_81 != evidencia_81_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 8.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                v81_check = d81.get("valor", "").strip()
+                pts_atuais_81 = d81.get("pontos", 0.0)
+
+                if not v81_check:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Preenchimento pendente no Quesito 8.1</span>", unsafe_allow_html=True)
+                elif v81_check.upper() == "XYZ":
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"❌ Impacto de Pontuação (Quesito 8.1): {pts_atuais_81:.1f} pontos (AMF Não Disponível - Penalidade Aplicada)</span>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Impacto de Pontuação (Quesito 8.1): {pts_atuais_81:.1f} pontos (Link Registrado)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 8.1
+        if st.session_state.get(f"gatilho_modal_8_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
