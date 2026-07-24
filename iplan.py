@@ -1970,5 +1970,120 @@ def mostrar_formulario_plan():
                 modal_aviso_link("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 1.3.1 • LINK DO INSTRUMENTO DE REGISTRO (MODELO PADRONIZADO iPLAN)
+        # =============================================================================
+        with st.container(key=f"container_bloco_iplan_1_3_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.3.1 - Página Eletrônica do Instrumento de Registro", expanded=True):
+                st.subheader("1.3.1 • Página Eletrônica do Instrumento de Registro")
+                st.write(
+                    "**Página eletrônica (link) do instrumento (Ata ou documento de registro de audiências). "
+                    "Informe a URL oficial ou digite 'XYZ' se não estiver disponível:**"
+                )
+                st.caption("ℹ *Informe a URL principal do instrumento, adicione evidências complementares se necessário e clique em 'Salvar Quesito 1.3.1'.*")
+
+                # Estado inicial / persistente
+                d131 = res_data.get("1.3.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                valor_salvo_131 = d131.get("valor", "")
+                evidencia_131_salva = d131.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_input_131 = f"i_iplan_131_{ano_sel}"
+                chave_link_131 = f"l_iplan_131_txt_{ano_sel}"
+                chave_coment_131 = f"coment_1.3.1_{ano_sel}"
+
+                c131_1, c131_2 = st.columns([1, 1])
+
+                with c131_1:
+                    v131_input = st.text_input(
+                        "URL Principal / Instrumento de Registro (1.3.1):",
+                        value=valor_salvo_131,
+                        key=chave_input_131,
+                        placeholder="https://... ou XYZ se indisponível"
+                    )
+                    
+                    # Cálculo em tempo de renderização para feedback visual
+                    v131_clean_pre = v131_input.strip().upper() if v131_input else ""
+                    pts_previsto_131 = 0.0 if (v131_clean_pre == "XYZ" or not v131_input.strip()) else 3.0
+
+                with c131_2:
+                    link_evidencia_131 = st.text_area(
+                        "Link/Evidência Adicional (1.3.1):",
+                        value=evidencia_131_salva,
+                        key=chave_link_131,
+                        placeholder="Links adicionais ou observações sobre o acervo de atas...",
+                        height=95
+                    )
+                    placeholder_links_131 = st.empty()
+                    links_131_visuais = re.findall(REGEX_PURE_URL, link_evidencia_131 or "")
+                    if links_131_visuais:
+                        placeholder_links_131.markdown("**🔗 Links ativos:** " + " | ".join([f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_131_visuais]))
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.3.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.3.1", key=f"btn_salvar_iplan_1_3_1_{ano_sel}", type="primary"):
+                    val_input_131 = v131_input.strip()
+                    val_clean_131 = val_input_131.upper()
+                    
+                    # Regra de negócio da pontuação: 0.0 para XYZ / Vazio; 3.0 para links/textos válidos
+                    pts_calculados_131 = 0.0 if (val_clean_131 == "XYZ" or not val_input_131) else 3.0
+                    lnk_val = link_evidencia_131.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_131, d131.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp(
+                        qid="1.3.1",
+                        valor=val_input_131,
+                        pontos=pts_calculados_131,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.3.1"] = {
+                        "valor": val_input_131,
+                        "pontos": pts_calculados_131,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal de verificação (considera input principal e evidência)
+                    texto_completo_links = f"{val_input_131} {lnk_val}"
+                    texto_antigo_links = f"{valor_salvo_131} {evidencia_131_salva}"
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, texto_completo_links or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, texto_antigo_links or "")]
+
+                    if (val_input_131 != valor_salvo_131 or lnk_val != evidencia_131_salva) and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_131 = d131.get("pontos", 0.0)
+                cor_txt_131 = "#28a745" if pts_atuais_131 > 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_131}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.3.1: {pts_atuais_131:.1f} / 3.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.3.1", st.session_state.get(f"links_pendentes_1_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_3_1_{ano_sel}"] = False
+
 
 
