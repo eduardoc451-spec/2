@@ -5089,3 +5089,135 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 8.2 • DEMONSTRATIVOS DA AMF (CHECKBOXES MULTIPLAS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_demonstrativos_amf_8_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 8.2 - Demonstrativos Contidos no Anexo de Metas Fiscais ({ano_sel})", expanded=True):
+                st.subheader("8.2 • Demonstrativos da AMF")
+                st.write("**8.2 Assinale os demonstrativos contidos no Anexo de Metas Fiscais:**")
+                st.caption("ℹ *Selecione os demonstrativos aplicáveis, informe os links e comentários, e clique em 'Salvar Questão 8.2'.*")
+
+                demonstrativos_82 = {
+                    "Metas Anuais – 0,7": 0.7,
+                    "Avaliação do Cumprimento das Metas Fiscais do Exercício Anterior – 0,7": 0.7,
+                    "Metas Fiscais Atuais Comparadas com as Metas Fiscais Fixadas nos três exercícios anteriores – 0,7": 0.7,
+                    "Evolução do Patrimônio Líquido – 0,7": 0.7,
+                    "Origem e Aplicação dos Recursos Obtidos com a Alienação de Ativos – 00": 0.0,
+                    "Avaliação da Situação Financeira e Atuarial do RPPS – 00": 0.0,
+                    "Estimativa e Compensação da Renúncia de Receita – 00": 0.0,
+                    "Margem de Expansão das Despesas Obrigatórias de Caráter Continuado – 1,2": 1.2,
+                    "Outros – 00": 0.0
+                }
+
+                # Resgate seguro dos dados de 8.2
+                d82 = res_data.get("8.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_82_salva = d82.get("link", "")
+                v_salvo_82 = d82.get("valor", "[]")
+
+                try:
+                    lista_salva_82 = ast.literal_eval(v_salvo_82)
+                    if not isinstance(lista_salva_82, list):
+                        lista_salva_82 = []
+                except Exception:
+                    lista_salva_82 = []
+
+                # Chaves fixas por componente e ano
+                chave_link_82 = f"t_8_2_{ano_sel}"
+                chave_coment_82 = f"coment_8.2_{ano_sel}"
+
+                c82_1, c82_2 = st.columns([1, 1])
+
+                with c82_1:
+                    st.write("**Demonstrativos Disponíveis:**")
+                    # Renderização dos checkboxes sem callbacks on_change
+                    for idx, (item, pt) in enumerate(demonstrativos_82.items()):
+                        key_chk = f"chk_82_{idx}_{ano_sel}"
+                        st.checkbox(
+                            item,
+                            value=item in lista_salva_82,
+                            key=key_chk
+                        )
+
+                with c82_2:
+                    link_evidencia_82 = st.text_area(
+                        "Link/Evidência (8.2):",
+                        value=evidencia_82_salva,
+                        key=chave_link_82,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 8.2...",
+                        height=250
+                    )
+                    placeholder_links_82 = st.empty()
+                    links_82_visuais = re.findall(REGEX_PURE_URL, link_evidencia_82 or "")
+                    if links_82_visuais:
+                        placeholder_links_82.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_82_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 8.2
+                bloco_comentarios("8.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 8.2
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 8.2", key=f"btn_salvar_8_2_{ano_sel}", type="primary"):
+                    # Coleta dos checkboxes selecionados no momento do clique
+                    sel_82 = []
+                    pts_total_82 = 0.0
+
+                    for idx, (item, pt) in enumerate(demonstrativos_82.items()):
+                        key_chk = f"chk_82_{idx}_{ano_sel}"
+                        if st.session_state.get(key_chk, False):
+                            sel_82.append(item)
+                            pts_total_82 += pt
+
+                    str_sel_82 = str(sel_82)
+                    lnk_val_82 = link_evidencia_82.strip()
+                    comentario_para_salvar_82 = st.session_state.get(chave_coment_82, d82.get("comentario", ""))
+
+                    save_resp(
+                        qid="8.2",
+                        valor=str_sel_82,
+                        pontos=float(pts_total_82),
+                        link=lnk_val_82,
+                        comentario=comentario_para_salvar_82
+                    )
+                    res_data["8.2"] = {
+                        "valor": str_sel_82,
+                        "pontos": float(pts_total_82),
+                        "link": lnk_val_82,
+                        "comentario": comentario_para_salvar_82
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_82 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_82_salva or "")]
+
+                    if lnk_val_82 != evidencia_82_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 8.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                pts_atuais_82 = d82.get("pontos", 0.0)
+                
+                if not lista_salva_82:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhum demonstrativo selecionado no Quesito 8.2</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação (Quesito 8.2): {pts_atuais_82:.2f} pontos</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 8.2
+        if st.session_state.get(f"gatilho_modal_8_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
