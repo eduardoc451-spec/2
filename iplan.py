@@ -9811,3 +9811,128 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.3", st.session_state.get(f"links_pendentes_15_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_3_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 15.4 • ELABORAÇÃO DO RELATÓRIO DE GESTÃO (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_relatorio_gestao_15_4_final_{ano_sel}", border=True):
+            with st.expander(f"🗂 Quesito 15.4 - Elaboração do Relatório de Gestão ({ano_sel})", expanded=True):
+                st.subheader("15.4 • Relatório de Gestão de Exercício")
+                st.write(f"**A ouvidoria elaborou Relatório de Gestão do exercício de {ano_sel} contendo a consolidação das manifestações encaminhadas pelos usuários de serviços públicos, e com base nelas, apontou falhas e sugeriu melhorias em sua prestação?**")
+                st.caption("ℹ *Caso selecionado 'Não', haverá penalização de -10.0 pontos e limpeza de dados nas subseções internas (15.4.1 e 15.4.2).*")
+
+                opcoes_154 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": -10.0
+                }
+
+                # Resgate seguro dos dados do 15.4
+                d154 = res_data.get("15.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d154 is None or not isinstance(d154, dict):
+                    d154 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_154 = d154.get("valor", "Selecione...")
+                evidencia_154_salva = d154.get("link", "")
+
+                # Chaves estáticas e limpas
+                chave_radio_154 = f"r_154_{ano_sel}"
+                chave_link_154 = f"l154_{ano_sel}"
+                chave_coment_154 = f"coment_15.4_{ano_sel}"
+
+                lista_opcoes_154 = list(opcoes_154.keys())
+                idx154 = lista_opcoes_154.index(val_salvo_154) if val_salvo_154 in opcoes_154 else 0
+
+                c154_1, c154_2 = st.columns([1, 1])
+
+                with c154_1:
+                    v_radio_154 = st.radio(
+                        "Selecione 15.4:",
+                        options=lista_opcoes_154,
+                        index=idx154,
+                        key=chave_radio_154,
+                        label_visibility="collapsed"
+                    )
+
+                with c154_2:
+                    link_154 = st.text_area(
+                        "Link/Evidência (15.4):",
+                        value=evidencia_154_salva,
+                        key=chave_link_154,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 15.4...",
+                        height=100
+                    )
+                    placeholder_links_154 = st.empty()
+                    links_154_visuais = re.findall(REGEX_PURE_URL, link_154 or "")
+                    if links_154_visuais:
+                        placeholder_links_154.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_154_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 15.4
+                bloco_comentarios("15.4", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 15.4
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 15.4", key=f"btn_salvar_15_4_{ano_sel}", type="primary"):
+                    val_para_salvar_154 = v_radio_154
+                    pts_calc_154 = opcoes_154.get(val_para_salvar_154, 0.0)
+                    lnk_val_154 = link_154.strip()
+                    comentario_para_salvar_154 = st.session_state.get(chave_coment_154, d154.get("comentario", ""))
+
+                    # Persistência do 15.4 no banco de dados e sessão
+                    save_resp(
+                        qid="15.4",
+                        valor=val_para_salvar_154,
+                        pontos=pts_calc_154,
+                        link=lnk_val_154,
+                        comentario=comentario_para_salvar_154
+                    )
+                    res_data["15.4"] = {
+                        "valor": val_para_salvar_154,
+                        "pontos": pts_calc_154,
+                        "link": lnk_val_154,
+                        "comentario": comentario_para_salvar_154
+                    }
+
+                    # Regra de Limpeza de Subseções / Dependentes caso "Não"
+                    if val_para_salvar_154 == "Não":
+                        save_resp(qid="15.4.1", valor="[]", pontos=0.0, link="", comentario="")
+                        res_data["15.4.1"] = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                        save_resp(qid="15.4.2", valor="Selecione...", pontos=0.0, link="", comentario="")
+                        res_data["15.4.2"] = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_154 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_154_salva or "")]
+
+                    if lnk_val_154 != evidencia_154_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 15.4 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Estado
+                pts_atuais_154 = d154.get("pontos", 0.0)
+
+                if val_salvo_154 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 15.4 (0.0 pontos)</span>", unsafe_allow_html=True)
+                else:
+                    cor_txt_154 = "#28a745" if pts_atuais_154 == 0.0 else "#dc3545"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_154}; font-weight:bold;'>"
+                        f"✅ Status: Opção '{val_salvo_154}' salva com sucesso (Impacto: {pts_atuais_154:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 15.4
+        if st.session_state.get(f"gatilho_modal_15_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.4", st.session_state.get(f"links_pendentes_15_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_4_{ano_sel}"] = False
