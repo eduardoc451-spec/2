@@ -4870,3 +4870,108 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 8.0 • ANEXO DE METAS FISCAIS NA LDO
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_metas_fiscais_8_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 8.0 - Anexo de Metas Fiscais na LDO ({ano_sel})", expanded=True):
+                st.subheader("8.0 • Anexo de Metas Fiscais")
+                st.write("**8.0 O Anexo de Metas Fiscais integra a Lei de Diretrizes Orçamentárias (LDO), nos termos exigidos pela Lei de Responsabilidade Fiscal?**")
+                st.caption("ℹ *Estabelecidas metas anuais, em valores correntes e constantes, relativas a receitas, despesas, resultados nominal e primário e montante da dívida pública, para o exercício a que se referirem e para os dois seguintes. Caso não esteja disponível na internet, recomendamos anexar o Anexo de Metas Fiscais (MDF), conforme Instrução de Preenchimento (IP) no Sistema de Questionários.*")
+                st.caption("ℹ *Selecione a resposta, informe a evidência, comente se necessário e clique em 'Salvar Questão 8.0'.*")
+
+                opcoes_80 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+
+                # Resgate seguro dos dados de 8.0
+                d80 = res_data.get("8.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_80_salva = d80.get("link", "")
+                v_salvo_80 = d80.get("valor", "Selecione...")
+
+                # Chaves fixas por componente e ano
+                chave_radio_80 = f"r_8_0_{ano_sel}"
+                chave_link_80 = f"t_8_0_{ano_sel}"
+                chave_coment_80 = f"coment_8.0_{ano_sel}"
+
+                c80_1, c80_2 = st.columns([1, 1])
+
+                with c80_1:
+                    lista_opcoes_80 = list(opcoes_80.keys())
+                    idx80 = lista_opcoes_80.index(v_salvo_80) if v_salvo_80 in lista_opcoes_80 else 0
+
+                    sel_8_0 = st.radio(
+                        "Selecione a resposta para o Quesito 8.0:",
+                        options=lista_opcoes_80,
+                        index=idx80,
+                        key=chave_radio_80
+                    )
+
+                with c80_2:
+                    link_evidencia_80 = st.text_area(
+                        "Link/Evidência (8.0):",
+                        value=evidencia_80_salva,
+                        key=chave_link_80,
+                        placeholder="Insira os links comprobatórios do Anexo de Metas Fiscais...",
+                        height=120
+                    )
+                    placeholder_links_80 = st.empty()
+                    links_80_visuais = re.findall(REGEX_PURE_URL, link_evidencia_80 or "")
+                    if links_80_visuais:
+                        placeholder_links_80.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_80_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 8.0
+                bloco_comentarios("8.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 8.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 8.0", key=f"btn_salvar_8_0_{ano_sel}", type="primary"):
+                    val_80 = st.session_state.get(chave_radio_80, "Selecione...")
+                    lnk_val_80 = link_evidencia_80.strip()
+                    comentario_para_salvar_80 = st.session_state.get(chave_coment_80, d80.get("comentario", ""))
+
+                    save_resp(
+                        qid="8.0",
+                        valor=val_80,
+                        pontos=0.0,
+                        link=lnk_val_80,
+                        comentario=comentario_para_salvar_80
+                    )
+                    res_data["8.0"] = {
+                        "valor": val_80,
+                        "pontos": 0.0,
+                        "link": lnk_val_80,
+                        "comentario": comentario_para_salvar_80
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_80 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_80_salva or "")]
+
+                    if lnk_val_80 != evidencia_80_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 8.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                if v_salvo_80 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Seleção pendente no Quesito 8.0</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação (Quesito 8.0): 0.0 pontos</span>", unsafe_allow_html=True)
+
+        # Modal de Evidências do 8.0
+        if st.session_state.get(f"gatilho_modal_8_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.0", st.session_state.get(f"links_pendentes_8_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = False
