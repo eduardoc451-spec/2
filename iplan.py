@@ -6614,3 +6614,132 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.0", st.session_state.get(f"links_pendentes_13_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 13.1 • AUDIÊNCIAS PÚBLICAS DE METAS FISCAIS (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_metas_fiscais_13_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.1 - Audiências Públicas de Metas Fiscais ({ano_sel})", expanded=True):
+                st.subheader("13.1 • Metas Fiscais e Audiências")
+                st.write("**A prefeitura demonstra e avalia, com periodicidade quadrimestral, o cumprimento das metas fiscais em audiências públicas?** *(Art. 9º, § 4º, da LRF)*")
+                st.caption("ℹ *Selecione as opções cabíveis, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 13.1'.*")
+
+                opc131 = {
+                    "Realizou Audiência pública do 1º Quadrimestre até o final do mês de maio de 2025 – 02": 2.0,
+                    "Realizou Audiência pública do 2º Quadrimestre até o final do mês de setembro de 2025 – 02": 2.0,
+                    "Realizou Audiência pública do 3º Quadrimestre até o final do mês de fevereiro de 2026 – 02": 2.0,
+                    "Não realizou audiência pública quadrimestral dentro do prazo – 00": 0.0,
+                    "Não realizou nenhuma audiência pública quadrimestral na Câmara Municipal – -10 (perde 10 pontos)": -10.0
+                }
+
+                # Resgate seguro dos dados do 13.1
+                d131 = res_data.get("13.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d131 is None:
+                    d131 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_131 = d131.get("valor", "[]")
+                evidencia_131_salva = d131.get("link", "")
+
+                # Desserialização segura da lista salva
+                try:
+                    lista_salva_131 = ast.literal_eval(val_salvo_131)
+                    if not isinstance(lista_salva_131, list):
+                        lista_salva_131 = []
+                except Exception:
+                    lista_salva_131 = []
+
+                # Chaves fixas por componente e ano
+                chave_link_131 = f"t_131_{ano_sel}"
+                chave_coment_131 = f"coment_13.1_{ano_sel}"
+
+                c131_1, c131_2 = st.columns([1, 1])
+
+                with c131_1:
+                    sel131_atuais = []
+                    for idx, (opt, pt) in enumerate(opc131.items()):
+                        v_antigo = opt in lista_salva_131
+                        chave_ck = f"ck_131_opt_{idx}_{ano_sel}"
+                        v_novo = st.checkbox(opt, value=v_antigo, key=chave_ck)
+                        if v_novo:
+                            sel131_atuais.append(opt)
+
+                with c131_2:
+                    link_evidencia_131 = st.text_area(
+                        "Link/Evidência (13.1):",
+                        value=evidencia_131_salva,
+                        key=chave_link_131,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 13.1...",
+                        height=140
+                    )
+                    placeholder_links_131 = st.empty()
+                    links_131_visuais = re.findall(REGEX_PURE_URL, link_evidencia_131 or "")
+                    if links_131_visuais:
+                        placeholder_links_131.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_131_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 13.1
+                bloco_comentarios("13.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 13.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 13.1", key=f"btn_salvar_13_1_{ano_sel}", type="primary"):
+                    # Cálculo da regra de negócio do 13.1 no momento do salvamento
+                    if any("Não realizou nenhuma" in p for p in sel131_atuais):
+                        pts131_salvar = -10.0
+                    elif any("dentro do prazo" in p for p in sel131_atuais):
+                        pts131_salvar = 0.0
+                    else:
+                        pts131_salvar = sum(opc131[p] for p in sel131_atuais)
+
+                    str_sel131_salvar = str(sel131_atuais)
+                    lnk_val_131 = link_evidencia_131.strip()
+                    comentario_para_salvar_131 = st.session_state.get(chave_coment_131, d131.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="13.1",
+                        valor=str_sel131_salvar,
+                        pontos=float(pts131_salvar),
+                        link=lnk_val_131,
+                        comentario=comentario_para_salvar_131
+                    )
+                    res_data["13.1"] = {
+                        "valor": str_sel131_salvar,
+                        "pontos": float(pts131_salvar),
+                        "link": lnk_val_131,
+                        "comentario": comentario_para_salvar_131
+                    }
+
+                    # Detecção de novos links para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_131 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_131_salva or "")]
+
+                    if lnk_val_131 != evidencia_131_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 13.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto da Pontuação
+                pts_atuais_131 = d131.get("pontos", 0.0)
+
+                if val_salvo_131 == "[]" or not lista_salva_131:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 13.1</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção(ões) salva(s) com sucesso (Impacto: {pts_atuais_131:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 13.1
+        if st.session_state.get(f"gatilho_modal_13_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = False
