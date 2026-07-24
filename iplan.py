@@ -9678,3 +9678,136 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.2", st.session_state.get(f"links_pendentes_15_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 15.3 • CARACTERÍSTICAS (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_caracteristicas_15_3_final_{ano_sel}", border=True):
+            with st.expander(f"🗂 Quesito 15.3 - Características Estruturais Disponíveis ({ano_sel})", expanded=True):
+                st.subheader("15.3 • Características da Ouvidoria")
+                st.write(f"**Assinale as características que a ouvidoria dispõe para a execução de suas atribuições em {ano_sel}:**")
+                st.caption("ℹ *Cada característica obrigatória não assinalada subtrai -0.5 pontos (Limite máximo de perda: -2.5).*")
+
+                caracteristicas_obrigatorias = ["Independência", "Isenção", "Acessibilidade", "Transparência", "Confidencialidade"]
+
+                # Resgate seguro dos dados do 15.3
+                d153 = res_data.get("15.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d153 is None or not isinstance(d153, dict):
+                    d153 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_153 = d153.get("valor", "[]")
+                evidencia_153_salva = d153.get("link", "")
+
+                # Desserialização segura do valor salvo
+                try:
+                    if isinstance(val_salvo_153, str):
+                        lista_salva_153 = json.loads(val_salvo_153)
+                    elif isinstance(val_salvo_153, list):
+                        lista_salva_153 = val_salvo_153
+                    else:
+                        lista_salva_153 = []
+                except Exception:
+                    try:
+                        lista_salva_153 = eval(val_salvo_153) if isinstance(val_salvo_153, str) else []
+                    except Exception:
+                        lista_salva_153 = []
+
+                if not isinstance(lista_salva_153, list):
+                    lista_salva_153 = []
+
+                # Chaves estáticas e limpas
+                chave_link_153 = f"l153_{ano_sel}"
+                chave_coment_153 = f"coment_15.3_{ano_sel}"
+
+                c153_1, c153_2 = st.columns([1, 1])
+
+                with c153_1:
+                    dict_chk_153 = {}
+                    for item in caracteristicas_obrigatorias:
+                        dict_chk_153[item] = st.checkbox(
+                            item,
+                            value=item in lista_salva_153,
+                            key=f"chk_153_{item}_{ano_sel}"
+                        )
+                    dict_chk_153["Outros"] = st.checkbox(
+                        "Outros",
+                        value="Outros" in lista_salva_153,
+                        key=f"chk_153_outros_{ano_sel}"
+                    )
+
+                with c153_2:
+                    link_153 = st.text_area(
+                        "Link/Evidência (15.3):",
+                        value=evidencia_153_salva,
+                        key=chave_link_153,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 15.3...",
+                        height=180
+                    )
+                    placeholder_links_153 = st.empty()
+                    links_153_visuais = re.findall(REGEX_PURE_URL, link_153 or "")
+                    if links_153_visuais:
+                        placeholder_links_153.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_153_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 15.3
+                bloco_comentarios("15.3", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 15.3
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 15.3", key=f"btn_salvar_15_3_{ano_sel}", type="primary"):
+                    itens_checados_153 = [item for item, checado in dict_chk_153.items() if checado]
+
+                    # Cálculo da penalidade subtrativa: -0.5 para cada obrigatória ausente (máx -2.5)
+                    itens_nao_assinalados = sum(1 for x in caracteristicas_obrigatorias if x not in itens_checados_153)
+                    pts_calc_153 = max(-(itens_nao_assinalados * 0.5), -2.5)
+
+                    str_lista_153 = json.dumps(itens_checados_153, ensure_ascii=False)
+                    lnk_val_153 = link_153.strip()
+                    comentario_para_salvar_153 = st.session_state.get(chave_coment_153, d153.get("comentario", ""))
+
+                    # Persistência no banco de dados e sessão
+                    save_resp(
+                        qid="15.3",
+                        valor=str_lista_153,
+                        pontos=pts_calc_153,
+                        link=lnk_val_153,
+                        comentario=comentario_para_salvar_153
+                    )
+                    res_data["15.3"] = {
+                        "valor": str_lista_153,
+                        "pontos": pts_calc_153,
+                        "link": lnk_val_153,
+                        "comentario": comentario_para_salvar_153
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_153 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_153_salva or "")]
+
+                    if lnk_val_153 != evidencia_153_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 15.3 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_153 = d153.get("pontos", 0.0)
+                cor_txt_153 = "#28a745" if pts_atuais_153 == 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_153}; font-weight:bold;'>"
+                    f"✅ Status: Opções salvas com sucesso (Impacto: {pts_atuais_153:.2f} pontos)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # Modal de Evidências do 15.3
+        if st.session_state.get(f"gatilho_modal_15_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.3", st.session_state.get(f"links_pendentes_15_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_3_{ano_sel}"] = False
