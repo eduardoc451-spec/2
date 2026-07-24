@@ -11815,6 +11815,117 @@ def mostrar_formulario_plan():
                 modal_aviso_link("P1", st.session_state.get(f"links_pendentes_p1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_p1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO P2 • CONFRONTO ENTRE RESULTADO FÍSICO E RECURSOS FINANCEIROS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_p2_confronto_{ano_sel}", border=True):
+            with st.expander("📌 Quesito P2 - Confronto entre Resultado Físico e Recursos Financeiros", expanded=True):
+                st.subheader("P2 • Confronto entre Resultado Físico e Recursos Financeiros")
+                st.write("**Confronto entre o resultado físico alcançado pelas metas das ações e os recursos financeiros utilizados:**")
+                st.caption("ℹ *Este quesito aceita digitação manual de nota ou atribuição direta de 0.0 ponto.*")
+
+                # Recuperação segura dos dados salvos no banco
+                dP2 = res_data.get("P2") or {"valor": "0.0", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_P2 = dP2.get("valor", "0.0")
+                pts_salvos_P2 = float(dP2.get("pontos", 0.0))
+                evidencia_P2_salva = dP2.get("link", "")
+
+                # Chaves explícitas no Session State
+                chave_num_P2 = f"num_p2_{ano_sel}"
+                chave_link_P2 = f"l_p2_text_{ano_sel}"
+                chave_coment_P2 = f"coment_P2_exclusivo_{ano_sel}"
+
+                cP2_1, cP2_2 = st.columns([1, 1])
+
+                with cP2_1:
+                    # Campo para inserção manual de pontuação
+                    nota_input_P2 = st.number_input(
+                        "Digite a pontuação manual:",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=pts_salvos_P2,
+                        step=0.5,
+                        format="%.1f",
+                        key=chave_num_P2
+                    )
+
+                    # Exibição da métrica de pontuação salva
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value=f"{pts_salvos_P2:.1f} pts",
+                        delta=None
+                    )
+
+                with cP2_2:
+                    link_P2 = st.text_area(
+                        "Justificativa / Link de Evidência (P2):",
+                        value=evidencia_P2_salva,
+                        key=chave_link_P2,
+                        placeholder="Inserir justificativa da nota atribuída e links de evidência...",
+                        height=120
+                    )
+                    placeholder_links_P2 = st.empty()
+                    links_P2_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_P2 or "")]
+                    if links_P2_visuais:
+                        placeholder_links_P2.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_P2_visuais])
+                        )
+
+                # Renderiza o bloco de comentários específico do Quesito P2
+                bloco_comentarios("P2_exclusivo", res_data, ano_sel)
+
+                # Feedback visual dinâmico
+                cor_txt_P2 = "#28a745" if pts_salvos_P2 > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_P2}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito P2: {pts_salvos_P2:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito P2", key=f"btn_salvar_p2_{ano_sel}", type="primary"):
+                    pts_digita = st.session_state.get(chave_num_P2, nota_input_P2)
+                    lnk_val = link_P2.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_P2, dP2.get("comentario", ""))
+
+                    str_valor = f"{pts_digita:.1f}"
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="P2",
+                        valor=str_valor,
+                        pontos=float(pts_digita),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["P2"] = {
+                        "valor": str_valor,
+                        "pontos": float(pts_digita),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_P2_salva or "")]
+
+                    if lnk_val != evidencia_P2_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_p2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_p2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast(f"Quesito P2 salvo com sucesso ({pts_digita:.1f} pts)!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL P2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_p2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("P2", st.session_state.get(f"links_pendentes_p2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_p2_{ano_sel}"] = False
+
 
 
 
