@@ -10695,3 +10695,138 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("16.2", st.session_state.get(f"links_pendentes_16_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_2_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO 16.3 • REGULAMENTAÇÃO DA CARTA DE SERVIÇOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_regulamentacao_16_3_final_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 16.3 - Regulamentação da Carta de Serviços", expanded=True):
+                st.subheader("16.3 • Regulamentação da Carta")
+                st.write("**A prefeitura regulamentou a operacionalização da Carta de Serviços ao Usuário, conforme o artigo 7°, § 5°, da Lei Federal n° 13.460/2017?**")
+                st.caption("ℹ *Caso modificado para 'Não', haverá cascata de limpeza automática nas subseções internas (16.3.1 e 16.3.2).*")
+
+                # Mapeamento oficial de opções e pontuações do Quesito 16.3
+                opc163 = {
+                    "Selecione...": 0.0,
+                    "Sim – 04": 4.0,
+                    "Não – 00": 0.0
+                }
+
+                # Recuperação segura dos dados salvos no banco
+                d163 = res_data.get("16.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_163 = d163.get("valor", "Selecione...")
+
+                # Normalização do valor salvo para bater com as opções do radio
+                if v_salvo_163 == "Sim":
+                    v_salvo_163 = "Sim – 04"
+                elif v_salvo_163 == "Não":
+                    v_salvo_163 = "Não – 00"
+
+                pts_salvos_163 = float(d163.get("pontos", 0.0))
+                evidencia_163_salva = d163.get("link", "")
+
+                # Chaves explícitas do Streamlit Session State
+                chave_radio_163 = f"r_163_{ano_sel}"
+                chave_link_163 = f"l163_{ano_sel}"
+                chave_coment_163 = f"coment_16.3_{ano_sel}"
+
+                c163_1, c163_2 = st.columns([1, 1])
+
+                with c163_1:
+                    lista_opcoes_163 = list(opc163.keys())
+                    idx163 = lista_opcoes_163.index(v_salvo_163) if v_salvo_163 in lista_opcoes_163 else 0
+
+                    op_sel_163 = st.radio(
+                        "Selecione 16.3:",
+                        options=lista_opcoes_163,
+                        index=idx163,
+                        key=chave_radio_163,
+                        label_visibility="collapsed"
+                    )
+
+                    # Exibição da métrica de impacto
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value=f"{pts_salvos_163:.1f} pts",
+                        delta="4.0 pts aplicáveis" if pts_salvos_163 > 0 else None
+                    )
+
+                with c163_2:
+                    link_163 = st.text_area(
+                        "Link/Evidência (16.3):",
+                        value=evidencia_163_salva,
+                        key=chave_link_163,
+                        placeholder="Inserir link do decreto ou norma de regulamentação...",
+                        height=100
+                    )
+                    placeholder_links_163 = st.empty()
+                    links_163_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_163 or "")]
+                    if links_163_visuais:
+                        placeholder_links_163.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_163_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 16.3
+                bloco_comentarios("16.3", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_txt_163 = "#28a745" if pts_salvos_163 > 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_163}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 16.3: {pts_salvos_163:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL COM CASCATA (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 16.3", key=f"btn_salvar_16_3_{ano_sel}", type="primary"):
+                    val_radio = st.session_state.get(chave_radio_163, op_sel_163)
+                    pts_calculados_163 = opc163.get(val_radio, 0.0)
+                    lnk_val = link_163.strip()
+
+                    # Padronização da string salva no banco ("Sim", "Não", "Selecione...")
+                    val_salvar = "Sim" if "Sim" in val_radio else ("Não" if "Não" in val_radio else "Selecione...")
+                    comentario_para_salvar = st.session_state.get(chave_coment_163, d163.get("comentario", ""))
+
+                    # Persistência do quesito pai no banco de dados
+                    save_resp(
+                        qid="16.3",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados_163),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário em memória
+                    res_data["16.3"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados_163),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Regra de Cascata: Se não for "Sim", reseta as subseções 16.3.1 e 16.3.2
+                    if val_salvar != "Sim":
+                        save_resp("16.3.1", "", 0.0, "")
+                        save_resp("16.3.2", "", 0.0, "")
+
+                        res_data["16.3.1"] = {"valor": "", "pontos": 0.0, "link": "", "comentario": res_data.get("16.3.1", {}).get("comentario", "")}
+                        res_data["16.3.2"] = {"valor": "", "pontos": 0.0, "link": "", "comentario": res_data.get("16.3.2", {}).get("comentario", "")}
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_163_salva or "")]
+
+                    if lnk_val != evidencia_163_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_16_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_16_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 16.3 e regras de cascata salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 16.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_16_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.3", st.session_state.get(f"links_pendentes_16_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_16_3_{ano_sel}"] = False
