@@ -3733,3 +3733,97 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.1.1.2", st.session_state.get(f"links_pendentes_4_1_1_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_1_1_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 4.1.1.2.1 • LINK DE DIVULGAÇÃO DOS RESULTADOS DO PPA
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_divulgacao_link_4_1_1_2_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 4.1.1.2.1 - Link de Divulgação dos Resultados ({ano_sel})", expanded=True):
+                st.subheader("4.1.1.2.1 • Link de Divulgação")
+                st.write("**Página eletrônica (link) de divulgação dos resultados (informe XYZ se não disponível):**")
+                st.caption("ℹ *Informe o link direto para a publicação dos resultados, adicione observações nos comentários e clique em 'Salvar Questão 4.1.1.2.1'.*")
+
+                # Resgate seguro dos dados da questão
+                d41121 = res_data.get("4.1.1.2.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                if not isinstance(d41121, dict):
+                    d41121 = {"valor": str(d41121), "pontos": 0.0, "link": "", "comentario": ""}
+
+                v_salvo_41121 = d41121.get("valor", "") or d41121.get("link", "")
+                
+                # Chaves fixas por componente e ano
+                chave_input_41121 = f"q41121_{ano_sel}"
+                chave_coment_41121 = f"coment_4.1.1.2.1_{ano_sel}"
+
+                # Campo para entrada da URL / 'XYZ'
+                link_input_41121 = st.text_input(
+                    "Link URL (PPA):",
+                    value=v_salvo_41121,
+                    key=chave_input_41121,
+                    placeholder="https://... ou XYZ se não houver link disponível",
+                    label_visibility="collapsed"
+                )
+
+                # Renderização e pré-visualização de links válidos detectados
+                placeholder_links_41121 = st.empty()
+                links_41121_visuais = re.findall(REGEX_PURE_URL, link_input_41121 or "")
+                if links_41121_visuais:
+                    placeholder_links_41121.markdown(
+                        "**🔗 Links ativos detectados:** " + " | ".join(
+                            [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_41121_visuais]
+                        )
+                    )
+
+                # Renderização do bloco unificado de comentários
+                bloco_comentarios("4.1.1.2.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 4.1.1.2.1", key=f"btn_salvar_4_1_1_2_1_{ano_sel}", type="primary"):
+                    val_lnk_41121 = link_input_41121.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_41121, d41121.get("comentario", ""))
+
+                    # Gravação no banco de dados e atualização local
+                    save_resp(
+                        qid="4.1.1.2.1",
+                        valor=val_lnk_41121,
+                        pontos=0.0,
+                        link=val_lnk_41121,
+                        comentario=comentario_para_salvar
+                    )
+
+                    res_data["4.1.1.2.1"] = {
+                        "valor": val_lnk_41121,
+                        "pontos": 0.0,
+                        "link": val_lnk_41121,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação e acionamento do modal de checagem de links
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, val_lnk_41121 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_41121 or "")]
+
+                    if val_lnk_41121 != v_salvo_41121 and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_1_1_2_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_1_1_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Link de divulgação e comentários da Questão 4.1.1.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status informativo do quesito
+                val_atual_41121 = d41121.get("valor", "")
+                if not val_atual_41121:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Quesito informativo aguardando preenchimento</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        "<span style='color:#17a2b8; font-weight:bold;'>"
+                        "ℹ️ Quesito de caráter exclusivamente informativo (0,0 pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # GATILHO DO MODAL DE EVIDÊNCIAS
+        if st.session_state.get(f"gatilho_modal_4_1_1_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.1.1.2.1", st.session_state.get(f"links_pendentes_4_1_1_2_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_1_1_2_1_{ano_sel}"] = False
