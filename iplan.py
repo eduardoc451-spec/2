@@ -6869,3 +6869,115 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("13.1.1", st.session_state.get(f"links_pendentes_13_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_1_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 13.1.1.1 • PÁGINA ELETRÔNICA DE DIVULGAÇÃO (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_url_divulgacao_13_1_1_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.1.1.1 - Página Eletrônica de Divulgação ({ano_sel})", expanded=True):
+                st.subheader("13.1.1.1 • URL de Divulgação")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação dos Relatórios Quadrimestrais de Metas Fiscais:** *(Insira XYZ se indisponível)*")
+                st.caption("ℹ *Informe a URL de divulgação, acrescente os links comprobatórios e comentários, e clique em 'Salvar Questão 13.1.1.1'.*")
+
+                # Resgate seguro dos dados do 13.1.1.1
+                d13111 = res_data.get("13.1.1.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                if d13111 is None:
+                    d13111 = {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_13111 = d13111.get("valor", "")
+                evidencia_13111_salva = d13111.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_input_13111 = f"i_13111_{ano_sel}"
+                chave_link_13111 = f"t_13111_{ano_sel}"
+                chave_coment_13111 = f"coment_13.1.1.1_{ano_sel}"
+
+                c13111_1, c13111_2 = st.columns([1, 1])
+
+                with c13111_1:
+                    url_divulgacao_13111 = st.text_input(
+                        "Link URL (Relatórios):",
+                        value=val_salvo_13111,
+                        key=chave_input_13111,
+                        placeholder="https://... ou XYZ"
+                    )
+
+                with c13111_2:
+                    link_evidencia_13111 = st.text_area(
+                        "Link/Evidência (13.1.1.1):",
+                        value=evidencia_13111_salva,
+                        key=chave_link_13111,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 13.1.1.1...",
+                        height=100
+                    )
+                    placeholder_links_13111 = st.empty()
+                    links_13111_visuais = re.findall(REGEX_PURE_URL, link_evidencia_13111 or "")
+                    if links_13111_visuais:
+                        placeholder_links_13111.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_13111_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 13.1.1.1
+                bloco_comentarios("13.1.1.1", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 13.1.1.1
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 13.1.1.1", key=f"btn_salvar_13_1_1_1_{ano_sel}", type="primary"):
+                    val_input_trim = url_divulgacao_13111.strip()
+
+                    # Regra de negócio: 2.0 pontos se preenchido e diferente de "XYZ"
+                    if val_input_trim and val_input_trim.upper() != "XYZ":
+                        pts13111_salvar = 2.0
+                    else:
+                        pts13111_salvar = 0.0
+
+                    lnk_val_13111 = link_evidencia_1311.strip()
+                    comentario_para_salvar_13111 = st.session_state.get(chave_coment_13111, d13111.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="13.1.1.1",
+                        valor=val_input_trim,
+                        pontos=float(pts13111_salvar),
+                        link=lnk_val_13111,
+                        comentario=comentario_para_salvar_13111
+                    )
+                    res_data["13.1.1.1"] = {
+                        "valor": val_input_trim,
+                        "pontos": float(pts13111_salvar),
+                        "link": lnk_val_13111,
+                        "comentario": comentario_para_salvar_13111
+                    }
+
+                    # Detecção de novos links para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_13111 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_13111_salva or "")]
+
+                    if lnk_val_13111 != evidencia_13111_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_1_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_1_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 13.1.1.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto da Pontuação
+                pts_atuais_13111 = d13111.get("pontos", 0.0)
+
+                if not val_salvo_1311:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma URL de divulgação cadastrada no Quesito 13.1.1.1</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: URL salva com sucesso (Impacto: {pts_atuais_13111:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 13.1.1.1
+        if st.session_state.get(f"gatilho_modal_13_1_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.1.1.1", st.session_state.get(f"links_pendentes_13_1_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_1_1_1_{ano_sel}"] = False
