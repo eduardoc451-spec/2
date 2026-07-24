@@ -13380,3 +13380,98 @@ def mostrar_formulario_iamb():
                 st.cache_data.clear()
                 st.toast("Dados do Item A6 (Balança) salvos com sucesso!", icon="✅")
                 st.rerun()
+
+    # =============================================================================
+    # ABA DE GRÁFICOS E DESEMPENHO HISTÓRICO (Padrão iGov)
+    # =============================================================================
+    with aba_graf:
+        st.header("📈 Evolução e Desempenho Histórico")
+        st.caption("Acompanhamento do progresso das pontuações consolidadas ao longo dos anos.")
+
+        all_data = get_all_years_data()
+
+        if all_data:
+            anos_lista = sorted(all_data.keys())
+            
+            # Cálculo dos totais desconsiderando comentários/metadados
+            totais = [
+                sum(
+                    float(item.get("pontos", 0.0)) 
+                    for k, item in all_data[ano].items() 
+                    if not k.startswith("COM_")
+                ) 
+                for ano in anos_lista
+            ]
+
+            # -----------------------------------------------------------------
+            # RESUMO EM MÉTRICAS (KPIs)
+            # -----------------------------------------------------------------
+            col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+            
+            val_max = max(totais) if totais else 0.0
+            val_atual = totais[-1] if totais else 0.0
+            val_media = (sum(totais) / len(totais)) if totais else 0.0
+
+            with col_kpi1:
+                st.metric("🏆 Maior Pontuação Histórica", f"{val_max:.1f} pts")
+            with col_kpi2:
+                st.metric("📌 Pontuação Atual", f"{val_atual:.1f} pts")
+            with col_kpi3:
+                st.metric("📊 Média Anual", f"{val_media:.1f} pts")
+
+            st.divider()
+
+            # -----------------------------------------------------------------
+            # GRÁFICO DE BARRAS PLOTLY INTERATIVO
+            # -----------------------------------------------------------------
+            fig = px.bar(
+                x=anos_lista,
+                y=totais,
+                labels={'x': 'Ano de Avaliação', 'y': 'Pontuação Total (pts)'},
+                title="Evolução da Pontuação Total por Ano",
+                text=[f"{v:.1f}" for v in totais],
+                color=totais,
+                color_continuous_scale="Blues"
+            )
+
+            # Ajustes visuais no gráfico
+            fig.update_traces(
+                textposition='outside',
+                hovertemplate="<b>Ano:</b> %{x}<br><b>Pontuação:</b> %{y:.1f} pts<extra></extra>"
+            )
+
+            fig.update_layout(
+                height=450,
+                margin=dict(l=20, r=20, t=50, b=40),
+                coloraxis_showscale=False,
+                xaxis=dict(type='category', title_font=dict(size=14)),
+                yaxis=dict(title_font=dict(size=14), gridcolor="#E9ECEF"),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            # -----------------------------------------------------------------
+            # TABELA COMPLEMENTAR DE DADOS
+            # -----------------------------------------------------------------
+            with st.expander("📄 Visualizar Tabela de Dados Históricos"):
+                dados_tabela = [{"Ano": ano, "Pontuação Total": f"{tot:.1f} pts"} for ano, tot in zip(anos_lista, totais)]
+                st.dataframe(dados_tabela, use_container_width=True)
+
+        else:
+            st.info("ℹ️ Ainda não há dados salvos suficientes para gerar o gráfico de evolução.")
+
+
+def main():
+    st.set_page_config(
+        page_title="i-AMB • Auditoria e Gestão Ambiental",
+        page_icon="🌱",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    mostrar_formulario_amb()
+
+
+if __name__ == "__main__":
+    main()
