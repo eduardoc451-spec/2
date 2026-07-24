@@ -7566,3 +7566,138 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.2", st.session_state.get(f"links_pendentes_14_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 14.3 • FUNÇÕES DO CONTROLE INTERNO (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_funcoes_14_3_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 14.3 - Funções Atribuídas ao Sistema de Controle Interno ({ano_sel})", expanded=True):
+                st.subheader("14.3 • Funções do Controle Interno")
+                st.write("**Assinale as funções atribuídas ao sistema de controle interno:**")
+                st.caption("ℹ *Selecione as opções desejadas, insira os links de evidência/comentários e clique em 'Salvar Questão 14.3'.*")
+
+                opcoes_143 = {
+                    "Avaliar o cumprimento das metas físicas e financeiras dos planos orçamentários, bem como a eficiência de seus resultados – 01": 1.0,
+                    "Comprovar a legalidade da gestão orçamentária, financeira e patrimonial – 01": 1.0,
+                    "Comprovar a legalidade dos repasses a entidades do terceiro setor, avaliando a eficácia e a eficiência dos resultados alcançados – 01": 1.0,
+                    "Exercer o controle das operações de crédito, avais e garantias, bem como dos direitos e haveres do Município – 01": 1.0,
+                    "Em conjunto com autoridades da Administração Financeira do Município, assinar o Relatório de Gestão Fiscal – 01": 1.0,
+                    "Atestar a regularidade da tomada de contas dos ordenadores de despesa, recebedores, tesoureiros, pagadores ou assemelhados – 01": 1.0,
+                    "Apoiar o Tribunal de Contas no exercício de sua missão institucional – 01": 1.0,
+                    "Comprovar a eficácia e a eficiência da gestão orçamentária, financeira e patrimonial – 01": 1.0,
+                    "Acompanhar as metas de superávit orçamentário, primário e nominal – 01": 1.0,
+                    "Observar se as operações de créditos sujeitam-se aos limites e condições das Resoluções 40 e 43/2001, do Senado – 01": 1.0,
+                    "Verificar se os empréstimos e financiamentos vêm sendo pagos tal qual previsto nos respectivos contratos – 01": 1.0,
+                    "Verificar se está sendo providenciada a recondução da despesa de pessoal e da dívida consolidada a seus limites fiscais – 01": 1.0,
+                    "Comprovar se os recursos da alienação de ativos estão sendo despendidos em gastos de capital e, não, em despesas correntes – 01": 1.0,
+                    "Constatar se está sendo satisfeito o limite para gastos totais das Câmaras Municipais – 01": 1.0,
+                    "Verificar a fidelidade funcional dos responsáveis por bens e valores públicos – 01": 1.0
+                }
+
+                # Resgate seguro dos dados do 14.3
+                d143 = res_data.get("14.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                if d143 is None or not isinstance(d143, dict):
+                    d143 = {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_143 = d143.get("valor", "[]")
+                evidencia_143_salva = d143.get("link", "")
+
+                try:
+                    lista_salva_143 = ast.literal_eval(val_salvo_143)
+                    if not isinstance(lista_salva_143, list):
+                        lista_salva_143 = []
+                except Exception:
+                    lista_salva_143 = []
+
+                # Chaves estáticas
+                chave_link_143 = f"t_143_{ano_sel}"
+                chave_coment_143 = f"coment_14.3_{ano_sel}"
+
+                c143_1, c143_2 = st.columns([1.2, 0.8])
+
+                with c143_1:
+                    st.write("**Opções Selecionáveis:**")
+                    for idx, (item_txt, pts_item) in enumerate(opcoes_143.items()):
+                        st.checkbox(
+                            item_txt,
+                            value=item_txt in lista_salva_143,
+                            key=f"chk_143_{idx}_{ano_sel}"
+                        )
+
+                with c143_2:
+                    link_143 = st.text_area(
+                        "Link/Evidência (14.3):",
+                        value=evidencia_143_salva,
+                        key=chave_link_143,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.3...",
+                        height=250
+                    )
+                    placeholder_links_143 = st.empty()
+                    links_143_visuais = re.findall(REGEX_PURE_URL, link_143 or "")
+                    if links_143_visuais:
+                        placeholder_links_143.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_143_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.3
+                bloco_comentarios("14.3", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.3
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.3", key=f"btn_salvar_14_3_{ano_sel}", type="primary"):
+                    sel_143 = []
+                    for idx, (item_txt, pts_item) in enumerate(opcoes_143.items()):
+                        if st.session_state.get(f"chk_143_{idx}_{ano_sel}", False):
+                            sel_143.append(item_txt)
+
+                    pts_calc_143 = sum(opcoes_143[p] for p in sel_143)
+                    val_para_salvar_143 = str(sel_143)
+                    lnk_val_143 = link_143.strip()
+                    comentario_para_salvar_143 = st.session_state.get(chave_coment_143, d143.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="14.3",
+                        valor=val_para_salvar_143,
+                        pontos=pts_calc_143,
+                        link=lnk_val_143,
+                        comentario=comentario_para_salvar_143
+                    )
+                    res_data["14.3"] = {
+                        "valor": val_para_salvar_143,
+                        "pontos": pts_calc_143,
+                        "link": lnk_val_143,
+                        "comentario": comentario_para_salvar_143
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_143 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_143_salva or "")]
+
+                    if lnk_val_143 != evidencia_143_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 14.3 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_143 = d143.get("pontos", 0.0)
+                qtd_selecionados = len(lista_salva_143)
+
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"✅ Status: {qtd_selecionados} de {len(opcoes_143)} função(ões) selecionada(s) "
+                    f"(Pontuação Total: {pts_atuais_143:.1f} pts)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # Modal de Evidências do 14.3
+        if st.session_state.get(f"gatilho_modal_14_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.3", st.session_state.get(f"links_pendentes_14_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_3_{ano_sel}"] = False
