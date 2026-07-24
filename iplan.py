@@ -6367,3 +6367,120 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("12.1.1", st.session_state.get(f"links_pendentes_12_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_12_1_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 12.1.2 • TREINAMENTO DE SERVIDORES (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_rh_planejamento_12_1_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 12.1.2 - Treinamento Periódico para Planejamento ({ano_sel})", expanded=True):
+                st.subheader("12.1.2 • Treinamento de Servidores")
+                st.write("**Os servidores responsáveis pelo planejamento recebem treinamento específico para a matéria? Treinamento periódico pelo menos 1 vez ao ano.**")
+                st.caption("ℹ *Selecione uma opção, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 12.1.2'.*")
+
+                opcoes_1212 = {
+                    "Selecione...": 0.0,
+                    "Sim – 00": 0.0,
+                    "Não – -10 (perde 10 pontos)": -10.0
+                }
+
+                # Resgate seguro dos dados do 12.1.2
+                d1212 = res_data.get("12.1.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d1212 is None:
+                    d1212 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_1212 = d1212.get("valor", "Selecione...")
+                evidencia_1212_salva = d1212.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_1212 = f"r_12_1_2_{ano_sel}"
+                chave_link_1212 = f"t_12_1_2_{ano_sel}"
+                chave_coment_1212 = f"coment_12.1.2_{ano_sel}"
+
+                c1212_1, c1212_2 = st.columns([1, 1])
+
+                with c1212_1:
+                    lista_opcoes_1212 = list(opcoes_1212.keys())
+                    idx1212 = lista_opcoes_1212.index(val_salvo_1212) if val_salvo_1212 in lista_opcoes_1212 else 0
+
+                    opcao_selecionada_1212 = st.radio(
+                        "Selecione 12.1.2:",
+                        options=lista_opcoes_1212,
+                        index=idx1212,
+                        key=chave_radio_1212,
+                        label_visibility="collapsed"
+                    )
+
+                with c1212_2:
+                    link_evidencia_1212 = st.text_area(
+                        "Link/Evidência (12.1.2):",
+                        value=evidencia_1212_salva,
+                        key=chave_link_1212,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 12.1.2...",
+                        height=120
+                    )
+                    placeholder_links_1212 = st.empty()
+                    links_1212_visuais = re.findall(REGEX_PURE_URL, link_evidencia_1212 or "")
+                    if links_1212_visuais:
+                        placeholder_links_1212.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1212_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 12.1.2
+                bloco_comentarios("12.1.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 12.1.2
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 12.1.2", key=f"btn_salvar_12_1_2_{ano_sel}", type="primary"):
+                    val_para_salvar_1212 = opcao_selecionada_1212
+                    pts_para_salvar_1212 = opcoes_1212.get(val_para_salvar_1212, 0.0)
+                    lnk_val_1212 = link_evidencia_1212.strip()
+                    comentario_para_salvar_1212 = st.session_state.get(chave_coment_1212, d1212.get("comentario", ""))
+
+                    # Persistência no banco/sessão
+                    save_resp(
+                        qid="12.1.2",
+                        valor=val_para_salvar_1212,
+                        pontos=float(pts_para_salvar_1212),
+                        link=lnk_val_1212,
+                        comentario=comentario_para_salvar_1212
+                    )
+                    res_data["12.1.2"] = {
+                        "valor": val_para_salvar_1212,
+                        "pontos": float(pts_para_salvar_1212),
+                        "link": lnk_val_1212,
+                        "comentario": comentario_para_salvar_1212
+                    }
+
+                    # Detecção de novos links para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_1212 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1212_salva or "")]
+
+                    if lnk_val_1212 != evidencia_1212_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_12_1_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 12.1.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto da Pontuação
+                val_atual_1212 = d1212.get("valor", "Selecione...")
+                pts_atuais_1212 = d1212.get("pontos", 0.0)
+
+                if val_atual_1212 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 12.1.2</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção '{val_atual_1212}' salva (Impacto: {pts_atuais_1212:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 12.1.2
+        if st.session_state.get(f"gatilho_modal_12_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.1.2", st.session_state.get(f"links_pendentes_12_1_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = False
