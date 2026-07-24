@@ -11362,3 +11362,128 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.2", st.session_state.get(f"links_pendentes_17_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_17_2_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 18.0 • ELABORAÇÃO DO PLANO DIREITOR (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_plano_diretor_master_18_0_final_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 18.0 - Elaboração do Plano Diretor", expanded=True):
+                st.subheader("18.0 • Elaboração")
+                st.write("**O município elaborou Plano Diretor conforme Lei nº 10.257/01?**")
+                st.caption("ℹ *Se modificado para um valor diferente de 'Sim', a data de atualização do quesito filho 18.1 será automaticamente limpa via cascata.*")
+
+                # Oções oficiais do Quesito 18.0 (Todas com impacto 0.0)
+                opc180 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0,
+                    "Não se aplica": 0.0
+                }
+
+                # Recuperação segura dos dados salvos no banco
+                d180 = res_data.get("18.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_180 = d180.get("valor", "Selecione...")
+                evidencia_180_salva = d180.get("link", "")
+
+                # Chaves explícitas no Session State
+                chave_radio_180 = f"r_180_{ano_sel}"
+                chave_link_180 = f"l80_txt_final_{ano_sel}"
+                chave_coment_180 = f"coment_18.0_exclusivo_g8_{ano_sel}"
+
+                c180_1, c180_2 = st.columns([1, 1])
+
+                with c180_1:
+                    lista_opcoes_180 = list(opc180.keys())
+                    idx180 = lista_opcoes_180.index(v_salvo_180) if v_salvo_180 in lista_opcoes_180 else 0
+
+                    op_sel_180 = st.radio(
+                        "Selecione 18.0:",
+                        options=lista_opcoes_180,
+                        index=idx180,
+                        key=chave_radio_180,
+                        label_visibility="collapsed"
+                    )
+
+                    # Exibição da métrica informativa (0.0 pts)
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value="0.0 pts",
+                        delta=None
+                    )
+
+                with c180_2:
+                    link_180 = st.text_area(
+                        "Link/Evidência (18.0):",
+                        value=evidencia_180_salva,
+                        key=chave_link_180,
+                        placeholder="Inserir link da norma/página do Plano Diretor...",
+                        height=100
+                    )
+                    placeholder_links_180 = st.empty()
+                    links_180_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_180 or "")]
+                    if links_180_visuais:
+                        placeholder_links_180.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_180_visuais])
+                        )
+
+                # Renderiza o bloco de comentários específico do Quesito 18.0
+                bloco_comentarios("18.0_exclusivo_g8", res_data, ano_sel)
+
+                # Feedback visual dinâmico
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 18.0: 0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL COM CASCATA (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 18.0", key=f"btn_salvar_18_0_{ano_sel}", type="primary"):
+                    val_radio = st.session_state.get(chave_radio_180, op_sel_180)
+                    lnk_val = link_180.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_180, d180.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="18.0",
+                        valor=val_radio,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["18.0"] = {
+                        "valor": val_radio,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Regra de Cascata: Se for diferente de "Sim", reseta a data do quesito filho 18.1
+                    if val_radio != "Sim":
+                        save_resp("18.1", "", 0.0, "")
+                        res_data["18.1"] = {
+                            "valor": "",
+                            "pontos": 0.0,
+                            "link": "",
+                            "comentario": res_data.get("18.1", {}).get("comentario", "")
+                        }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_180_salva or "")]
+
+                    if lnk_val != evidencia_180_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_18_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 18.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 18.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_18_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.0", st.session_state.get(f"links_pendentes_18_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = False
