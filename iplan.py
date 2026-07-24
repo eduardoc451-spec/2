@@ -5727,3 +5727,125 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("10.0", st.session_state.get(f"links_pendentes_10_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 11.0 • PREVISÃO DE CRÉDITOS ADICIONAIS NA LOA (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_creditos_11_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 11.0 - Previsão de Créditos Adicionais por Decreto ({ano_sel})", expanded=True):
+                st.subheader("11.0 • Créditos Adicionais na LOA")
+                st.write("**Na Lei Orçamentária Anual (LOA), há previsão para abertura de créditos adicionais por decreto?**")
+                st.caption("ℹ *Selecione uma opção, informe os links comprobatórios e comentários, e clique em 'Salvar Questão 11.0'.*")
+
+                opcoes_110 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+
+                # Resgate seguro dos dados do 11.0
+                d110 = res_data.get("11.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d110 is None:
+                    d110 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_110 = d110.get("valor", "Selecione...")
+                evidencia_110_salva = d110.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_110 = f"r_11_0_{ano_sel}"
+                chave_link_110 = f"t_11_0_{ano_sel}"
+                chave_coment_110 = f"coment_11.0_{ano_sel}"
+
+                c110_1, c110_2 = st.columns([1, 1])
+
+                with c110_1:
+                    lista_opcoes_110 = list(opcoes_110.keys())
+                    idx110 = lista_opcoes_110.index(val_salvo_110) if val_salvo_110 in lista_opcoes_110 else 0
+
+                    opcao_selecionada_110 = st.radio(
+                        "Selecione 11.0:",
+                        options=lista_opcoes_110,
+                        index=idx110,
+                        key=chave_radio_110,
+                        label_visibility="collapsed"
+                    )
+
+                with c110_2:
+                    link_evidencia_110 = st.text_area(
+                        "Link/Evidência (11.0):",
+                        value=evidencia_110_salva,
+                        key=chave_link_110,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 11.0...",
+                        height=120
+                    )
+                    placeholder_links_110 = st.empty()
+                    links_110_visuais = re.findall(REGEX_PURE_URL, link_evidencia_110 or "")
+                    if links_110_visuais:
+                        placeholder_links_110.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_110_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 11.0
+                bloco_comentarios("11.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 11.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 11.0", key=f"btn_salvar_11_0_{ano_sel}", type="primary"):
+                    val_para_salvar_110 = opcao_selecionada_110
+                    pts_para_salvar_110 = opcoes_110.get(val_para_salvar_110, 0.0)
+                    lnk_val_110 = link_evidencia_110.strip()
+                    comentario_para_salvar_110 = st.session_state.get(chave_coment_110, d110.get("comentario", ""))
+
+                    # Salvamento principal
+                    save_resp(
+                        qid="11.0",
+                        valor=val_para_salvar_110,
+                        pontos=float(pts_para_salvar_110),
+                        link=lnk_val_110,
+                        comentario=comentario_para_salvar_110
+                    )
+                    res_data["11.0"] = {
+                        "valor": val_para_salvar_110,
+                        "pontos": float(pts_para_salvar_110),
+                        "link": lnk_val_110,
+                        "comentario": comentario_para_salvar_110
+                    }
+
+                    # Regra de dependência: Se marcar "Não", reseta o quesito 11.1
+                    if val_para_salvar_110 == "Não":
+                        save_resp("11.1", "0.0|0.0", 0.0, "")
+                        if "11.1" in res_data:
+                            res_data["11.1"] = {"valor": "0.0|0.0", "pontos": 0.0, "link": "", "comentario": ""}
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_110 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_110_salva or "")]
+
+                    if lnk_val_110 != evidencia_110_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_11_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 11.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                val_atual_110 = d110.get("valor", "Selecione...")
+
+                if val_atual_110 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 11.0</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção '{val_atual_110}' salva (Impacto: 0.0 pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 11.0
+        if st.session_state.get(f"gatilho_modal_11_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = False
