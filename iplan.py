@@ -5221,3 +5221,118 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 9.0 • ANEXO DE RISCOS FISCAIS (SELEÇÃO ÚNICA VIA RADIO)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_riscos_fiscais_9_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 9.0 - Presença do Anexo de Riscos Fiscais na LDO ({ano_sel})", expanded=True):
+                st.subheader("9.0 • Anexo de Riscos Fiscais")
+                st.write("**9.0 O Anexo de Riscos Fiscais integra a Lei de Diretrizes Orçamentárias (LDO), nos termos exigidos pela Lei de Responsabilidade Fiscal?**")
+                st.caption("ℹ *Avalia os passivos contingentes e outros riscos capazes de afetar as contas públicas, informando as providências a serem tomadas, caso se concretizem.*")
+                st.caption("ℹ *Selecione a opção desejada, informe os links e comentários, e clique em 'Salvar Questão 9.0'.*")
+
+                opcoes_90 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+
+                # Resgate seguro dos dados de 9.0
+                d90 = res_data.get("9.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_90_salva = d90.get("link", "")
+                v_salvo_90 = d90.get("valor", "Selecione...")
+
+                # Chaves fixas por componente e ano
+                chave_radio_90 = f"r_9_0_{ano_sel}"
+                chave_link_90 = f"t_9_0_{ano_sel}"
+                chave_coment_90 = f"coment_9.0_{ano_sel}"
+
+                c90_1, c90_2 = st.columns([1, 1])
+
+                with c90_1:
+                    lista_opcoes_90 = list(opcoes_90.keys())
+                    idx90 = lista_opcoes_90.index(v_salvo_90) if v_salvo_90 in lista_opcoes_90 else 0
+
+                    sel_9_0 = st.radio(
+                        "Selecione a opção do Quesito 9.0:",
+                        options=lista_opcoes_90,
+                        index=idx90,
+                        key=chave_radio_90,
+                        label_visibility="collapsed"
+                    )
+
+                with c90_2:
+                    link_evidencia_90 = st.text_area(
+                        "Link/Evidência (9.0):",
+                        value=evidencia_90_salva,
+                        key=chave_link_90,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 9.0...",
+                        height=100
+                    )
+                    placeholder_links_90 = st.empty()
+                    links_90_visuais = re.findall(REGEX_PURE_URL, link_evidencia_90 or "")
+                    if links_90_visuais:
+                        placeholder_links_90.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_90_visuais]
+                            )
+                        )
+
+                # Bloco de comentários do 9.0
+                bloco_comentarios("9.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 9.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 9.0", key=f"btn_salvar_9_0_{ano_sel}", type="primary"):
+                    val_radio_90 = st.session_state.get(chave_radio_90, "Selecione...")
+                    lnk_val_90 = link_evidencia_90.strip()
+                    comentario_para_salvar_90 = st.session_state.get(chave_coment_90, d90.get("comentario", ""))
+
+                    pts_90 = opcoes_90.get(val_radio_90, 0.0)
+
+                    save_resp(
+                        qid="9.0",
+                        valor=val_radio_90,
+                        pontos=float(pts_90),
+                        link=lnk_val_90,
+                        comentario=comentario_para_salvar_90
+                    )
+                    res_data["9.0"] = {
+                        "valor": val_radio_90,
+                        "pontos": float(pts_90),
+                        "link": lnk_val_90,
+                        "comentario": comentario_para_salvar_90
+                    }
+
+                    # Verificação de alteração de links para disparo do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_90 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_90_salva or "")]
+
+                    if lnk_val_90 != evidencia_90_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 9.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição de Impacto de Pontuação
+                v90_check = d90.get("valor", "Selecione...").strip()
+                pts_atuais_90 = d90.get("pontos", 0.0)
+
+                if v90_check in ["", "Selecione..."]:
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Seleção pendente no Quesito 9.0</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção '{v90_check}' salva (Impacto: {pts_atuais_90:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 9.0
+        if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
