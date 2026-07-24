@@ -12826,3 +12826,94 @@ def mostrar_formulario_iamb():
                 st.cache_data.clear()
                 st.toast("Todos os indicadores de Saneamento do Item A4.1.1 foram salvos com sucesso!", icon="✅")
                 st.rerun()
+
+        # =============================================================================
+        # ITEM A4.1.2 • COLETA DE RESÍDUOS - SINISA (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_ext_a412_{ano_sel}", border=True):
+            st.subheader("A4.1.2 • Coleta de Resíduos Sólidos Domiciliares (SINISA)")
+            st.caption(
+                "Dados provenientes do SINISA (Não sujeitos à validação municipal).\n\n"
+                "**Regra de Pontuação (Até 20.0 pts):**\n"
+                "- Cobertura = 100%: **20,0 pontos**\n"
+                "- 99% < Cobertura < 100%: **Interpolação de 10,0 a 20,0 pontos**\n"
+                "- 90% < Cobertura ≤ 99%: **Interpolação de 0,0 a 10,0 pontos**\n"
+                "- Cobertura ≤ 90%: **0,0 ponto**"
+            )
+
+            # Recuperação dos dados salvos no banco
+            d_col_res = res_data.get("A4.1.2_coleta") or {"valor": 0.0, "pontos": 0.0, "link": "SINISA"}
+            v_salvo_col_res = float(d_col_res.get("valor", 0.0))
+            pts_salvos_col_res = float(d_col_res.get("pontos", 0.0))
+
+            # Definindo chave do Streamlit Session State
+            chave_col_res = f"ext_col_res_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                p_col_res = st.number_input(
+                    "% Cobertura de coleta domiciliar (População Total):",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=v_salvo_col_res,
+                    step=0.1,
+                    key=chave_col_res
+                )
+
+                # Cálculo dinâmico da pontuação baseado nas faixas oficiais
+                if p_col_res >= 100.0:
+                    pts_col_res = 20.0
+                elif 99.0 < p_col_res < 100.0:
+                    pts_col_res = ((p_col_res - 99.0) / 1.0 * 10.0) + 10.0
+                elif 90.0 < p_col_res <= 99.0:
+                    pts_col_res = (p_col_res - 90.0) / 9.0 * 10.0
+                else:
+                    pts_col_res = 0.0
+
+                # Exibição da métrica com a pontuação calculada dinamicamente
+                st.metric(
+                    label="Impacto na Pontuação (Calculado)",
+                    value=f"{pts_col_res:.2f} / 20.0 pts"
+                )
+
+            with col2:
+                st.info(
+                    f"**Fonte dos Dados:** SINISA\n\n"
+                    f"**Cobertura Salva Anteriormente:** {v_salvo_col_res:.1f}%\n\n"
+                    f"**Pontuação Salva Anteriormente:** {pts_salvos_col_res:.2f} pts"
+                )
+
+            # Feedback visual dinâmico
+            cor_impacto = "#28a745" if pts_col_res > 0 else "#6c757d"
+            st.markdown(
+                f"<span style='color:{cor_impacto}; font-weight:bold;'>📊 Impacto Previsto para A4.1.2: {pts_col_res:.2f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Item A4.1.2 - Coleta de Resíduos", key=f"btn_salvar_ext_a412_{ano_sel}", type="primary"):
+                val_col_res_final = float(p_col_res)
+                pts_col_res_final = float(pts_col_res)
+                fonte_link = "SINISA"
+
+                # Persistência no banco de dados
+                save_resp(
+                    qid="A4.1.2_coleta",
+                    valor=val_col_res_final,
+                    pontos=pts_col_res_final,
+                    link=fonte_link
+                )
+
+                # Atualização do dicionário em memória
+                res_data["A4.1.2_coleta"] = {
+                    "valor": val_col_res_final,
+                    "pontos": pts_col_res_final,
+                    "link": fonte_link
+                }
+
+                st.cache_data.clear()
+                st.toast("Dados do Indicador A4.1.2 (Coleta de Resíduos) salvos com sucesso!", icon="✅")
+                st.rerun()
