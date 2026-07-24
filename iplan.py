@@ -9334,3 +9334,137 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.5.1", st.session_state.get(f"links_pendentes_14_5_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_5_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO MASTER 15.0 • CRIAÇÃO DA OUVIDORIA PÚBLICA (PADRÃO 1.0)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_ouvidoria_master_15_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 15.0 - Criação da Ouvidoria Pública ({ano_sel})", expanded=True):
+                st.subheader("15.0 • Ouvidoria Pública Executiva")
+                st.write(f"**Houve a criação da ouvidoria pública no âmbito do Poder Executivo Municipal em {ano_sel}?**")
+                st.caption("ℹ *Selecione uma opção, preencha os campos e clique em 'Salvar Questão 15.0'. Se modificado para 'Não' ou 'Selecione...', toda a árvore de subquesitos dependentes (15.1 a 15.5) será redefinida no banco de dados.*")
+
+                opcoes_150 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+
+                # Resgate seguro dos dados do 15.0
+                d150 = res_data.get("15.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                if d150 is None or not isinstance(d150, dict):
+                    d150 = {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_150 = d150.get("valor", "Selecione...")
+                if val_salvo_150 not in opcoes_150:
+                    val_salvo_150 = "Selecione..."
+
+                evidencia_150_salva = d150.get("link", "")
+
+                # Chaves estáticas e limpas
+                chave_radio_150 = f"r_150_{ano_sel}"
+                chave_link_150 = f"t_150_{ano_sel}"
+                chave_coment_150 = f"coment_15.0_{ano_sel}"
+
+                lista_opcoes_150 = list(opcoes_150.keys())
+                idx150 = lista_opcoes_150.index(val_salvo_150)
+
+                c150_1, c150_2 = st.columns([1, 1])
+
+                with c150_1:
+                    v_input_150 = st.radio(
+                        "Selecione 15.0:",
+                        options=lista_opcoes_150,
+                        index=idx150,
+                        key=chave_radio_150,
+                        label_visibility="collapsed"
+                    )
+
+                with c150_2:
+                    link_150 = st.text_area(
+                        "Link/Evidência (15.0):",
+                        value=evidencia_150_salva,
+                        key=chave_link_150,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 15.0...",
+                        height=100
+                    )
+                    placeholder_links_150 = st.empty()
+                    links_150_visuais = re.findall(REGEX_PURE_URL, link_150 or "")
+                    if links_150_visuais:
+                        placeholder_links_150.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_150_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 15.0
+                bloco_comentarios("15.0", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 15.0
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 15.0", key=f"btn_salvar_15_0_{ano_sel}", type="primary"):
+                    val_para_salvar_150 = v_input_150
+                    pts_calc_150 = opcoes_150.get(val_para_salvar_150, 0.0)
+                    lnk_val_150 = link_150.strip()
+                    comentario_para_salvar_150 = st.session_state.get(chave_coment_150, d150.get("comentario", ""))
+
+                    # Persistência no banco de dados e sessão
+                    save_resp(
+                        qid="15.0",
+                        valor=val_para_salvar_150,
+                        pontos=pts_calc_150,
+                        link=lnk_val_150,
+                        comentario=comentario_para_salvar_150
+                    )
+                    res_data["15.0"] = {
+                        "valor": val_para_salvar_150,
+                        "pontos": pts_calc_150,
+                        "link": lnk_val_150,
+                        "comentario": comentario_para_salvar_150
+                    }
+
+                    # Cascata de limpeza completa para a árvore filha (15.1 a 15.5) caso não seja "Sim"
+                    if val_para_salvar_150 in ["Não", "Selecione..."]:
+                        limpeza_grupo_15 = {
+                            "15.1": "Selecione...",
+                            "15.2": "Selecione...",
+                            "15.3": "[]",
+                            "15.4": "Selecione...",
+                            "15.4.1": "[]",
+                            "15.4.2": "Selecione...",
+                            "15.5": "[]"
+                        }
+                        for sub_q, d_val in limpeza_grupo_15.items():
+                            save_resp(qid=sub_q, valor=d_val, pontos=0.0, link="", comentario="")
+                            res_data[sub_q] = {"valor": d_val, "pontos": 0.0, "link": "", "comentario": ""}
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_150 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_150_salva or "")]
+
+                    if lnk_val_150 != evidencia_150_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 15.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_150 = d150.get("pontos", 0.0)
+
+                if v_input_150 == "Selecione...":
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma opção selecionada no Quesito 15.0</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Opção salva com sucesso (Impacto: {pts_atuais_150:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 15.0
+        if st.session_state.get(f"gatilho_modal_15_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.0", st.session_state.get(f"links_pendentes_15_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = False
