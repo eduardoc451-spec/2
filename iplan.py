@@ -1362,61 +1362,129 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     return buffer
     
 # =============================================================================
-# 2. INTERFACE E FORMULÁRIO
+# SIDEBAR E FUNÇÃO ZERAR - iPLAN
 # =============================================================================
 
-def render_sidebar():
-    st.sidebar.title("🛠️ Painel i-PLAN")
-    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
-    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_global")
-    res_data = load_respostas(ano_sel)
-    
-    total_pts = sum(float(item.get("pontos", 0)) for k, item in res_data.items() if not k.startswith("COM_"))
-    
-    if total_pts <= 499:   faixa, cor = "C",  "red"
-    elif total_pts <= 599: faixa, cor = "C+", "orange"
-    elif total_pts <= 749: faixa, cor = "B",  "#d4d400"
-    elif total_pts <= 899: faixa, cor = "B+", "lightgreen"
-    elif total_pts <= 1000: faixa, cor = "A",  "green"
+def zerar_questionario_iplan(ano: int):
+    """Deleta todas as respostas do ano selecionado na tabela respostas_iplan."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM respostas_iplan WHERE ano = %s",
+                    (int(ano),)
+                )
+            conn.commit()
+        st.cache_data.clear()
+    except Exception as e:
+        st.error(f"Erro ao zerar questionário iPLAN: {e}")
 
-    st.sidebar.metric("Pontuação Total", f"{total_pts:.1f} pts")
-    st.sidebar.markdown(f"**Faixa:** <span style='color:{cor}; font-size:20px; font-weight:bold;'>{faixa}</span>", unsafe_allow_html=True)
+
+@st.dialog("⚠️ Zerar Respostas do iPLAN")
+def confirmar_zerar_iplan_dialog(ano):
+    st.warning(f"Tem certeza que deseja apagar TODAS as respostas do iPLAN para o ano {ano}?")
+    st.write("Esta ação é irreversível e excluirá os dados salvos no banco de dados.")
     
+    # Campo para inserção da senha de confirmação
+    senha_digitada = st.text_input(
+        "Digite a senha de confirmação para prosseguir:",
+        type="password",
+        placeholder="Digite a senha..."
+    )
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔴 Sim, Zerar Tudo", type="primary", use_container_width=True):
+            if senha_digitada.strip() == "fidelios":
+                try:
+                    zerar_questionario_iplan(ano)
+                    
+                    # Limpa as chaves vinculadas ao ano no session_state
+                    for key in list(st.session_state.keys()):
+                        if key.endswith(f"_{ano}"):
+                            del st.session_state[key]
+                            
+                    st.toast(f"Respostas do iPLAN para o ano {ano} zeradas com sucesso!", icon="🗑️")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao zerar banco: {e}")
+            else:
+                st.error("🔒 Senha incorreta! Ação cancelada.")
+
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+def render_sidebar():
+    st.sidebar.title("📊 Painel de Controle - iPLAN")
+    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    
+    # Seleção do ano de referência
+    ano_sel = st.sidebar.selectbox("Ano de Referência:", anos, key="ano_referencia_iplan")
+
+    res_data = load_respostas(ano_sel)
+    total_pts = sum(
+        float(item.get("pontos", 0.0)) 
+        for k, item in res_data.items() 
+        if isinstance(item, dict) and not k.startswith("COM_")
+    )
+
+    # Régua de Classificação IEGM / iPLAN
+    if total_pts <= 500:
+        faixa, cor = "C", "red"
+    elif total_pts <= 599:
+        faixa, cor = "C+", "orange"
+    elif total_pts <= 749:
+        faixa, cor = "B", "#d4d400"
+    elif total_pts <= 899:
+        faixa, cor = "B+", "lightgreen"
+    else:
+        faixa, cor = "A", "green"
+
+    st.sidebar.metric("Pontuação Total iPLAN", f"{total_pts:.1f} pts")
+    st.sidebar.markdown(
+        f"**Faixa:** <span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
+        unsafe_allow_html=True
+    )
+
+    st.sidebar.divider()
+
     # =========================================================================
-    # CORREÇÃO: Carrega o histórico completo de todos os anos para o PDF
+    # Carrega o histórico completo de todos os anos para o PDF
     # =========================================================================
     historico_completo = {}
     for ano_h in anos:
         dados_ano_h = load_respostas(ano_h)
-        if dados_ano_h: # Só adiciona se houver respostas salvas para aquele ano
+        if dados_ano_h:
             historico_completo[str(ano_h)] = dados_ano_h
-    # =========================================================================
 
-    # Geração Dinâmica do PDF na Sidebar passando o historico_completo
-    try:
-        pdf_buffer = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, all_data=historico_completo)
-        st.sidebar.download_button(
-            label="📥Relatório PDF",
-            data=pdf_buffer.getvalue(),
+    col1, col2 = st.sidebar.columns(2)
+
+    # Botão de Gerar e Baixar PDF
+    with col1:
+        pdf_bytes = b""
+        try:
+            if "gerar_relatorio_pdf" in globals():
+                pdf_buffer = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa, all_data=historico_completo)
+                pdf_bytes = pdf_buffer.getvalue() if hasattr(pdf_buffer, 'getvalue') else pdf_buffer
+        except Exception as e:
+            st.sidebar.error(f"Erro ao gerar PDF: {e}")
+
+        st.download_button(
+            label="📄 Relatório PDF",
+            data=pdf_bytes,
             file_name=f"Relatorio_iPLAN_{ano_sel}.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
+            use_container_width=True,
+            disabled=(pdf_bytes == b"")
         )
-    except Exception as e:
-        st.sidebar.error(f"Erro ao gerar PDF para download: {e}")
-    
-    if st.sidebar.button("🔄 Zerar Questionário"):
-        with get_connection() as conn:
-            conn.execute("DELETE FROM respostas WHERE ano = ?", (ano_sel,))
-            conn.commit()
-        
-        # Limpa o session_state para desmarcar todos os widgets (radio, checkbox, etc)
-        # Filtramos as chaves que terminam com o ano de referência para não afetar configurações globais
-        for key in list(st.session_state.keys()):
-            if key.endswith(f"_{ano_sel}"):
-                del st.session_state[key]
-                
-        st.rerun()
-        
+
+    # Botão com Modal de Confirmação para Zerar
+    with col2:
+        if st.button("🔄 Zerar", help="Limpar todas as respostas do ano selecionado", use_container_width=True):
+            confirmar_zerar_iplan_dialog(ano_sel)
+
     return total_pts, res_data, ano_sel
 
 def mostrar_formulario_plan():
