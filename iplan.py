@@ -7459,3 +7459,110 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.1", st.session_state.get(f"links_pendentes_14_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_1_{ano_sel}"] = False
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 14.2 • PÁGINA ELETRÔNICA DE DIVULGAÇÃO (PADRÃO 1.0 - 8 ESPAÇOS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_url_divulgacao_14_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 14.2 - Página Eletrônica de Divulgação da Regulamentação ({ano_sel})", expanded=True):
+                st.subheader("14.2 • Página Eletrônica de Divulgação")
+                st.write("**Página eletrônica (link na internet) de divulgação do instrumento de regulamentação do sistema de controle interno (XYZ se não disponível):**")
+                st.caption("ℹ *Informe a URL de divulgação, insira os links de evidência/comentários e clique em 'Salvar Questão 14.2'.*")
+
+                # Resgate seguro dos dados do 14.2
+                d142 = res_data.get("14.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                if d142 is None:
+                    d142 = {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                if not isinstance(d142, dict):
+                    d142 = {"valor": str(d142), "pontos": 0.0, "link": "", "comentario": ""}
+
+                val_salvo_142 = d142.get("valor", "")
+                evidencia_142_salva = d142.get("link", "")
+
+                # Chaves estáticas e seguras por componente e ano
+                chave_txt_142 = f"q142_txt_{ano_sel}"
+                chave_link_142 = f"t_142_{ano_sel}"
+                chave_coment_142 = f"coment_14.2_{ano_sel}"
+
+                c142_1, c142_2 = st.columns([1, 1])
+
+                with c142_1:
+                    v_input_142 = st.text_input(
+                        "Página eletrônica (link) 14.2:",
+                        value=val_salvo_142,
+                        key=chave_txt_142,
+                        placeholder="https://... ou XYZ se não disponível"
+                    )
+
+                with c142_2:
+                    link_evidencia_142 = st.text_area(
+                        "Link/Evidência (14.2):",
+                        value=evidencia_142_salva,
+                        key=chave_link_142,
+                        placeholder="Insira os links comprobatórios referente ao Quesito 14.2...",
+                        height=100
+                    )
+                    placeholder_links_142 = st.empty()
+                    links_142_visuais = re.findall(REGEX_PURE_URL, link_evidencia_142 or "")
+                    if links_142_visuais:
+                        placeholder_links_142.markdown(
+                            "**🔗 Links ativos:** " + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_142_visuais]
+                            )
+                        )
+
+                # Bloco de comentários integrado do 14.2
+                bloco_comentarios("14.2", res_data, ano_sel)
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL 14.2
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Questão 14.2", key=f"btn_salvar_14_2_{ano_sel}", type="primary"):
+                    val_para_salvar_142 = v_input_142.strip()
+                    lnk_val_142 = link_evidencia_142.strip()
+                    comentario_para_salvar_142 = st.session_state.get(chave_coment_142, d142.get("comentario", ""))
+
+                    # Persistência no banco/sessão (impacto 0.0 pontos)
+                    save_resp(
+                        qid="14.2",
+                        valor=val_para_salvar_142,
+                        pontos=0.0,
+                        link=lnk_val_142,
+                        comentario=comentario_para_salvar_142
+                    )
+                    res_data["14.2"] = {
+                        "valor": val_para_salvar_142,
+                        "pontos": 0.0,
+                        "link": lnk_val_142,
+                        "comentario": comentario_para_salvar_142
+                    }
+
+                    # Validação de novas evidências para gatilho de modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_142 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_142_salva or "")]
+
+                    if lnk_val_142 != evidencia_142_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta da Questão 14.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Status e Exibição do Impacto de Pontuação
+                pts_atuais_142 = d142.get("pontos", 0.0)
+
+                if not v_input_142.strip():
+                    st.markdown("<span style='color:#ffc107; font-weight:bold;'>⚠️ Status: Nenhuma URL ou 'XYZ' informada no Quesito 14.2</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"✅ Status: Página eletrônica salva com sucesso (Impacto: {pts_atuais_142:.1f} pontos)</span>",
+                        unsafe_allow_html=True
+                    )
+
+        # Modal de Evidências do 14.2
+        if st.session_state.get(f"gatilho_modal_14_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.2", st.session_state.get(f"links_pendentes_14_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_2_{ano_sel}"] = False
