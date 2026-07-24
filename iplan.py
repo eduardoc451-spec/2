@@ -11028,3 +11028,138 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("16.3.2", st.session_state.get(f"links_pendentes_16_3_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_3_2_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO MASTER 17.0 • REGULAMENTAÇÃO DO CONSELHO DE USUÁRIOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_conselho_master_17_0_final_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 17.0 - Regulamentação do Conselho de Usuários", expanded=True):
+                st.subheader("17.0 • Regulamentação e Instituição")
+                st.write("**A prefeitura regulamentou e instituiu o Conselho de Usuários, nos termos definidos nos artigos 18 a 21 da Lei Federal nº 13.460/2017?**")
+                st.caption("ℹ *Se modificado para 'Não' ou 'Selecione...', as subseções filhas (17.1 e 17.2) serão automaticamente limpas via cascata.*")
+
+                # Mapeamento oficial de opções e pontuações do Quesito 17.0
+                opc170 = {
+                    "Selecione...": 0.0,
+                    "Sim – 04": 4.0,
+                    "Não – 00": 0.0
+                }
+
+                # Recuperação segura dos dados salvos no banco
+                d170 = res_data.get("17.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_170 = d170.get("valor", "Selecione...")
+
+                # Normalização do valor salvo para bater com as opções do radio
+                if v_salvo_170 == "Sim":
+                    v_salvo_170 = "Sim – 04"
+                elif v_salvo_170 == "Não":
+                    v_salvo_170 = "Não – 00"
+
+                pts_salvos_170 = float(d170.get("pontos", 0.0))
+                evidencia_170_salva = d170.get("link", "")
+
+                # Chaves explícitas no Session State
+                chave_radio_170 = f"r_170_{ano_sel}"
+                chave_link_170 = f"l170_final_txt_{ano_sel}"
+                chave_coment_170 = f"coment_17.0_exclusivo_g17_{ano_sel}"
+
+                c170_1, c170_2 = st.columns([1, 1])
+
+                with c170_1:
+                    lista_opcoes_170 = list(opc170.keys())
+                    idx170 = lista_opcoes_170.index(v_salvo_170) if v_salvo_170 in lista_opcoes_170 else 0
+
+                    op_sel_170 = st.radio(
+                        "Selecione 17.0:",
+                        options=lista_opcoes_170,
+                        index=idx170,
+                        key=chave_radio_170,
+                        label_visibility="collapsed"
+                    )
+
+                    # Exibição da métrica de impacto de pontuação
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value=f"{pts_salvos_170:.1f} pts",
+                        delta="4.0 pts aplicáveis" if pts_salvos_170 > 0 else None
+                    )
+
+                with c170_2:
+                    link_170 = st.text_area(
+                        "Link/Evidência (17.0):",
+                        value=evidencia_170_salva,
+                        key=chave_link_170,
+                        placeholder="Inserir link da norma de regulamentação do Conselho de Usuários...",
+                        height=100
+                    )
+                    placeholder_links_170 = st.empty()
+                    links_170_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_170 or "")]
+                    if links_170_visuais:
+                        placeholder_links_170.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_170_visuais])
+                        )
+
+                # Renderiza o bloco de comentários específico do Quesito 17.0
+                bloco_comentarios("17.0_exclusivo_g17", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_txt_170 = "#28a745" if pts_salvos_170 > 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_170}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 17.0: {pts_salvos_170:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL COM CASCATA (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 17.0", key=f"btn_salvar_17_0_{ano_sel}", type="primary"):
+                    val_radio = st.session_state.get(chave_radio_170, op_sel_170)
+                    pts_calculados_170 = opc170.get(val_radio, 0.0)
+                    lnk_val = link_170.strip()
+
+                    # Padronização da string salva ("Sim", "Não", "Selecione...")
+                    val_salvar = "Sim" if "Sim" in val_radio else ("Não" if "Não" in val_radio else "Selecione...")
+                    comentario_para_salvar = st.session_state.get(chave_coment_170, d170.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="17.0",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados_170),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["17.0"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados_170),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Regra de Cascata: Se não for "Sim", reseta as subseções 17.1 e 17.2
+                    if val_salvar != "Sim":
+                        save_resp("17.1", "", 0.0, "")
+                        save_resp("17.2", "", 0.0, "")
+
+                        res_data["17.1"] = {"valor": "", "pontos": 0.0, "link": "", "comentario": res_data.get("17.1", {}).get("comentario", "")}
+                        res_data["17.2"] = {"valor": "", "pontos": 0.0, "link": "", "comentario": res_data.get("17.2", {}).get("comentario", "")}
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_170_salva or "")]
+
+                    if lnk_val != evidencia_170_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_17_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 17.0 e regras de cascata salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 17.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_17_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.0", st.session_state.get(f"links_pendentes_17_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = False
