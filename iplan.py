@@ -11163,3 +11163,202 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.0", st.session_state.get(f"links_pendentes_17_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = False
+
+# =============================================================================
+        # QUESITO TEXTUAL FILHO 17.1 • DETALHES DO INSTRUMENTO NORMATIVO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_norma_conselho_17_1_final_{ano_sel}", border=True):
+            with st.expander("📑 Quesito 17.1 - Detalhes do Instrumento Normativo do Conselho", expanded=True):
+                st.subheader("17.1 • Dados do Instrumento")
+                st.write("**Informe o instrumento normativo que regulamentou os Conselhos de Usuários, Número e Data da publicação:**")
+                st.info("ℹ️ *Caso não esteja disponível na internet, recomendamos anexar o Instrumento Normativo no Sistema de Questionários.*")
+
+                # Recuperação segura dos dados salvos
+                d171 = res_data.get("17.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_171 = d171.get("valor", "")
+                evidencia_171_salva = d171.get("link", "")
+
+                # Chaves explícitas no Session State
+                chave_input_171 = f"q171_final_input_{ano_sel}"
+                chave_link_171 = f"l171_final_input_{ano_sel}"
+                chave_coment_171 = f"coment_17.1_exclusivo_g17_{ano_sel}"
+
+                c171_1, c171_2 = st.columns([1, 1])
+
+                with c171_1:
+                    val_input_171 = st.text_input(
+                        "Instrumento normativo, número e data:",
+                        value=v_salvo_171,
+                        key=chave_input_171,
+                        placeholder="Ex: Decreto nº 5.678/2023, publicado em 10/05/2023"
+                    )
+
+                    # Exibição da métrica informativa (0.0 pts)
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value="0.0 pts",
+                        delta=None
+                    )
+
+                with c171_2:
+                    link_171 = st.text_area(
+                        "Link/Evidência (17.1):",
+                        value=evidencia_171_salva,
+                        key=chave_link_171,
+                        placeholder="Inserir link(s) comprobatório(s)...",
+                        height=100
+                    )
+                    placeholder_links_171 = st.empty()
+                    links_171_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_171 or "")]
+                    if links_171_visuais:
+                        placeholder_links_171.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_171_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 17.1
+                bloco_comentarios("17.1_exclusivo_g17", res_data, ano_sel)
+
+                # Feedback visual dinâmico
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 17.1: 0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 17.1", key=f"btn_salvar_17_1_{ano_sel}", type="primary"):
+                    texto_norma_171 = st.session_state.get(chave_input_171, val_input_171).strip()
+                    lnk_val_171 = link_171.strip()
+                    comentario_para_salvar_171 = st.session_state.get(chave_coment_171, d171.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="17.1",
+                        valor=texto_norma_171,
+                        pontos=0.0,
+                        link=lnk_val_171,
+                        comentario=comentario_para_salvar_171
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["17.1"] = {
+                        "valor": texto_norma_171,
+                        "pontos": 0.0,
+                        "link": lnk_val_171,
+                        "comentario": comentario_para_salvar_171
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais_171 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_171 or "")]
+                    links_antigos_171 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_171_salva or "")]
+
+                    if lnk_val_171 != evidencia_171_salva and links_atuais_171 and links_atuais_171 != links_antigos_171:
+                        st.session_state[f"links_pendentes_17_1_{ano_sel}"] = links_atuais_171
+                        st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 17.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 17.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_17_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.1", st.session_state.get(f"links_pendentes_17_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = False
+
+
+        # =============================================================================
+        # QUESITO TEXTUAL FILHO 17.2 • ENDEREÇO ELETRÔNICO DO CONSELHO (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_url_conselho_17_2_final_{ano_sel}", border=True):
+            with st.expander("🔗 Quesito 17.2 - Endereço Eletrônico do Conselho", expanded=True):
+                st.subheader("17.2 • Endereço Eletrônico da Norma")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação da regulamentação do Conselho de Usuários:**")
+                st.warning("⚠️ *Se não estiver disponível na internet, insira exatamente o texto **XYZ** no campo abaixo.*")
+
+                # Recuperação segura dos dados salvos
+                d172 = res_data.get("17.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_172 = d172.get("valor", "")
+
+                # Chaves explícitas no Session State
+                chave_input_172 = f"q172_final_input_{ano_sel}"
+                chave_coment_172 = f"coment_17.2_exclusivo_g17_{ano_sel}"
+
+                c172_1, c172_2 = st.columns([1, 1])
+
+                with c172_1:
+                    v_campo_172 = st.text_input(
+                        "Página eletrônica (Link ou XYZ):",
+                        value=v_salvo_172,
+                        key=chave_input_172,
+                        placeholder="Ex: https://... ou XYZ"
+                    )
+
+                    # Exibição da métrica informativa (0.0 pts)
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value="0.0 pts",
+                        delta=None
+                    )
+
+                with c172_2:
+                    placeholder_links_172 = st.empty()
+                    links_172_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_campo_172 or "")]
+                    if links_172_visuais:
+                        placeholder_links_172.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_172_visuais])
+                        )
+                    else:
+                        placeholder_links_172.markdown("*Nenhum link ativo detectado no campo.*")
+
+                # Renderiza o bloco de comentários do Quesito 17.2
+                bloco_comentarios("17.2_exclusivo_g17", res_data, ano_sel)
+
+                # Feedback visual dinâmico
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 17.2: 0.0 pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 17.2", key=f"btn_salvar_17_2_{ano_sel}", type="primary"):
+                    v_txt_172 = st.session_state.get(chave_input_172, v_campo_172).strip()
+                    comentario_para_salvar_172 = st.session_state.get(chave_coment_172, d172.get("comentario", ""))
+
+                    # No quesito 17.2, o valor do texto informado atua simultaneamente como link/evidência
+                    save_resp(
+                        qid="17.2",
+                        valor=v_txt_172,
+                        pontos=0.0,
+                        link=v_txt_172,
+                        comentario=comentario_para_salvar_172
+                    )
+
+                    # Atualização no dicionário local em memória
+                    res_data["17.2"] = {
+                        "valor": v_txt_172,
+                        "pontos": 0.0,
+                        "link": v_txt_172,
+                        "comentario": comentario_para_salvar_172
+                    }
+
+                    # Detecção de alteração de links para acionamento do modal
+                    links_atuais_172 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_txt_172 or "")]
+                    links_antigos_172 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_172 or "")]
+
+                    if v_txt_172 != v_salvo_172 and links_atuais_172 and links_atuais_172 != links_antigos_172:
+                        st.session_state[f"links_pendentes_17_2_{ano_sel}"] = links_atuais_172
+                        st.session_state[f"gatilho_modal_17_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 17.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 17.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_17_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.2", st.session_state.get(f"links_pendentes_17_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_17_2_{ano_sel}"] = False
