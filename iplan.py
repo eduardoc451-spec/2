@@ -10569,3 +10569,129 @@ def mostrar_formulario_plan():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("16.1", st.session_state.get(f"links_pendentes_16_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 16.2 • ATUALIZAÇÃO DA CARTA DE SERVIÇOS (Padrão iGov)
+        # =============================================================================
+        with st.container(key=f"container_bloco_carta_atualizada_16_2_final_{ano_sel}", border=True):
+            with st.expander("🗂 Quesito 16.2 - Atualização da Carta de Serviços", expanded=True):
+                st.subheader("16.2 • Atualização da Carta")
+                st.write("**A 'Carta de Serviço ao Usuário' está atualizada?**")
+
+                # Mapeamento oficial de opções e pontuações do Quesito 16.2
+                map_opcoes_162 = {
+                    "Selecione...": 0.0,
+                    "Sim – 02": 2.0,
+                    "Não – 00": 0.0
+                }
+
+                # Recuperação segura do banco de dados
+                d162 = res_data.get("16.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_162 = d162.get("valor", "Selecione...")
+                
+                # Normalização do valor salvo para bater com as opções do radio
+                if v_salvo_162 == "Sim":
+                    v_salvo_162 = "Sim – 02"
+                elif v_salvo_162 == "Não":
+                    v_salvo_162 = "Não – 00"
+
+                pts_salvos_162 = float(d162.get("pontos", 0.0))
+                evidencia_162_salva = d162.get("link", "")
+
+                # Chaves explícitas do Streamlit Session State
+                chave_radio_162 = f"r_162_{ano_sel}"
+                chave_link_162 = f"l162_{ano_sel}"
+                chave_coment_162 = f"coment_16.2_{ano_sel}"
+
+                c162_1, c162_2 = st.columns([1, 1])
+
+                with c162_1:
+                    lista_opcoes_162 = list(map_opcoes_162.keys())
+                    idx162 = lista_opcoes_162.index(v_salvo_162) if v_salvo_162 in lista_opcoes_162 else 0
+
+                    op_sel_162 = st.radio(
+                        "Selecione 16.2:",
+                        options=lista_opcoes_162,
+                        index=idx162,
+                        key=chave_radio_162,
+                        label_visibility="collapsed"
+                    )
+
+                    # Exibição da métrica de impacto
+                    st.metric(
+                        label="Impacto na Pontuação (Salvo)",
+                        value=f"{pts_salvos_162:.1f} pts",
+                        delta="2.0 pts aplicáveis" if pts_salvos_162 > 0 else None
+                    )
+
+                with c162_2:
+                    link_162 = st.text_area(
+                        "Link/Evidência (16.2):",
+                        value=evidencia_162_salva,
+                        key=chave_link_162,
+                        placeholder="Inserir link(s) comprobatório(s)...",
+                        height=100
+                    )
+                    placeholder_links_162 = st.empty()
+                    links_162_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_162 or "")]
+                    if links_162_visuais:
+                        placeholder_links_162.markdown(
+                            "**🔗 Links Ativos:** " + " | ".join([f"[{u}]({u})" for u in links_162_visuais])
+                        )
+
+                # Renderiza o bloco de comentários do Quesito 16.2
+                bloco_comentarios("16.2", res_data, ano_sel)
+
+                # Feedback visual dinâmico do impacto salvo
+                cor_txt_162 = "#28a745" if pts_salvos_162 > 0.0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_txt_162}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 16.2: {pts_salvos_162:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL (Padrão iGov)
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 16.2", key=f"btn_salvar_16_2_{ano_sel}", type="primary"):
+                    val_radio = st.session_state.get(chave_radio_162, op_sel_162)
+                    pts_calculados_162 = map_opcoes_162.get(val_radio, 0.0)
+                    lnk_val = link_162.strip()
+
+                    # Limpa a string da opção para salvar no formato padronizado no banco ("Sim", "Não", "Selecione...")
+                    val_salvar = "Sim" if "Sim" in val_radio else ("Não" if "Não" in val_radio else "Selecione...")
+                    comentario_para_salvar = st.session_state.get(chave_coment_162, d162.get("comentario", ""))
+
+                    # Persistência no banco de dados
+                    save_resp(
+                        qid="16.2",
+                        valor=val_salvar,
+                        pontos=float(pts_calculados_162),
+                        link=lnk_val,
+                        comentario=comentario_para_salvar
+                    )
+
+                    # Atualização no dicionário em memória
+                    res_data["16.2"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts_calculados_162),
+                        "link": lnk_val,
+                        "comentario": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para disparo do modal de validação
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_162_salva or "")]
+
+                    if lnk_val != evidencia_162_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_16_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_16_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 16.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 16.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_16_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.2", st.session_state.get(f"links_pendentes_16_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_16_2_{ano_sel}"] = False
