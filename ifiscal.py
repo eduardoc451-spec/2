@@ -5730,6 +5730,122 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("8.0", st.session_state.get(f"links_pendentes_8_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.1 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_8_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.1 - Atualização da Legislação do ISSQN", expanded=True):
+                st.subheader("8.1 • Atualização Normativa (LC 157/2016)")
+                st.write("**O Município atualizou sua legislação conforme as novas hipóteses de incidência de ISS (LC 157/2016)?**")
+                
+                # Estado inicial / persistente
+                d81 = res_data.get("8.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc81 = ["Selecione...", "Sim – 02", "Não – 00"]
+                
+                v_salvo_81 = d81.get("valor", "Selecione...")
+                if v_salvo_81 not in opc81: 
+                    v_salvo_81 = "Selecione..."
+                
+                evidencia_81_salva = d81.get("link", "")
+
+                # Chaves padronizadas
+                chave_rad_81 = f"rad_81_{ano_sel}_fiscal"
+                chave_link_81 = f"l81_in_{ano_sel}_fiscal"
+                chave_coment_81 = f"coment_8.1_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1: 
+                    st.radio(
+                        "Selecione 8.1:", 
+                        opc81, 
+                        index=opc81.index(v_salvo_81), 
+                        key=chave_rad_81
+                    )
+                with c2: 
+                    link_81 = st.text_area(
+                        "Link/Evidência (8.1):", 
+                        value=evidencia_81_salva, 
+                        key=chave_link_81, 
+                        placeholder="Insira os links e evidências gerais...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_81 = st.empty()
+                    links_81_visuais = re.findall(REGEX_PURE_URL, link_81 or "")
+                    if links_81_visuais: 
+                        placeholder_links_81.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_81_visuais
+                                ]
+                            )
+                        )
+                
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("8.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.1", key=f"btn_salvar_8_1_{ano_sel}", type="primary"):
+                    val_sel_81 = st.session_state.get(chave_rad_81, v_salvo_81)
+                    lnk_val_81 = link_81.strip()
+                    
+                    # Regra de Pontuação: 2.0 para "Sim", 0.0 caso contrário
+                    pts81_nova = 2.0 if "Sim" in val_sel_81 else 0.0
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_81, d81.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="8.1",
+                        valor=val_sel_81,
+                        pontos=float(pts81_nova),
+                        link=lnk_val_81,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["8.1"] = {
+                        "valor": val_sel_81,
+                        "pontos": float(pts81_nova),
+                        "link": lnk_val_81,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_81 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_81_salva or "")]
+
+                    if lnk_val_81 != evidencia_81_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 8.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_81 = d81.get("pontos", 0.0)
+                cor_status_81 = "#28a745" if pts_exibido_81 > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_status_81}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 8.1: {pts_exibido_81:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 8.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
+
 
 
 
