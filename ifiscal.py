@@ -9940,6 +9940,138 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("15.1", st.session_state.get(f"links_pendentes_15_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 15.2 • MODALIDADES DE COBRANÇA EXTRAJUDICIAL
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_15_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 15.2 - Modalidades Adotadas ({ano_sel})", expanded=True):
+                st.subheader("15.2 • Modalidades de Cobrança Extrajudicial")
+                st.write("**Assinale as modalidades de cobrança extrajudicial da dívida ativa adotadas pelo município:**")
+                
+                # Estado inicial / persistente
+                d152 = res_data.get("15.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                evidencia_152_salva = d152.get("link", "")
+                
+                # Desserialização do JSON armazenado no banco
+                try:
+                    val_banco152 = str(d152.get("valor", "[]")).replace("'", '"')
+                    sel152 = json.loads(val_banco152)
+                    if not isinstance(sel152, list):
+                        sel152 = []
+                except Exception:
+                    sel152 = []
+
+                opcoes_152 = [
+                    "Protesto Extrajudicial da CDA (Certidão da Dívida Ativa)",
+                    "Parcelamento",
+                    "Facilitação do Pagamento",
+                    "Conciliação extrajudicial",
+                    "Inclusão do nome do devedor em Cadastro (Ex. CADIN)",
+                    "Inclusão do nome do devedor em serviços de proteção ao crédito",
+                    "Outros"
+                ]
+
+                # Chaves padronizadas para session_state
+                chave_link_152 = f"txt_152_{ano_sel}_fiscal"
+                chave_coment_152 = f"coment_15.2_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    # Renderização dos checkboxes com base nos valores salvos
+                    for idx, opcao in enumerate(opcoes_152):
+                        st.checkbox(
+                            opcao, 
+                            value=(opcao in sel152), 
+                            key=f"chk_152_{idx}_{ano_sel}_fiscal"
+                        )
+
+                with c2:
+                    link_152 = st.text_area(
+                        f"Link/Evidência de Legislação/Atos de Cobrança ({ano_sel}):", 
+                        value=evidencia_152_salva, 
+                        key=chave_link_152, 
+                        placeholder="Insira os links e evidências...",
+                        height=180
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_152 = st.empty()
+                    links_152_visuais = re.findall(REGEX_PURE_URL, link_152 or "")
+                    if links_152_visuais:
+                        placeholder_links_152.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_152_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("15.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 15.2", key=f"btn_salvar_15_2_{ano_sel}", type="primary"):
+                    # Captura das opções selecionadas nos checkboxes
+                    res152_temp = []
+                    for idx_chk, opcao_chk in enumerate(opcoes_152):
+                        if st.session_state.get(f"chk_152_{idx_chk}_{ano_sel}_fiscal", False):
+                            res152_temp.append(opcao_chk)
+                    
+                    valor_json = json.dumps(res152_temp, ensure_ascii=False)
+                    lnk_val_152 = link_152.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_152, d152.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal (Pontuação neutra = 0.0)
+                    save_resp_ifiscal(
+                        qid="15.2",
+                        valor=valor_json,
+                        pontos=0.0,
+                        link=lnk_val_152,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["15.2"] = {
+                        "valor": valor_json,
+                        "pontos": 0.0,
+                        "link": lnk_val_152,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_152 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_152_salva or "")]
+
+                    if lnk_val_152 != evidencia_152_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Modalidades e comentários do Quesito 15.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_152 = d152.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto 15.2: {pts_exibido_152:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 15.2 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_15_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.2", st.session_state.get(f"links_pendentes_15_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_2_{ano_sel}"] = False
+
 
 
 
