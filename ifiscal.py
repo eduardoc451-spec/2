@@ -2062,3 +2062,130 @@ def mostrar_formulario_ifiscal():
                                 st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []),
                         )
                 st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 1.1 • LEI DA ESTRUTURA ORGANIZACIONAL (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_1_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.1 - Lei da Estrutura Organizacional", expanded=True):
+                st.subheader("1.1 • Estrutura Organizacional por Lei")
+                st.write(
+                    "**O Município possui lei que defina a estrutura organizacional da Administração Tributária?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.1' para registrar.*")
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 1.1
+                opcoes_11 = {
+                    "Selecione...": 0.0,
+                    "Sim – 0,5": 0.5,
+                    "Não – 00": 0.0
+                }
+
+                # Estado inicial / persistente
+                d11 = res_data.get("1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_11 = d11.get("valor", "Selecione...")
+
+                # Trata migração de legado caso no banco esteja salvo apenas "Sim" ou "Não"
+                if v_salvo_11 == "Sim":
+                    v_salvo_11 = "Sim – 0,5"
+                elif v_salvo_11 == "Não":
+                    v_salvo_11 = "Não – 00"
+
+                evidencia_11_salva = d11.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_11 = f"r_11_{ano_sel}_fiscal"
+                chave_link_11 = f"l_11_txt_{ano_sel}_fiscal"
+                chave_coment_11 = f"coment_1.1_{ano_sel}_fiscal"
+
+                c11_1, c11_2 = st.columns([1, 1])
+                with c11_1:
+                    lista_opcoes_11 = list(opcoes_11.keys())
+                    idx_11 = lista_opcoes_11.index(v_salvo_11) if v_salvo_11 in lista_opcoes_11 else 0
+
+                    val_radio_11 = st.radio(
+                        "Selecione uma opção (1.1):",
+                        options=lista_opcoes_11,
+                        index=idx_11,
+                        key=chave_radio_11
+                    )
+
+                with c11_2:
+                    link_11 = st.text_area(
+                        "Link/Evidência (1.1):",
+                        value=evidencia_11_salva,
+                        key=chave_link_11,
+                        placeholder="Insira o link oficial da lei que estrutura a Administração Tributária...",
+                        height=100
+                    )
+                    placeholder_links_11 = st.empty()
+                    links_11_visuais = re.findall(REGEX_PURE_URL, link_11 or "")
+                    if links_11_visuais:
+                        placeholder_links_11.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_11_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("1.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.1", key=f"btn_salvar_1_1_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_11, v_salvo_11)
+                    pts_11 = float(opcoes_11.get(val_salvar, 0.0))
+                    lnk_val = link_11.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_11, d11.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="1.1",
+                        valor=val_salvar,
+                        pontos=pts_11,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.1"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_11,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_11_salva or "")]
+
+                    if lnk_val != evidencia_11_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_11 = d11.get("pontos", 0.0)
+                cor_txt_11 = "#28a745" if pts_atuais_11 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_11}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.1: +{pts_atuais_11:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
