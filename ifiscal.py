@@ -17295,4 +17295,8 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F22", st.session_state.get(f"links_pendentes_f22_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f22_{ano_sel}"] = False
 
+        with aba_graf:
+            st.subheader("📊 Diagnóstico e Visão Geral Fiscal")
+            st.caption(f"Análise gráfica do desempenho nos quesitos e indicadores fiscais ({ano_sel})")
+
     
