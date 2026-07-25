@@ -14507,4 +14507,214 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F8", st.session_state.get(f"links_pendentes_f8_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f8_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F9 • APURAÇÃO DA DÍVIDA FUNDADA (DCL / RCL)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f9_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F9 - Apuração da Dívida Fundada ({ano_sel})", expanded=True):
+                st.subheader("F9 • Apuração da Dívida Fundada (DCL / RCL)")
+                st.write("**Razão entre a Dívida Consolidada Líquida e a Receita Corrente Líquida [DCL / RCL = AF]**")
+                
+                # Tabela Oficial de Parâmetros
+                st.markdown(r"""
+                | Resultado do Índice $AF$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior que 1,20 ($> 1,2$) | 🚨 -10 (Perde 10 pontos fixos) |
+                | Entre 1,10 e 1,20 ($\ge 1,1$ e $\le 1,2$) | ⚠️ Graduação entre 0 e -10 pontos |
+                | Menor que 1,10 ($< 1,1$) | ✅ 00 ponto (Sem penalidades) |
+                """)
+                st.caption("ℹ️ *Dados extraídos do Relatório de Instrução, item GF-28 do Sistema AUDESP.*")
+                
+                # Memórias matemáticas oficiais do indicador F9
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional no Intervalo Crítico:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 1,10 e menores que 1,20:</b> A graduação será distribuída igualitariamente no intervalo através da fórmula: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((AF – 1,1) / 0,10) * (-10)</code> <br><i>Exemplo: se AF = 1,15, a nota do indicador será exatamente -5,00 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato salvo no banco: "DCL/RCL")
+                dF9 = res_data.get("F9") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_dcl, val_salvo_rcl = str(dF9.get("valor", "0.00/1.00")).split("/")
+                    float_dcl = float(val_salvo_dcl)
+                    float_rcl = float(val_salvo_rcl)
+                except Exception:
+                    float_dcl, float_rcl = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_dcl = f"R$ {float_dcl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_rcl = f"R$ {float_rcl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f9_salva = dF9.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_dcl = f"txt_f9_dcl_{ano_sel}_fiscal"
+                chave_input_rcl = f"txt_f9_rcl_{ano_sel}_fiscal"
+                chave_link_f9 = f"txt_f9_link_{ano_sel}_fiscal"
+                chave_coment_f9 = f"coment_F9_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_dcl_str = st.text_input(
+                        "Dívida Consolidada Líquida (DCL) - R$:",
+                        value=str_inicial_dcl,
+                        placeholder="Ex: 12.000.000,00",
+                        key=chave_input_dcl
+                    )
+                    
+                    input_rcl_str = st.text_input(
+                        "Receita Corrente Líquida (RCL) - R$:",
+                        value=str_inicial_rcl,
+                        placeholder="Ex: 10.000.000,00",
+                        key=chave_input_rcl
+                    )
+
+                with c2:
+                    link_f9 = st.text_area(
+                        f"Link/Evidência (F9 - Item GF-28 AUDESP) ({ano_sel}):", 
+                        value=evidencia_f9_salva, 
+                        key=chave_link_f9, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f9 = st.empty()
+                    links_f9_visuais = re.findall(REGEX_PURE_URL, link_f9 or "")
+                    if links_f9_visuais:
+                        placeholder_links_f9.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f9_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                v_dcl_exib = converte_moeda_br_para_float(input_dcl_str)
+                v_rcl_exib = max(converte_moeda_br_para_float(input_rcl_str), 0.01) # Evita divisão por zero
+
+                AF_exib = round(v_dcl_exib / v_rcl_exib, 4)
+
+                if v_dcl_exib == 0.0 and (link_f9.strip() == ""):
+                    pts_f9_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if AF_exib > 1.2000:
+                        pts_f9_exib = -10.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Índice Superior ao Teto (> 1,20)"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                    elif 1.1000 <= AF_exib <= 1.2000:
+                        pts_f9_exib = ((AF_exib - 1.1000) / 0.1000) * (-10.0)
+                        texto_resultado_exib = "⚠️ ALERTA DE GRADUAÇÃO (Fórmula Aplicada)"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:  # AF_exib < 1.1000
+                        pts_f9_exib = 0.0
+                        texto_resultado_exib = "✅ REGULAR: Menor que 1,10 (Sem penalidades)"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f9_exib:.2f} pontos"
+
+                str_dcl_fmt = f"R$ {v_dcl_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_rcl_fmt = f"R$ {v_rcl_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_af_fmt = f"{AF_exib:.4f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Razão:</b> {str_dcl_fmt} / {str_rcl_fmt}<br>
+                    📊 <b>Resultado do Indicador (AF):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_af_fmt}</code><br>
+                    ⚖️ <b>Situação da Dívida Líquida:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F9", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F9", key=f"btn_salvar_f9_{ano_sel}", type="primary"):
+                    v_dcl = converte_moeda_br_para_float(st.session_state.get(chave_input_dcl, input_dcl_str))
+                    v_rcl = max(converte_moeda_br_para_float(st.session_state.get(chave_input_rcl, input_rcl_str)), 0.01)
+
+                    AF = round(v_dcl / v_rcl, 4)
+
+                    if AF > 1.2000:
+                        pts_f9 = -10.0
+                    elif 1.1000 <= AF <= 1.2000:
+                        pts_f9 = ((AF - 1.1000) / 0.1000) * (-10.0)
+                    else:  # AF < 1.1000
+                        pts_f9 = 0.0
+
+                    str_banco = f"{v_dcl:.2f}/{v_rcl:.2f}"
+                    lnk_val_f9 = link_f9.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f9, dF9.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F9",
+                        valor=str_banco,
+                        pontos=pts_f9,
+                        link=lnk_val_f9,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F9"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f9,
+                        "link": lnk_val_f9,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f9 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f9_salva or "")]
+
+                    if lnk_val_f9 != evidencia_f9_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f9_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f9_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F9 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f9_salvos = float(dF9.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto F9 Salvo: {pts_f9_salvos:.2f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F9 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f9_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F9", st.session_state.get(f"links_pendentes_f9_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f9_{ano_sel}"] = False
+
     
