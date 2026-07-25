@@ -244,7 +244,14 @@ def init_db_ifiscal():
                     );
                     """
                 )
-                # 2. Garante a existência de todas as colunas necessárias sem apagar dados
+                # 2. Converte a coluna id para VARCHAR caso tenha sido criada como INT no passado
+                cursor.execute(
+                    """
+                    ALTER TABLE respostas_ifiscal 
+                    ALTER COLUMN id TYPE VARCHAR(100) USING id::VARCHAR;
+                    """
+                )
+                # 3. Garante a existência de todas as colunas necessárias sem apagar dados
                 cursor.execute(
                     """
                     ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS valor TEXT;
