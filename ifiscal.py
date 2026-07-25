@@ -2752,5 +2752,134 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("1.4.2", st.session_state.get(f"links_pendentes_1_4_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_4_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 1.5 • SEGREGAÇÃO DE FUNÇÕES (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_1_5_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.5 - Segregação de Funções", expanded=True):
+                st.subheader("1.5 • Segregação de Funções Administrativas")
+                st.write(
+                    "**Há segregação de funções entre os setores de lançadoria, arrecadação, fiscalização e contabilidade?**"
+                )
+                st.caption(
+                    "ℹ️ *Critério: O órgão deve demonstrar a divisão independente de competências para evitar conflitos de interesse.*"
+                )
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 1.5
+                opcoes_15 = {
+                    "Selecione...": 0.0,
+                    "Sim – 5,0": 5.0,
+                    "Não – 0,0": 0.0
+                }
+
+                # Estado inicial / persistente
+                d15 = res_data.get("1.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_15 = d15.get("valor", "Selecione...")
+
+                # Trata migração de legado caso no banco esteja salvo como "Sim – 05" ou no formato antigo
+                if "Sim" in v_salvo_15 and "5,0" not in v_salvo_15:
+                    v_salvo_15 = "Sim – 5,0"
+                elif "Não" in v_salvo_15 and "0,0" not in v_salvo_15:
+                    v_salvo_15 = "Não – 0,0"
+
+                evidencia_15_salva = d15.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_15 = f"r_15_{ano_sel}_fiscal"
+                chave_link_15 = f"l_15_txt_{ano_sel}_fiscal"
+                chave_coment_15 = f"coment_1.5_{ano_sel}_fiscal"
+
+                c15_1, c15_2 = st.columns([1, 1])
+                with c15_1:
+                    lista_opcoes_15 = list(opcoes_15.keys())
+                    idx_15 = lista_opcoes_15.index(v_salvo_15) if v_salvo_15 in lista_opcoes_15 else 0
+
+                    val_radio_15 = st.radio(
+                        "Selecione uma opção (1.5):",
+                        options=lista_opcoes_15,
+                        index=idx_15,
+                        key=chave_radio_15
+                    )
+
+                with c15_2:
+                    link_15 = st.text_area(
+                        "Link/Evidência (1.5):",
+                        value=evidencia_15_salva,
+                        key=chave_link_15,
+                        placeholder="Insira o link oficial com organograma, regimento interno ou portarias...",
+                        height=100
+                    )
+                    placeholder_links_15 = st.empty()
+                    links_15_visuais = re.findall(REGEX_PURE_URL, link_15 or "")
+                    if links_15_visuais:
+                        placeholder_links_15.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_15_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("1.5", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.5", key=f"btn_salvar_1_5_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_15, v_salvo_15)
+                    pts_15 = float(opcoes_15.get(val_salvar, 0.0))
+                    lnk_val = link_15.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_15, d15.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="1.5",
+                        valor=val_salvar,
+                        pontos=pts_15,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.5"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_15,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_15_salva or "")]
+
+                    if lnk_val != evidencia_15_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_5_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_15 = d15.get("pontos", 0.0)
+                cor_txt_15 = "#28a745" if pts_atuais_15 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_15}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.5: +{pts_atuais_15:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.5 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.5", st.session_state.get(f"links_pendentes_1_5_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = False
+
 
 
