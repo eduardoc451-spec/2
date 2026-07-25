@@ -15865,4 +15865,162 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F15", st.session_state.get(f"links_pendentes_f15_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f15_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F16 • BALANCETES REJEITADOS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f16_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F16 - Balancetes Rejeitados ({ano_sel})", expanded=True):
+                st.subheader("F16 • Balancetes Rejeitados")
+                st.write("**Quantidade total de balancetes mensais rejeitados no exercício**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Balancetes Rejeitados | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Menor ou igual a 1 ($\le 1$) | ✅ 25,00 pontos (Pontuação Máxima) |
+                | Entre 2 e 17 ($> 1$ e $< 18$) | ⚠️ 10,00 pontos (Atenção / Nota Parcial) |
+                | Maior ou igual a 18 ($\ge 18$) | 🚨 0,00 ponto (Volume Crítico de Rejeições) |
+                """)
+                st.caption("ℹ️ *Informações apuradas com base nas notificações de rejeição do Sistema AUDESP.*")
+
+                # Estado inicial / persistente do banco
+                dF16 = res_data.get("F16") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_rejeitados = int(float(dF16.get("valor", 0)))
+                except Exception:
+                    val_salvo_rejeitados = 0
+
+                evidencia_f16_salva = dF16.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_f16 = f"num_f16_rejeitados_{ano_sel}_fiscal"
+                chave_link_f16 = f"txt_f16_link_{ano_sel}_fiscal"
+                chave_coment_f16 = f"coment_F16_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    qtd_rejeitados = st.number_input(
+                        "Quantidade de balancetes rejeitados no ano:",
+                        min_value=0,
+                        max_value=120,
+                        value=val_salvo_rejeitados,
+                        step=1,
+                        format="%d",
+                        key=chave_input_f16
+                    )
+
+                with c2:
+                    link_f16 = st.text_area(
+                        f"Link/Evidência (F16 - Histórico de Balancetes AUDESP) ({ano_sel}):", 
+                        value=evidencia_f16_salva, 
+                        key=chave_link_f16, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f16 = st.empty()
+                    links_f16_visuais = re.findall(REGEX_PURE_URL, link_f16 or "")
+                    if links_f16_visuais:
+                        placeholder_links_f16.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f16_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                if qtd_rejeitados <= 1:
+                    pts_f16_exib = 25.0
+                    texto_resultado_exib = f"✅ ADEQUADO: Índice de rejeição mínimo ({qtd_rejeitados})"
+                    estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    texto_pontuacao_exib = "25,00 pontos"
+                elif 1 < qtd_rejeitados < 18:
+                    pts_f16_exib = 10.0
+                    texto_resultado_exib = f"⚠️ ATENÇÃO: Rejeições recorrentes identificadas ({qtd_rejeitados})"
+                    estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    texto_pontuacao_exib = "10,00 pontos"
+                else:
+                    pts_f16_exib = 0.0
+                    texto_resultado_exib = f"🚨 EXCESSO: Volume crítico de inconsistências contábeis ({qtd_rejeitados})"
+                    estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                    texto_pontuacao_exib = "0,00 pontos"
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Métrica Avaliada:</b> Qualidade e consistência das remessas contábeis mensais<br>
+                    📊 <b>Quantidade Registrada:</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{qtd_rejeitados} balancetes</code><br>
+                    ⚖️ <b>Situação Institucional:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F16", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F16", key=f"btn_salvar_f16_{ano_sel}", type="primary"):
+                    v_rejeitados = st.session_state.get(chave_input_f16, qtd_rejeitados)
+
+                    if v_rejeitados <= 1:
+                        pts_f16 = 25.0
+                    elif 1 < v_rejeitados < 18:
+                        pts_f16 = 10.0
+                    else:
+                        pts_f16 = 0.0
+
+                    lnk_val_f16 = link_f16.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f16, dF16.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F16",
+                        valor=str(v_rejeitados),
+                        pontos=pts_f16,
+                        link=lnk_val_f16,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F16"] = {
+                        "valor": str(v_rejeitados),
+                        "pontos": pts_f16,
+                        "link": lnk_val_f16,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f16 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f16_salva or "")]
+
+                    if lnk_val_f16 != evidencia_f16_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f16_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f16_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F16 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f16_salvos = float(dF16.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F16 Registrado: {pts_f16_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F16 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f16_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F16", st.session_state.get(f"links_pendentes_f16_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f16_{ano_sel}"] = False
+
     
