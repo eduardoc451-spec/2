@@ -8965,6 +8965,121 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("12.5.2", st.session_state.get(f"links_pendentes_12_5_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_12_5_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 13.0 • REGULAMENTAÇÃO SOBRE DÍVIDA ATIVA
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_13_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.0 - Regulamentação da Dívida Ativa ({ano_sel})", expanded=True):
+                st.subheader("13.0 • Dívida Ativa")
+                st.write("**O município possui regulamentação sobre dívida ativa?**")
+                
+                # Estado inicial / persistente
+                d130 = res_data.get("13.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc130 = ["Selecione...", "Sim – 01", "Não – 00"]
+                
+                valor_limpo_130 = d130.get("valor", "Selecione...")
+                if valor_limpo_130 not in opc130: 
+                    valor_limpo_130 = "Selecione..."
+                
+                evidencia_130_salva = d130.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_130 = f"rad_130_{ano_sel}_fiscal"
+                chave_link_130 = f"txt_130_{ano_sel}_fiscal"
+                chave_coment_130 = f"coment_13.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 13.0:", 
+                        opc130, 
+                        index=opc130.index(valor_limpo_130), 
+                        key=chave_rad_130
+                    )
+                with c2:
+                    link_130 = st.text_area(
+                        f"Link/Evidência Geral ({ano_sel}):", 
+                        value=evidencia_130_salva, 
+                        key=chave_link_130, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_130 = st.empty()
+                    links_130_visuais = re.findall(REGEX_PURE_URL, link_130 or "")
+                    if links_130_visuais:
+                        placeholder_links_130.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_130_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("13.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 13.0", key=f"btn_salvar_13_0_{ano_sel}", type="primary"):
+                    val_para_salvar = st.session_state.get(chave_rad_130, valor_limpo_130)
+                    lnk_val_130 = link_130.strip()
+
+                    # Cálculo da pontuação
+                    pts130_nova = 1.0 if "Sim" in val_para_salvar else 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_130, d130.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="13.0",
+                        valor=val_para_salvar,
+                        pontos=float(pts130_nova),
+                        link=lnk_val_130,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["13.0"] = {
+                        "valor": val_para_salvar,
+                        "pontos": float(pts130_nova),
+                        "link": lnk_val_130,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_130 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_130_salva or "")]
+
+                    if lnk_val_130 != evidencia_130_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 13.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_130 = d130.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto 13.0: {pts_exibido_130:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 13.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_13_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.0", st.session_state.get(f"links_pendentes_13_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = False
+
 
 
 
