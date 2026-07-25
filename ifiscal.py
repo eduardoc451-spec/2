@@ -3792,5 +3792,134 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("4.2", st.session_state.get(f"links_pendentes_4_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 4.3 • STATUS DE ATUALIZAÇÃO DO CADASTRO (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_4_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 4.3 - Status de Atualização do Cadastro", expanded=True):
+                st.subheader("4.3 • Revisão Atualizada")
+                st.write("**O cadastro imobiliário está com a revisão periódica ou geral atualizada?**")
+                st.caption(
+                    "⚠️ **Obs.:** *A mera atualização cadastral por solicitação do contribuinte realizada de forma pontual e esporádica, "
+                    "sem qualquer convocação ou iniciativa por parte da Prefeitura Municipal, não será considerada na questão como revisão "
+                    "periódica e geral do Cadastro imobiliário.*"
+                )
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 4.3
+                opcoes_43 = {
+                    "Selecione...": 0.0,
+                    "Sim – 5,0": 5.0,
+                    "Não – 0,0": 0.0
+                }
+
+                # Estado inicial / persistente
+                d43 = res_data.get("4.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_43 = d43.get("valor", "Selecione...")
+
+                # Tratamento de legados/formatos anteriores (ex: "Sim – 05" ou "Sim – 5")
+                if "Sim" in v_salvo_43 and "5,0" not in v_salvo_43:
+                    v_salvo_43 = "Sim – 5,0"
+                elif "Não" in v_salvo_43 and "0,0" not in v_salvo_43:
+                    v_salvo_43 = "Não – 0,0"
+
+                evidencia_43_salva = d43.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_43 = f"r43_in_{ano_sel}_fiscal"
+                chave_link_43 = f"l43_in_{ano_sel}_fiscal"
+                chave_coment_43 = f"coment_4.3_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    lista_opcoes_43 = list(opcoes_43.keys())
+                    idx_43 = lista_opcoes_43.index(v_salvo_43) if v_salvo_43 in lista_opcoes_43 else 0
+
+                    val_radio_43 = st.radio(
+                        "Selecione uma opção (4.3):",
+                        options=lista_opcoes_43,
+                        index=idx_43,
+                        key=chave_radio_43
+                    )
+
+                with col2:
+                    link_43 = st.text_area(
+                        "Link/Evidência (4.3):",
+                        value=evidencia_43_salva,
+                        key=chave_link_43,
+                        placeholder="Insira os links e comprovações referentes ao status de atualização...",
+                        height=100
+                    )
+                    placeholder_links_43 = st.empty()
+                    links_43_visuais = re.findall(REGEX_PURE_URL, link_43 or "")
+                    if links_43_visuais:
+                        placeholder_links_43.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_43_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("4.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 4.3", key=f"btn_salvar_4_3_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_43, v_salvo_43)
+                    pts_43 = float(opcoes_43.get(val_salvar, 0.0))
+                    lnk_val = link_43.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_43, d43.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="4.3",
+                        valor=val_salvar,
+                        pontos=pts_43,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["4.3"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_43,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_43_salva or "")]
+
+                    if lnk_val != evidencia_43_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 4.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_43 = d43.get("pontos", 0.0)
+                cor_txt_43 = "#28a745" if pts_atuais_43 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_43}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 4.3: +{pts_atuais_43:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 4.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_4_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.3", st.session_state.get(f"links_pendentes_4_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_3_{ano_sel}"] = False
+
 
 
