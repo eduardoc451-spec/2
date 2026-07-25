@@ -13930,4 +13930,186 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F5", st.session_state.get(f"links_pendentes_f5_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f5_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F6 • DESPESAS COM PESSOAL – PODER EXECUTIVO (LRF)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f6_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F6 - Despesas com Pessoal – Poder Executivo ({ano_sel})", expanded=True):
+                st.subheader("F6 • Despesas com Pessoal – Poder Executivo (LRF)")
+                st.write("**Índice da Despesa Total com Pessoal do Executivo em relação à Receita Corrente Líquida (RCL)**")
+                
+                # Tabela Oficial de Parâmetros e Impactos do Indicador F6
+                st.markdown("""
+                | Resultado do Índice (%) | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior que 54,00% (Acima do Limite Legal) | 🚨 Rebaixa 1 faixa do i-Fiscal |
+                | Entre 51,30% e 54,00% (Acima do Limite de Alerta) | ⚠️ -20 (Perde 20 pontos) |
+                | Menor que 51,30% (Dentro do Limite) | ✅ 00 (Sem penalidades) |
+                """)
+                st.caption("ℹ️ *Dados obtidos a partir do Relatório de Instrução, item GF27 do Sistema AUDESP.*")
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Função para converter string percentual BR para float decimal (ex: "51,30%" -> 0.513)
+                def converte_percentual_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("%", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        val = float(limpo)
+                        # Se o usuário digitou ex: 51.30 -> converte para 0.513
+                        return val / 100.0 if val > 1.0 else val
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente
+                dF6 = res_data.get("F6") or {"valor": "0.0000", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    float_f6 = float(dF6.get("valor", "0.0"))
+                except Exception:
+                    float_f6 = 0.0
+
+                str_inicial_f6 = f"{float_f6 * 100:.2f}%".replace(".", ",")
+                evidencia_f6_salva = dF6.get("link", "")
+
+                # Chaves padronizadas para o session_state
+                chave_input_f6 = f"txt_f6_indice_{ano_sel}_fiscal"
+                chave_link_f6 = f"txt_f6_link_{ano_sel}_fiscal"
+                chave_coment_f6 = f"coment_F6_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_f6_str = st.text_input(
+                        "Índice de Despesa com Pessoal (%):",
+                        value=str_inicial_f6,
+                        placeholder="Ex: 51,30%",
+                        key=chave_input_f6
+                    )
+
+                with c2:
+                    link_f6 = st.text_area(
+                        f"Link/Evidência (F6 - Item GF27 AUDESP) ({ano_sel}):", 
+                        value=evidencia_f6_salva, 
+                        key=chave_link_f6, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f6 = st.empty()
+                    links_f6_visuais = re.findall(REGEX_PURE_URL, link_f6 or "")
+                    if links_f6_visuais:
+                        placeholder_links_f6.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f6_visuais
+                                ]
+                            )
+                        )
+
+                # Avaliação de projeção do índice no momento da digitação
+                v_indice_exib = converte_percentual_br_para_float(input_f6_str)
+
+                if v_indice_exib > 0.54:
+                    pts_f6_exib = 0.0
+                    texto_resultado_exib = "🚨 CRÍTICO: Maior que 54,00% (Gera Rebaixamento de Faixa Geral)"
+                    estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                elif 0.513 <= v_indice_exib <= 0.54:
+                    pts_f6_exib = -20.0
+                    texto_resultado_exib = "⚠️ ALERTA: Entre 51,30% e 54,00% (Penalidade: -20,00 pontos)"
+                    estilo_status_exib = "color: #d97706; font-weight: bold;"
+                else:
+                    pts_f6_exib = 0.0
+                    texto_resultado_exib = "✅ REGULAR: Menor que 51,30% (Sem penalidades)"
+                    estilo_status_exib = "color: #16a34a; font-weight: bold;"
+
+                fmt_percentual = f"{v_indice_exib * 100:.2f}%".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📊 <b>Índice Calculado:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{fmt_percentual}</code><br>
+                    ⚖️ <b>Status LRF (Projeção):</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F6", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F6", key=f"btn_salvar_f6_{ano_sel}", type="primary"):
+                    v_indice = converte_percentual_br_para_float(st.session_state.get(chave_input_f6, input_f6_str))
+
+                    # Regra oficial de enquadramento
+                    if v_indice > 0.54:
+                        pts_f6 = 0.0  # O rebaixamento da faixa do i-Fiscal é tratado na consolidação geral
+                    elif 0.513 <= v_indice <= 0.54:
+                        pts_f6 = -20.0
+                    else:
+                        pts_f6 = 0.0
+
+                    str_banco = f"{v_indice:.4f}"
+                    lnk_val_f6 = link_f6.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f6, dF6.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura iFiscal
+                    save_resp_ifiscal(
+                        qid="F6",
+                        valor=str_banco,
+                        pontos=pts_f6,
+                        link=lnk_val_f6,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data
+                    res_data["F6"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f6,
+                        "link": lnk_val_f6,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f6 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f6_salva or "")]
+
+                    if lnk_val_f6 != evidencia_f6_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f6_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f6_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Índice do Indicador F6 salvo com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação/impacto salvo
+                pts_f6_salvos = float(dF6.get("pontos", 0.0))
+                val_salvo_pct = float_f6 * 100.0
+
+                if float_f6 > 0.54:
+                    status_f6_tag = "<span style='color:#dc2626; font-weight:bold;'>🚨 Rebaixamento de Faixa Geral</span>"
+                elif pts_f6_salvos < 0:
+                    status_f6_tag = f"<span style='color:#d97706; font-weight:bold;'>⚠️ Penalidade: {pts_f6_salvos:.2f} pontos</span>"
+                else:
+                    status_f6_tag = "<span style='color:#28a745; font-weight:bold;'>✅ Sem Penalidade (0,00 pts)</span>"
+
+                st.markdown(
+                    f"📊 Impacto F6 Salvo ({val_salvo_pct:.2f}%): {status_f6_tag}",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F6 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f6_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F6", st.session_state.get(f"links_pendentes_f6_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f6_{ano_sel}"] = False
+
     
