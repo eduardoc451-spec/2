@@ -222,20 +222,21 @@ def modal_aviso_link(qid, links_encontrados):
         st.rerun()
 
 # =============================================================================
-# BANCO DE DADOS NEON (UNIFICADO)
+# BANCO DE DADOS NEON (ISOLADO PARA O iFISCAL)
 # =============================================================================
 def get_connection():
     """Conecta ao banco Neon PostgreSQL usando st.secrets."""
     return psycopg2.connect(st.secrets["DATABASE_URL"], sslmode="require")
 
 
-def init_db():
-    """Inicializa a tabela unificada no PostgreSQL."""
+def init_db_ifiscal():
+    """Inicializa a tabela EXCLUSIVA do i-Fiscal no PostgreSQL."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS respostas (
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS respostas_ifiscal (
                         id VARCHAR(100) NOT NULL,
                         ano INT NOT NULL,
                         valor TEXT,
@@ -246,52 +247,68 @@ def init_db():
                         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         PRIMARY KEY (id, ano)
                     );
-                """)
+                    """
+                )
             conn.commit()
     except Exception as e:
-        logging.error(f"Erro ao inicializar banco Neon: {e}")
+        logging.error(f"Erro ao inicializar tabela respostas_ifiscal: {e}")
 
-# Executa criação ao importar o módulo
+
+# Inicializa a tabela do iFiscal ao importar
 try:
-    init_db()
+    init_db_ifiscal()
 except Exception as e:
-    logging.error(f"Erro na inicialização automática do BD: {e}")
+    logging.error(f"Erro na inicialização da tabela respostas_ifiscal: {e}")
 
 
-def load_respostas(ano):
+def load_respostas_ifiscal(ano):
+    """Carrega EXCLUSIVAMENTE as respostas do i-Fiscal do banco."""
     dados_ano = {}
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas WHERE ano = %s",
+                    "SELECT id, valor, pontos, link, comentarios FROM respostas_ifiscal WHERE ano = %s",
                     (int(ano),),
                 )
                 rows = cursor.fetchall()
                 for row in rows:
                     qid, valor, pontos, link, comentarios_raw = row
                     try:
-                        comentarios_lista = json.loads(comentarios_raw) if comentarios_raw else []
+                        comentarios_lista = (
+                            json.loads(comentarios_raw)
+                            if comentarios_raw
+                            else []
+                        )
                     except Exception:
                         comentarios_lista = []
 
-                    dados_ano[qid] = {
+                    dados_ano[str(qid)] = {
                         "valor": valor,
                         "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link,
+                        "link": link or "",
                         "comentarios": comentarios_lista,
                     }
     except Exception as e:
-        logging.error(f"Erro ao carregar respostas do Neon: {e}")
+        logging.error(f"Erro ao carregar respostas_ifiscal do Neon: {e}")
     return dados_ano
 
 
-def save_resp(qid, valor, pontos, link, comentarios=None):
-    ano_sel = st.session_state.get("ano_referencia_global")
+def save_resp_ifiscal(qid, valor, pontos, link, comentarios=None):
+    """Salva a resposta do i-Fiscal isolada na tabela respostas_ifiscal."""
+    # Busca do ano exclusivo do iFiscal ou do global
+    ano_sel = st.session_state.get(
+        "ano_referencia_ifiscal",
+        st.session_state.get("ano_referencia_global"),
+    )
     if not ano_sel:
         return
 
-    comentarios_json = json.dumps(comentarios, ensure_ascii=False) if comentarios is not None else "[]"
+    comentarios_json = (
+        json.dumps(comentarios, ensure_ascii=False)
+        if comentarios is not None
+        else "[]"
+    )
     timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
@@ -299,26 +316,38 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
+                    INSERT INTO respostas_ifiscal (id, ano, valor, pontos, link, comentarios, atualizado_em)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id, ano) DO UPDATE SET
                         valor = EXCLUDED.valor,
                         pontos = EXCLUDED.pontos,
                         link = EXCLUDED.link,
-                        comentarios = COALESCE(EXCLUDED.comentarios, respostas.comentarios),
+                        comentarios = COALESCE(EXCLUDED.comentarios, respostas_ifiscal.comentarios),
                         atualizado_em = EXCLUDED.atualizado_em;
                     """,
-                    (qid, int(ano_sel), str(valor), float(pontos), str(link), comentarios_json, timestamp_atual),
+                    (
+                        str(qid),
+                        int(ano_sel),
+                        str(valor),
+                        float(pontos),
+                        str(link),
+                        comentarios_json,
+                        timestamp_atual,
+                    ),
                 )
             conn.commit()
     except Exception as e:
-        st.error(f"Erro ao salvar {qid} no Neon: {e}")
+        st.error(f"Erro ao salvar {qid} na tabela respostas_ifiscal: {e}")
 
 
-def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
-    """Gera o diálogo interno com histórico e gerenciamento de comentários."""
-    ano_sel = st.session_state.get("ano_referencia_global", datetime.now().year)
-    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+def bloco_comentarios_ifiscal(questao_id, res_data, sufixo="fiscal"):
+    """Gera o diálogo interno com histórico e gerenciamento de comentários do iFiscal."""
+    ano_sel = st.session_state.get(
+        "ano_referencia_ifiscal", datetime.now().year
+    )
+    usuario_atual = st.session_state.get(
+        "username", st.session_state.get("usuario", "Usuário Anônimo")
+    )
 
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
@@ -336,15 +365,24 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
         if "status_definido" in com:
             status_global = com["status_definido"]
 
-    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+    badge_status = (
+        "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+    )
 
     with st.expander(
         f"💬 Diálogo Interno {id_chave} | Status: {badge_status}",
         expanded=(status_global == "Pendente"),
     ):
-        st.markdown("<b style='font-size: 13px;'>Status Atual do Quesito:</b>", unsafe_allow_html=True)
+        st.markdown(
+            "<b style='font-size: 13px;'>Status Atual do Quesito:</b>",
+            unsafe_allow_html=True,
+        )
         opcoes_status = ["Resolvido", "Pendente"]
-        idx_status_atual = opcoes_status.index(status_global)
+        idx_status_atual = (
+            opcoes_status.index(status_global)
+            if status_global in opcoes_status
+            else 0
+        )
 
         novo_status_clicado = st.radio(
             f"Definir status para {id_chave}:",
@@ -363,7 +401,7 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                 "status_definido": novo_status_clicado,
             }
             historico.append(log_mudanca)
-            save_resp(
+            save_resp_ifiscal(
                 qid=questao_id,
                 valor=dados_questao.get("valor", ""),
                 pontos=dados_questao.get("pontos", 0.0),
@@ -372,7 +410,9 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
             )
             st.rerun()
 
-        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True
+        )
 
         if historico:
             for idx, com in enumerate(historico):
@@ -401,10 +441,17 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                         )
 
                 with col_lixeira:
-                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                    if st.button("🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}", help="Excluir este comentário"):
+                    st.markdown(
+                        "<div style='margin-top: 10px;'></div>",
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "🗑️",
+                        key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}",
+                        help="Excluir este comentário",
+                    ):
                         historico.pop(idx)
-                        save_resp(
+                        save_resp_ifiscal(
                             qid=questao_id,
                             valor=dados_questao.get("valor", ""),
                             pontos=dados_questao.get("pontos", 0.0),
@@ -413,17 +460,32 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                         )
                         st.rerun()
         else:
-            st.markdown("<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>", unsafe_allow_html=True)
+            st.markdown(
+                "<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>",
+                unsafe_allow_html=True,
+            )
 
-        st.markdown("<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>", unsafe_allow_html=True)
+        st.markdown(
+            "<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>",
+            unsafe_allow_html=True,
+        )
 
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
 
-        novo_texto = st.text_area("Digite sua mensagem:", key=key_texto, height=80, label_visibility="collapsed")
+        novo_texto = st.text_area(
+            "Digite sua mensagem:",
+            key=key_texto,
+            height=80,
+            label_visibility="collapsed",
+        )
 
-        if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
+        if st.button(
+            "Postar Comentário",
+            key=f"btn_com_{id_chave}_{ano_sel}",
+            type="primary",
+        ):
             if novo_texto.strip():
                 nova_mensagem = {
                     "autor": usuario_atual,
@@ -432,7 +494,7 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                     "status_definido": status_global,
                 }
                 historico.append(nova_mensagem)
-                save_resp(
+                save_resp_ifiscal(
                     qid=questao_id,
                     valor=dados_questao.get("valor", ""),
                     pontos=dados_questao.get("pontos", 0.0),
@@ -443,31 +505,39 @@ def bloco_comentarios(questao_id, res_data, sufixo="fiscal"):
                 st.rerun()
 
 
-def get_all_years_data():
+def get_all_years_data_ifiscal():
+    """Busca histórico EXCLUSIVO do i-Fiscal no Neon."""
     all_data = {}
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC")
+                cursor.execute(
+                    "SELECT id, ano, valor, pontos, link, comentarios FROM respostas_ifiscal ORDER BY ano DESC"
+                )
                 rows = cursor.fetchall()
                 for row in rows:
                     qid, ano, valor, pontos, link, comentarios_raw = row
                     try:
-                        comentarios_lista = json.loads(comentarios_raw) if comentarios_raw else []
+                        comentarios_lista = (
+                            json.loads(comentarios_raw)
+                            if comentarios_raw
+                            else []
+                        )
                     except Exception:
                         comentarios_lista = []
 
                     if ano not in all_data:
                         all_data[ano] = {}
-                    all_data[ano][qid] = {
+                    all_data[ano][str(qid)] = {
                         "valor": valor,
                         "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link,
+                        "link": link or "",
                         "comentarios": comentarios_lista,
                     }
     except Exception as e:
-        logging.error(f"Erro ao buscar histórico no Neon: {e}")
+        logging.error(f"Erro ao buscar histórico do iFiscal no Neon: {e}")
     return all_data
+    
 # =============================================================================
 # 2. GERADOR DO RELATÓRIO PDF (i-Fiscal)
 # =============================================================================
