@@ -8472,6 +8472,128 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("12.3.1", st.session_state.get(f"links_pendentes_12_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_12_3_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 12.4 • MENSURAÇÃO FINANCEIRA (MONETÁRIO)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_12_4_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 12.4 - Valor Total da Renúncia ({ano_sel})", expanded=True):
+                st.subheader("12.4 • Montante Financeiro Estimado")
+                st.write(f"**Informe o valor das renúncias no exercício de {ano_sel}:**")
+                
+                # Estado inicial / persistente
+                d124 = res_data.get("12.4") or {"valor": "R$ 0,00", "pontos": 0.0, "link": "", "comentarios": ""}
+                val_inicial = d124.get("valor", "R$ 0,00")
+                if not val_inicial.startswith("R$"): 
+                    val_inicial = f"R$ {val_inicial}"
+                evidencia_124_salva = d124.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_txt_124 = f"txt_124_dinamico_{ano_sel}_fiscal"
+                chave_link_124 = f"txt_lnk_124_{ano_sel}_fiscal"
+                chave_coment_124 = f"coment_12.4_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    val_digitado_124 = st.text_input(
+                        "Informe o Valor Total (R$):", 
+                        value=val_inicial, 
+                        placeholder="Ex: 100.000,00", 
+                        key=chave_txt_124
+                    )
+                with c2:
+                    link_124 = st.text_area(
+                        f"Link/Evidência da Memória de Cálculo ({ano_sel}):", 
+                        value=evidencia_124_salva, 
+                        key=chave_link_124, 
+                        placeholder="Insira os links e evidências da memória de cálculo...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_124 = st.empty()
+                    links_124_visuais = re.findall(REGEX_PURE_URL, link_124 or "")
+                    if links_124_visuais:
+                        placeholder_links_124.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_124_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("12.4", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 12.4", key=f"btn_salvar_12_4_{ano_sel}", type="primary"):
+                    v_cru = st.session_state.get(chave_txt_124, val_inicial)
+                    lnk_val_124 = link_124.strip()
+                    
+                    # Tratamento e sanitização do valor monetário
+                    num_limpo = v_cru.replace("R$", "").replace(" ", "")
+                    if "." in num_limpo and "," in num_limpo:
+                        num_limpo = num_limpo.replace(".", "").replace(",", ".")
+                    elif "," in num_limpo:
+                        num_limpo = num_limpo.replace(",", ".")
+                        
+                    try:
+                        valor_float = float(num_limpo)
+                        valor_br = f"{valor_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        v124_salvar = f"R$ {valor_br}"
+                    except ValueError:
+                        v124_salvar = val_inicial  # Reverte em caso de falha no parsing numérico
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_124, d124.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="12.4",
+                        valor=v124_salvar,
+                        pontos=0.0,
+                        link=lnk_val_124,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["12.4"] = {
+                        "valor": v124_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val_124,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_124 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_124_salva or "")]
+
+                    if lnk_val_124 != evidencia_124_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_12_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_12_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 12.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Quesito meramente informativo)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 12.4: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 12.4 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_12_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.4", st.session_state.get(f"links_pendentes_12_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_4_{ano_sel}"] = False
+
 
 
 
