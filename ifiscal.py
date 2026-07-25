@@ -9464,6 +9464,119 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("13.3", st.session_state.get(f"links_pendentes_13_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 14.0 • DÍVIDA ATIVA JUDICIAL
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_14_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 14.0 - Dívida Ativa Judicial ({ano_sel})", expanded=True):
+                st.subheader("14.0 • Cobrança Judicial")
+                st.write(f"**O Município possui dívida ativa executada de forma judicial em {ano_sel}?**")
+                
+                # Estado inicial / persistente
+                d140 = res_data.get("14.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc140 = ["Selecione...", "Sim", "Não"]
+                
+                valor_limpo_140 = d140.get("valor", "Selecione...")
+                if valor_limpo_140 not in opc140:
+                    valor_limpo_140 = "Selecione..."
+                
+                evidencia_140_salva = d140.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_140 = f"rad_140_{ano_sel}_fiscal"
+                chave_link_140 = f"txt_140_{ano_sel}_fiscal"
+                chave_coment_140 = f"coment_14.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 14.0:", 
+                        opc140, 
+                        index=opc140.index(valor_limpo_140), 
+                        key=chave_rad_140
+                    )
+
+                with c2:
+                    link_140 = st.text_area(
+                        f"Link/Evidência Geral de Execuções ({ano_sel}):", 
+                        value=evidencia_140_salva, 
+                        key=chave_link_140, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_140 = st.empty()
+                    links_140_visuais = re.findall(REGEX_PURE_URL, link_140 or "")
+                    if links_140_visuais:
+                        placeholder_links_140.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_140_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("14.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 14.0", key=f"btn_salvar_14_0_{ano_sel}", type="primary"):
+                    val_para_salvar = st.session_state.get(chave_rad_140, valor_limpo_140)
+                    lnk_val_140 = link_140.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_140, d140.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal (Pontuação neutra = 0.0)
+                    save_resp_ifiscal(
+                        qid="14.0",
+                        valor=val_para_salvar,
+                        pontos=0.0,
+                        link=lnk_val_140,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["14.0"] = {
+                        "valor": val_para_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val_140,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_140 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_140_salva or "")]
+
+                    if lnk_val_140 != evidencia_140_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_14_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 14.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_140 = d140.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto 14.0: {pts_exibido_140:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 14.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_14_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("14.0", st.session_state.get(f"links_pendentes_14_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = False
+
 
 
 
