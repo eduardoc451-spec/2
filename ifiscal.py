@@ -14112,4 +14112,192 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F6", st.session_state.get(f"links_pendentes_f6_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f6_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F7 • DESPESAS COM PESSOAL – PODER LEGISLATIVO (LRF)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f7_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F7 - Despesas com Pessoal – Poder Legislativo ({ano_sel})", expanded=True):
+                st.subheader("F7 • Despesas com Pessoal – Poder Legislativo (LRF)")
+                st.write("**Índice da Despesa Total com Pessoal do Legislativo em relação à Receita Corrente Líquida (DPPL / RCL = AB)**")
+                
+                # Tabela Oficial de Parâmetros
+                st.markdown(r"""
+                | Resultado do Índice $AB$ (%) | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior que 6,00% ($> 0,06$) | 🚨 -10 (Perde 10 pontos) |
+                | Entre 5,60% e 6,00% ($\ge 0,056$ e $\le 0,06$) | ⚠️ Graduação entre 0 e -10 pontos |
+                | Menor que 5,60% ($< 0,056$) | ✅ 00 pontos (Sem penalidades) |
+                """)
+                
+                # Memórias matemáticas oficiais do indicador F7
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional no Intervalo Crítico (Base Decimal):</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 5,70% (0,057) e menores ou iguais a 6,00% (0,060):</b> A graduação de penalidade é calculada estritamente sobre a base decimal. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((AB – 0,057) / 0,003) * (-10)</code> <br><i>Exemplo: se AB = 5,80% (0,058), a perda será de -3,33 pontos. Se AB = 6,00% (0,060), atinge o teto de -10,00 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função de conversão de percentual para float decimal (base 1.0)
+                def converte_percentual_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("%", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        val = float(limpo)
+                        val_dec = val / 100.0 if val > 1.0 else val
+                        return round(val_dec, 4)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente
+                dF7 = res_data.get("F7") or {"valor": "0.0000", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    float_ab = float(dF7.get("valor", "0.0"))
+                except Exception:
+                    float_ab = 0.0
+
+                str_inicial_ab = f"{float_ab * 100:.2f}%".replace(".", ",")
+                evidencia_f7_salva = dF7.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_input_f7 = f"txt_f7_ab_{ano_sel}_fiscal"
+                chave_link_f7 = f"txt_f7_link_{ano_sel}_fiscal"
+                chave_coment_f7 = f"coment_F7_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_ab_str = st.text_input(
+                        "Índice de Pessoal do Legislativo (AB) - %:",
+                        value=str_inicial_ab,
+                        placeholder="Ex: 5,80%",
+                        key=chave_input_f7
+                    )
+
+                with c2:
+                    link_f7 = st.text_area(
+                        f"Link/Evidência (F7 - Item GF27 AUDESP) ({ano_sel}):", 
+                        value=evidencia_f7_salva, 
+                        key=chave_link_f7, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f7 = st.empty()
+                    links_f7_visuais = re.findall(REGEX_PURE_URL, link_f7 or "")
+                    if links_f7_visuais:
+                        placeholder_links_f7.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f7_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado para exibição visual imediata
+                v_indice_exib = converte_percentual_br_para_float(input_ab_str)
+
+                if v_indice_exib > 0.0600:
+                    pts_exib = -10.0
+                    texto_resultado_exib = "🚨 CRÍTICO: Limite Máximo Extrapolado (> 6,00%)"
+                    estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                elif 0.0570 <= v_indice_exib <= 0.0600:
+                    pts_exib = ((v_indice_exib - 0.0570) / 0.0030) * (-10.0)
+                    texto_resultado_exib = "⚠️ ALERTA DE GRADUAÇÃO (Fórmula Aplicada)"
+                    estilo_status_exib = "color: #d97706; font-weight: bold;"
+                elif 0.0560 <= v_indice_exib < 0.0570:
+                    pts_exib = 0.0
+                    texto_resultado_exib = "⚠️ Atenção: Faixa Prudencial de Alerta (Sem penalidade)"
+                    estilo_status_exib = "color: #b45309;"
+                else: # v_indice_exib < 0.0560
+                    pts_exib = 0.0
+                    texto_resultado_exib = "✅ REGULAR: Menor que 5,60%"
+                    estilo_status_exib = "color: #16a34a; font-weight: bold;"
+
+                fmt_percentual = f"{v_indice_exib * 100:.2f}%".replace(".", ",")
+                fmt_decimal = f"{v_indice_exib:.4f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📊 <b>Índice Informado:</b> {fmt_percentual} | 🕵️ <b>Base Decimal de Análise:</b> <code style="font-size: 14px; font-weight: bold; color: #b45309;">{fmt_decimal}</code><br>
+                    ⚖️ <b>Situação do Poder Legislativo:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Pontuação Calculada:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{pts_exib:.2f} pontos</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F7", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F7", key=f"btn_salvar_f7_{ano_sel}", type="primary"):
+                    v_indice = converte_percentual_br_para_float(st.session_state.get(chave_input_f7, input_ab_str))
+
+                    # Recálculo oficial no salvamento
+                    if v_indice > 0.0600:
+                        pts_f7 = -10.0
+                    elif 0.0570 <= v_indice <= 0.0600:
+                        pts_f7 = ((v_indice - 0.0570) / 0.0030) * (-10.0)
+                    else: # v_indice < 0.0570
+                        pts_f7 = 0.0
+
+                    str_banco = f"{v_indice:.4f}"
+                    lnk_val_f7 = link_f7.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f7, dF7.get("comentarios", ""))
+
+                    # Salva no banco de dados via iFiscal
+                    save_resp_ifiscal(
+                        qid="F7",
+                        valor=str_banco,
+                        pontos=pts_f7,
+                        link=lnk_val_f7,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data
+                    res_data["F7"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f7,
+                        "link": lnk_val_f7,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f7 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f7_salva or "")]
+
+                    if lnk_val_f7 != evidencia_f7_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f7_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f7_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Índice do Indicador F7 salvo com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f7_salvos = float(dF7.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto F7: {pts_f7_salvos:.2f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F7 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f7_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F7", st.session_state.get(f"links_pendentes_f7_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f7_{ano_sel}"] = False
+
     
