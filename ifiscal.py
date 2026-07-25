@@ -10695,6 +10695,117 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("17.0", st.session_state.get(f"links_pendentes_17_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 17.1 • DESCRIÇÃO DA METODOLOGIA DE CONTROLE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_17_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.1 - Metodologia de Controle Descritiva ({ano_sel})", expanded=True):
+                st.subheader("17.1 • Metodologia do Polo Passivo")
+                st.write("**Descreva de que forma é realizado o controle das ações judiciais em que é parte (polo passivo):**")
+                
+                # Estado inicial / persistente
+                d171 = res_data.get("17.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_171 = str(d171.get("valor", ""))
+                evidencia_171_salva = d171.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_txt_171 = f"txt_171_desc_{ano_sel}_fiscal"
+                chave_link_171 = f"txt_lnk_171_{ano_sel}_fiscal"
+                chave_coment_171 = f"coment_17.1_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    st.text_area(
+                        "Descreva a metodologia/sistema de controle:",
+                        value=v_salvo_171,
+                        placeholder="Ex: O controle é realizado via sistema informatizado da Procuradoria Geral...",
+                        key=chave_txt_171,
+                        height=120
+                    )
+
+                with c4:
+                    link_171 = st.text_area(
+                        f"Evidência Adicional ({ano_sel}):", 
+                        value=evidencia_171_salva, 
+                        key=chave_link_171, 
+                        placeholder="Insira os links e evidências...",
+                        height=120
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_171 = st.empty()
+                    links_171_visuais = re.findall(REGEX_PURE_URL, link_171 or "")
+                    if links_171_visuais:
+                        placeholder_links_171.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_171_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("17.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 17.1", key=f"btn_salvar_17_1_{ano_sel}", type="primary"):
+                    val_171_digitado = st.session_state.get(chave_txt_171, v_salvo_171).strip()
+                    lnk_val_171 = link_171.strip()
+
+                    # Quesito meramente descritivo (0.0 ponto)
+                    pts_171 = 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_171, d171.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="17.1",
+                        valor=val_171_digitado,
+                        pontos=pts_171,
+                        link=lnk_val_171,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["17.1"] = {
+                        "valor": val_171_digitado,
+                        "pontos": pts_171,
+                        "link": lnk_val_171,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_171 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_171_salva or "")]
+
+                    if lnk_val_171 != evidencia_171_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_17_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Descrição e comentários do Quesito 17.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição fixa de pontuação neutra
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 17.1: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 17.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_17_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.1", st.session_state.get(f"links_pendentes_17_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = False
+
 
 
 
