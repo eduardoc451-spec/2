@@ -12337,6 +12337,118 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("23.0", st.session_state.get(f"links_pendentes_23_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_23_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 24.0 • ADESÃO A PARCELAMENTOS DE DÉBITOS (RGPS)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_24_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 24.0 - Adesão a Parcelamento RGPS ({ano_sel})", expanded=True):
+                st.subheader("24.0 • Identificação de Parcelamentos")
+                st.write(f"**A Prefeitura aderiu a algum parcelamento de encargos sociais (Regime Geral de Previdência Social - RGPS)?**")
+                
+                # Estado inicial / persistente
+                d240 = res_data.get("24.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc240 = ["Selecione...", "Sim", "Não"]
+                
+                valor_limpo_240 = str(d240.get("valor", "Selecione..."))
+                if valor_limpo_240 not in opc240:
+                    valor_limpo_240 = "Selecione..."
+                
+                evidencia_240_salva = d240.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_240 = f"rad_240_{ano_sel}_fiscal"
+                chave_link_240 = f"txt_240_{ano_sel}_fiscal"
+                chave_coment_240 = f"coment_24.0_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    st.radio(
+                        "Selecione 24.0:", 
+                        opc240, 
+                        index=opc240.index(valor_limpo_240), 
+                        key=chave_rad_240
+                    )
+
+                with c4:
+                    link_240 = st.text_area(
+                        f"Link/Evidência do Termo de Parcelamento / Extrato da RFB ({ano_sel}):", 
+                        value=evidencia_240_salva, 
+                        key=chave_link_240, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_240 = st.empty()
+                    links_240_visuais = re.findall(REGEX_PURE_URL, link_240 or "")
+                    if links_240_visuais:
+                        placeholder_links_240.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_240_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("24.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 24.0", key=f"btn_salvar_24_0_{ano_sel}", type="primary"):
+                    val_240_selecionado = st.session_state.get(chave_rad_240, valor_limpo_240)
+                    lnk_val_240 = link_240.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_240, d240.get("comentarios", ""))
+
+                    # Quesito qualificador/informativo (pontuação 0.0)
+                    save_resp_ifiscal(
+                        qid="24.0",
+                        valor=val_240_selecionado,
+                        pontos=0.0,
+                        link=lnk_val_240,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["24.0"] = {
+                        "valor": val_240_selecionado,
+                        "pontos": 0.0,
+                        "link": lnk_val_240,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_240 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_240_salva or "")]
+
+                    if lnk_val_240 != evidencia_240_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_24_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_24_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 24.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação informativa (sempre 0.0)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 24.0: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 24.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_24_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("24.0", st.session_state.get(f"links_pendentes_24_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_24_0_{ano_sel}"] = False
+
 
 
 
