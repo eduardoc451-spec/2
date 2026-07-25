@@ -6316,6 +6316,131 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("9.1", st.session_state.get(f"links_pendentes_9_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 9.2 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_9_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 9.2 - Página de Divulgação do ITBI", expanded=True):
+                st.subheader("9.2 • Divulgação Eletrônica da Regulamentação")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação da regulamentação do ITBI:**")
+                st.caption("⚠️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ** (Aplica penalidade de -03 pontos).*")
+                
+                # Estado inicial / persistente
+                d92 = res_data.get("9.2") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_92 = d92.get("valor", "")
+                evidencia_92_salva = d92.get("link", "")
+
+                # Chaves padronizadas
+                chave_txt_92 = f"txt_92_val_{ano_sel}_fiscal"
+                chave_link_92 = f"l92_in_{ano_sel}_fiscal"
+                chave_coment_92 = f"coment_9.2_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    v_input_92 = st.text_input(
+                        "Link de divulgação do ITBI (ou XYZ):", 
+                        value=v_salvo_92, 
+                        key=chave_txt_92
+                    )
+                    
+                    # Detecção visual de links no campo de texto
+                    lk_detec_92 = re.findall(REGEX_PURE_URL, v_input_92 or "")
+                    if lk_detec_92: 
+                        st.markdown(
+                            "**🔗 Detectado no campo:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in lk_detec_92
+                                ]
+                            )
+                        )
+
+                with c2:
+                    link_92 = st.text_area(
+                        "Link/Evidência Geral (9.2):", 
+                        value=evidencia_92_salva, 
+                        key=chave_link_92, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo de evidências
+                    placeholder_links_92 = st.empty()
+                    links_92_visuais = re.findall(REGEX_PURE_URL, link_92 or "")
+                    if links_92_visuais: 
+                        placeholder_links_92.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_92_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("9.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.2", key=f"btn_salvar_9_2_{ano_sel}", type="primary"):
+                    val_sel_92 = st.session_state.get(chave_txt_92, v_salvo_92).strip()
+                    lnk_val_92 = link_92.strip()
+                    
+                    # Regra de Pontuação (-3.0 para XYZ, 0.0 caso contrário)
+                    pts92_nova = -3.0 if val_sel_92.upper() == "XYZ" else 0.0
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_92, d92.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="9.2",
+                        valor=val_sel_92,
+                        pontos=float(pts92_nova),
+                        link=lnk_val_92,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["9.2"] = {
+                        "valor": val_sel_92,
+                        "pontos": float(pts92_nova),
+                        "link": lnk_val_92,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_92 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_92_salva or "")]
+
+                    if lnk_val_92 != evidencia_92_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 9.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_92 = d92.get("pontos", 0.0)
+                cor_status_92 = "#dc3545" if pts_exibido_92 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_status_92}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 9.2: {pts_exibido_92:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 9.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = False
+
 
 
 
