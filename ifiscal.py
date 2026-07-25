@@ -14300,4 +14300,211 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F7", st.session_state.get(f"links_pendentes_f7_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f7_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F8 • APURAÇÃO DO RESULTADO FINANCEIRO (SUPERÁVIT/DÉFICIT)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f8_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F8 - Apuração do Resultado Financeiro ({ano_sel})", expanded=True):
+                st.subheader("F8 • Apuração do Resultado Financeiro (Superávit/Déficit) – Resultado Consolidado")
+                st.write("**Divisão entre o Ativo Financeiro e o Passivo Financeiro (AC / AD = AE)**")
+                
+                # Tabela Oficial de Parâmetros e Pontuações do Indicador F8
+                st.markdown("""
+                | Resultado de $AE$ | Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior ou igual a 1,30 | 0,00 pts |
+                | Maior que 1,10 e menor que 1,30 | Graduação entre 75,00 e 0,00 pts |
+                | Maior ou igual a 1,00 e menor ou igual a 1,10 | 75,00 pts |
+                | Maior que 0,75 e menor que 1,00 | Graduação entre 0,00 e 75,00 pts |
+                | Menor ou igual a 0,75 | 0,00 pts |
+                """)
+                
+                # Memórias matemáticas oficiais do indicador F8
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regras de Distribuição Proporcional nos Intervalos:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 1,10 e menores que 1,30 (Superávit Elevado):</b> Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((AE – 1,30) * (-1) / 0,20) * 75</code> <br><i>Exemplo: se AE = 1,20, a nota do indicador será 37,50 pontos.</i></li>
+                        <li style="margin-top: 8px;"><b>Para resultados maiores que 0,75 e menores que 1,00 (Tendência a Déficit):</b> Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((AE – 0,75) / 0,25) * 75</code> <br><i>Exemplo: se AE = 0,85, a nota do indicador será 30,00 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato no banco: "AC/AD")
+                dF8 = res_data.get("F8") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_ac, val_salvo_ad = str(dF8.get("valor", "0.00/1.00")).split("/")
+                    float_ac = float(val_salvo_ac)
+                    float_ad = float(val_salvo_ad)
+                except Exception:
+                    float_ac, float_ad = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_ac = f"R$ {float_ac:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_ad = f"R$ {float_ad:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f8_salva = dF8.get("link", "")
+
+                # Chaves de controle para session_state
+                chave_input_ac = f"txt_f8_ac_{ano_sel}_fiscal"
+                chave_input_ad = f"txt_f8_ad_{ano_sel}_fiscal"
+                chave_link_f8 = f"txt_f8_link_{ano_sel}_fiscal"
+                chave_coment_f8 = f"coment_F8_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_ac_str = st.text_input(
+                        "Ativo Financeiro (AC) - R$:",
+                        value=str_inicial_ac,
+                        placeholder="Ex: 1.200.000,00",
+                        key=chave_input_ac
+                    )
+                    
+                    input_ad_str = st.text_input(
+                        "Passivo Financeiro (AD) - R$:",
+                        value=str_inicial_ad,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_ad
+                    )
+
+                with c2:
+                    link_f8 = st.text_area(
+                        f"Link/Evidência (F8 - Balanço Patrimonial AUDESP) ({ano_sel}):", 
+                        value=evidencia_f8_salva, 
+                        key=chave_link_f8, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f8 = st.empty()
+                    links_f8_visuais = re.findall(REGEX_PURE_URL, link_f8 or "")
+                    if links_f8_visuais:
+                        placeholder_links_f8.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f8_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real com os dados da tela
+                v_ativo_exib = converte_moeda_br_para_float(input_ac_str)
+                v_passivo_exib = max(converte_moeda_br_para_float(input_ad_str), 0.01) # Evita divisão por zero
+
+                AE_exib = v_ativo_exib / v_passivo_exib
+
+                if v_ativo_exib == 0.0 and (link_f8.strip() == ""):
+                    pts_f8_exib = 0.0
+                    texto_pontuacao_exib = "⏳ Aguardando preenchimento dos valores..."
+                else:
+                    if AE_exib >= 1.30 or AE_exib <= 0.75:
+                        pts_f8_exib = 0.0
+                    elif 1.00 <= AE_exib <= 1.10:
+                        pts_f8_exib = 75.0
+                    elif 1.10 < AE_exib < 1.30:
+                        pts_f8_exib = ((AE_exib - 1.30) * (-1) / 0.20) * 75.0
+                    else: # 0.75 < AE_exib < 1.00
+                        pts_f8_exib = ((AE_exib - 0.75) / 0.25) * 75.0
+                    
+                    texto_pontuacao_exib = f"{pts_f8_exib:.2f} pontos"
+
+                str_ativo_fmt = f"R$ {v_ativo_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_passivo_fmt = f"R$ {v_passivo_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_ae_fmt = f"{AE_exib:.4f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Balanço Contábil:</b> {str_ativo_fmt} / {str_passivo_fmt}<br>
+                    📊 <b>Resultado do Indicador (AE):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_ae_fmt}</code><br>
+                    🎯 <b>Pontuação Calculada:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F8", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F8", key=f"btn_salvar_f8_{ano_sel}", type="primary"):
+                    v_ativo = converte_moeda_br_para_float(st.session_state.get(chave_input_ac, input_ac_str))
+                    v_passivo = max(converte_moeda_br_para_float(st.session_state.get(chave_input_ad, input_ad_str)), 0.01)
+
+                    AE = v_ativo / v_passivo
+
+                    if AE >= 1.30 or AE <= 0.75:
+                        pts_f8 = 0.0
+                    elif 1.00 <= AE <= 1.10:
+                        pts_f8 = 75.0
+                    elif 1.10 < AE < 1.30:
+                        pts_f8 = ((AE - 1.30) * (-1) / 0.20) * 75.0
+                    else: # 0.75 < AE < 1.00
+                        pts_f8 = ((AE - 0.75) / 0.25) * 75.0
+
+                    str_banco = f"{v_ativo:.2f}/{v_passivo:.2f}"
+                    lnk_val_f8 = link_f8.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f8, dF8.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F8",
+                        valor=str_banco,
+                        pontos=pts_f8,
+                        link=lnk_val_f8,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F8"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f8,
+                        "link": lnk_val_f8,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f8 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f8_salva or "")]
+
+                    if lnk_val_f8 != evidencia_f8_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f8_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f8_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F8 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f8_salvos = float(dF8.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Pontuação F8 Salva: {pts_f8_salvos:.2f} pontos obtidos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F8 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f8_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F8", st.session_state.get(f"links_pendentes_f8_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f8_{ano_sel}"] = False
+
     
