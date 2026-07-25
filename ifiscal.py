@@ -11182,6 +11182,124 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("18.1", st.session_state.get(f"links_pendentes_18_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_18_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 19.0 • DIVULGAÇÃO DE RECEITAS EM TEMPO REAL
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_19_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.0 - Receitas em Tempo Real ({ano_sel})", expanded=True):
+                st.subheader("19.0 • Divulgação de Receitas em Tempo Real")
+                st.write(f"**Houve divulgação das receitas arrecadadas em tempo real em {ano_sel}?**")
+                st.caption("ℹ️ *Tempo real é considerado até o 1º dia útil que sucede o do registro contábil.*")
+                
+                # Estado inicial / persistente
+                d190 = res_data.get("19.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc190 = ["Selecione...", "Sim – 03", "Não – 00"]
+                
+                valor_limpo_190 = str(d190.get("valor", "Selecione..."))
+                if valor_limpo_190 not in opc190:
+                    valor_limpo_190 = "Selecione..."
+                
+                evidencia_190_salva = d190.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_190 = f"rad_190_{ano_sel}_fiscal"
+                chave_link_190 = f"txt_190_{ano_sel}_fiscal"
+                chave_coment_190 = f"coment_19.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 19.0:", 
+                        opc190, 
+                        index=opc190.index(valor_limpo_190), 
+                        key=chave_rad_190
+                    )
+
+                with c2:
+                    link_190 = st.text_area(
+                        f"Link do Portal da Transparência / Tempo Real ({ano_sel}):", 
+                        value=evidencia_190_salva, 
+                        key=chave_link_190, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_190 = st.empty()
+                    links_190_visuais = re.findall(REGEX_PURE_URL, link_190 or "")
+                    if links_190_visuais:
+                        placeholder_links_190.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_190_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("19.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 19.0", key=f"btn_salvar_19_0_{ano_sel}", type="primary"):
+                    val_190_selecionado = st.session_state.get(chave_rad_190, valor_limpo_190)
+                    lnk_val_190 = link_190.strip()
+
+                    # Cálculo da pontuação
+                    pts_190 = 3.0 if "Sim" in val_190_selecionado else 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_190, d190.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="19.0",
+                        valor=val_190_selecionado,
+                        pontos=pts_190,
+                        link=lnk_val_190,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["19.0"] = {
+                        "valor": val_190_selecionado,
+                        "pontos": pts_190,
+                        "link": lnk_val_190,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_190 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_190_salva or "")]
+
+                    if lnk_val_190 != evidencia_190_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_19_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_19_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 19.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição de pontuação
+                pts_atuais_190 = d190.get("pontos", 0.0)
+                cor_p190 = "#28a745" if pts_atuais_190 > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_p190}; font-weight:bold;'>"
+                    f"📊 Impacto 19.0: {pts_atuais_190} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 19.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_19_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.0", st.session_state.get(f"links_pendentes_19_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_19_0_{ano_sel}"] = False
+
 
 
 
