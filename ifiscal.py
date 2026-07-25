@@ -17302,8 +17302,6 @@ def mostrar_formulario_ifiscal():
         # -------------------------------------------------------------------------
         # 1. RECUPERAÇÃO DA SÉRIE HISTÓRICA DE PONTOS POR ANO
         # -------------------------------------------------------------------------
-        # Tenta buscar do session_state/banco a lista de anos e suas pontuações totais
-        # Adaptado conforme a estrutura global do iFiscal
         historico_anos = st.session_state.get("lista_anos_disponiveis", [ano_sel])
         
         dados_serie_historica = []
@@ -17379,7 +17377,7 @@ def mostrar_formulario_ifiscal():
             )
 
             fig_linha.update_layout(
-                xaxis_title="Ano do Exército/Exercício Fiscal",
+                xaxis_title="Exercício Fiscal",
                 yaxis_title="Pontuação Total",
                 height=420,
                 margin=dict(l=20, r=20, t=50, b=20),
@@ -17393,7 +17391,7 @@ def mostrar_formulario_ifiscal():
                 st.dataframe(df_historico, use_container_width=True, hide_index=True)
 
         except ImportError:
-            # Fallback nativo do Streamlit (caso Plotly não esteja instalado)
+            # Fallback nativo do Streamlit (caso Plotly/Pandas não estejam disponíveis)
             st.markdown("### 📈 Evolução da Pontuação Total")
             chart_data = {d["Ano"]: d["Pontuação Total"] for d in dados_serie_historica}
             st.line_chart(chart_data)
