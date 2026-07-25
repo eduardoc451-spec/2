@@ -5846,6 +5846,122 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.2 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_8_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.2 - Rotina de Fiscalização do ISSQN", expanded=True):
+                st.subheader("8.2 • Mecanismos de Combate à Sonegação")
+                st.write("**Houve rotina de fiscalização para detectar contribuintes que deixaram de emitir a Nota Fiscal de Serviços por determinado período ou que apresentaram queda acentuada em suas operações, a fim de detectar o fim das atividades ou a sonegação do ISSQN?**")
+                
+                # Estado inicial / persistente
+                d82 = res_data.get("8.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc82 = ["Selecione...", "Sim por meio de sistema automatizado – 15", "Sim, manualmente – 08", "Não – 00"]
+                
+                v_salvo_82 = d82.get("valor", "Selecione...")
+                if v_salvo_82 not in opc82: 
+                    v_salvo_82 = "Selecione..."
+                
+                evidencia_82_salva = d82.get("link", "")
+
+                # Chaves padronizadas
+                chave_rad_82 = f"rad_82_{ano_sel}_fiscal"
+                chave_link_82 = f"l82_in_{ano_sel}_fiscal"
+                chave_coment_82 = f"coment_8.2_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1: 
+                    st.radio(
+                        "Selecione 8.2:", 
+                        opc82, 
+                        index=opc82.index(v_salvo_82), 
+                        key=chave_rad_82
+                    )
+                with c2: 
+                    link_82 = st.text_area(
+                        "Link/Evidência (8.2):", 
+                        value=evidencia_82_salva, 
+                        key=chave_link_82, 
+                        placeholder="Insira os links e evidências gerais...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_82 = st.empty()
+                    links_82_visuais = re.findall(REGEX_PURE_URL, link_82 or "")
+                    if links_82_visuais: 
+                        placeholder_links_82.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_82_visuais
+                                ]
+                            )
+                        )
+                
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("8.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.2", key=f"btn_salvar_8_2_{ano_sel}", type="primary"):
+                    val_sel_82 = st.session_state.get(chave_rad_82, v_salvo_82)
+                    lnk_val_82 = link_82.strip()
+                    
+                    # Regra de Pontuação: 15.0 para automatizado, 8.0 para manualmente, 0.0 caso contrário
+                    pts82_nova = 15.0 if "automatizado" in val_sel_82 else (8.0 if "manualmente" in val_sel_82 else 0.0)
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_82, d82.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="8.2",
+                        valor=val_sel_82,
+                        pontos=float(pts82_nova),
+                        link=lnk_val_82,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["8.2"] = {
+                        "valor": val_sel_82,
+                        "pontos": float(pts82_nova),
+                        "link": lnk_val_82,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_82 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_82_salva or "")]
+
+                    if lnk_val_82 != evidencia_82_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 8.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_82 = d82.get("pontos", 0.0)
+                cor_status_82 = "#28a745" if pts_exibido_82 > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_status_82}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 8.2: {pts_exibido_82:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 8.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
+
 
 
 
