@@ -9080,6 +9080,113 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("13.0", st.session_state.get(f"links_pendentes_13_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 13.1 • INSTRUMENTO NORMATIVO
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_13_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.1 - Identificação do Normativo ({ano_sel})", expanded=True):
+                st.subheader("13.1 • Instrumento Normativo da Dívida Ativa")
+                st.write("**Instrumento normativo de regulamentação da dívida ativa, Número e Data da publicação:**")
+                st.caption("ℹ️ *Caso não esteja disponível na internet, recomendamos anexar o documento no Sistema de Questionários.*")
+                
+                # Estado inicial / persistente
+                d131 = res_data.get("13.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_131 = d131.get("valor", "")
+                evidencia_131_salva = d131.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_txt_131 = f"txt_131_{ano_sel}_fiscal"
+                chave_link_131 = f"txt_lnk_131_{ano_sel}_fiscal"
+                chave_coment_131 = f"coment_13.1_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    v131_input = st.text_input(
+                        f"Instrumento normativo (Nº e Data) ({ano_sel}):", 
+                        value=v_salvo_131, 
+                        key=chave_txt_131,
+                        placeholder="Ex: Lei Complementar nº 123, de 10/01/2020"
+                    )
+                with c2:
+                    link_131 = st.text_area(
+                        f"Link/Evidência da Publicação (13.1) ({ano_sel}):", 
+                        value=evidencia_131_salva, 
+                        key=chave_link_131, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_131 = st.empty()
+                    links_131_visuais = re.findall(REGEX_PURE_URL, link_131 or "")
+                    if links_131_visuais:
+                        placeholder_links_131.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_131_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("13.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 13.1", key=f"btn_salvar_13_1_{ano_sel}", type="primary"):
+                    val_para_salvar = st.session_state.get(chave_txt_131, v_salvo_131).strip()
+                    lnk_val_131 = link_131.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_131, d131.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal (Pontuação neutra = 0.0)
+                    save_resp_ifiscal(
+                        qid="13.1",
+                        valor=val_para_salvar,
+                        pontos=0.0,
+                        link=lnk_val_131,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["13.1"] = {
+                        "valor": val_para_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val_131,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_131 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_131_salva or "")]
+
+                    if lnk_val_131 != evidencia_131_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 13.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 13.1: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 13.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_13_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = False
+
 
 
 
