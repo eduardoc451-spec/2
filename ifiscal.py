@@ -12697,6 +12697,128 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("25.0", st.session_state.get(f"links_pendentes_25_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_25_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 25.1 • AUTORIZAÇÃO FORMAL DE COMPENSAÇÃO (RFB)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_25_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 25.1 - Lastro Formal das Compensações ({ano_sel})", expanded=True):
+                st.subheader("25.1 • Regularidade / Decisão Autorizativa")
+                st.write("**Houve autorização formal administrativa da Receita Federal do Brasil (RFB) ou decisão judicial para realizar as compensações?**")
+                
+                # Estado inicial / persistente
+                d251 = res_data.get("25.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc251 = ["Selecione...", "Sim – 00", "Não – -25 (perde 25 pontos)"]
+                
+                valor_limpo_251 = str(d251.get("valor", "Selecione..."))
+                if valor_limpo_251 not in opc251:
+                    valor_limpo_251 = "Selecione..."
+                
+                evidencia_251_salva = d251.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_251 = f"rad_251_{ano_sel}_fiscal"
+                chave_link_251 = f"txt_251_{ano_sel}_fiscal"
+                chave_coment_251 = f"coment_25.1_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    st.radio(
+                        "Selecione 25.1:", 
+                        opc251, 
+                        index=opc251.index(valor_limpo_251), 
+                        key=chave_rad_251
+                    )
+
+                with c4:
+                    link_251 = st.text_area(
+                        f"Link/Evidência do Ato Autorizativo ou Sentença Judicial ({ano_sel}):", 
+                        value=evidencia_251_salva, 
+                        key=chave_link_251, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_251 = st.empty()
+                    links_251_visuais = re.findall(REGEX_PURE_URL, link_251 or "")
+                    if links_251_visuais:
+                        placeholder_links_251.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_251_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("25.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 25.1", key=f"btn_salvar_25_1_{ano_sel}", type="primary"):
+                    val_251_selecionado = st.session_state.get(chave_rad_251, valor_limpo_251)
+                    lnk_val_251 = link_251.strip()
+
+                    # Cálculo da pontuação conforme a escolha
+                    if "Sim" in val_251_selecionado:
+                        pts_251 = 0.0
+                    elif "Não" in val_251_selecionado:
+                        pts_251 = -25.0
+                    else:
+                        pts_251 = 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_251, d251.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="25.1",
+                        valor=val_251_selecionado,
+                        pontos=pts_251,
+                        link=lnk_val_251,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["25.1"] = {
+                        "valor": val_251_selecionado,
+                        "pontos": pts_251,
+                        "link": lnk_val_251,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_251 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_251_salva or "")]
+
+                    if lnk_val_251 != evidencia_251_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_25_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_25_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 25.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação atual
+                pts_atuais_251 = d251.get("pontos", 0.0)
+                cor_p251 = "#dc3545" if pts_atuais_251 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_p251}; font-weight:bold;'>"
+                    f"📊 Impacto 25.1: {pts_atuais_251} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 25.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_25_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("25.1", st.session_state.get(f"links_pendentes_25_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_25_1_{ano_sel}"] = False
+
 
 
 
