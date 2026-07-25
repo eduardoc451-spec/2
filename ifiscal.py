@@ -4505,6 +4505,127 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.3.1", st.session_state.get(f"links_pendentes_5_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_3_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.3.2 • PÁGINA DE DIVULGAÇÃO DA REVISÃO DA PGV (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_3_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.3.2 - Página de Divulgação da Revisão", expanded=True):
+                st.subheader("5.3.2 • Divulgação Eletrônica da Revisão")
+                st.write(
+                    "**Informe a página eletrônica (link na internet) de divulgação do Instrumento "
+                    "normativo de revisão da Planta Genérica de Valores (PGV):**"
+                )
+                st.caption("ℹ️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ***")
+
+                # Estado inicial / persistente (Pontuação fixa de 0.0)
+                d532 = res_data.get("5.3.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_532 = d532.get("valor", "")
+                evidencia_532_salva = d532.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_texto_532 = f"t532_{ano_sel}_fiscal"
+                chave_link_532 = f"l532_in_{ano_sel}_fiscal"
+                chave_coment_532 = f"coment_5.3.2_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_texto_532 = st.text_input(
+                        "Link de divulgação da revisão (ou XYZ):",
+                        value=v_salvo_532,
+                        key=chave_texto_532,
+                        placeholder="https://... ou XYZ"
+                    )
+
+                    # Detecta e exibe links no campo de divulgação
+                    placeholder_detec_532 = st.empty()
+                    links_detec_532 = re.findall(REGEX_PURE_URL, val_texto_532 or "")
+                    if links_detec_532:
+                        placeholder_detec_532.markdown(
+                            "**🔗 Detectado no campo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_detec_532
+                                ]
+                            )
+                        )
+
+                with col2:
+                    link_532 = st.text_area(
+                        "Link/Evidência Geral (5.3.2):",
+                        value=evidencia_532_salva,
+                        key=chave_link_532,
+                        placeholder="Insira os links e evidências complementares da divulgação...",
+                        height=100
+                    )
+                    placeholder_links_532 = st.empty()
+                    links_532_visuais = re.findall(REGEX_PURE_URL, link_532 or "")
+                    if links_532_visuais:
+                        placeholder_links_532.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_532_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.3.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.3.2", key=f"btn_salvar_5_3_2_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_texto_532, v_salvo_532).strip()
+                    lnk_val = link_532.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_532, d532.get("comentario", ""))
+
+                    # Salva no banco de dados Neon (Item informativo: 0.0 ponto)
+                    save_resp_ifiscal(
+                        qid="5.3.2",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.3.2"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_532_salva or "")]
+
+                    if lnk_val != evidencia_532_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_3_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_3_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 5.3.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 5.3.2: 0,0 ponto (Quesito Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.3.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_3_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.3.2", st.session_state.get(f"links_pendentes_5_3_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_3_2_{ano_sel}"] = False
+
 
 
 
