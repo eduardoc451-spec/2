@@ -13737,4 +13737,197 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F4", st.session_state.get(f"links_pendentes_f4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f4_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F5 • ANÁLISE DO NÍVEL DE CANCELAMENTO DE RESTOS A PAGAR
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f5_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F5 - Análise do Nível de Cancelamento de Restos a Pagar ({ano_sel})", expanded=True):
+                st.subheader("F5 • Análise do Nível de Cancelamento de Restos a Pagar")
+                st.write("**Divisão dos cancelamentos realizados pela posição inicial de restos a pagar [C / B = K]**")
+                
+                # Tabela Oficial de Parâmetros e Pontuações do Indicador F5
+                st.markdown("""
+                | Resultado de $K$ | Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior ou igual a 0,20 | 0 |
+                | Maior que 0,05 e menor que 0,20 | Graduação entre 0 e 25 |
+                | Menor ou igual a 0,05 | 25 |
+                """)
+                
+                # Memórias matemáticas oficiais do indicador F5
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional no Intervalo:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 0,05 e menores que 0,20:</b> A graduação será distribuída igualitariamente no intervalo. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((0,20 – K) / 0,15) * 25</code> <br><i>Exemplo: se K = 0,06, a nota do indicador será 23,33 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função de conversão monetária BR para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (Estrutura C/B)
+                dF5 = res_data.get("F5") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_c, val_salvo_b = str(dF5.get("valor", "0.00/1.00")).split("/")
+                    float_c = float(val_salvo_c)
+                    float_b = float(val_salvo_b)
+                except Exception:
+                    float_c, float_b = 0.0, 1.0
+
+                str_inicial_c = f"R$ {float_c:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_b = f"R$ {float_b:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f5_salva = dF5.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_input_c = f"txt_f5_c_{ano_sel}_fiscal"
+                chave_input_b = f"txt_f5_b_{ano_sel}_fiscal"
+                chave_link_f5 = f"txt_f5_link_{ano_sel}_fiscal"
+                chave_coment_f5 = f"coment_F5_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_c_str = st.text_input(
+                        "Cancelamentos no Exercício (C) - R$:",
+                        value=str_inicial_c,
+                        placeholder="Ex: 50.000,00",
+                        key=chave_input_c
+                    )
+
+                    input_b_str = st.text_input(
+                        "Posição Inicial de Restos a Pagar (B) - R$:",
+                        value=str_inicial_b,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_b
+                    )
+
+                with c2:
+                    link_f5 = st.text_area(
+                        f"Link/Evidência (F5 - Item GF26 AUDESP) ({ano_sel}):", 
+                        value=evidencia_f5_salva, 
+                        key=chave_link_f5, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f5 = st.empty()
+                    links_f5_visuais = re.findall(REGEX_PURE_URL, link_f5 or "")
+                    if links_f5_visuais:
+                        placeholder_links_f5.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f5_visuais
+                                ]
+                            )
+                        )
+
+                # Exibição do cálculo projetado no momento
+                v_cancelado_exib = converte_moeda_br_para_float(input_c_str)
+                v_pos_inicial_exib = max(converte_moeda_br_para_float(input_b_str), 0.01) # Evita divisão por zero
+
+                K_exib = v_cancelado_exib / v_pos_inicial_exib
+
+                if K_exib >= 0.20:
+                    pts_exib = 0.0
+                elif 0.05 < K_exib < 0.20:
+                    pts_exib = ((0.20 - K_exib) / 0.15) * 25.0
+                else: # K_exib <= 0.05
+                    pts_exib = 25.0
+
+                fmt_v_cancelado = f"R$ {v_cancelado_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                fmt_v_pos_inicial = f"R$ {v_pos_inicial_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo do Nível de Cancelamento:</b> {fmt_v_cancelado} / {fmt_v_pos_inicial}<br>
+                    📊 <b>Resultado do Indicador (K):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{K_exib:.4f}</code><br>
+                    🎯 <b>Pontuação Calculada:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{pts_exib:.2f} pontos</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F5", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F5", key=f"btn_salvar_f5_{ano_sel}", type="primary"):
+                    v_cancelado = converte_moeda_br_para_float(st.session_state.get(chave_input_c, input_c_str))
+                    v_pos_inicial = max(converte_moeda_br_para_float(st.session_state.get(chave_input_b, input_b_str)), 0.01)
+
+                    # Recálculo oficial no salvamento
+                    K_calc = v_cancelado / v_pos_inicial
+
+                    if K_calc >= 0.20:
+                        pts_f5 = 0.0
+                    elif 0.05 < K_calc < 0.20:
+                        pts_f5 = ((0.20 - K_calc) / 0.15) * 25.0
+                    else: # K_calc <= 0.05
+                        pts_f5 = 25.0
+
+                    str_banco = f"{v_cancelado:.2f}/{v_pos_inicial:.2f}"
+                    lnk_val_f5 = link_f5.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f5, dF5.get("comentarios", ""))
+
+                    # Salva no banco de dados via iFiscal
+                    save_resp_ifiscal(
+                        qid="F5",
+                        valor=str_banco,
+                        pontos=pts_f5,
+                        link=lnk_val_f5,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data
+                    res_data["F5"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f5,
+                        "link": lnk_val_f5,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f5 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f5_salva or "")]
+
+                    if lnk_val_f5 != evidencia_f5_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f5_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Valores e cálculo do Indicador F5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f5_salvos = float(dF5.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto F5: {pts_f5_salvos:.2f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F5 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F5", st.session_state.get(f"links_pendentes_f5_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f5_{ano_sel}"] = False
+
     
