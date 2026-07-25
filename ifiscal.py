@@ -5962,6 +5962,133 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 8.3 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_8_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 8.3 - Autenticidade de Notas Fiscais", expanded=True):
+                st.subheader("8.3 • Acesso Público à Consulta de NFS-e")
+                st.write("**A pesquisa de autenticidade de notas fiscais eletrônicas está disponível ao público?**")
+                
+                # Estado inicial / persistente
+                d83 = res_data.get("8.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc83 = [
+                    "Selecione...",
+                    "Sim, sem restrição – 00", 
+                    "Sim, com restrição (Ex.: há necessidade de cadastro para acessar o resultado da pesquisa) – -09 (perde 09 pontos)", 
+                    "Serviço não disponibilizado – -15", 
+                    "Não implantou a NFS-e – -15"
+                ]
+                
+                v_salvo_83 = d83.get("valor", "Selecione...")
+                if v_salvo_83 not in opc83: 
+                    v_salvo_83 = "Selecione..."
+                
+                evidencia_83_salva = d83.get("link", "")
+
+                # Chaves padronizadas
+                chave_rad_83 = f"rad_83_{ano_sel}_fiscal"
+                chave_link_83 = f"l83_in_{ano_sel}_fiscal"
+                chave_coment_83 = f"coment_8.3_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1: 
+                    st.radio(
+                        "Selecione 8.3:", 
+                        opc83, 
+                        index=opc83.index(v_salvo_83), 
+                        key=chave_rad_83
+                    )
+                with c2: 
+                    link_83 = st.text_area(
+                        "Link/Evidência (8.3):", 
+                        value=evidencia_83_salva, 
+                        key=chave_link_83, 
+                        placeholder="Insira os links e evidências gerais...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_83 = st.empty()
+                    links_83_visuais = re.findall(REGEX_PURE_URL, link_83 or "")
+                    if links_83_visuais: 
+                        placeholder_links_83.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_83_visuais
+                                ]
+                            )
+                        )
+                
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("8.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 8.3", key=f"btn_salvar_8_3_{ano_sel}", type="primary"):
+                    val_sel_83 = st.session_state.get(chave_rad_83, v_salvo_83)
+                    lnk_val_83 = link_83.strip()
+                    
+                    # Regra de Cálculo de Pontuação
+                    if val_sel_83 == "Sim, sem restrição – 00" or val_sel_83 == "Selecione...":
+                        pts83_nova = 0.0
+                    elif "com restrição" in val_sel_83:
+                        pts83_nova = -9.0
+                    else:
+                        pts83_nova = -15.0
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_83, d83.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="8.3",
+                        valor=val_sel_83,
+                        pontos=float(pts83_nova),
+                        link=lnk_val_83,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["8.3"] = {
+                        "valor": val_sel_83,
+                        "pontos": float(pts83_nova),
+                        "link": lnk_val_83,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_83 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_83_salva or "")]
+
+                    if lnk_val_83 != evidencia_83_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 8.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_83 = d83.get("pontos", 0.0)
+                cor_status_83 = "#dc3545" if pts_exibido_83 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_status_83}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 8.3: {pts_exibido_83:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 8.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = False
+
 
 
 
