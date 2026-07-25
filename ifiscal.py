@@ -7164,6 +7164,113 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("10.0", st.session_state.get(f"links_pendentes_10_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 10.1 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_10_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 10.1 - Instrumento Normativo da CIP", expanded=True):
+                st.subheader("10.1 • Instrumento de Regulamentação")
+                st.write("**Informe o instrumento normativo de instituição da Contribuição para Custeio do Serviço de Iluminação Pública (CIP), número e data da publicação:**")
+                st.caption("ℹ️ *Caso não esteja disponível na internet, recomendamos anexar o documento no Sistema de Questionários.*")
+                
+                # Estado inicial / persistente
+                d101 = res_data.get("10.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_101 = d101.get("valor", "")
+                evidencia_101_salva = d101.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_txt_101 = f"txt_101_val_{ano_sel}_fiscal"
+                chave_link_101 = f"l101_in_{ano_sel}_fiscal"
+                chave_coment_101 = f"coment_10.1_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    inst_normativo_101 = st.text_input(
+                        "Instrumento normativo da CIP (Nº e Data):", 
+                        value=v_salvo_101, 
+                        key=chave_txt_101,
+                        placeholder="Ex: Lei Complementar nº 123/2020, pub. em 15/12/2020"
+                    )
+                with c2:
+                    link_101 = st.text_area(
+                        "Link/Evidência (10.1):", 
+                        value=evidencia_101_salva, 
+                        key=chave_link_101, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_101 = st.empty()
+                    links_101_visuais = re.findall(REGEX_PURE_URL, link_101 or "")
+                    if links_101_visuais:
+                        placeholder_links_101.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_101_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("10.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 10.1", key=f"btn_salvar_10_1_{ano_sel}", type="primary"):
+                    val_101 = inst_normativo_101.strip()
+                    lnk_val_101 = link_101.strip()
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_101, d101.get("comentarios", ""))
+
+                    # Salva no banco de dados (Pontuação fixa 0.0)
+                    save_resp_ifiscal(
+                        qid="10.1",
+                        valor=val_101,
+                        pontos=0.0,
+                        link=lnk_val_101,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["10.1"] = {
+                        "valor": val_101,
+                        "pontos": 0.0,
+                        "link": lnk_val_101,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_101 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_101_salva or "")]
+
+                    if lnk_val_101 != evidencia_101_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_10_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_10_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 10.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Quesito informativo)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 10.1: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 10.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_10_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.1", st.session_state.get(f"links_pendentes_10_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_10_1_{ano_sel}"] = False
+
 
 
 
