@@ -9702,6 +9702,119 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("14.1", st.session_state.get(f"links_pendentes_14_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_14_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 15.0 • COBRANÇA EXTRAJUDICIAL DA DÍVIDA ATIVA
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_15_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 15.0 - Cobrança Extrajudicial ({ano_sel})", expanded=True):
+                st.subheader("15.0 • Execução Extrajudicial")
+                st.write(f"**A prefeitura realiza cobrança de dívida ativa de forma extrajudicial em {ano_sel}?**")
+                
+                # Estado inicial / persistente
+                d150 = res_data.get("15.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc150 = ["Selecione...", "Sim", "Não"]
+                
+                valor_limpo_150 = d150.get("valor", "Selecione...")
+                if valor_limpo_150 not in opc150:
+                    valor_limpo_150 = "Selecione..."
+                
+                evidencia_150_salva = d150.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_150 = f"rad_150_{ano_sel}_fiscal"
+                chave_link_150 = f"txt_150_{ano_sel}_fiscal"
+                chave_coment_150 = f"coment_15.0_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    st.radio(
+                        "Selecione 15.0:", 
+                        opc150, 
+                        index=opc150.index(valor_limpo_150), 
+                        key=chave_rad_150
+                    )
+
+                with c4:
+                    link_150 = st.text_area(
+                        f"Link/Evidência de Cobranças Protestadas/Notificadas ({ano_sel}):", 
+                        value=evidencia_150_salva, 
+                        key=chave_link_150, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_150 = st.empty()
+                    links_150_visuais = re.findall(REGEX_PURE_URL, link_150 or "")
+                    if links_150_visuais:
+                        placeholder_links_150.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_150_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("15.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 15.0", key=f"btn_salvar_15_0_{ano_sel}", type="primary"):
+                    val_para_salvar = st.session_state.get(chave_rad_150, valor_limpo_150)
+                    lnk_val_150 = link_150.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_150, d150.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal (Pontuação neutra = 0.0)
+                    save_resp_ifiscal(
+                        qid="15.0",
+                        valor=val_para_salvar,
+                        pontos=0.0,
+                        link=lnk_val_150,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["15.0"] = {
+                        "valor": val_para_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val_150,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_150 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_150_salva or "")]
+
+                    if lnk_val_150 != evidencia_150_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_15_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 15.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_150 = d150.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto 15.0: {pts_exibido_150:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 15.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_15_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.0", st.session_state.get(f"links_pendentes_15_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_15_0_{ano_sel}"] = False
+
 
 
 
