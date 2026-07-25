@@ -17300,7 +17300,58 @@ def mostrar_formulario_ifiscal():
             st.caption("Acompanhamento da evolução da pontuação fiscal do município ao longo dos anos")
 
             # -------------------------------------------------------------------------
-            # GRÁFICO DE BARRAS: PONTUAÇÃO POR ANO
+            # 1. INICIALIZAÇÃO E RECUPERAÇÃO DOS DADOS HISTÓRICOS
+            # -------------------------------------------------------------------------
+            historico_anos = st.session_state.get("lista_anos_disponiveis", [ano_sel])
+            
+            # Inicialização explícita da variável para evitar UnboundLocalError / NameError
+            dados_serie_historica = []
+            
+            for ano_h in sorted(historico_anos):
+                # Obtém a estrutura de dados salva para o ano específico
+                res_ano = st.session_state.get(f"res_data_{ano_h}", res_data if str(ano_h) == str(ano_sel) else {})
+                
+                # Soma dos pontos do questionário i-Fiscal (F01 a F19)
+                pts_quest = sum(
+                    float((res_ano.get(f"F{i:02d}") or {}).get("pontos", 0.0))
+                    for i in range(1, 20)
+                )
+                
+                # Soma das glosas/penalidades dos indicadores externos (F20, F21, F22)
+                pts_ext = sum(
+                    float((res_ano.get(f"F{q}") or {}).get("pontos", 0.0))
+                    for q in ["20", "21", "22"]
+                )
+                
+                total_ano = pts_quest + pts_ext
+                dados_serie_historica.append({
+                    "Ano": str(ano_h),
+                    "Pontuação Total": round(total_ano, 2),
+                    "Questionário": round(pts_quest, 2),
+                    "Indicadores Externos": round(pts_ext, 2)
+                })
+
+            # -------------------------------------------------------------------------
+            # 2. CARTÕES DE MÉTRICA DE APOIO
+            # -------------------------------------------------------------------------
+            pts_atual = next((d["Pontuação Total"] for d in dados_serie_historica if d["Ano"] == str(ano_sel)), 0.0)
+            
+            c_kpi1, c_kpi2 = st.columns(2)
+            with c_kpi1:
+                st.metric(
+                    label=f"Pontuação Total - {ano_sel}",
+                    value=f"{pts_atual:.2f} pts".replace(".", ",")
+                )
+            with c_kpi2:
+                st.metric(
+                    label="Anos Mapeados no Sistema",
+                    value=len(dados_serie_historica)
+                )
+
+            st.markdown("---")
+
+            # -------------------------------------------------------------------------
+            # 3. RENDERIZAÇÃO DO GRÁFICO DE BARRAS
             # -------------------------------------------------------------------------
             try:
                 import plotly.express as px
@@ -17313,11 +17364,10 @@ def mostrar_formulario_ifiscal():
                     x="Ano",
                     y="Pontuação Total",
                     text="Pontuação Total",
-                    title="Pontuação i-Fiscal por Ano",
+                    title="Evolução da Pontuação i-Fiscal por Ano",
                     color_discrete_sequence=["#1e3a8a"]
                 )
 
-                # Ajuste dos rótulos e layout
                 fig_barras.update_traces(
                     texttemplate="%{text:.2f}",
                     textposition="outside"
@@ -17333,7 +17383,10 @@ def mostrar_formulario_ifiscal():
 
                 st.plotly_chart(fig_barras, use_container_width=True)
 
+                with st.expander("📋 Ver Tabela de Dados Históricos Consolidados"):
+                    st.dataframe(df_historico, use_container_width=True, hide_index=True)
+
             except ImportError:
-                # Fallback nativo do Streamlit
+                st.markdown("### 📊 Pontuação Total por Ano")
                 chart_data = {d["Ano"]: d["Pontuação Total"] for d in dados_serie_historica}
                 st.bar_chart(chart_data)
