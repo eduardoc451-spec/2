@@ -244,14 +244,27 @@ def init_db_ifiscal():
                     );
                     """
                 )
-                # 2. Converte a coluna id para VARCHAR caso tenha sido criada como INT no passado
+                # 2. Converte id para VARCHAR se for INT antigo
                 cursor.execute(
                     """
                     ALTER TABLE respostas_ifiscal 
                     ALTER COLUMN id TYPE VARCHAR(100) USING id::VARCHAR;
                     """
                 )
-                # 3. Garante a existência de todas as colunas necessárias sem apagar dados
+                # 3. Garante que exista a chave primária composta (id, ano) para o ON CONFLICT funcionar
+                cursor.execute(
+                    """
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_constraint WHERE conname = 'respostas_ifiscal_pkey'
+                        ) THEN
+                            ALTER TABLE respostas_ifiscal ADD CONSTRAINT respostas_ifiscal_pkey PRIMARY KEY (id, ano);
+                        END IF;
+                    END $$;
+                    """
+                )
+                # 4. Garante a existência de todas as colunas necessárias
                 cursor.execute(
                     """
                     ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS valor TEXT;
@@ -309,7 +322,6 @@ def load_respostas_ifiscal(ano):
 
 def save_resp_ifiscal(qid, valor, pontos, link, comentarios=None):
     """Salva a resposta do i-Fiscal isolada na tabela respostas_ifiscal."""
-    # Busca do ano exclusivo do iFiscal ou do global
     ano_sel = st.session_state.get(
         "ano_referencia_ifiscal",
         st.session_state.get("ano_referencia_global"),
