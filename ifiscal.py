@@ -10933,6 +10933,121 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("17.2", st.session_state.get(f"links_pendentes_17_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_17_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 18.0 • DISPONIBILIDADE DA TRANSPARÊNCIA FISCAL
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_18_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.0 - Divulgação da Gestão Fiscal ({ano_sel})", expanded=True):
+                st.subheader("18.0 • Transparência na Gestão Fiscal")
+                st.write(f"**Os dados relativos à transparência na gestão fiscal são divulgados na página eletrônica do Município em {ano_sel}?**")
+                
+                # Estado inicial / persistente
+                d180 = res_data.get("18.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc180 = ["Selecione...", "Sim", "Não"]
+                
+                valor_limpo_180 = str(d180.get("valor", "Selecione..."))
+                if valor_limpo_180 not in opc180:
+                    valor_limpo_180 = "Selecione..."
+                
+                evidencia_180_salva = d180.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_180 = f"rad_180_{ano_sel}_fiscal"
+                chave_link_180 = f"txt_180_{ano_sel}_fiscal"
+                chave_coment_180 = f"coment_18.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 18.0:", 
+                        opc180, 
+                        index=opc180.index(valor_limpo_180), 
+                        key=chave_rad_180
+                    )
+
+                with c2:
+                    link_180 = st.text_area(
+                        f"Link do Portal da Transparência / Página Eletrônica ({ano_sel}):", 
+                        value=evidencia_180_salva, 
+                        key=chave_link_180, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_180 = st.empty()
+                    links_180_visuais = re.findall(REGEX_PURE_URL, link_180 or "")
+                    if links_180_visuais:
+                        placeholder_links_180.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_180_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("18.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 18.0", key=f"btn_salvar_18_0_{ano_sel}", type="primary"):
+                    val_180_selecionado = st.session_state.get(chave_rad_180, valor_limpo_180)
+                    lnk_val_180 = link_180.strip()
+
+                    # Quesito informativo/direcionador (0.0 ponto)
+                    pts_180 = 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_180, d180.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="18.0",
+                        valor=val_180_selecionado,
+                        pontos=pts_180,
+                        link=lnk_val_180,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["18.0"] = {
+                        "valor": val_180_selecionado,
+                        "pontos": pts_180,
+                        "link": lnk_val_180,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_180 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_180_salva or "")]
+
+                    if lnk_val_180 != evidencia_180_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_18_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 18.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição de pontuação neutra
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 18.0: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 18.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_18_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.0", st.session_state.get(f"links_pendentes_18_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = False
+
 
 
 
