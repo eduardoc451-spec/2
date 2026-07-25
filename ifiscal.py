@@ -3276,5 +3276,146 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 3.1 • DETALHAMENTO DAS MEDIDAS - CHECKLIST (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_3_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 3.1 - Detalhamento das Medidas (Checklist)", expanded=True):
+                st.subheader("3.1 • Medidas Implementadas")
+                st.write("**Assinale as medidas implementadas para o aumento da arrecadação:**")
+                st.caption(
+                    "ℹ️ *Critério: Marque todas as ações e programas efetivamente adotados pelo município.*"
+                )
+
+                # Lista de Opções do Checklist
+                opc31 = [
+                    "Recadastramento de Imóveis",
+                    "Programas de Recuperação Fiscal",
+                    "Implementação de Nota Fiscal Eletrônica",
+                    "Convênios com a União e o Estado para compartilhamento de Informações",
+                    "Parceria/Convênio com os tabelionatos de notas e Registros de Imóveis",
+                    "Protesto da Certidão de Dívida Ativa",
+                    "Convênios com órgãos de proteção ao crédito",
+                    "Convênio com o Governo Federal para a cobrança do ITR (Imposto sobre a Propriedade Territorial Rural)",
+                    "Outros"
+                ]
+
+                # Estado inicial / persistente
+                d31 = res_data.get("3.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_31_salva = d31.get("link", "")
+
+                # Desserialização do JSON armazenado em d31["valor"]
+                valor_cru_31 = d31.get("valor", "[]")
+                try:
+                    if isinstance(valor_cru_31, list):
+                        sel31 = valor_cru_31
+                    else:
+                        sel31 = json.loads(valor_cru_31.replace("'", '"'))
+                        if not isinstance(sel31, list):
+                            sel31 = []
+                except Exception:
+                    sel31 = []
+
+                # Chaves fixas por componente e ano
+                chave_link_31 = f"l_31_txt_{ano_sel}_fiscal"
+                chave_coment_31 = f"coment_3.1_{ano_sel}_fiscal"
+
+                # Renderização dos Checkboxes em 2 colunas
+                col_chk1, col_chk2 = st.columns(2)
+                for i, opcao in enumerate(opc31):
+                    target_col = col_chk1 if i % 2 == 0 else col_chk2
+                    with target_col:
+                        ja_checado = opcao in sel31
+                        st.checkbox(
+                            opcao,
+                            value=ja_checado,
+                            key=f"chk_31_{i}_{ano_sel}_fiscal"
+                        )
+
+                st.markdown("---")
+
+                # Campo de Evidências / Links
+                link_31 = st.text_area(
+                    "Link/Evidência Específica (3.1):",
+                    value=evidencia_31_salva,
+                    key=chave_link_31,
+                    placeholder="Insira os links e comprovações específicos das medidas assinaladas acima...",
+                    height=100
+                )
+                placeholder_links_31 = st.empty()
+                links_31_visuais = re.findall(REGEX_PURE_URL, link_31 or "")
+                if links_31_visuais:
+                    placeholder_links_31.markdown(
+                        "**🔗 Link ativo:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_31_visuais
+                            ]
+                        )
+                    )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("3.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 3.1", key=f"btn_salvar_3_1_{ano_sel}", type="primary"):
+                    # Coleta o estado atual dos checkboxes no session_state
+                    lista_selecionados_31 = []
+                    for i, opcao in enumerate(opc31):
+                        if st.session_state.get(f"chk_31_{i}_{ano_sel}_fiscal", False):
+                            lista_selecionados_31.append(opcao)
+
+                    json_str_31 = json.dumps(lista_selecionados_31, ensure_ascii=False)
+                    lnk_val = link_31.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_31, d31.get("comentario", ""))
+
+                    # Salva no banco de dados Neon (Checklist tem peso informativo: 0.0 pontos)
+                    save_resp_ifiscal(
+                        qid="3.1",
+                        valor=json_str_31,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["3.1"] = {
+                        "valor": json_str_31,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_31_salva or "")]
+
+                    if lnk_val != evidencia_31_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_31 = d31.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 3.1: {pts_atuais_31:+.1f} pontos (Checklist Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
+
 
 
