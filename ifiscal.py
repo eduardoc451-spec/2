@@ -6573,6 +6573,122 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("9.3", st.session_state.get(f"links_pendentes_9_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 9.4 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_9_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 9.4 - Informações de Transmissões Imobiliárias", expanded=True):
+                st.subheader("9.4 • Obrigatoriedade dos Cartórios de Registro")
+                st.write("**O município instituiu normativo que obrigue o(s) Cartório(s) de Registro de Imóveis e Distribuidor(es) a informar periodicamente as transmissões imobiliárias realizadas no seu território, para fins de incidência do ITBI?**")
+                
+                # Estado inicial / persistente
+                d94 = res_data.get("9.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc94 = ["Selecione...", "Sim – 02", "Não – 00"]
+                
+                v_salvo_94 = d94.get("valor", "Selecione...")
+                if v_salvo_94 not in opc94: 
+                    v_salvo_94 = "Selecione..."
+                
+                evidencia_94_salva = d94.get("link", "")
+
+                # Chaves padronizadas
+                chave_rad_94 = f"rad_94_{ano_sel}_fiscal"
+                chave_link_94 = f"l94_in_{ano_sel}_fiscal"
+                chave_coment_94 = f"coment_9.4_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1: 
+                    st.radio(
+                        "Selecione 9.4:", 
+                        opc94, 
+                        index=opc94.index(v_salvo_94), 
+                        key=chave_rad_94
+                    )
+                with c2: 
+                    link_94 = st.text_area(
+                        "Link/Evidência (9.4):", 
+                        value=evidencia_94_salva, 
+                        key=chave_link_94, 
+                        placeholder="Insira os links e evidências gerais...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_94 = st.empty()
+                    links_94_visuais = re.findall(REGEX_PURE_URL, link_94 or "")
+                    if links_94_visuais: 
+                        placeholder_links_94.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_94_visuais
+                                ]
+                            )
+                        )
+                
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("9.4", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.4", key=f"btn_salvar_9_4_{ano_sel}", type="primary"):
+                    val_sel_94 = st.session_state.get(chave_rad_94, v_salvo_94)
+                    lnk_val_94 = link_94.strip()
+                    
+                    # Regra de Pontuação (2.0 para Sim, 0.0 caso contrário)
+                    pts94_nova = 2.0 if "Sim" in val_sel_94 else 0.0
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_94, d94.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="9.4",
+                        valor=val_sel_94,
+                        pontos=float(pts94_nova),
+                        link=lnk_val_94,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["9.4"] = {
+                        "valor": val_sel_94,
+                        "pontos": float(pts94_nova),
+                        "link": lnk_val_94,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_94 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_94_salva or "")]
+
+                    if lnk_val_94 != evidencia_94_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 9.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_94 = d94.get("pontos", 0.0)
+                cor_status_94 = "#28a745" if pts_exibido_94 > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_status_94}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 9.4: {pts_exibido_94:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 9.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.4", st.session_state.get(f"links_pendentes_9_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_4_{ano_sel}"] = False
+
 
 
 
