@@ -14925,6 +14925,198 @@ def mostrar_formulario_ifiscal():
         if st.session_state.get(f"gatilho_modal_f10_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("F10", st.session_state.get(f"links_pendentes_f10_{ano_sel}", []))
-            st.session_state[f"gatilho_modal_f10_{ano_sel}"] = False
+            st.session_state[f"gatilho_modal_f10_{ano_sel}"] = False,
+
+
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F11 • REPASSE DE DUODÉCIMOS ÀS CÂMARAS (REP / RCL)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f11_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F11 - Repasse de Duodécimos às Câmaras ({ano_sel})", expanded=True):
+                st.subheader("F11 • Repasse de Duodécimos às Câmaras (Valor Repassado / RCL)")
+                st.write("**Razão entre as Transferências à Câmara e a Receita Corrente Líquida**")
+                
+                # Tabela Oficial de Regras de Pontuação / Penalidade
+                st.markdown(r"""
+                | Percentual de Repasse | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Menor ou igual a 6,00% ($\le 6\%$) | ✅ 0,00 ponto (Sem penalidades / Regular) |
+                | Maior que 6,00% ($> 6\%$) | 🚨 **REBAIXAR IEG-M PARA FAIXA C** (Nota Geral afetada) |
+                """)
+                st.caption("ℹ️ *Dados extraídos com base no item 'Transferências à Câmara dos Vereadores' do modelo de relatório de contas municipais do Sistema AUDESP.*")
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato salvo no banco: "REP/RCL")
+                dF11 = res_data.get("F11") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_rep, val_salvo_rcl = str(dF11.get("valor", "0.00/1.00")).split("/")
+                    float_rep = float(val_salvo_rep)
+                    float_rcl = float(val_salvo_rcl)
+                except Exception:
+                    float_rep, float_rcl = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_rep = f"R$ {float_rep:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_rcl = f"R$ {float_rcl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f11_salva = dF11.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_rep = f"txt_f11_rep_{ano_sel}_fiscal"
+                chave_input_rcl = f"txt_f11_rcl_{ano_sel}_fiscal"
+                chave_link_f11 = f"txt_f11_link_{ano_sel}_fiscal"
+                chave_coment_f11 = f"coment_F11_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_rep_str = st.text_input(
+                        "Transferências à Câmara dos Vereadores - R$:",
+                        value=str_inicial_rep,
+                        placeholder="Ex: 600.000,00",
+                        key=chave_input_rep
+                    )
+                    
+                    input_rcl_str = st.text_input(
+                        "Receita Corrente Líquida (RCL) - R$ (F11):",
+                        value=str_inicial_rcl,
+                        placeholder="Ex: 10.000.000,00",
+                        key=chave_input_rcl
+                    )
+
+                with c2:
+                    link_f11 = st.text_area(
+                        f"Link/Evidência (F11 - Duodécimo Câmara) ({ano_sel}):", 
+                        value=evidencia_f11_salva, 
+                        key=chave_link_f11, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f11 = st.empty()
+                    links_f11_visuais = re.findall(REGEX_PURE_URL, link_f11 or "")
+                    if links_f11_visuais:
+                        placeholder_links_f11.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f11_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                v_rep_exib = converte_moeda_br_para_float(input_rep_str)
+                v_rcl_exib = max(converte_moeda_br_para_float(input_rcl_str), 0.01) # Evita divisão por zero
+
+                perc_repasse_exib = round(v_rep_exib / v_rcl_exib, 4)
+                perc_exibicao = perc_repasse_exib * 100
+
+                if v_rep_exib == 0.0 and (link_f11.strip() == ""):
+                    pts_f11_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ Verificar Limite"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if perc_repasse_exib > 0.0600:
+                        pts_f11_exib = 0.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Limite Excedido! Rebaixar IEG-M para Faixa C"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                    else:
+                        pts_f11_exib = 0.0
+                        texto_resultado_exib = "✅ REGULAR: Dentro do teto constitucional de 6,00%"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f11_exib:.2f} pontos"
+
+                str_rep_fmt = f"R$ {v_rep_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_rcl_fmt = f"R$ {v_rcl_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_perc_fmt = f"{perc_exibicao:.2f}%".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo do Repasse:</b> ({str_rep_fmt} / {str_rcl_fmt}) * 100<br>
+                    📊 <b>Percentual Apurado:</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_perc_fmt}</code> (Limite Constitucional: 6,00%)<br>
+                    ⚖️ <b>Situação Constitucional:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F11", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F11", key=f"btn_salvar_f11_{ano_sel}", type="primary"):
+                    v_rep = converte_moeda_br_para_float(st.session_state.get(chave_input_rep, input_rep_str))
+                    v_rcl = max(converte_moeda_br_para_float(st.session_state.get(chave_input_rcl, input_rcl_str)), 0.01)
+
+                    perc_repasse = round(v_rep / v_rcl, 4)
+
+                    pts_f11 = 0.0  # F11 atua como gatilho de rebaixamento e mantém pontuação base zerada
+
+                    str_banco = f"{v_rep:.2f}/{v_rcl:.2f}"
+                    lnk_val_f11 = link_f11.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f11, dF11.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F11",
+                        valor=str_banco,
+                        pontos=pts_f11,
+                        link=lnk_val_f11,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F11"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f11,
+                        "link": lnk_val_f11,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f11 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f11_salva or "")]
+
+                    if lnk_val_f11 != evidencia_f11_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f11_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f11_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F11 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f11_salvos = float(dF11.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F11 Registrado: {pts_f11_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F11 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f11_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F11", st.session_state.get(f"links_pendentes_f11_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f11_{ano_sel}"] = False
 
     
