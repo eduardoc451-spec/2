@@ -10072,6 +10072,130 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("15.2", st.session_state.get(f"links_pendentes_15_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_15_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 16.0 • DÍVIDAS PRESCRITAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_16_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 16.0 - Ocorrência de Prescrições ({ano_sel})", expanded=True):
+                st.subheader("16.0 • Dívidas Prescritas")
+                st.write(f"**No exercício de {ano_sel} houve dívidas prescritas?**")
+                st.caption("ℹ️ *Considerar na prescrição ordinária apenas os valores passíveis de cobrança via judicial, conforme regulamento específico local.*")
+                
+                # Estado inicial / persistente
+                d160 = res_data.get("16.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                opc160 = [
+                    "Selecione...",
+                    "Sim, houve prescrição ordinária – -10 (perde 10 pontos)",
+                    "Sim, houve prescrição intercorrente – 00",
+                    f"Não houve prescrição de dívidas em {ano_sel} – 00"
+                ]
+                
+                valor_limpo_160 = d160.get("valor", "Selecione...")
+                if valor_limpo_160 not in opc160:
+                    valor_limpo_160 = "Selecione..."
+                
+                evidencia_160_salva = d160.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_160 = f"rad_160_{ano_sel}_fiscal"
+                chave_link_160 = f"txt_160_{ano_sel}_fiscal"
+                chave_coment_160 = f"coment_16.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 16.0:", 
+                        opc160, 
+                        index=opc160.index(valor_limpo_160), 
+                        key=chave_rad_160
+                    )
+
+                with c2:
+                    link_160 = st.text_area(
+                        f"Link/Evidência Geral de Prescrições/Decretos ({ano_sel}):", 
+                        value=evidencia_160_salva, 
+                        key=chave_link_160, 
+                        placeholder="Insira os links e evidências...",
+                        height=120
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_160 = st.empty()
+                    links_160_visuais = re.findall(REGEX_PURE_URL, link_160 or "")
+                    if links_160_visuais:
+                        placeholder_links_160.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_160_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("16.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 16.0", key=f"btn_salvar_16_0_{ano_sel}", type="primary"):
+                    val_160 = st.session_state.get(chave_rad_160, valor_limpo_160)
+                    lnk_val_160 = link_160.strip()
+
+                    # Regra de pontuação
+                    pts_160 = -10.0 if "ordinária" in val_160 else 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_160, d160.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="16.0",
+                        valor=val_160,
+                        pontos=pts_160,
+                        link=lnk_val_160,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["16.0"] = {
+                        "valor": val_160,
+                        "pontos": pts_160,
+                        "link": lnk_val_160,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_160 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_160_salva or "")]
+
+                    if lnk_val_160 != evidencia_160_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_16_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentários do Quesito 16.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação com cor dinâmica
+                pts_exibido_160 = d160.get("pontos", 0.0)
+                cor_p160 = "#dc3545" if pts_exibido_160 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_p160}; font-weight:bold;'>"
+                    f"📊 Impacto 16.0: {pts_exibido_160:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 16.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_16_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = False
+
 
 
 
