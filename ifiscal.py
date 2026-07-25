@@ -17296,104 +17296,106 @@ def mostrar_formulario_ifiscal():
             st.session_state[f"gatilho_modal_f22_{ano_sel}"] = False
 
         with aba_graf:
-        st.subheader("📈 Série Histórica de Pontuação")
-        st.caption("Acompanhamento da evolução da pontuação fiscal do município ao longo dos anos")
+            st.subheader("📈 Série Histórica de Pontuação")
+            st.caption("Acompanhamento da evolução da pontuação fiscal do município ao longo dos anos")
 
-        # -------------------------------------------------------------------------
-        # 1. RECUPERAÇÃO DA SÉRIE HISTÓRICA DE PONTOS POR ANO
-        # -------------------------------------------------------------------------
-        historico_anos = st.session_state.get("lista_anos_disponiveis", [ano_sel])
-        
-        dados_serie_historica = []
-        
-        for ano_h in sorted(historico_anos):
-            # Obtém a estrutura de dados salva para o ano específico
-            res_ano = st.session_state.get(f"res_data_{ano_h}", res_data if str(ano_h) == str(ano_sel) else {})
-            
-            # Soma dos pontos do questionário i-Fiscal (F01 a F19)
-            pts_quest = sum(
-                float((res_ano.get(f"F{i:02d}") or {}).get("pontos", 0.0))
-                for i in range(1, 20)
-            )
-            
-            # Soma das glosas/penalidades dos indicadores externos (F20, F21, F22)
-            pts_ext = sum(
-                float((res_ano.get(f"F{q}") or {}).get("pontos", 0.0))
-                for q in ["20", "21", "22"]
-            )
-            
-            total_ano = pts_quest + pts_ext
-            dados_serie_historica.append({
-                "Ano": str(ano_h),
-                "Pontuação Total": round(total_ano, 2),
-                "Questionário": round(pts_quest, 2),
-                "Indicadores Externos": round(pts_ext, 2)
-            })
+                with aba_graf:
+                st.subheader("📈 Série Histórica de Pontuação")
+                st.caption("Acompanhamento da evolução da pontuação fiscal do município ao longo dos anos")
 
-        # -------------------------------------------------------------------------
-        # 2. CARTÃO DE MÉTRICA DO ANO ATUAL SELECIONADO
-        # -------------------------------------------------------------------------
-        pts_atual = next((d["Pontuação Total"] for d in dados_serie_historica if d["Ano"] == str(ano_sel)), 0.0)
-        
-        c_kpi1, c_kpi2 = st.columns(2)
-        with c_kpi1:
-            st.metric(
-                label=f"Pontuação Total - {ano_sel}",
-                value=f"{pts_atual:.2f} pts".replace(".", ",")
-            )
-        with c_kpi2:
-            st.metric(
-                label="Anos Mapeados no Sistema",
-                value=len(dados_serie_historica)
-            )
+                # -------------------------------------------------------------------------
+                # 1. RECUPERAÇÃO DA SÉRIE HISTÓRICA DE PONTOS POR ANO
+                # -------------------------------------------------------------------------
+                historico_anos = st.session_state.get("lista_anos_disponiveis", [ano_sel])
+                
+                dados_serie_historica = []
+                
+                for ano_h in sorted(historico_anos):
+                    # Obtém a estrutura de dados salva para o ano específico
+                    res_ano = st.session_state.get(f"res_data_{ano_h}", res_data if str(ano_h) == str(ano_sel) else {})
+                    
+                    # Soma dos pontos do questionário i-Fiscal (F01 a F19)
+                    pts_quest = sum(
+                        float((res_ano.get(f"F{i:02d}") or {}).get("pontos", 0.0))
+                        for i in range(1, 20)
+                    )
+                    
+                    # Soma das glosas/penalidades dos indicadores externos (F20, F21, F22)
+                    pts_ext = sum(
+                        float((res_ano.get(f"F{q}") or {}).get("pontos", 0.0))
+                        for q in ["20", "21", "22"]
+                    )
+                    
+                    total_ano = pts_quest + pts_ext
+                    dados_serie_historica.append({
+                        "Ano": str(ano_h),
+                        "Pontuação Total": round(total_ano, 2),
+                        "Questionário": round(pts_quest, 2),
+                        "Indicadores Externos": round(pts_ext, 2)
+                    })
 
-        st.markdown("---")
+                # -------------------------------------------------------------------------
+                # 2. CARTÃO DE MÉTRICA DO ANO ATUAL SELECIONADO
+                # -------------------------------------------------------------------------
+                pts_atual = next((d["Pontuação Total"] for d in dados_serie_historica if d["Ano"] == str(ano_sel)), 0.0)
+                
+                c_kpi1, c_kpi2 = st.columns(2)
+                with c_kpi1:
+                    st.metric(
+                        label=f"Pontuação Total - {ano_sel}",
+                        value=f"{pts_atual:.2f} pts".replace(".", ",")
+                    )
+                with c_kpi2:
+                    st.metric(
+                        label="Anos Mapeados no Sistema",
+                        value=len(dados_serie_historica)
+                    )
 
-        # -------------------------------------------------------------------------
-        # 3. RENDERIZAÇÃO GRÁFICA DA SÉRIE HISTÓRICA
-        # -------------------------------------------------------------------------
-        try:
-            import plotly.express as px
-            import pandas as pd
+                st.markdown("---")
 
-            df_historico = pd.DataFrame(dados_serie_historica)
+                # -------------------------------------------------------------------------
+                # 3. RENDERIZAÇÃO GRÁFICA DA SÉRIE HISTÓRICA
+                # -------------------------------------------------------------------------
+                try:
+                    import plotly.express as px
+                    import pandas as pd
 
-            fig_linha = px.line(
-                df_historico,
-                x="Ano",
-                y="Pontuação Total",
-                text="Pontuação Total",
-                markers=True,
-                title="Evolução da Pontuação i-Fiscal por Ano"
-            )
+                    df_historico = pd.DataFrame(dados_serie_historica)
 
-            # Estilização visual da linha e rótulos
-            fig_linha.update_traces(
-                line_color="#1e3a8a",
-                line_width=3,
-                marker=dict(size=10, color="#2563eb"),
-                texttemplate="%{text:.2f}",
-                textposition="top center"
-            )
+                    fig_linha = px.line(
+                        df_historico,
+                        x="Ano",
+                        y="Pontuação Total",
+                        text="Pontuação Total",
+                        markers=True,
+                        title="Evolução da Pontuação i-Fiscal por Ano"
+                    )
 
-            fig_linha.update_layout(
-                xaxis_title="Exercício Fiscal",
-                yaxis_title="Pontuação Total",
-                height=420,
-                margin=dict(l=20, r=20, t=50, b=20),
-                yaxis=dict(zeroline=True, zerolinewidth=1, zerolinecolor="#cbd5e1")
-            )
+                    # Estilização visual da linha e rótulos
+                    fig_linha.update_traces(
+                        line_color="#1e3a8a",
+                        line_width=3,
+                        marker=dict(size=10, color="#2563eb"),
+                        texttemplate="%{text:.2f}",
+                        textposition="top center"
+                    )
 
-            st.plotly_chart(fig_linha, use_container_width=True)
+                    fig_linha.update_layout(
+                        xaxis_title="Exercício Fiscal",
+                        yaxis_title="Pontuação Total",
+                        height=420,
+                        margin=dict(l=20, r=20, t=50, b=20),
+                        yaxis=dict(zeroline=True, zerolinewidth=1, zerolinecolor="#cbd5e1")
+                    )
 
-            # Tabela resumida de apoio para conferência rápida
-            with st.expander("📋 Ver Tabela de Dados Históricos Consolidados"):
-                st.dataframe(df_historico, use_container_width=True, hide_index=True)
+                    st.plotly_chart(fig_linha, use_container_width=True)
 
-        except ImportError:
-            # Fallback nativo do Streamlit (caso Plotly/Pandas não estejam disponíveis)
-            st.markdown("### 📈 Evolução da Pontuação Total")
-            chart_data = {d["Ano"]: d["Pontuação Total"] for d in dados_serie_historica}
-            st.line_chart(chart_data)
+                    # Tabela resumida de apoio para conferência rápida
+                    with st.expander("📋 Ver Tabela de Dados Históricos Consolidados"):
+                        st.dataframe(df_historico, use_container_width=True, hide_index=True)
 
-    
+                except ImportError:
+                    # Fallback nativo do Streamlit (caso Plotly/Pandas não estejam disponíveis)
+                    st.markdown("### 📈 Evolução da Pontuação Total")
+                    chart_data = {d["Ano"]: d["Pontuação Total"] for d in dados_serie_historica}
+                    st.line_chart(chart_data)
