@@ -7397,6 +7397,120 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("10.2", st.session_state.get(f"links_pendentes_10_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_10_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 10.3 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_10_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 10.3 - Movimentação em Contas Específicas", expanded=True):
+                st.subheader("10.3 • Exclusividade de Contas Bancárias")
+                st.write("**Os recursos da Contribuição para Custeio do Serviço de Iluminação Pública (CIP) foram movimentados em contas específicas?**")
+                
+                # Estado inicial / persistente
+                d103 = res_data.get("10.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc103 = ["Selecione...", "Sim – 00", "Não – -05 (perde 05 pontos)"]
+                v_salvo_103 = d103.get("valor", "Selecione...")
+                if v_salvo_103 not in opc103: 
+                    v_salvo_103 = "Selecione..."
+                evidencia_103_salva = d103.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_103 = f"rad_103_{ano_sel}_fiscal"
+                chave_link_103 = f"txt_103_{ano_sel}_fiscal"
+                chave_coment_103 = f"coment_10.3_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    opc_selecionada_103 = st.radio(
+                        "Selecione 10.3:", 
+                        opc103, 
+                        index=opc103.index(v_salvo_103), 
+                        key=chave_rad_103
+                    )
+                with c4:
+                    link_103 = st.text_area(
+                        "Link/Evidência de Conta Bancária Exclusiva (10.3):", 
+                        value=evidencia_103_salva, 
+                        key=chave_link_103, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_103 = st.empty()
+                    links_103_visuais = re.findall(REGEX_PURE_URL, link_103 or "")
+                    if links_103_visuais:
+                        placeholder_links_103.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_103_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("10.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 10.3", key=f"btn_salvar_10_3_{ano_sel}", type="primary"):
+                    val_103 = st.session_state.get(chave_rad_103, v_salvo_103)
+                    lnk_val_103 = link_103.strip()
+                    
+                    # Cálculo dos pontos (Penalidade de -5.0 caso responda 'Não')
+                    pts_103_nova = -5.0 if "Não" in val_103 else 0.0
+
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_103, d103.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="10.3",
+                        valor=val_103,
+                        pontos=float(pts_103_nova),
+                        link=lnk_val_103,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["10.3"] = {
+                        "valor": val_103,
+                        "pontos": float(pts_103_nova),
+                        "link": lnk_val_103,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_103 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_103_salva or "")]
+
+                    if lnk_val_103 != evidencia_103_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_10_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_10_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 10.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação aplicada
+                pts_exibido_103 = d103.get("pontos", 0.0)
+                cor_impacto_103 = "#dc3545" if pts_exibido_103 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_impacto_103}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 10.3: {pts_exibido_103:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 10.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_10_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.3", st.session_state.get(f"links_pendentes_10_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_10_3_{ano_sel}"] = False
+
 
 
 
