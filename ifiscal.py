@@ -14717,4 +14717,214 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F9", st.session_state.get(f"links_pendentes_f9_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f9_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F10 • APURAÇÃO DOS PAGAMENTOS DOS PRECATÓRIOS (AG / AH)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f10_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F10 - Apuração dos Pagamentos dos Precatórios ({ano_sel})", expanded=True):
+                st.subheader("F10 • Apuração dos Pagamentos dos Precatórios (AG / AH)")
+                st.write("**Razão entre o Estoque Final e o Estoque Inicial de Precatórios [AG / AH = AI]**")
+                
+                # Tabela Oficial de Parâmetros
+                st.markdown(r"""
+                | Resultado do Índice $AI$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Menor ou igual a 0,9 ($\le 0,9$) | ✅ 75,00 pontos (Pontuação Máxima) |
+                | Entre 0,9 e 1,0 ($> 0,9$ e $< 1,0$) | ⚠️ Graduação entre 0,00 e 75,00 pontos |
+                | Maior ou igual a 1,0 ($\ge 1,0$) | 🚨 0,00 ponto (Sem bonificação) |
+                """)
+                st.caption("ℹ️ *Dados extraídos da contabilidade encaminhada pelo Sistema AUDESP.*")
+                
+                # Memórias matemáticas oficiais do indicador F10
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional no Intervalo Crítico:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 0,90 e menores que 1,00:</b> A graduação será distribuída igualitariamente no intervalo através da fórmula: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((AI – 1,0) * (-1) / 0,10) * 75</code> <br><i>Exemplo: se AI = 0,95, a nota do indicador será exatamente 37,50 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato salvo no banco: "AG/AH")
+                dF10 = res_data.get("F10") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_ag, val_salvo_ah = str(dF10.get("valor", "0.00/1.00")).split("/")
+                    float_ag = float(val_salvo_ag)
+                    float_ah = float(val_salvo_ah)
+                except Exception:
+                    float_ag, float_ah = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_ag = f"R$ {float_ag:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_ah = f"R$ {float_ah:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f10_salva = dF10.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_ag = f"txt_f10_ag_{ano_sel}_fiscal"
+                chave_input_ah = f"txt_f10_ah_{ano_sel}_fiscal"
+                chave_link_f10 = f"txt_f10_link_{ano_sel}_fiscal"
+                chave_coment_f10 = f"coment_F10_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_ag_str = st.text_input(
+                        "Estoque Final dos Precatórios (AG) - R$:",
+                        value=str_inicial_ag,
+                        placeholder="Ex: 950.000,00",
+                        key=chave_input_ag
+                    )
+                    
+                    input_ah_str = st.text_input(
+                        "Estoque Inicial dos Precatórios (AH) - R$:",
+                        value=str_inicial_ah,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_ah
+                    )
+
+                with c2:
+                    link_f10 = st.text_area(
+                        f"Link/Evidência (F10 - Precatórios AUDESP) ({ano_sel}):", 
+                        value=evidencia_f10_salva, 
+                        key=chave_link_f10, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f10 = st.empty()
+                    links_f10_visuais = re.findall(REGEX_PURE_URL, link_f10 or "")
+                    if links_f10_visuais:
+                        placeholder_links_f10.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f10_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                v_ag_exib = converte_moeda_br_para_float(input_ag_str)
+                v_ah_exib = max(converte_moeda_br_para_float(input_ah_str), 0.01) # Evita divisão por zero
+
+                AI_exib = round(v_ag_exib / v_ah_exib, 4)
+
+                if v_ag_exib == 0.0 and (link_f10.strip() == ""):
+                    pts_f10_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if AI_exib <= 0.9000:
+                        pts_f10_exib = 75.0
+                        texto_resultado_exib = "✅ REGULAR: Redução Ótima do Estoque (≤ 0,90)"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    elif 0.9000 < AI_exib < 1.0000:
+                        pts_f10_exib = ((AI_exib - 1.0000) * (-1.0) / 0.1000) * 75.0
+                        texto_resultado_exib = "⚠️ ALERTA DE GRADUAÇÃO (Redução Parcial)"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:  # AI_exib >= 1.0000
+                        pts_f10_exib = 0.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Estoque Mantido ou Aumentado (≥ 1,00)"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f10_exib:.2f} pontos"
+
+                str_ag_fmt = f"R$ {v_ag_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_ah_fmt = f"R$ {v_ah_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_ai_fmt = f"{AI_exib:.4f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Razão:</b> {str_ag_fmt} / {str_ah_fmt}<br>
+                    📊 <b>Resultado do Indicador (AI):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_ai_fmt}</code><br>
+                    ⚖️ <b>Situação do Estoque:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F10", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F10", key=f"btn_salvar_f10_{ano_sel}", type="primary"):
+                    v_ag = converte_moeda_br_para_float(st.session_state.get(chave_input_ag, input_ag_str))
+                    v_ah = max(converte_moeda_br_para_float(st.session_state.get(chave_input_ah, input_ah_str)), 0.01)
+
+                    AI = round(v_ag / v_ah, 4)
+
+                    if AI <= 0.9000:
+                        pts_f10 = 75.0
+                    elif 0.9000 < AI < 1.0000:
+                        pts_f10 = ((AI - 1.0000) * (-1.0) / 0.1000) * 75.0
+                    else:  # AI >= 1.0000
+                        pts_f10 = 0.0
+
+                    str_banco = f"{v_ag:.2f}/{v_ah:.2f}"
+                    lnk_val_f10 = link_f10.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f10, dF10.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F10",
+                        valor=str_banco,
+                        pontos=pts_f10,
+                        link=lnk_val_f10,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F10"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f10,
+                        "link": lnk_val_f10,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f10 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f10_salva or "")]
+
+                    if lnk_val_f10 != evidencia_f10_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f10_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f10_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F10 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f10_salvos = float(dF10.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Pontuação F10 Salva: {pts_f10_salvos:.2f} pontos obtidos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F10 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f10_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F10", st.session_state.get(f"links_pendentes_f10_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f10_{ano_sel}"] = False
+
     
