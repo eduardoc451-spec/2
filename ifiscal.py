@@ -2189,3 +2189,143 @@ def mostrar_formulario_ifiscal():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 1.2 • QUADRO DE FISCAIS E AUDITORES (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_1_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.2 - Quadro de Fiscais e Auditores", expanded=True):
+                st.subheader("1.2 • Cargos Preenchidos")
+                st.write(
+                    "**Qual o número de cargos de fiscais/auditores tributários preenchidos?**"
+                )
+                st.caption(
+                    "ℹ *Critério: Se efetivos > 0 E comissão = 0 E terceirizados = 0 ➔ 1,5 ponto. Caso contrário ➔ 0,0 ponto.*"
+                )
+
+                # Estado inicial / persistente
+                d12 = res_data.get("1.2") or {"valor": "0/0/0", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_12_salva = d12.get("link", "")
+
+                # Extrai os valores numéricos salvos (Efetivos / Comissão / Terceirizados)
+                val_bruto_12 = d12.get("valor", "0/0/0")
+                try:
+                    ef_salvo, com_salvo, terc_salvo = map(int, val_bruto_12.split("/"))
+                except Exception:
+                    ef_salvo, com_salvo, terc_salvo = 0, 0, 0
+
+                # Chaves fixas por componente e ano
+                chave_ef_12 = f"num_12_ef_{ano_sel}_fiscal"
+                chave_com_12 = f"num_12_com_{ano_sel}_fiscal"
+                chave_terc_12 = f"num_12_terc_{ano_sel}_fiscal"
+                chave_link_12 = f"l_12_txt_{ano_sel}_fiscal"
+                chave_coment_12 = f"coment_1.2_{ano_sel}_fiscal"
+
+                c12_1, c12_2 = st.columns([1, 1])
+                with c12_1:
+                    v_ef_12 = st.number_input(
+                        "Efetivos:",
+                        value=ef_salvo,
+                        min_value=0,
+                        step=1,
+                        key=chave_ef_12
+                    )
+                    v_com_12 = st.number_input(
+                        "Em comissão:",
+                        value=com_salvo,
+                        min_value=0,
+                        step=1,
+                        key=chave_com_12
+                    )
+                    v_terc_12 = st.number_input(
+                        "Terceirizados:",
+                        value=terc_salvo,
+                        min_value=0,
+                        step=1,
+                        key=chave_terc_12
+                    )
+
+                with c12_2:
+                    link_12 = st.text_area(
+                        "Link/Evidência (1.2):",
+                        value=evidencia_12_salva,
+                        key=chave_link_12,
+                        placeholder="Insira o link oficial com o quantitativo de cargos preenchidos...",
+                        height=165
+                    )
+                    placeholder_links_12 = st.empty()
+                    links_12_visuais = re.findall(REGEX_PURE_URL, link_12 or "")
+                    if links_12_visuais:
+                        placeholder_links_12.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_12_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("1.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.2", key=f"btn_salvar_1_2_{ano_sel}", type="primary"):
+                    ef_val = st.session_state.get(chave_ef_12, ef_salvo)
+                    com_val = st.session_state.get(chave_com_12, com_salvo)
+                    terc_val = st.session_state.get(chave_terc_12, terc_salvo)
+                    lnk_val = link_12.strip()
+
+                    # Regra de cálculo de pontuação do Quesito 1.2
+                    pts_12 = 1.5 if ef_val > 0 and com_val == 0 and terc_val == 0 else 0.0
+                    val_salvar = f"{ef_val}/{com_val}/{terc_val}"
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_12, d12.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="1.2",
+                        valor=val_salvar,
+                        pontos=pts_12,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.2"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_12,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_12_salva or "")]
+
+                    if lnk_val != evidencia_12_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_12 = d12.get("pontos", 0.0)
+                cor_txt_12 = "#28a745" if pts_atuais_12 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_12}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.2: +{pts_atuais_12:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
