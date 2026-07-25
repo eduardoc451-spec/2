@@ -3921,5 +3921,135 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("4.3", st.session_state.get(f"links_pendentes_4_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.0 • APROVAÇÃO DA PGV POR LEI (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.0 - Aprovação da PGV por Lei", expanded=True):
+                st.subheader("5.0 • Aprovação Legal da PGV")
+                st.write(
+                    "**O instrumento da Planta Genérica de Valores (PGV) foi aprovado por lei, "
+                    "conforme previsto no Código Tributário Nacional (CTN)?**"
+                )
+                st.caption(
+                    "ℹ️ *Critério: A aprovação da PGV exige previsão legal formal nos termos da legislação tributária vigência.*"
+                )
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 5.0
+                opcoes_50 = {
+                    "Selecione...": 0.0,
+                    "Sim – 3,0": 3.0,
+                    "Não – 0,0": 0.0
+                }
+
+                # Estado inicial / persistente
+                d50 = res_data.get("5.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_50 = d50.get("valor", "Selecione...")
+
+                # Tratamento de legados/formatos anteriores (ex: "Sim – 03" ou "Sim – 3")
+                if "Sim" in v_salvo_50 and "3,0" not in v_salvo_50:
+                    v_salvo_50 = "Sim – 3,0"
+                elif "Não" in v_salvo_50 and "0,0" not in v_salvo_50:
+                    v_salvo_50 = "Não – 0,0"
+
+                evidencia_50_salva = d50.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_50 = f"r50_in_{ano_sel}_fiscal"
+                chave_link_50 = f"l50_in_{ano_sel}_fiscal"
+                chave_coment_50 = f"coment_5.0_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    lista_opcoes_50 = list(opcoes_50.keys())
+                    idx_50 = lista_opcoes_50.index(v_salvo_50) if v_salvo_50 in lista_opcoes_50 else 0
+
+                    val_radio_50 = st.radio(
+                        "Selecione uma opção (5.0):",
+                        options=lista_opcoes_50,
+                        index=idx_50,
+                        key=chave_radio_50
+                    )
+
+                with col2:
+                    link_50 = st.text_area(
+                        "Link/Evidência Geral (5.0):",
+                        value=evidencia_50_salva,
+                        key=chave_link_50,
+                        placeholder="Insira os links da norma de aprovação da PGV e evidências legais...",
+                        height=100
+                    )
+                    placeholder_links_50 = st.empty()
+                    links_50_visuais = re.findall(REGEX_PURE_URL, link_50 or "")
+                    if links_50_visuais:
+                        placeholder_links_50.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_50_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.0", key=f"btn_salvar_5_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_50, v_salvo_50)
+                    pts_50 = float(opcoes_50.get(val_salvar, 0.0))
+                    lnk_val = link_50.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_50, d50.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="5.0",
+                        valor=val_salvar,
+                        pontos=pts_50,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_50,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_50_salva or "")]
+
+                    if lnk_val != evidencia_50_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 5.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_50 = d50.get("pontos", 0.0)
+                cor_txt_50 = "#28a745" if pts_atuais_50 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_50}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.0: +{pts_atuais_50:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
+
 
 
