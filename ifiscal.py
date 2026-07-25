@@ -230,31 +230,37 @@ def get_connection():
 
 
 def init_db_ifiscal():
-    """Inicializa a tabela EXCLUSIVA do i-Fiscal no PostgreSQL."""
+    """Inicializa ou atualiza a tabela EXCLUSIVA do i-Fiscal no PostgreSQL."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
+                # 1. Cria a tabela base caso não exista
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS respostas_ifiscal (
                         id VARCHAR(100) NOT NULL,
                         ano INT NOT NULL,
-                        valor TEXT,
-                        pontos NUMERIC DEFAULT 0,
-                        link TEXT,
-                        comentarios TEXT,
-                        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         PRIMARY KEY (id, ano)
                     );
                     """
                 )
+                # 2. Garante a existência de todas as colunas necessárias sem apagar dados
+                cursor.execute(
+                    """
+                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS valor TEXT;
+                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS pontos NUMERIC DEFAULT 0;
+                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS link TEXT;
+                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS comentarios TEXT;
+                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                    """
+                )
             conn.commit()
     except Exception as e:
-        logging.error(f"Erro ao inicializar tabela respostas_ifiscal: {e}")
+        logging.error(f"Erro ao inicializar/atualizar tabela respostas_ifiscal: {e}")
 
 
-# Inicializa a tabela do iFiscal ao importar
+# Inicializa/Atualiza a tabela do iFiscal ao importar
 try:
     init_db_ifiscal()
 except Exception as e:
