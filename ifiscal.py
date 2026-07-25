@@ -15496,4 +15496,215 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F13", st.session_state.get(f"links_pendentes_f13_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f13_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F14 • DÍVIDA ATIVA: PERCENTUAL DE CANCELAMENTO (AM)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f14_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F14 - Dívida Ativa: Percentual de Cancelamento ({ano_sel})", expanded=True):
+                st.subheader("F14 • Dívida Ativa: Percentual de Cancelamento (AM)")
+                st.write("**Nível de cancelamento da dívida em relação ao estoque inicial**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Resultado do Índice $AM$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Igual a 0 ($AM = 0$) | ✅ 50,00 pontos (Pontuação Máxima) |
+                | Entre 0,0 e 0,1 ($> 0,0$ e $< 0,1$) | ⚠️ Graduação entre 50 e 0 pontos |
+                | Maior ou igual a 0,10 ($\ge 0,10$) | 🚨 0,00 ponto (Cancelamento Excessivo) |
+                """)
+                st.caption("ℹ️ *Dados extraídos do Relatório de Análises Anuais Eletrônicas do Sistema AUDESP.*")
+
+                # Regra Proporcional Regressiva Intermediária
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional Regressiva no Intervalo:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 0,00 e menores que 0,10:</b> A graduação decrescerá igualitariamente no intervalo através da fórmula: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((AM – 0,10) * (-1) / 0,10) * 50</code> <br><i>Exemplo: se AM = 0,0500 (5% de cancelamento), a nota do indicador será exatamente 25,00 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato salvo no banco: "CAN/EST")
+                dF14 = res_data.get("F14") or {"valor": "0.00/1.00", "pontos": 50.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_can, val_salvo_est = str(dF14.get("valor", "0.00/1.00")).split("/")
+                    float_can = float(val_salvo_can)
+                    float_est = float(val_salvo_est)
+                except Exception:
+                    float_can, float_est = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_can = f"R$ {float_can:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_est = f"R$ {float_est:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f14_salva = dF14.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_can = f"txt_f14_can_{ano_sel}_fiscal"
+                chave_input_est = f"txt_f14_est_{ano_sel}_fiscal"
+                chave_link_f14 = f"txt_f14_link_{ano_sel}_fiscal"
+                chave_coment_f14 = f"coment_F14_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_can_str = st.text_input(
+                        "Valor Cancelado de Dívida Ativa - R$:",
+                        value=str_inicial_can,
+                        placeholder="Ex: 10.000,00",
+                        key=chave_input_can
+                    )
+
+                    input_est_str = st.text_input(
+                        "Estoque Inicial da Dívida Ativa - R$ (F14):",
+                        value=str_inicial_est,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_est
+                    )
+
+                with c2:
+                    link_f14 = st.text_area(
+                        f"Link/Evidência (F14 - Cancelamento Dívida Ativa) ({ano_sel}):", 
+                        value=evidencia_f14_salva, 
+                        key=chave_link_f14, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f14 = st.empty()
+                    links_f14_visuais = re.findall(REGEX_PURE_URL, link_f14 or "")
+                    if links_f14_visuais:
+                        placeholder_links_f14.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f14_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                v_can_exib = converte_moeda_br_para_float(input_can_str)
+                v_est_exib = max(converte_moeda_br_para_float(input_est_str), 0.01) # Evita divisão por zero
+
+                am_exib = round(v_can_exib / v_est_exib, 4)
+
+                if v_can_exib == 0.0 and (link_f14.strip() == ""):
+                    pts_f14_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if am_exib == 0.0000:
+                        pts_f14_exib = 50.0
+                        texto_resultado_exib = "✅ EXCELENTE: Nenhum cancelamento efetuado (= 0,00)"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    elif 0.0000 < am_exib < 0.1000:
+                        pts_f14_exib = ((am_exib - 0.1000) * (-1.0) / 0.1000) * 50.0
+                        texto_resultado_exib = "⚠️ ALERTA DE GRADUAÇÃO (Baixa Parcial do Estoque)"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:
+                        pts_f14_exib = 0.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Índice de cancelamento muito elevado (≥ 10%)"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f14_exib:.2f} pontos"
+
+                str_can_fmt = f"R$ {v_can_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_est_fmt = f"R$ {v_est_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_am_fmt = f"{am_exib:.4f}".replace(".", ",")
+                str_perc_fmt = f"{am_exib * 100:.2f}%".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Razão:</b> {str_can_fmt} / {str_est_fmt}<br>
+                    📊 <b>Resultado do Indicador (AM):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_am_fmt}</code> ({str_perc_fmt} de cancelamento)<br>
+                    ⚖️ <b>Situação do Estoque:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F14", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F14", key=f"btn_salvar_f14_{ano_sel}", type="primary"):
+                    v_can = converte_moeda_br_para_float(st.session_state.get(chave_input_can, input_can_str))
+                    v_est = max(converte_moeda_br_para_float(st.session_state.get(chave_input_est, input_est_str)), 0.01)
+
+                    am_calculado = round(v_can / v_est, 4)
+
+                    if am_calculado == 0.0000:
+                        pts_f14 = 50.0
+                    elif 0.0000 < am_calculado < 0.1000:
+                        pts_f14 = ((am_calculado - 0.1000) * (-1.0) / 0.1000) * 50.0
+                    else:
+                        pts_f14 = 0.0
+
+                    str_banco = f"{v_can:.2f}/{v_est:.2f}"
+                    lnk_val_f14 = link_f14.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f14, dF14.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F14",
+                        valor=str_banco,
+                        pontos=pts_f14,
+                        link=lnk_val_f14,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F14"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f14,
+                        "link": lnk_val_f14,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f14 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f14_salva or "")]
+
+                    if lnk_val_f14 != evidencia_f14_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f14_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f14_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F14 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f14_salvos = float(dF14.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F14 Registrado: {pts_f14_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F14 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f14_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F14", st.session_state.get(f"links_pendentes_f14_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f14_{ano_sel}"] = False
+
     
