@@ -1204,359 +1204,359 @@ for qid in quesitos_validos_ods:
     return buffer
 
 import logging
-import plotly.graph_objects as go
-import streamlit as st
+    import plotly.graph_objects as go
+    import streamlit as st
 
-# =============================================================================
-# 1. FUNÇÕES DE BANCO E LIMPEZA - i-Saúde
-# =============================================================================
+    # =============================================================================
+    # 1. FUNÇÕES DE BANCO E LIMPEZA - i-Saúde
+    # =============================================================================
 
 
-def zerar_questionario_isaude(ano: int):
-    """Deleta todas as respostas do ano selecionado na tabela de respostas do i-Saúde."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                # Tenta deletar da tabela específica do i-Saúde
-                try:
+    def zerar_questionario_isaude(ano: int):
+        """Deleta todas as respostas do ano selecionado na tabela de respostas do i-Saúde."""
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Tenta deletar da tabela específica do i-Saúde
+                    try:
+                        cursor.execute(
+                            "DELETE FROM respostas_isaude WHERE ano = %s;",
+                            (int(ano),),
+                        )
+                    except Exception:
+                        # Fallback caso seu banco utilize a tabela unificada 'respostas'
+                        conn.rollback()
+                        cursor.execute(
+                            "DELETE FROM respostas WHERE ano = %s AND (modulo = 'isaude' OR modulo IS NULL);",
+                            (int(ano),),
+                        )
+                conn.commit()
+
+            # Limpa o cache de leitura do Streamlit para forçar nova consulta ao banco
+            st.cache_data.clear()
+        except Exception as e:
+            logging.error(f"Erro ao zerar questionário i-Saúde: {e}")
+            st.error(f"Erro ao zerar questionário i-Saúde no banco Neon: {e}")
+
+
+    @st.dialog("⚠️ Zerar Respostas do i-Saúde")
+    def confirmar_zerar_dialog_isaude(ano):
+        st.warning(
+            f"Tem certeza que deseja apagar TODAS as respostas do i-Saúde para o ano {ano}?"
+        )
+        st.write(
+            "Esta ação é irreversível e excluirá os dados salvos no banco Neon."
+        )
+
+        # Campo para inserção da senha de confirmação
+        senha_digitada = st.text_input(
+            "Digite a senha de confirmação para prosseguir:",
+            type="password",
+            placeholder="Digite a senha...",
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(
+                "🔴 Sim, Zerar Tudo", type="primary", use_container_width=True
+            ):
+                if senha_digitada.strip() == "fidelios":
+                    try:
+                        # 1. Deleta do PostgreSQL (Neon)
+                        zerar_questionario_isaude(ano)
+
+                        # 2. Reseta a chave primária de respostas no session_state
+                        key_ano = f"respostas_isaude_{ano}"
+                        st.session_state[key_ano] = {}
+
+                        # 3. Limpa todas as chaves dinâmicas dos formulários/inputs do i-Saúde no session_state
+                        chaves_para_limpar = [
+                            k
+                            for k in list(st.session_state.keys())
+                            if f"isaude_{ano}" in k
+                            or k.endswith(f"_{ano}")
+                            or "isaude" in k.lower()
+                        ]
+
+                        for key in chaves_para_limpar:
+                            # Preserva apenas a chave que guarda a seleção do ano na sidebar
+                            if key != "ano_referencia_isaude":
+                                del st.session_state[key]
+
+                        st.toast(
+                            f"Respostas do i-Saúde ({ano}) zeradas com sucesso!",
+                            icon="🗑️",
+                        )
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao zerar i-Saúde: {e}")
+                else:
+                    st.error("🔒 Senha incorreta! Ação cancelada.")
+
+        with col2:
+            if st.button("Cancelar", use_container_width=True):
+                st.rerun()
+
+
+    # =============================================================================
+    # 2. DIÁLOGO E BANCO - ZERAR DADOS DO i-SAÚDE
+    # =============================================================================
+
+
+    def zerar_banco_isaude_por_ano(ano: int):
+        """Apaga fisicamente as respostas do i-Saúde para o ano selecionado no Neon DB."""
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Garante exclusão/zeramento estritamente na tabela do i-Saúde
                     cursor.execute(
-                        "DELETE FROM respostas_isaude WHERE ano = %s;",
-                        (int(ano),),
+                        "DELETE FROM respostas_isaude WHERE ano = %s;", (int(ano),)
                     )
-                except Exception:
-                    # Fallback caso seu banco utilize a tabela unificada 'respostas'
-                    conn.rollback()
-                    cursor.execute(
-                        "DELETE FROM respostas WHERE ano = %s AND (modulo = 'isaude' OR modulo IS NULL);",
-                        (int(ano),),
-                    )
-            conn.commit()
+                conn.commit()
 
-        # Limpa o cache de leitura do Streamlit para forçar nova consulta ao banco
-        st.cache_data.clear()
-    except Exception as e:
-        logging.error(f"Erro ao zerar questionário i-Saúde: {e}")
-        st.error(f"Erro ao zerar questionário i-Saúde no banco Neon: {e}")
+            # Limpa caches em memória
+            st.cache_data.clear()
+
+            # Limpa chaves do session_state associadas ao ano
+            chave_ss = f"respostas_isaude_{ano}"
+            if chave_ss in st.session_state:
+                del st.session_state[chave_ss]
+
+            return True
+        except Exception as e:
+            logging.error(f"Erro ao zerar i-Saúde no banco: {e}")
+            return False
 
 
-@st.dialog("⚠️ Zerar Respostas do i-Saúde")
-def confirmar_zerar_dialog_isaude(ano):
-    st.warning(
-        f"Tem certeza que deseja apagar TODAS as respostas do i-Saúde para o ano {ano}?"
-    )
-    st.write(
-        "Esta ação é irreversível e excluirá os dados salvos no banco Neon."
-    )
+    @st.dialog("⚠️ Confirmar Zeramento - i-Saúde")
+    def confirmar_zerar_dialog_isaude(ano):
+        st.warning(
+            f"Tem certeza que deseja apagar **TODAS** as respostas e pontos do i-Saúde para o ano de **{ano}**?"
+        )
+        st.write(
+            "Esta ação é irreversível e removerá as evidências e comentários do banco de dados."
+        )
 
-    # Campo para inserção da senha de confirmação
-    senha_digitada = st.text_input(
-        "Digite a senha de confirmação para prosseguir:",
-        type="password",
-        placeholder="Digite a senha...",
-    )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button(
-            "🔴 Sim, Zerar Tudo", type="primary", use_container_width=True
-        ):
-            if senha_digitada.strip() == "fidelios":
-                try:
-                    # 1. Deleta do PostgreSQL (Neon)
-                    zerar_questionario_isaude(ano)
-
-                    # 2. Reseta a chave primária de respostas no session_state
-                    key_ano = f"respostas_isaude_{ano}"
-                    st.session_state[key_ano] = {}
-
-                    # 3. Limpa todas as chaves dinâmicas dos formulários/inputs do i-Saúde no session_state
-                    chaves_para_limpar = [
-                        k
-                        for k in list(st.session_state.keys())
-                        if f"isaude_{ano}" in k
-                        or k.endswith(f"_{ano}")
-                        or "isaude" in k.lower()
-                    ]
-
-                    for key in chaves_para_limpar:
-                        # Preserva apenas a chave que guarda a seleção do ano na sidebar
-                        if key != "ano_referencia_isaude":
-                            del st.session_state[key]
-
+        col_sim, col_nao = st.columns(2)
+        with col_sim:
+            if st.button(
+                "🔥 Sim, Zerar Dados", type="primary", use_container_width=True
+            ):
+                if zerar_banco_isaude_por_ano(ano):
                     st.toast(
-                        f"Respostas do i-Saúde ({ano}) zeradas com sucesso!",
+                        f"Dados do i-Saúde para {ano} foram zerados com sucesso!",
                         icon="🗑️",
                     )
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao zerar i-Saúde: {e}")
-            else:
-                st.error("🔒 Senha incorreta! Ação cancelada.")
+                else:
+                    st.error("Erro ao tentar zerar os dados no banco.")
 
-    with col2:
-        if st.button("Cancelar", use_container_width=True):
-            st.rerun()
-
-
-# =============================================================================
-# 2. DIÁLOGO E BANCO - ZERAR DADOS DO i-SAÚDE
-# =============================================================================
-
-
-def zerar_banco_isaude_por_ano(ano: int):
-    """Apaga fisicamente as respostas do i-Saúde para o ano selecionado no Neon DB."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                # Garante exclusão/zeramento estritamente na tabela do i-Saúde
-                cursor.execute(
-                    "DELETE FROM respostas_isaude WHERE ano = %s;", (int(ano),)
-                )
-            conn.commit()
-
-        # Limpa caches em memória
-        st.cache_data.clear()
-
-        # Limpa chaves do session_state associadas ao ano
-        chave_ss = f"respostas_isaude_{ano}"
-        if chave_ss in st.session_state:
-            del st.session_state[chave_ss]
-
-        return True
-    except Exception as e:
-        logging.error(f"Erro ao zerar i-Saúde no banco: {e}")
-        return False
-
-
-@st.dialog("⚠️ Confirmar Zeramento - i-Saúde")
-def confirmar_zerar_dialog_isaude(ano):
-    st.warning(
-        f"Tem certeza que deseja apagar **TODAS** as respostas e pontos do i-Saúde para o ano de **{ano}**?"
-    )
-    st.write(
-        "Esta ação é irreversível e removerá as evidências e comentários do banco de dados."
-    )
-
-    col_sim, col_nao = st.columns(2)
-    with col_sim:
-        if st.button(
-            "🔥 Sim, Zerar Dados", type="primary", use_container_width=True
-        ):
-            if zerar_banco_isaude_por_ano(ano):
-                st.toast(
-                    f"Dados do i-Saúde para {ano} foram zerados com sucesso!",
-                    icon="🗑️",
-                )
+        with col_nao:
+            if st.button("Cancelar", use_container_width=True):
                 st.rerun()
-            else:
-                st.error("Erro ao tentar zerar os dados no banco.")
-
-    with col_nao:
-        if st.button("Cancelar", use_container_width=True):
-            st.rerun()
 
 
-# =============================================================================
-# 3. SIDEBAR E PAINEL - i-Saúde
-# =============================================================================
+    # =============================================================================
+    # 3. SIDEBAR E PAINEL - i-Saúde
+    # =============================================================================
 
 
-def render_sidebar():
-    st.sidebar.title("🏥 Painel de Controle - i-Saúde")
-    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    def render_sidebar():
+        st.sidebar.title("🏥 Painel de Controle - i-Saúde")
+        anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
 
-    ano_sel = st.sidebar.selectbox(
-        "Ano de Referência:", anos, key="ano_referencia_isaude"
-    )
+        ano_sel = st.sidebar.selectbox(
+            "Ano de Referência:", anos, key="ano_referencia_isaude"
+        )
 
-    # Força a busca da função específica do i-Saúde sem recuar para tabelas genéricas
-    if "load_respostas_isaude" in globals():
-        res_data = load_respostas_isaude(ano_sel)
-    else:
-        res_data = load_respostas(ano_sel)
+        # Força a busca da função específica do i-Saúde sem recuar para tabelas genéricas
+        if "load_respostas_isaude" in globals():
+            res_data = load_respostas_isaude(ano_sel)
+        else:
+            res_data = load_respostas(ano_sel)
 
-    # Garante conversão float para não travar o cálculo de pontuação
-    total_pts = sum(
-        float(item.get("pontos", 0.0))
-        for item in res_data.values()
-        if isinstance(item, dict)
-    )
+        # Garante conversão float para não travar o cálculo de pontuação
+        total_pts = sum(
+            float(item.get("pontos", 0.0))
+            for item in res_data.values()
+            if isinstance(item, dict)
+        )
 
-    # Régua de Classificação IEGM / i-Saúde
-    if total_pts <= 500:
-        faixa, cor = "C", "red"
-    elif total_pts <= 599:
-        faixa, cor = "C+", "orange"
-    elif total_pts <= 749:
-        faixa, cor = "B", "#d4d400"
-    elif total_pts <= 899:
-        faixa, cor = "B+", "lightgreen"
-    else:
-        faixa, cor = "A", "green"
+        # Régua de Classificação IEGM / i-Saúde
+        if total_pts <= 500:
+            faixa, cor = "C", "red"
+        elif total_pts <= 599:
+            faixa, cor = "C+", "orange"
+        elif total_pts <= 749:
+            faixa, cor = "B", "#d4d400"
+        elif total_pts <= 899:
+            faixa, cor = "B+", "lightgreen"
+        else:
+            faixa, cor = "A", "green"
 
-    st.sidebar.metric("Pontuação Total i-Saúde", f"{total_pts:.1f} pts")
-    st.sidebar.markdown(
-        f"**Faixa:** <span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
-        unsafe_allow_html=True,
-    )
+        st.sidebar.metric("Pontuação Total i-Saúde", f"{total_pts:.1f} pts")
+        st.sidebar.markdown(
+            f"**Faixa:** <span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
+            unsafe_allow_html=True,
+        )
 
-    st.sidebar.divider()
+        st.sidebar.divider()
 
-    col1, col2 = st.sidebar.columns(2)
+        col1, col2 = st.sidebar.columns(2)
 
-    # Botão de Download do PDF
-    with col1:
-        pdf_bytes = b""
-        if "gerar_relatorio_isaude" in globals():
-            pdf_bytes = gerar_relatorio_isaude(
-                res_data, ano_sel=ano_sel, total_pts=total_pts
-            ).getvalue()
-        elif "gerar_relatorio_pdf" in globals():
-            pdf_bytes = gerar_relatorio_pdf(
-                res_data, ano_sel, total_pts, faixa
+        # Botão de Download do PDF
+        with col1:
+            pdf_bytes = b""
+            if "gerar_relatorio_isaude" in globals():
+                pdf_bytes = gerar_relatorio_isaude(
+                    res_data, ano_sel=ano_sel, total_pts=total_pts
+                ).getvalue()
+            elif "gerar_relatorio_pdf" in globals():
+                pdf_bytes = gerar_relatorio_pdf(
+                    res_data, ano_sel, total_pts, faixa
+                )
+
+            st.download_button(
+                label="📄 Baixar PDF",
+                data=pdf_bytes,
+                file_name=f"Relatorio_iSaude_{ano_sel}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                disabled=(pdf_bytes == b""),
             )
 
-        st.download_button(
-            label="📄 Baixar PDF",
-            data=pdf_bytes,
-            file_name=f"Relatorio_iSaude_{ano_sel}.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-            disabled=(pdf_bytes == b""),
-        )
+        # Botão para abrir o Modal de confirmação
+        with col2:
+            if st.button(
+                "🔄 Zerar",
+                help="Limpar todas as respostas do ano selecionado",
+                use_container_width=True,
+            ):
+                confirmar_zerar_dialog_isaude(ano_sel)
 
-    # Botão para abrir o Modal de confirmação
-    with col2:
-        if st.button(
-            "🔄 Zerar",
-            help="Limpar todas as respostas do ano selecionado",
-            use_container_width=True,
-        ):
-            confirmar_zerar_dialog_isaude(ano_sel)
-
-    return total_pts, res_data, ano_sel
+        return total_pts, res_data, ano_sel
 
 
-# =============================================================================
-# 4. GRÁFICOS E HISTÓRICO - i-Saúde
-# =============================================================================
+    # =============================================================================
+    # 4. GRÁFICOS E HISTÓRICO - i-Saúde
+    # =============================================================================
 
 
-def get_all_years_data_isaude() -> dict:
-    """Busca o histórico de dados EXCLUSIVAMENTE do i-Saúde."""
-    all_data = {}
+    def get_all_years_data_isaude() -> dict:
+        """Busca o histórico de dados EXCLUSIVAMENTE do i-Saúde."""
+        all_data = {}
 
-    # 1. Carrega estritamente da tabela respostas_isaude no Neon
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                # NENHUM fallback para 'respostas' aqui! Apenas 'respostas_isaude'
-                cursor.execute(
-                    "SELECT DISTINCT ano FROM respostas_isaude ORDER BY ano"
-                )
-                anos_banco = [row[0] for row in cursor.fetchall()]
-
-                for a in anos_banco:
-                    all_data[a] = (
-                        load_respostas_isaude(a)
-                        if "load_respostas_isaude" in globals()
-                        else load_respostas(a)
+        # 1. Carrega estritamente da tabela respostas_isaude no Neon
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # NENHUM fallback para 'respostas' aqui! Apenas 'respostas_isaude'
+                    cursor.execute(
+                        "SELECT DISTINCT ano FROM respostas_isaude ORDER BY ano"
                     )
-    except Exception as e:
-        logging.error(f"Erro ao buscar histórico de anos i-Saúde no banco: {e}")
+                    anos_banco = [row[0] for row in cursor.fetchall()]
 
-    # 2. Carrega dados temporários do Session State do i-Saúde
-    prefixo = "respostas_isaude_"
-    for key in list(st.session_state.keys()):
-        if key.startswith(prefixo):
-            try:
-                ano = int(key.replace(prefixo, ""))
-                if ano not in all_data or not all_data[ano]:
-                    all_data[ano] = st.session_state[key]
-            except ValueError:
-                continue
+                    for a in anos_banco:
+                        all_data[a] = (
+                            load_respostas_isaude(a)
+                            if "load_respostas_isaude" in globals()
+                            else load_respostas(a)
+                        )
+        except Exception as e:
+            logging.error(f"Erro ao buscar histórico de anos i-Saúde no banco: {e}")
 
-    return all_data
+        # 2. Carrega dados temporários do Session State do i-Saúde
+        prefixo = "respostas_isaude_"
+        for key in list(st.session_state.keys()):
+            if key.startswith(prefixo):
+                try:
+                    ano = int(key.replace(prefixo, ""))
+                    if ano not in all_data or not all_data[ano]:
+                        all_data[ano] = st.session_state[key]
+                except ValueError:
+                    continue
+
+        return all_data
 
 
-def grafico_pontos_por_ano(all_data):
-    """Gráfico de barras vertical com pontos totais por ano para o i-Saúde."""
-    anos = sorted(all_data.keys())
-    totais = []
-    cores = []
+    def grafico_pontos_por_ano(all_data):
+        """Gráfico de barras vertical com pontos totais por ano para o i-Saúde."""
+        anos = sorted(all_data.keys())
+        totais = []
+        cores = []
 
-    for ano in anos:
-        res = all_data[ano]
-        total = sum(
-            float(v.get("pontos", 0.0))
-            for k, v in res.items()
-            if isinstance(v, dict) and not str(k).startswith("COM_")
+        for ano in anos:
+            res = all_data[ano]
+            total = sum(
+                float(v.get("pontos", 0.0))
+                for k, v in res.items()
+                if isinstance(v, dict) and not str(k).startswith("COM_")
+            )
+            totais.append(total)
+
+            if total <= 500:
+                cores.append("#ef4444")
+            elif total <= 599:
+                cores.append("#f97316")
+            elif total <= 749:
+                cores.append("#eab308")
+            elif total <= 899:
+                cores.append("#84cc16")
+            else:
+                cores.append("#16a34a")
+
+        fig = go.Figure()
+        fig.add_trace(
+            go.Bar(
+                x=[str(a) for a in anos],
+                y=totais,
+                marker_color=cores,
+                text=[f"{t:.1f} pts" for t in totais],
+                textposition="outside",
+                hovertemplate="<b>Ano: %{x}</b><br>i-Saúde Total: %{y:.1f} pts<extra></extra>",
+            )
         )
-        totais.append(total)
 
-        if total <= 500:
-            cores.append("#ef4444")
-        elif total <= 599:
-            cores.append("#f97316")
-        elif total <= 749:
-            cores.append("#eab308")
-        elif total <= 899:
-            cores.append("#84cc16")
-        else:
-            cores.append("#16a34a")
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Bar(
-            x=[str(a) for a in anos],
-            y=totais,
-            marker_color=cores,
-            text=[f"{t:.1f} pts" for t in totais],
-            textposition="outside",
-            hovertemplate="<b>Ano: %{x}</b><br>i-Saúde Total: %{y:.1f} pts<extra></extra>",
+        fig.update_layout(
+            title="Índice Histórico i-Saúde (Gestão da Saúde) por Exercício",
+            xaxis_title="Ano",
+            yaxis_title="Pontuação i-Saúde",
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            showlegend=False,
+            height=400,
         )
-    )
 
-    fig.update_layout(
-        title="Índice Histórico i-Saúde (Gestão da Saúde) por Exercício",
-        xaxis_title="Ano",
-        yaxis_title="Pontuação i-Saúde",
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        showlegend=False,
-        height=400,
-    )
-
-    return fig
+        return fig
 
 
-def render_graficos(res_data_atual, ano_sel):
-    st.header("📊 Painel de Análise do i-Saúde")
+    def render_graficos(res_data_atual, ano_sel):
+        st.header("📊 Painel de Análise do i-Saúde")
 
-    all_data = get_all_years_data_isaude()
+        all_data = get_all_years_data_isaude()
 
-    if not all_data:
-        st.info(
-            "Nenhum dado do i-Saúde registrado ainda. Preencha os itens para visualizar os gráficos."
+        if not all_data:
+            st.info(
+                "Nenhum dado do i-Saúde registrado ainda. Preencha os itens para visualizar os gráficos."
+            )
+            return
+
+        st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
+
+
+    # =============================================================================
+    # 5. FORMULÁRIO PRINCIPAL - i-Saúde
+    # =============================================================================
+
+
+    def mostrar_formulario_isaude():
+        total_pts, res_data, ano_sel = render_sidebar()
+
+        st.title(f"🏥 Gestão e Fiscalização da Saúde (i-Saúde) - {ano_sel}")
+
+        aba_quest, aba_ext, aba_graf = st.tabs(
+            ["📋 Questionário i-Saúde", "🌐 Dados Externos", "📊 Gráficos"]
         )
-        return
 
-    st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
-
-
-# =============================================================================
-# 5. FORMULÁRIO PRINCIPAL - i-Saúde
-# =============================================================================
-
-
-def mostrar_formulario_isaude():
-    total_pts, res_data, ano_sel = render_sidebar()
-
-    st.title(f"🏥 Gestão e Fiscalização da Saúde (i-Saúde) - {ano_sel}")
-
-    aba_quest, aba_ext, aba_graf = st.tabs(
-        ["📋 Questionário i-Saúde", "🌐 Dados Externos", "📊 Gráficos"]
-    )
-
-    with aba_quest:
-        st.info("Preencha as informações da área da saúde do município.")
+        with aba_quest:
+            st.info("Preencha as informações da área da saúde do município.")
