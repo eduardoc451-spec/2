@@ -12450,5 +12450,141 @@ def mostrar_formulario_ifiscal():
             st.session_state[f"gatilho_modal_24_0_{ano_sel}"] = False
 
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 24.1 • SITUAÇÃO DAS PARCELAS DE PARCELAMENTO (RGPS)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_24_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 24.1 - Adimplemento das Parcelas RGPS ({ano_sel})", expanded=True):
+                st.subheader("24.1 • Regularidade das Parcelas")
+                st.write(f"**As parcelas referentes ao parcelamento para o Regime Geral de Previdência Social (RGPS) com vencimento em {ano_sel} foram realizadas em qual prazo?**")
+                
+                # Estado inicial / persistente
+                d241 = res_data.get("24.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc241 = [
+                    "Selecione...",
+                    "Todas as parcelas foram recolhidas dentro do prazo legal – 00",
+                    "A maior parte das parcelas recolhidas até 30 dias após o vencimento – -04 (perde 04 pontos)",
+                    "A maior parte das parcelas recolhidas de 31 a 90 dias do vencimento – -15 (perde 15 pontos)",
+                    "A maior parte das parcelas recolhidas acima de 90 dias do vencimento – -21 (perde 21 pontos)",
+                    "As parcelas não foram recolhidas – -30 (perde 30 pontos)"
+                ]
+                
+                valor_limpo_241 = str(d241.get("valor", "Selecione..."))
+                if valor_limpo_241 not in opc241:
+                    valor_limpo_241 = "Selecione..."
+                
+                evidencia_241_salva = d241.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_241 = f"rad_241_{ano_sel}_fiscal"
+                chave_link_241 = f"txt_241_{ano_sel}_fiscal"
+                chave_coment_241 = f"coment_24.1_{ano_sel}_fiscal"
+
+                c5, c6 = st.columns([1, 1])
+                with c5:
+                    st.radio(
+                        "Selecione 24.1:", 
+                        opc241, 
+                        index=opc241.index(valor_limpo_241), 
+                        key=chave_rad_241
+                    )
+
+                with c6:
+                    link_241 = st.text_area(
+                        f"Link/Evidência de Comprovantes de Pagamento do Parcelamento ({ano_sel}):", 
+                        value=evidencia_241_salva, 
+                        key=chave_link_241, 
+                        placeholder="Insira os links e evidências...",
+                        height=140
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_241 = st.empty()
+                    links_241_visuais = re.findall(REGEX_PURE_URL, link_241 or "")
+                    if links_241_visuais:
+                        placeholder_links_241.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_241_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("24.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 24.1", key=f"btn_salvar_24_1_{ano_sel}", type="primary"):
+                    val_241_selecionado = st.session_state.get(chave_rad_241, valor_limpo_241)
+                    lnk_val_241 = link_241.strip()
+
+                    # Cálculo da pontuação conforme a opção selecionada
+                    if "dentro do prazo" in val_241_selecionado:
+                        pts_241 = 0.0
+                    elif "até 30 dias" in val_241_selecionado:
+                        pts_241 = -4.0
+                    elif "31 a 90 dias" in val_241_selecionado:
+                        pts_241 = -15.0
+                    elif "acima de 90 dias" in val_241_selecionado:
+                        pts_241 = -21.0
+                    elif "não foram recolhidas" in val_241_selecionado:
+                        pts_241 = -30.0
+                    else:
+                        pts_241 = 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_241, d241.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="24.1",
+                        valor=val_241_selecionado,
+                        pontos=pts_241,
+                        link=lnk_val_241,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["24.1"] = {
+                        "valor": val_241_selecionado,
+                        "pontos": pts_241,
+                        "link": lnk_val_241,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_241 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_241_salva or "")]
+
+                    if lnk_val_241 != evidencia_241_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_24_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_24_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 24.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição de pontuação
+                pts_atuais_241 = d241.get("pontos", 0.0)
+                cor_p241 = "#dc3545" if pts_atuais_241 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_p241}; font-weight:bold;'>"
+                    f"📊 Impacto 24.1: {pts_atuais_241} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 24.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_24_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("24.1", st.session_state.get(f"links_pendentes_24_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_24_1_{ano_sel}"] = False
+
+
 
 
