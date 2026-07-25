@@ -11048,6 +11048,140 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("18.0", st.session_state.get(f"links_pendentes_18_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 18.1 • CHECKLIST DE DOCUMENTOS DIVULGADOS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_18_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.1 - Checklist de Itens Divulgados ({ano_sel})", expanded=True):
+                st.subheader("18.1 • Itens Publicados na Página Eletrônica")
+                st.write("**Assinale os itens que são divulgados na página eletrônica do Município (Checklist):**")
+                
+                # Estado inicial / persistente
+                d181 = res_data.get("18.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                evidencia_181_salva = d181.get("link", "")
+                
+                # Desserialização do valor salvo
+                try:
+                    val_banco181 = str(d181.get("valor", "[]")).replace("'", '"')
+                    sel181 = json.loads(val_banco181)
+                    if not isinstance(sel181, list):
+                        sel181 = []
+                except Exception:
+                    sel181 = []
+
+                opcoes_181 = {
+                    "PPA, LDO e LOA – 2,5": 2.5,
+                    "Balanços de exercício – 2,5": 2.5,
+                    "Prestação de contas do ano anterior – 2,5": 2.5,
+                    "Parecer prévio do TCE – 2,5": 2.5,
+                    "Relatório de Gestão Fiscal (RGF) – 2,5": 2.5,
+                    "Relatório Resumido da Execução Orçamentária (RREO) – 2,5": 2.5
+                }
+
+                # Chaves padronizadas para session_state
+                chave_link_181 = f"txt_181_{ano_sel}_fiscal"
+                chave_coment_181 = f"coment_18.1_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    for idx, (opcao, _) in enumerate(opcoes_181.items()):
+                        st.checkbox(
+                            opcao, 
+                            value=(opcao in sel181), 
+                            key=f"chk_181_{idx}_{ano_sel}_fiscal"
+                        )
+
+                with c4:
+                    link_181 = st.text_area(
+                        f"Link/Evidência dos Documentos Publicados ({ano_sel}):", 
+                        value=evidencia_181_salva, 
+                        key=chave_link_181, 
+                        placeholder="Insira os links e evidências...",
+                        height=140
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_181 = st.empty()
+                    links_181_visuais = re.findall(REGEX_PURE_URL, link_181 or "")
+                    if links_181_visuais:
+                        placeholder_links_181.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_181_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("18.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 18.1", key=f"btn_salvar_18_1_{ano_sel}", type="primary"):
+                    res181_temp = []
+                    pts_acumulados = 0.0
+
+                    # Apuração dos checkboxes selecionados
+                    for idx_chk, (opcao_chk, pontos_chk) in enumerate(opcoes_181.items()):
+                        chk_key = f"chk_181_{idx_chk}_{ano_sel}_fiscal"
+                        if st.session_state.get(chk_key, False):
+                            res181_temp.append(opcao_chk)
+                            pts_acumulados += pontos_chk
+
+                    valor_json_181 = json.dumps(res181_temp)
+                    lnk_val_181 = link_181.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_181, d181.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="18.1",
+                        valor=valor_json_181,
+                        pontos=float(pts_acumulados),
+                        link=lnk_val_181,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["18.1"] = {
+                        "valor": valor_json_181,
+                        "pontos": float(pts_acumulados),
+                        "link": lnk_val_181,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_181 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_181_salva or "")]
+
+                    if lnk_val_181 != evidencia_181_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_18_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_18_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Checklist e comentários do Quesito 18.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação acumulada
+                pts_atuais_181 = d181.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto 18.1: {pts_atuais_181} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 18.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_18_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.1", st.session_state.get(f"links_pendentes_18_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_18_1_{ano_sel}"] = False
+
 
 
 
