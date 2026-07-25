@@ -12819,6 +12819,73 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("25.1", st.session_state.get(f"links_pendentes_25_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_25_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 26.0 • CONSIDERAÇÕES FINAIS / OUVIDORIA
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_26_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 26.0 - Impressões Finais ({ano_sel})", expanded=True):
+                st.subheader("26.0 • Ouvidoria e Espaço Crítico")
+                st.write("**Gostaria de registrar suas impressões, comentários e sugestões a respeito do presente questionário?**")
+                st.caption("ℹ️ *Utilize o espaço abaixo de forma livre para documentar observações sobre a usabilidade, críticas ou pontos de melhoria.*")
+                
+                # Estado inicial / persistente
+                d260 = res_data.get("26.0") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_260 = str(d260.get("valor", ""))
+
+                # Chaves padronizadas para session_state
+                chave_txt_260 = f"txt_260_val_{ano_sel}_fiscal"
+                chave_coment_260 = f"coment_26.0_{ano_sel}_fiscal"
+
+                impressoes_260 = st.text_area(
+                    "Impressões, comentários e sugestões:", 
+                    value=v_salvo_260, 
+                    key=chave_txt_260, 
+                    placeholder="Digite aqui suas observações sobre o questionário...",
+                    height=180
+                )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("26.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 26.0", key=f"btn_salvar_26_0_{ano_sel}", type="primary"):
+                    val_260_digitado = impressoes_260.strip()
+
+                    # Captura o comentário adicional da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_260, d260.get("comentarios", ""))
+
+                    # Quesito de ouvidoria / informativo (pontuação 0.0)
+                    save_resp_ifiscal(
+                        qid="26.0",
+                        valor=val_260_digitado,
+                        pontos=0.0,
+                        link="",
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["26.0"] = {
+                        "valor": val_260_digitado,
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    st.cache_data.clear()
+                    st.toast("Impressões e observações do Quesito 26.0 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição de pontuação (sempre 0.0)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 26.0: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
 
 
 
