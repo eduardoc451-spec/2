@@ -6805,6 +6805,142 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("9.4.1", st.session_state.get(f"links_pendentes_9_4_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_4_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 9.5 • TOTALMENTE INDEPENDENTE (FORMULÁRIO MULTI-CHECK DOS MEIOS DE PAGAMENTO)
+        # =============================================================================
+        with st.container(key=f"bloco_isolado_q9_5_{ano_sel}_fiscal", border=True):
+            with st.expander("📌 Quesito 9.5 - Forma de Recolhimento da Guia", expanded=True):
+                st.subheader("9.5 • Meios de Recolhimento do ITBI")
+                st.write("**Assinale a forma de recolhimento da guia do ITBI:**")
+                
+                # Estado inicial / persistente
+                d95 = res_data.get("9.5") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                valor_salvo_95 = d95.get("valor", "") or ""
+                evidencia_95_salva = d95.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_chk_banco = f"chk_95_banco_{ano_sel}_fiscal"
+                chave_chk_caixa = f"chk_95_caixa_{ano_sel}_fiscal"
+                chave_chk_loterica = f"chk_95_loterica_{ano_sel}_fiscal"
+                chave_chk_outros = f"chk_95_outros_{ano_sel}_fiscal"
+                chave_link_95 = f"txt_95_{ano_sel}_fiscal"
+                chave_coment_95 = f"coment_9.5_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.write("*Selecione todas as opções aplicáveis:*")
+                    st.checkbox(
+                        "Sistema Bancário", 
+                        value=("Sistema Bancário" in valor_salvo_95), 
+                        key=chave_chk_banco
+                    )
+                    st.checkbox(
+                        "Diretamente no Caixa da Prefeitura", 
+                        value=("Diretamente no Caixa da Prefeitura" in valor_salvo_95), 
+                        key=chave_chk_caixa
+                    )
+                    st.checkbox(
+                        "Lotérica", 
+                        value=("Lotérica" in valor_salvo_95), 
+                        key=chave_chk_loterica
+                    )
+                    st.checkbox(
+                        "Outros", 
+                        value=("Outros" in valor_salvo_95), 
+                        key=chave_chk_outros
+                    )
+
+                with c2:
+                    link_95 = st.text_area(
+                        "Link/Evidência (9.5):", 
+                        value=evidencia_95_salva, 
+                        key=chave_link_95, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_95 = st.empty()
+                    links_95_visuais = re.findall(REGEX_PURE_URL, link_95 or "")
+                    if links_95_visuais:
+                        placeholder_links_95.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_95_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("9.5", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.5", key=f"btn_salvar_9_5_{ano_sel}", type="primary"):
+                    # Consolidação dos checkboxes selecionados
+                    lista_selecionados = []
+                    if st.session_state.get(chave_chk_banco, False): 
+                        lista_selecionados.append("Sistema Bancário")
+                    if st.session_state.get(chave_chk_caixa, False): 
+                        lista_selecionados.append("Diretamente no Caixa da Prefeitura")
+                    if st.session_state.get(chave_chk_loterica, False): 
+                        lista_selecionados.append("Lotérica")
+                    if st.session_state.get(chave_chk_outros, False): 
+                        lista_selecionados.append("Outros")
+
+                    str_resultado_95 = "/".join(lista_selecionados) if lista_selecionados else "Nenhuma"
+                    lnk_val_95 = link_95.strip()
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_95, d95.get("comentarios", ""))
+
+                    # Salva no banco de dados (Pontuação fixa 0.0)
+                    save_resp_ifiscal(
+                        qid="9.5",
+                        valor=str_resultado_95,
+                        pontos=0.0,
+                        link=lnk_val_95,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["9.5"] = {
+                        "valor": str_resultado_95,
+                        "pontos": 0.0,
+                        "link": lnk_val_95,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_95 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_95_salva or "")]
+
+                    if lnk_val_95 != evidencia_95_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_5_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 9.5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Quesito meramente informativo)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 9.5: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 9.5 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.5", st.session_state.get(f"links_pendentes_9_5_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_5_{ano_sel}"] = False
+
 
 
 
