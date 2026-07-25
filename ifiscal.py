@@ -8100,6 +8100,133 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("12.1.2", st.session_state.get(f"links_pendentes_12_1_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 12.2 • ACOMPANHAMENTO E AVALIAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_12_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 12.2 - Avaliação Periódica ({ano_sel})", expanded=True):
+                st.subheader("12.2 • Monitoramento das Renúncias")
+                st.write("**A Prefeitura Municipal realizou acompanhamento e (re)avaliação das renúncias de receita?**")
+                
+                # Estado inicial / persistente
+                d122 = res_data.get("12.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc122 = [
+                    "Selecione...",
+                    "Sim, de todas as renúncias de receita – 00",
+                    "Sim, de parte das renúncias de receita – -02 (perde 02 pontos)",
+                    "Não – -05 (perde 05 pontos)"
+                ]
+                
+                v_salvo_122 = d122.get("valor", "Selecione...")
+                if v_salvo_122 not in opc122: 
+                    v_salvo_122 = "Selecione..."
+                evidencia_122_salva = d122.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_122 = f"rad_122_{ano_sel}_fiscal"
+                chave_link_122 = f"txt_122_{ano_sel}_fiscal"
+                chave_coment_122 = f"coment_12.2_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    opc_selecionada_122 = st.radio(
+                        "Selecione 12.2:", 
+                        opc122, 
+                        index=opc122.index(v_salvo_122), 
+                        key=chave_rad_122
+                    )
+                with c2:
+                    link_122 = st.text_area(
+                        f"Link/Evidência do Acompanhamento ({ano_sel}):", 
+                        value=evidencia_122_salva, 
+                        key=chave_link_122, 
+                        placeholder="Insira os links e evidências do acompanhamento...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_122 = st.empty()
+                    links_122_visuais = re.findall(REGEX_PURE_URL, link_122 or "")
+                    if links_122_visuais:
+                        placeholder_links_122.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_122_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("12.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 12.2", key=f"btn_salvar_12_2_{ano_sel}", type="primary"):
+                    val_cru_122 = st.session_state.get(chave_rad_122, v_salvo_122)
+                    lnk_val_122 = link_122.strip()
+                    
+                    # Cálculo da pontuação conforme regra de negócio
+                    if "todas" in val_cru_122:
+                        pts122_nova = 0.0
+                    elif "parte" in val_cru_122:
+                        pts122_nova = -2.0
+                    elif val_cru_122 == "Selecione...":
+                        pts122_nova = 0.0
+                    else:
+                        pts122_nova = -5.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_122, d122.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="12.2",
+                        valor=val_cru_122,
+                        pontos=float(pts122_nova),
+                        link=lnk_val_122,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["12.2"] = {
+                        "valor": val_cru_122,
+                        "pontos": float(pts122_nova),
+                        "link": lnk_val_122,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_122 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_122_salva or "")]
+
+                    if lnk_val_122 != evidencia_122_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_12_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_12_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 12.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Destaque dinâmico: verde/vermelho)
+                pts_exibido_122 = d122.get("pontos", 0.0)
+                cor_pts = "#dc3545" if pts_exibido_122 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_pts}; font-weight:bold;'>"
+                    f"📊 Impacto 12.2: {pts_exibido_122:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 12.2 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_12_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.2", st.session_state.get(f"links_pendentes_12_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_2_{ano_sel}"] = False
+
 
 
 
