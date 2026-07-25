@@ -2656,5 +2656,101 @@ def mostrar_formulario_ifiscal():
                     unsafe_allow_html=True
                 )
 
+        # =============================================================================
+        # QUESITO 1.4.2 • DIVULGAÇÃO ELETRÔNICA DO PCCS (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_1_4_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.4.2 - Divulgação Eletrônica do PCCS", expanded=True):
+                st.subheader("1.4.2 • Página Eletrônica do PCCS")
+                st.write(
+                    "**Informe a página eletrônica (link na internet) de divulgação do Plano de Cargos e Salários específico para os fiscais tributários:**"
+                )
+                st.caption(
+                    "ℹ️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ**.* "
+                    "Este quesito é meramente informativo/declaratório e não gera pontuação direta."
+                )
+
+                # Estado inicial / persistente
+                d142 = res_data.get("1.4.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_142 = d142.get("valor", "")
+
+                # Chaves fixas por componente e ano
+                chave_text_142 = f"t142_in_{ano_sel}_fiscal"
+                chave_coment_142 = f"coment_1.4.2_{ano_sel}_fiscal"
+
+                val_text_142 = st.text_input(
+                    "Página eletrônica (ou XYZ):",
+                    value=v_salvo_142,
+                    key=chave_text_142,
+                    placeholder="https://... ou XYZ"
+                )
+
+                # Visualização dinâmica dos links detectados no próprio campo de texto
+                placeholder_links_142 = st.empty()
+                links_142_visuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(REGEX_PURE_URL, val_text_142 or "")
+                ]
+                if links_142_visuais:
+                    placeholder_links_142.markdown(
+                        "**🔗 Link ativo:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_142_visuais])
+                    )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("1.4.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.4.2", key=f"btn_salvar_1_4_2_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_text_142, v_salvo_142).strip()
+                    pts_142 = 0.0
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_142, d142.get("comentario", ""))
+
+                    # Salva no banco de dados Neon (o próprio campo 'valor' funciona como link)
+                    save_resp_ifiscal(
+                        qid="1.4.2",
+                        valor=val_salvar,
+                        pontos=pts_142,
+                        link=val_salvar,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.4.2"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_142,
+                        "link": val_salvar,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, val_salvar or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_142 or "")]
+
+                    if val_salvar != v_salvo_142 and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_4_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_4_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.4.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 1.4.2: +0.0 pontos (Quesito Declaratório)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.4.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_4_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.4.2", st.session_state.get(f"links_pendentes_1_4_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_4_2_{ano_sel}"] = False
+
 
 
