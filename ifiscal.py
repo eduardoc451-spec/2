@@ -4281,6 +4281,121 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.2", st.session_state.get(f"links_pendentes_5_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.3 • PREVISÃO DE REVISÃO OBRIGATÓRIA DA PGV (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.3 - Previsão de Revisão Obrigatória da PGV", expanded=True):
+                st.subheader("5.3 • Previsão de Revisão Periódica")
+                st.write(
+                    "**O Código Tributário Municipal ou Lei específica que tenha instituído o IPTU "
+                    "prevê a revisão periódica obrigatória da Planta Genérica de Valores (PGV)?**"
+                )
+
+                # Estado inicial / persistente
+                d53 = res_data.get("5.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc53 = ["Selecione...", "Sim – 03", "Não – 00"]
+                
+                v_salvo_53 = d53.get("valor", "Selecione...")
+                if v_salvo_53 not in opc53:
+                    v_salvo_53 = "Selecione..."
+                
+                evidencia_53_salva = d53.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_53 = f"r53_in_{ano_sel}_fiscal"
+                chave_link_53 = f"l53_in_{ano_sel}_fiscal"
+                chave_coment_53 = f"coment_5.3_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_radio_53 = st.radio(
+                        "Selecione uma opção (5.3):",
+                        options=opc53,
+                        index=opc53.index(v_salvo_53),
+                        key=chave_radio_53
+                    )
+
+                with col2:
+                    link_53 = st.text_area(
+                        "Link/Evidência (5.3):",
+                        value=evidencia_53_salva,
+                        key=chave_link_53,
+                        placeholder="Insira os links e evidências do dispositivo legal...",
+                        height=100
+                    )
+                    placeholder_links_53 = st.empty()
+                    links_53_visuais = re.findall(REGEX_PURE_URL, link_53 or "")
+                    if links_53_visuais:
+                        placeholder_links_53.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_53_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.3", res_data, sufixo="fiscal")
+
+                # Cálculo de pontuação em tempo real
+                pts_calculados_53 = 3.0 if "Sim" in val_radio_53 else 0.0
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.3", key=f"btn_salvar_5_3_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_53, v_salvo_53)
+                    lnk_val = link_53.strip()
+                    pts_salvar = 3.0 if "Sim" in val_salvar else 0.0
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_53, d53.get("comentarios", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="5.3",
+                        valor=val_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.3"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_salvar,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_53_salva or "")]
+
+                    if lnk_val != evidencia_53_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 5.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.3: {pts_calculados_53:.1f} ponto(s) aplicado(s)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.3", st.session_state.get(f"links_pendentes_5_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_3_{ano_sel}"] = False
+
 
 
 
