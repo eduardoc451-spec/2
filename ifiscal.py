@@ -12585,6 +12585,118 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("24.1", st.session_state.get(f"links_pendentes_24_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_24_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 25.0 • COMPENSAÇÃO DE ENCARGOS SOCIAIS (RFB)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_25_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 25.0 - Compensação de Encargos Sociais ({ano_sel})", expanded=True):
+                st.subheader("25.0 • Compensações Junto à RFB")
+                st.write(f"**O Município efetuou, no exercício de {ano_sel}, compensação de encargos sociais junto à Receita Federal do Brasil?**")
+                
+                # Estado inicial / persistente
+                d250 = res_data.get("25.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc250 = ["Selecione...", "Sim", "Não"]
+                
+                valor_limpo_250 = str(d250.get("valor", "Selecione..."))
+                if valor_limpo_250 not in opc250:
+                    valor_limpo_250 = "Selecione..."
+                
+                evidencia_250_salva = d250.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_250 = f"rad_250_{ano_sel}_fiscal"
+                chave_link_250 = f"txt_250_{ano_sel}_fiscal"
+                chave_coment_250 = f"coment_25.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 25.0:", 
+                        opc250, 
+                        index=opc250.index(valor_limpo_250), 
+                        key=chave_rad_250
+                    )
+
+                with c2:
+                    link_250 = st.text_area(
+                        f"Link/Evidência da Declaração de Compensação (PER/DCOMP) ({ano_sel}):", 
+                        value=evidencia_250_salva, 
+                        key=chave_link_250, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_250 = st.empty()
+                    links_250_visuais = re.findall(REGEX_PURE_URL, link_250 or "")
+                    if links_250_visuais:
+                        placeholder_links_250.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_250_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("25.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 25.0", key=f"btn_salvar_25_0_{ano_sel}", type="primary"):
+                    val_250_selecionado = st.session_state.get(chave_rad_250, valor_limpo_250)
+                    lnk_val_250 = link_250.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_250, d250.get("comentarios", ""))
+
+                    # Quesito qualificador/informativo (pontuação 0.0)
+                    save_resp_ifiscal(
+                        qid="25.0",
+                        valor=val_250_selecionado,
+                        pontos=0.0,
+                        link=lnk_val_250,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["25.0"] = {
+                        "valor": val_250_selecionado,
+                        "pontos": 0.0,
+                        "link": lnk_val_250,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_250 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_250_salva or "")]
+
+                    if lnk_val_250 != evidencia_250_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_25_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_25_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 25.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação informativa (sempre 0.0)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 25.0: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 25.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_25_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("25.0", st.session_state.get(f"links_pendentes_25_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_25_0_{ano_sel}"] = False
+
 
 
 
