@@ -8227,6 +8227,136 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("12.2", st.session_state.get(f"links_pendentes_12_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_12_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 12.3 • DEMONSTRATIVO NA LDO
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_12_3_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 12.3 - Demonstrativo AMF / LDO ({ano_sel})", expanded=True):
+                st.subheader("12.3 • Previsão no Anexo de Metas Fiscais")
+                st.write("**O Anexo de Metas Fiscais, que integra a LDO, contém demonstrativo da estimativa e compensação da renúncia de receita para o respectivo exercício orçamentário?**")
+                
+                # Estado inicial / persistente
+                d123 = res_data.get("12.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc123 = [
+                    "Selecione...",
+                    "Todas as renúncias concedidas estão contidas no demonstrativo – 00",
+                    "A maior parte das renúncias concedidas estão contidas no demonstrativo – -01 (perde 01 ponto)",
+                    "A menor parte das renúncias concedidas estão contidas no demonstrativo – -03 (perde 03 pontos)",
+                    "Não há demonstrativo – -05 (perde 05 pontos)"
+                ]
+                
+                v_salvo_123 = d123.get("valor", "Selecione...")
+                if v_salvo_123 not in opc123: 
+                    v_salvo_123 = "Selecione..."
+                evidencia_123_salva = d123.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_123 = f"rad_123_{ano_sel}_fiscal"
+                chave_link_123 = f"txt_123_{ano_sel}_fiscal"
+                chave_coment_123 = f"coment_12.3_{ano_sel}_fiscal"
+
+                c5, c6 = st.columns([1, 1])
+                with c5:
+                    opc_selecionada_123 = st.radio(
+                        "Selecione 12.3:", 
+                        opc123, 
+                        index=opc123.index(v_salvo_123), 
+                        key=chave_rad_123
+                    )
+                with c6:
+                    link_123 = st.text_area(
+                        f"Link/Evidência do AMF da LDO ({ano_sel}):", 
+                        value=evidencia_123_salva, 
+                        key=chave_link_123, 
+                        placeholder="Insira os links e evidências do AMF da LDO...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_123 = st.empty()
+                    links_123_visuais = re.findall(REGEX_PURE_URL, link_123 or "")
+                    if links_123_visuais:
+                        placeholder_links_123.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_123_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("12.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 12.3", key=f"btn_salvar_12_3_{ano_sel}", type="primary"):
+                    val_cru_123 = st.session_state.get(chave_rad_123, v_salvo_123)
+                    lnk_val_123 = link_123.strip()
+                    
+                    # Cálculo da pontuação conforme regra de negócio
+                    if "Todas" in val_cru_123:
+                        pts123_nova = 0.0
+                    elif "maior" in val_cru_123:
+                        pts123_nova = -1.0
+                    elif "menor" in val_cru_123:
+                        pts123_nova = -3.0
+                    elif val_cru_123 == "Selecione...":
+                        pts123_nova = 0.0
+                    else:
+                        pts123_nova = -5.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_123, d123.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="12.3",
+                        valor=val_cru_123,
+                        pontos=float(pts123_nova),
+                        link=lnk_val_123,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["12.3"] = {
+                        "valor": val_cru_123,
+                        "pontos": float(pts123_nova),
+                        "link": lnk_val_123,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_123 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_123_salva or "")]
+
+                    if lnk_val_123 != evidencia_123_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_12_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_12_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 12.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Destaque dinâmico: verde/vermelho)
+                pts_exibido_123 = d123.get("pontos", 0.0)
+                cor_pts = "#dc3545" if pts_exibido_123 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_pts}; font-weight:bold;'>"
+                    f"📊 Impacto 12.3: {pts_exibido_123:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 12.3 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_12_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.3", st.session_state.get(f"links_pendentes_12_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_3_{ano_sel}"] = False
+
 
 
 
