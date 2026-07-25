@@ -9313,6 +9313,157 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("13.2", st.session_state.get(f"links_pendentes_13_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_13_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 13.3 • CHECKLIST DE CRITÉRIOS DA LEGISLAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_13_3_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 13.3 - Critérios Estabelecidos (Checklist) ({ano_sel})", expanded=True):
+                st.subheader("13.3 • Critérios da Legislação sobre Dívida Ativa")
+                st.write("**Assinale os critérios estabelecidos na legislação sobre dívida ativa:**")
+                
+                # Estado inicial / persistente
+                d133 = res_data.get("13.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                evidencia_133_salva = d133.get("link", "")
+                
+                # Tratamento do JSON de seleções anteriores
+                try:
+                    val_banco133 = str(d133.get("valor", "[]")).replace("'", '"')
+                    sel133 = json.loads(val_banco133)
+                    if not isinstance(sel133, list):
+                        sel133 = []
+                except Exception:
+                    sel133 = []
+
+                opcoes_133 = [
+                    "Cobrança administrativa da dívida ativa – 1,5",
+                    "Parcelamento da dívida ativa – 1,5",
+                    "Restrição e controle da inadimplência nos parcelamentos da dívida ativa – 1,5",
+                    "Início do trâmite da execução judicial da dívida ativa – 1,5",
+                    "Anistia – 1,5",
+                    "Remissão – 1,5"
+                ]
+
+                # Chaves padronizadas para session_state
+                chave_link_133 = f"txt_lnk_133_{ano_sel}_fiscal"
+                chave_coment_133 = f"coment_13.3_{ano_sel}_fiscal"
+
+                # Renderização das opções em duas colunas sem on_change
+                c3, c4 = st.columns([1, 1])
+                for idx, opcao in enumerate(opcoes_133):
+                    target_col = c3 if idx % 2 == 0 else c4
+                    with target_col:
+                        pode_marcar = opcao in sel133
+                        st.checkbox(
+                            opcao, 
+                            value=pode_marcar, 
+                            key=f"chk_133_{idx}_{ano_sel}_fiscal"
+                        )
+
+                st.markdown("---")
+
+                # Campo de Evidências/Links Adicionais
+                link_133 = st.text_area(
+                    f"Link/Evidência Adicional do Checklist (13.3) ({ano_sel}):", 
+                    value=evidencia_133_salva, 
+                    key=chave_link_133, 
+                    placeholder="Insira os links e evidências...",
+                    height=100
+                )
+                
+                # Detecção e exibição visual dos links no campo
+                placeholder_links_133 = st.empty()
+                links_133_visuais = re.findall(REGEX_PURE_URL, link_133 or "")
+                if links_133_visuais:
+                    placeholder_links_133.markdown(
+                        "**🔗 Ativos:** " 
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                for u in links_133_visuais
+                            ]
+                        )
+                    )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("13.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 13.3", key=f"btn_salvar_13_3_{ano_sel}", type="primary"):
+                    # Processa as opções marcadas
+                    res133 = []
+                    for idx, opcao in enumerate(opcoes_133):
+                        if st.session_state.get(f"chk_133_{idx}_{ano_sel}_fiscal", False):
+                            res133.append(opcao)
+
+                    # Cálculo dinâmico de pontuação
+                    pts133 = 0.0
+                    mapeamento_pontos = {
+                        "Cobrança administrativa": 1.5,
+                        "Parcelamento": 1.5,
+                        "Restrição e controle": 1.5,
+                        "Início do trâmite": 1.5,
+                        "Anistia": 1.5,
+                        "Remissão": 1.5
+                    }
+                    for item in res133:
+                        for chave, valor in mapeamento_pontos.items():
+                            if chave in item:
+                                pts133 += valor
+                                break
+
+                    val_para_salvar = json.dumps(res133)
+                    lnk_val_133 = link_133.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_133, d133.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="13.3",
+                        valor=val_para_salvar,
+                        pontos=float(pts133),
+                        link=lnk_val_133,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["13.3"] = {
+                        "valor": val_para_salvar,
+                        "pontos": float(pts133),
+                        "link": lnk_val_133,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_133 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_133_salva or "")]
+
+                    if lnk_val_133 != evidencia_133_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_13_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_13_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opções, pontuação e comentários do Quesito 13.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação aplicada
+                pts_exibido_133 = d133.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto 13.3: {pts_exibido_133:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 13.3 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_13_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.3", st.session_state.get(f"links_pendentes_13_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_13_3_{ano_sel}"] = False
+
 
 
 
