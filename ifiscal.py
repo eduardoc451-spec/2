@@ -16873,4 +16873,224 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F20", st.session_state.get(f"links_pendentes_f20_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f20_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F21 • RELAÇÃO DESPESAS / RECEITAS CORRENTES
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f21_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F21 - Relação Despesas Correntes / Receitas Correntes ({ano_sel})", expanded=True):
+                st.subheader("F21 • Relação Despesas Correntes / Receitas Correntes [LDC = DC / RC]")
+                st.write("**Verifica o cumprimento do limite constitucional de gastos (Art. 167-A da CF)**")
+
+                # Tabela Oficial de Regras de Pontuação (Penalidades)
+                st.markdown(r"""
+                | Resultado do Índice $LDC$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Menor ou igual a 0,85 ($LDC \le 0,85$) | ✅ 0,00 ponto (Situação Confortável / Sem Penalidade) |
+                | Entre 0,85 e 0,95 ($> 0,85$ e $\le 0,95$) | ⚠️ Graduação proporcional entre 0 e -50 pontos (Perda) |
+                | Maior que 0,95 ($LDC > 0,95$) | 🚨 -50,00 pontos (Penalidade Máxima por Estouro de Teto) |
+                """)
+                st.caption("ℹ️ *Dados consolidados (Prefeitura, Câmara e Autarquias) com base no Relatório de Instrução AUDESP, item GF56.*")
+
+                # Memória de cálculo oficial fornecida
+                st.markdown("""
+                <div style="background-color: #fff5f5; padding: 12px; border-radius: 4px; border-left: 3px solid #e53e3e; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px; color: #9b2c2c;">📊 <b>Regra de Penalização Proporcional no Intervalo:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px; color: #9b2c2c;">
+                        <li><b>Para resultados maiores que 0,85 e menores ou iguais a 0,95:</b> A perda de pontos será distribuída utilizando a fórmula: <br><code style="background-color: #fed7d7; padding: 2px 5px; color: #9b2c2c;">P = ((LDC – 0,85) / 0,10) * (-50)</code> <br><i>Exemplo: se LDC = 0,9300 (93% de comprometimento), a nota do indicador será exatamente de -40,00 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Helper de formatação monetária BRL segura
+                def fmt_brl(valor: float) -> str:
+                    sinal = "-" if valor < 0 else ""
+                    return f"{sinal}R$ {abs(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                # Estado inicial / persistente (formato salvo no banco: "DC/RC")
+                dF21 = res_data.get("F21") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_dc, val_salvo_rc = str(dF21.get("valor", "0.00/1.00")).split("/")
+                    float_dc = float(val_salvo_dc)
+                    float_rc = float(val_salvo_rc)
+                except Exception:
+                    float_dc, float_rc = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_dc = fmt_brl(float_dc)
+                str_inicial_rc = fmt_brl(float_rc)
+                evidencia_f21_salva = dF21.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_dc = f"txt_f21_dc_{ano_sel}_fiscal"
+                chave_input_rc = f"txt_f21_rc_{ano_sel}_fiscal"
+                chave_link_f21 = f"txt_f21_link_{ano_sel}_fiscal"
+                chave_coment_f21 = f"coment_F21_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_dc_str = st.text_input(
+                        "Despesa Corrente Liquidada (DC) - R$:",
+                        value=str_inicial_dc,
+                        placeholder="Ex: 850.000,00",
+                        key=chave_input_dc
+                    )
+
+                    input_rc_str = st.text_input(
+                        "Receita Corrente Total (RC) - R$ (F21):",
+                        value=str_inicial_rc,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_rc
+                    )
+
+                with c2:
+                    link_f21 = st.text_area(
+                        f"Link/Evidência (F21 - Relação Corrente AUDESP) ({ano_sel}):", 
+                        value=evidencia_f21_salva, 
+                        key=chave_link_f21, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f21 = st.empty()
+                    links_f21_visuais = re.findall(REGEX_PURE_URL, link_f21 or "")
+                    if links_f21_visuais:
+                        placeholder_links_f21.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f21_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real (Sem salvar até o clique do botão)
+                v_dc_exib = converte_moeda_br_para_float(input_dc_str)
+                v_rc_exib = max(converte_moeda_br_para_float(input_rc_str), 0.01)  # Proteção contra divisão por zero
+                
+                LDC_exib = round(v_dc_exib / v_rc_exib, 4)
+
+                if v_dc_exib == 0.0 and (link_f21.strip() == ""):
+                    pts_f21_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if LDC_exib <= 0.8500:
+                        pts_f21_exib = 0.0
+                        texto_resultado_exib = "✅ ADEQUADO: Gastos correntes equilibrados e sob controle"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    elif 0.8500 < LDC_exib <= 0.9500:
+                        pts_f21_exib = round(((LDC_exib - 0.8500) / 0.1000) * (-50.0), 2)
+                        texto_resultado_exib = "⚠️ ALERTA: Próximo ao limite prudencial (Incidência de Penalidade)"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:  # LDC_exib > 0.9500
+                        pts_f21_exib = -50.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Violação do teto do Art. 167-A da CF (> 95%)"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+
+                    sinal_pontos = "" if pts_f21_exib >= 0 else " "
+                    texto_pontuacao_exib = f"{sinal_pontos}{pts_f21_exib:.2f} pontos".replace(".", ",")
+
+                str_dc_fmt = fmt_brl(v_dc_exib)
+                str_rc_fmt = fmt_brl(v_rc_exib)
+                str_ldc_fmt = f"{LDC_exib:.4f}".replace(".", ",")
+                str_ldc_pct = f"{LDC_exib * 100:.2f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Razão (DC / RC):</b> {str_dc_fmt} / {str_rc_fmt}<br>
+                    📊 <b>Resultado do Indicador (LDC):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_ldc_fmt}</code> ({str_ldc_pct}% de comprometimento)<br>
+                    ⚖️ <b>Enquadramento Legal:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Glosa/Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #dc2626;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F21", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F21", key=f"btn_salvar_f21_{ano_sel}", type="primary"):
+                    v_dc = converte_moeda_br_para_float(st.session_state.get(chave_input_dc, input_dc_str))
+                    v_rc = max(converte_moeda_br_para_float(st.session_state.get(chave_input_rc, input_rc_str)), 0.01)
+
+                    LDC = round(v_dc / v_rc, 4)
+
+                    if v_dc == 0.0 and (link_f21.strip() == ""):
+                        pts_f21 = 0.0
+                    else:
+                        if LDC <= 0.8500:
+                            pts_f21 = 0.0
+                        elif 0.8500 < LDC <= 0.9500:
+                            pts_f21 = round(((LDC - 0.8500) / 0.1000) * (-50.0), 2)
+                        else:
+                            pts_f21 = -50.0
+
+                    str_banco = f"{v_dc:.2f}/{v_rc:.2f}"
+                    lnk_val_f21 = link_f21.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f21, dF21.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F21",
+                        valor=str_banco,
+                        pontos=pts_f21,
+                        link=lnk_val_f21,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F21"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f21,
+                        "link": lnk_val_f21,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f21 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f21_salva or "")]
+
+                    if lnk_val_f21 != evidencia_f21_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f21_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f21_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F21 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f21_salvos = float(dF21.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F21 Registrado: {pts_f21_salvos:.2f} pontos registrados no sistema</span>".replace(".", ","),
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F21 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f21_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F21", st.session_state.get(f"links_pendentes_f21_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f21_{ano_sel}"] = False
+
     
