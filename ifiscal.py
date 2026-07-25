@@ -6441,6 +6441,138 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 9.3 • TOTALMENTE INDEPENDENTE (CHECKLIST)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_9_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 9.3 - Registro e Emissão da Guia do ITBI", expanded=True):
+                st.subheader("9.3 • Emissão de Guia de Recolhimento")
+                st.write("**Assinale a forma de registro e emissão da guia de recolhimento do ITBI: (Checklist)**")
+                st.caption("🚨 *Nota: A mera impressão da guia de recolhimento do ITBI não é considerada forma de emissão.*")
+                
+                # Estado inicial / persistente
+                d93 = res_data.get("9.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                evidencia_93_salva = d93.get("link", "")
+                
+                # Leitura segura da lista em JSON vinda do banco
+                try:
+                    val_banco93 = (d93.get("valor") or "[]").replace("'", '"')
+                    sel93 = json.loads(val_banco93)
+                    if not isinstance(sel93, list): 
+                        sel93 = []
+                except Exception:
+                    sel93 = []
+
+                opc93 = ["Site da Prefeitura", "Órgão Fazendário", "Cartório autorizado", "Outros"]
+
+                # Chaves padronizadas
+                chave_link_93 = f"l93_in_{ano_sel}_fiscal"
+                chave_coment_93 = f"coment_9.3_{ano_sel}_fiscal"
+
+                # Layout do Checklist em 2 colunas
+                c3, c4 = st.columns([1, 1])
+                for idx, opcao in enumerate(opc93):
+                    target_col = c3 if idx % 2 == 0 else c4
+                    with target_col:
+                        st.checkbox(
+                            opcao, 
+                            value=(opcao in sel93), 
+                            key=f"chk_93_{idx}_{ano_sel}_fiscal"
+                        )
+
+                st.markdown("---")
+
+                # Campo de Evidências / Link
+                link_93 = st.text_area(
+                    "Link/Evidência (9.3):", 
+                    value=evidencia_93_salva, 
+                    key=chave_link_93, 
+                    placeholder="Insira os links e evidências...",
+                    height=100
+                )
+                
+                # Detecção visual de links no campo de evidências
+                placeholder_links_93 = st.empty()
+                links_93_visuais = re.findall(REGEX_PURE_URL, link_93 or "")
+                if links_93_visuais: 
+                    placeholder_links_93.markdown(
+                        "**🔗 Ativos:** " 
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                for u in links_93_visuais
+                            ]
+                        )
+                    )
+
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("9.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.3", key=f"btn_salvar_9_3_{ano_sel}", type="primary"):
+                    # Coleta as opções marcadas no checklist
+                    res93_atual = []
+                    for idx_c, opc_c in enumerate(opc93):
+                        if st.session_state.get(f"chk_93_{idx_c}_{ano_sel}_fiscal", opc_c in sel93):
+                            res93_atual.append(opc_c)
+
+                    val_sel_93 = json.dumps(res93_atual)
+                    lnk_val_93 = link_93.strip()
+                    
+                    # Regra de Pontuação (Informativo - 0.0)
+                    pts93_nova = 0.0
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_93, d93.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="9.3",
+                        valor=val_sel_93,
+                        pontos=float(pts93_nova),
+                        link=lnk_val_93,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["9.3"] = {
+                        "valor": val_sel_93,
+                        "pontos": float(pts93_nova),
+                        "link": lnk_val_93,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_93 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_93_salva or "")]
+
+                    if lnk_val_93 != evidencia_93_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 9.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_93 = d93.get("pontos", 0.0)
+                cor_status_93 = "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_status_93}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 9.3: {pts_exibido_93:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 9.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.3", st.session_state.get(f"links_pendentes_9_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_3_{ano_sel}"] = False
+
 
 
 
