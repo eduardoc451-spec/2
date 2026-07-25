@@ -8710,6 +8710,134 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("12.5", st.session_state.get(f"links_pendentes_12_5_{ano_sel}", []))
             st.session_state[f"gatilho_modal_12_5_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 12.5.1 • CHECKLIST DE CONTEÚDO EXIBIDO
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_12_5_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 12.5.1 - Escopo da Transparência ({ano_sel})", expanded=True):
+                st.subheader("12.5.1 • Elementos Informativos Disponibilizados")
+                st.write(f"**Assinale as informações divulgadas referente aos benefícios concedidos por Renúncia de Receitas em {ano_sel}: (Checklist)**")
+                
+                # Estado inicial / persistente
+                d1251 = res_data.get("12.5.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    sel1251 = json.loads(d1251.get("valor", "[]").replace("'", '"'))
+                    if not isinstance(sel1251, list):
+                        sel1251 = []
+                except Exception:
+                    sel1251 = []
+                
+                evidencia_1251_salva = d1251.get("link", "")
+
+                opc1251 = [
+                    "Valor dos benefícios concedidos",
+                    "Público beneficiado",
+                    "Métodos utilizados na sua mensuração",
+                    "Resultados socioeconômicos alcançados com a renúncia",
+                    "Outros"
+                ]
+
+                # Chaves padronizadas para session_state
+                chave_link_1251 = f"txt_lnk_1251_{ano_sel}_fiscal"
+                chave_coment_1251 = f"coment_12.5.1_{ano_sel}_fiscal"
+
+                c7, c8 = st.columns([1, 1])
+                with c7:
+                    st.write("**Itens divulgados:**")
+                    # Renderiza cada opção do checklist mantendo o valor selecionado
+                    for idx, opcao in enumerate(opc1251):
+                        st.checkbox(
+                            opcao,
+                            value=(opcao in sel1251),
+                            key=f"chk_1251_{idx}_{ano_sel}_fiscal"
+                        )
+                with c8:
+                    link_1251 = st.text_area(
+                        f"Link/Evidência dos Itens Declarados ({ano_sel}):", 
+                        value=evidencia_1251_salva, 
+                        key=chave_link_1251, 
+                        placeholder="Insira os links e evidências dos itens divulgados...",
+                        height=150
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_1251 = st.empty()
+                    links_1251_visuais = re.findall(REGEX_PURE_URL, link_1251 or "")
+                    if links_1251_visuais:
+                        placeholder_links_1251.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_1251_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("12.5.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 12.5.1", key=f"btn_salvar_12_5_1_{ano_sel}", type="primary"):
+                    # Compila as opções do checklist selecionadas no momento do clique
+                    itens_selecionados = [
+                        opcao for idx, opcao in enumerate(opc1251)
+                        if st.session_state.get(f"chk_1251_{idx}_{ano_sel}_fiscal", False)
+                    ]
+                    
+                    v_json_1251 = json.dumps(itens_selecionados)
+                    lnk_val_1251 = link_1251.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_1251, d1251.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="12.5.1",
+                        valor=v_json_1251,
+                        pontos=0.0,
+                        link=lnk_val_1251,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["12.5.1"] = {
+                        "valor": v_json_1251,
+                        "pontos": 0.0,
+                        "link": lnk_val_1251,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_1251 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_1251_salva or "")]
+
+                    if lnk_val_1251 != evidencia_1251_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_12_5_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_12_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 12.5.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Quesito meramente informativo)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 12.5.1: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 12.5.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_12_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.5.1", st.session_state.get(f"links_pendentes_12_5_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_5_1_{ano_sel}"] = False
+
 
 
 
