@@ -3531,5 +3531,148 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 4.1 • DETALHAMENTO NORMATIVO E DIVULGAÇÃO (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_4_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 4.1 - Detalhamento Normativo e Divulgação", expanded=True):
+                st.subheader("4.1 • Instrumento Normativo e Endereço Eletrônico")
+                st.write(
+                    "**Informe o instrumento normativo (número e data da aprovação) e "
+                    "endereço eletrônico de divulgação do procedimento de revisão do cadastro imobiliário:**"
+                )
+                st.caption(
+                    "ℹ️ *Critério: Preencha os dados do ato normativo e o link onde a revisão cadastral foi publicada.*"
+                )
+
+                # Estado inicial / persistente
+                d41 = res_data.get("4.1") or {"valor": " | ", "pontos": 0.0, "link": "", "comentario": ""}
+                evidencia_41_salva = d41.get("link", "")
+
+                # Extração do normativo e link do campo valor
+                valor_salvo_41 = d41.get("valor", " | ")
+                try:
+                    normativo_salvo, link_salvo = valor_salvo_41.split(" | ", 1)
+                except Exception:
+                    normativo_salvo, link_salvo = "", ""
+
+                # Chaves fixas por componente e ano
+                chave_norm_41 = f"t41_norm_{ano_sel}_fiscal"
+                chave_link_div_41 = f"t41_link_{ano_sel}_fiscal"
+                chave_link_evid_41 = f"l41_in_{ano_sel}_fiscal"
+                chave_coment_41 = f"coment_4.1_{ano_sel}_fiscal"
+
+                # Campos de entrada de texto para o quesito
+                normativo_input = st.text_input(
+                    "Instrumento Normativo (Número e Data):",
+                    value=normativo_salvo,
+                    key=chave_norm_41,
+                    placeholder="Ex: Lei Municipal nº 1.234 de 15/03/2023..."
+                )
+
+                link_divulgacao_input = st.text_input(
+                    "Endereço Eletrônico de Divulgação (Campo do Quesito):",
+                    value=link_salvo,
+                    key=chave_link_div_41,
+                    placeholder="https://..."
+                )
+
+                # Visualizador de link ativo do campo de divulgação
+                placeholder_link_div = st.empty()
+                links_div_visuais = re.findall(REGEX_PURE_URL, link_divulgacao_input or "")
+                if links_div_visuais:
+                    placeholder_link_div.markdown(
+                        "**🔗 Links detectados no campo normativo:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_div_visuais
+                            ]
+                        )
+                    )
+
+                st.markdown("---")
+
+                # Campo de Evidência Geral
+                link_evidencia_41 = st.text_area(
+                    "Link/Evidência Geral (4.1):",
+                    value=evidencia_41_salva,
+                    key=chave_link_evid_41,
+                    placeholder="Insira os links e evidências complementares do quesito 4.1...",
+                    height=100
+                )
+
+                placeholder_links_evid = st.empty()
+                links_evid_visuais = re.findall(REGEX_PURE_URL, link_evidencia_41 or "")
+                if links_evid_visuais:
+                    placeholder_links_evid.markdown(
+                        "**🔗 Ativos (Evidência 4.1):** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_evid_visuais
+                            ]
+                        )
+                    )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("4.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 4.1", key=f"btn_salvar_4_1_{ano_sel}", type="primary"):
+                    val_norm = st.session_state.get(chave_norm_41, normativo_salvo).strip()
+                    val_div = st.session_state.get(chave_link_div_41, link_salvo).strip()
+                    novo_valor_41 = f"{val_norm} | {val_div}"
+
+                    lnk_val = link_evidencia_41.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_41, d41.get("comentario", ""))
+
+                    # Salva no banco de dados Neon (Item informativo: 0.0 pontos)
+                    save_resp_ifiscal(
+                        qid="4.1",
+                        valor=novo_valor_41,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["4.1"] = {
+                        "valor": novo_valor_41,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_41_salva or "")]
+
+                    if lnk_val != evidencia_41_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 4.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_41 = d41.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 4.1: {pts_atuais_41:+.1f} pontos (Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 4.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_4_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.1", st.session_state.get(f"links_pendentes_4_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = False
+
 
 
