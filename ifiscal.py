@@ -7625,6 +7625,119 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 12.0 • REGISTRO DA RENÚNCIA DE RECEITAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_12_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 12.0 - Renúncia de Receitas ({ano_sel})", expanded=True):
+                st.subheader("12.0 • Concessão de Benefícios / Incentivos")
+                st.write(f"**No exercício de {ano_sel}, foram concedidos benefícios e incentivos de natureza tributária, financeira e creditícia da qual decorram em renúncia de receitas?**")
+                
+                # Estado inicial / persistente
+                d120 = res_data.get("12.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc120 = ["Selecione...", "Sim", "Não"]
+                
+                valor_limpo_120 = d120.get("valor", "Selecione...").split(" | ")[0] if d120.get("valor") else "Selecione..."
+                if valor_limpo_120 not in opc120: 
+                    valor_limpo_120 = "Selecione..."
+                evidencia_120_salva = d120.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_120 = f"rad_120_{ano_sel}_fiscal"
+                chave_link_120 = f"txt_120_{ano_sel}_fiscal"
+                chave_coment_120 = f"coment_12.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    opc_selecionada_120 = st.radio(
+                        "Selecione 12.0:", 
+                        opc120, 
+                        index=opc120.index(valor_limpo_120), 
+                        key=chave_rad_120
+                    )
+                with c2:
+                    link_120 = st.text_area(
+                        f"Link/Evidência Geral ({ano_sel}):", 
+                        value=evidencia_120_salva, 
+                        key=chave_link_120, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_120 = st.empty()
+                    links_120_visuais = re.findall(REGEX_PURE_URL, link_120 or "")
+                    if links_120_visuais:
+                        placeholder_links_120.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_120_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("12.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 12.0", key=f"btn_salvar_12_0_{ano_sel}", type="primary"):
+                    val_cru = st.session_state.get(chave_rad_120, valor_limpo_120)
+                    lnk_val_120 = link_120.strip()
+                    
+                    # Formatação do valor incluindo o ano de referência
+                    val_com_ano = f"{val_cru} | Exercício Ref: {ano_sel}" if val_cru != "Selecione..." else "Selecione..."
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_120, d120.get("comentarios", ""))
+
+                    # Salva no banco de dados (Pontuação fixa 0.0)
+                    save_resp_ifiscal(
+                        qid="12.0",
+                        valor=val_com_ano,
+                        pontos=0.0,
+                        link=lnk_val_120,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["12.0"] = {
+                        "valor": val_com_ano,
+                        "pontos": 0.0,
+                        "link": lnk_val_120,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_120 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_120_salva or "")]
+
+                    if lnk_val_120 != evidencia_120_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_12_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 12.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Quesito informativo/qualificatório)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 12.0: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 12.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_12_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.0", st.session_state.get(f"links_pendentes_12_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = False
+
 
 
 
