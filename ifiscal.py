@@ -3674,5 +3674,123 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("4.1", st.session_state.get(f"links_pendentes_4_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_4_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 4.2 • PERIODICIDADE DA REVISÃO (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_4_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 4.2 - Periodicidade da Revisão", expanded=True):
+                st.subheader("4.2 • Janela Temporal de Revisão")
+                st.write("**Qual a periodicidade da revisão geral do Cadastro Imobiliário?**")
+                st.caption(
+                    "ℹ️ *Critério: Selecione o intervalo de tempo regulamentado para a atualização periódica do cadastro.*"
+                )
+
+                # Opções de Seleção de Periodicidade
+                opc42 = [
+                    "Selecione...",
+                    "Menor ou igual a 1 ano",
+                    "Maior que 1 e menor ou igual a 4 anos",
+                    "Maior que 4 e menor ou igual a 8 anos",
+                    "Maior que 8 anos"
+                ]
+
+                # Estado inicial / persistente
+                d42 = res_data.get("4.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_42 = d42.get("valor", "Selecione...")
+                if v_salvo_42 not in opc42:
+                    v_salvo_42 = "Selecione..."
+                evidencia_42_salva = d42.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_42 = f"r42_in_{ano_sel}_fiscal"
+                chave_link_42 = f"l42_in_{ano_sel}_fiscal"
+                chave_coment_42 = f"coment_4.2_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_radio_42 = st.radio(
+                        "Selecione a periodicidade (4.2):",
+                        options=opc42,
+                        index=opc42.index(v_salvo_42),
+                        key=chave_radio_42
+                    )
+
+                with col2:
+                    link_42 = st.text_area(
+                        "Link/Evidência Geral (4.2):",
+                        value=evidencia_42_salva,
+                        key=chave_link_42,
+                        placeholder="Insira os links e evidências comprobatórias da periodicidade...",
+                        height=100
+                    )
+                    placeholder_links_42 = st.empty()
+                    links_42_visuais = re.findall(REGEX_PURE_URL, link_42 or "")
+                    if links_42_visuais:
+                        placeholder_links_42.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_42_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("4.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 4.2", key=f"btn_salvar_4_2_{ano_sel}", type="primary"):
+                    val_sel_42 = st.session_state.get(chave_radio_42, v_salvo_42)
+                    lnk_val = link_42.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_42, d42.get("comentario", ""))
+
+                    # Salva no banco de dados Neon (Item informativo: 0.0 pontos)
+                    save_resp_ifiscal(
+                        qid="4.2",
+                        valor=val_sel_42,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["4.2"] = {
+                        "valor": val_sel_42,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_42_salva or "")]
+
+                    if lnk_val != evidencia_42_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 4.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_42 = d42.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 4.2: {pts_atuais_42:+.1f} pontos (Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 4.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_4_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.2", st.session_state.get(f"links_pendentes_4_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_2_{ano_sel}"] = False
+
 
 
