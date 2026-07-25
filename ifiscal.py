@@ -3147,5 +3147,134 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 3.0 • MEDIDAS DE ARRECADAÇÃO (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_3_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 3.0 - Medidas de Arrecadação", expanded=True):
+                st.subheader("3.0 • Efetividade na Arrecadação")
+                st.write(
+                    "**O Município adotou medidas efetivas para aumento da arrecadação?**"
+                )
+                st.caption(
+                    "ℹ️ *Critério: O município deve comprovar a implementação de políticas, programas ou ações práticas voltadas à expansão da arrecadação própria.*"
+                )
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 3.0
+                opcoes_30 = {
+                    "Selecione...": 0.0,
+                    "Sim – 30,0": 30.0,
+                    "Não – 0,0": 0.0
+                }
+
+                # Estado inicial / persistente
+                d30 = res_data.get("3.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_30 = d30.get("valor", "Selecione...")
+
+                # Tratamento de legados/formatos anteriores (ex: "Sim – 30")
+                if "Sim" in v_salvo_30 and "30,0" not in v_salvo_30:
+                    v_salvo_30 = "Sim – 30,0"
+                elif "Não" in v_salvo_30 and "0,0" not in v_salvo_30:
+                    v_salvo_30 = "Não – 0,0"
+
+                evidencia_30_salva = d30.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_30 = f"r_30_{ano_sel}_fiscal"
+                chave_link_30 = f"l_30_txt_{ano_sel}_fiscal"
+                chave_coment_30 = f"coment_3.0_{ano_sel}_fiscal"
+
+                c30_1, c30_2 = st.columns([1, 1])
+                with c30_1:
+                    lista_opcoes_30 = list(opcoes_30.keys())
+                    idx_30 = lista_opcoes_30.index(v_salvo_30) if v_salvo_30 in lista_opcoes_30 else 0
+
+                    val_radio_30 = st.radio(
+                        "Selecione uma opção (3.0):",
+                        options=lista_opcoes_30,
+                        index=idx_30,
+                        key=chave_radio_30
+                    )
+
+                with c30_2:
+                    link_30 = st.text_area(
+                        "Link/Evidência Geral (3.0):",
+                        value=evidencia_30_salva,
+                        key=chave_link_30,
+                        placeholder="Insira o link oficial com leis de incentivo, relatórios de arrecadação ou campanhas tributárias...",
+                        height=100
+                    )
+                    placeholder_links_30 = st.empty()
+                    links_30_visuais = re.findall(REGEX_PURE_URL, link_30 or "")
+                    if links_30_visuais:
+                        placeholder_links_30.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_30_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("3.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 3.0", key=f"btn_salvar_3_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_30, v_salvo_30)
+                    pts_30 = float(opcoes_30.get(val_salvar, 0.0))
+                    lnk_val = link_30.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_30, d30.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="3.0",
+                        valor=val_salvar,
+                        pontos=pts_30,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["3.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_30,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_30_salva or "")]
+
+                    if lnk_val != evidencia_30_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 3.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_30 = d30.get("pontos", 0.0)
+                cor_txt_30 = "#28a745" if pts_atuais_30 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_30}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 3.0: +{pts_atuais_30:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 3.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
+
 
 
