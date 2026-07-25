@@ -17299,94 +17299,75 @@ def mostrar_formulario_ifiscal():
             st.subheader("📈 Série Histórica de Pontuação")
             st.caption("Acompanhamento da evolução da pontuação fiscal do município ao longo dos anos")
 
+           # -------------------------------------------------------------------------
+            # 1. BUSCA E CONSOLIDAÇÃO DOS DADOS HISTÓRICOS
             # -------------------------------------------------------------------------
-            # 1. INICIALIZAÇÃO E RECUPERAÇÃO DOS DADOS HISTÓRICOS
-            # -------------------------------------------------------------------------
-            historico_anos = st.session_state.get("lista_anos_disponiveis", [ano_sel])
-            
-            # Inicialização explícita da variável para evitar UnboundLocalError / NameError
-            dados_serie_historica = []
-            
-            for ano_h in sorted(historico_anos):
-                # Obtém a estrutura de dados salva para o ano específico
-                res_ano = st.session_state.get(f"res_data_{ano_h}", res_data if str(ano_h) == str(ano_sel) else {})
-                
-                # Soma dos pontos do questionário i-Fiscal (F01 a F19)
-                pts_quest = sum(
-                    float((res_ano.get(f"F{i:02d}") or {}).get("pontos", 0.0))
-                    for i in range(1, 20)
-                )
-                
-                # Soma das glosas/penalidades dos indicadores externos (F20, F21, F22)
-                pts_ext = sum(
-                    float((res_ano.get(f"F{q}") or {}).get("pontos", 0.0))
-                    for q in ["20", "21", "22"]
-                )
-                
-                total_ano = pts_quest + pts_ext
-                dados_serie_historica.append({
-                    "Ano": str(ano_h),
-                    "Pontuação Total": round(total_ano, 2),
-                    "Questionário": round(pts_quest, 2),
-                    "Indicadores Externos": round(pts_ext, 2)
-                })
+            # Chama a função de busca do banco Neon e Session State
+            all_data = get_all_years_data_ifiscal()
 
-            # -------------------------------------------------------------------------
-            # 2. CARTÕES DE MÉTRICA DE APOIO
-            # -------------------------------------------------------------------------
-            pts_atual = next((d["Pontuação Total"] for d in dados_serie_historica if d["Ano"] == str(ano_sel)), 0.0)
-            
-            c_kpi1, c_kpi2 = st.columns(2)
-            with c_kpi1:
-                st.metric(
-                    label=f"Pontuação Total - {ano_sel}",
-                    value=f"{pts_atual:.2f} pts".replace(".", ",")
-                )
-            with c_kpi2:
-                st.metric(
-                    label="Anos Mapeados no Sistema",
-                    value=len(dados_serie_historica)
+            # Garante que o ano selecionado atualmente na tela também apareça no gráfico
+            if ano_sel not in all_data or not all_data[ano_sel]:
+                all_data[ano_sel] = res_data
+
+            # Se mesmo assim não houver nenhum dado estruturado, exibe aviso
+            if not all_data:
+                st.info("💡 Nenhum dado do i-Fiscal registrado ainda. Preencha os itens para visualizar os gráficos.")
+            else:
+                # ---------------------------------------------------------------------
+                # 2. CARTÕES DE MÉTRICA DE APOIO
+                # ---------------------------------------------------------------------
+                res_ano_atual = all_data.get(ano_sel, {})
+                pts_atual = sum(
+                    float(v.get("pontos", 0.0))
+                    for k, v in res_ano_atual.items()
+                    if isinstance(v, dict) and not str(k).startswith("COM_")
                 )
 
-            st.markdown("---")
+                c_kpi1, c_kpi2 = st.columns(2)
+                with c_kpi1:
+                    st.metric(
+                        label=f"Pontuação Total - {ano_sel}",
+                        value=f"{pts_atual:.2f} pts".replace(".", ",")
+                    )
+                with c_kpi2:
+                    st.metric(
+                        label="Anos Mapeados no Gráfico",
+                        value=len(all_data)
+                    )
 
-            # -------------------------------------------------------------------------
-            # 3. RENDERIZAÇÃO DO GRÁFICO DE BARRAS
-            # -------------------------------------------------------------------------
-            try:
-                import plotly.express as px
-                import pandas as pd
+                st.markdown("---")
 
-                df_historico = pd.DataFrame(dados_serie_historica)
+                # ---------------------------------------------------------------------
+                # 3. RENDERIZAÇÃO DO GRÁFICO DE BARRAS PERSONALIZADO
+                # ---------------------------------------------------------------------
+                try:
+                    import plotly.graph_objects as go
 
-                fig_barras = px.bar(
-                    df_historico,
-                    x="Ano",
-                    y="Pontuação Total",
-                    text="Pontuação Total",
-                    title="Evolução da Pontuação i-Fiscal por Ano",
-                    color_discrete_sequence=["#1e3a8a"]
-                )
+                    fig_barras = grafico_pontos_por_ano(all_data)
+                    st.plotly_chart(fig_barras, use_container_width=True)
 
-                fig_barras.update_traces(
-                    texttemplate="%{text:.2f}",
-                    textposition="outside"
-                )
+                except Exception as e:
+                    # Fallback simples caso aconteça erro na renderização
+                    st.warning(f"Não foi possível renderizar o gráfico via Plotly: {e}")
+                    anos_plot = sorted(all_data.keys())
+                    totais_plot = {
+                        str(a): sum(
+                            float(v.get("pontos", 0.0))
+                            for k, v in all_data[a].items()
+                            if isinstance(v, dict) and not str(k).startswith("COM_")
+                        )
+                        for a in anos_plot
+                    }
+                    st.bar_chart(totais_plot)
 
-                fig_barras.update_layout(
-                    xaxis_title="Exercício Fiscal",
-                    yaxis_title="Pontuação Total",
-                    height=420,
-                    margin=dict(l=20, r=20, t=50, b=20),
-                    yaxis=dict(zeroline=True, zerolinewidth=1, zerolinecolor="#cbd5e1")
-                )
-
-                st.plotly_chart(fig_barras, use_container_width=True)
-
+                # Tabela de dados para conferência rápida
                 with st.expander("📋 Ver Tabela de Dados Históricos Consolidados"):
-                    st.dataframe(df_historico, use_container_width=True, hide_index=True)
-
-            except ImportError:
-                st.markdown("### 📊 Pontuação Total por Ano")
-                chart_data = {d["Ano"]: d["Pontuação Total"] for d in dados_serie_historica}
-                st.bar_chart(chart_data)
+                    dados_tabela = []
+                    for a in sorted(all_data.keys()):
+                        tot = sum(
+                            float(v.get("pontos", 0.0))
+                            for k, v in all_data[a].items()
+                            if isinstance(v, dict) and not str(k).startswith("COM_")
+                        )
+                        dados_tabela.append({"Ano": str(a), "Pontuação Total": round(tot, 2)})
+                    st.dataframe(dados_tabela, use_container_width=True, hide_index=True)
