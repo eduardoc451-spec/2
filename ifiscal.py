@@ -15285,4 +15285,215 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F12", st.session_state.get(f"links_pendentes_f12_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f12_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F13 • DÍVIDA ATIVA: PERCENTUAL DE RECEBIMENTO (AL)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f13_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F13 - Dívida Ativa: Percentual de Recebimento ({ano_sel})", expanded=True):
+                st.subheader("F13 • Dívida Ativa: Percentual de Recebimento (AL)")
+                st.write("**Nível de recebimento da dívida em relação ao estoque inicial**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Resultado do Índice $AL$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Igual a 0 ($AL = 0$) | 🚨 0,00 ponto (Sem arrecadação) |
+                | Entre 0,0 e 0,1 ($> 0,0$ e $< 0,1$) | ⚠️ Graduação entre 0 e 50 pontos |
+                | Maior ou igual a 0,10 ($\ge 0,10$) | ✅ 50,00 pontos (Arrecadação Excelente) |
+                """)
+                st.caption("ℹ️ *Dados extraídos do Relatório de Análises Anuais Eletrônicas do Sistema AUDESP.*")
+
+                # Regra Proporcional Intermediária
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional no Intervalo Intermediário:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 0,00 e menores que 0,10:</b> A graduação será distribuída igualitariamente no intervalo através da fórmula: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">(AL / 0,10) * 50</code> <br><i>Exemplo: se AL = 0,0500 (5% de recebimento), a nota do indicador será exatamente 25,00 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato salvo no banco: "REC/EST")
+                dF13 = res_data.get("F13") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_rec, val_salvo_est = str(dF13.get("valor", "0.00/1.00")).split("/")
+                    float_rec = float(val_salvo_rec)
+                    float_est = float(val_salvo_est)
+                except Exception:
+                    float_rec, float_est = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_rec = f"R$ {float_rec:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_est = f"R$ {float_est:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f13_salva = dF13.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_rec = f"txt_f13_rec_{ano_sel}_fiscal"
+                chave_input_est = f"txt_f13_est_{ano_sel}_fiscal"
+                chave_link_f13 = f"txt_f13_link_{ano_sel}_fiscal"
+                chave_coment_f13 = f"coment_F13_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_rec_str = st.text_input(
+                        "Valor Arrecadado de Dívida Ativa - R$:",
+                        value=str_inicial_rec,
+                        placeholder="Ex: 50.000,00",
+                        key=chave_input_rec
+                    )
+
+                    input_est_str = st.text_input(
+                        "Estoque Inicial da Dívida Ativa - R$:",
+                        value=str_inicial_est,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_est
+                    )
+
+                with c2:
+                    link_f13 = st.text_area(
+                        f"Link/Evidência (F13 - Dívida Ativa AUDESP) ({ano_sel}):", 
+                        value=evidencia_f13_salva, 
+                        key=chave_link_f13, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f13 = st.empty()
+                    links_f13_visuais = re.findall(REGEX_PURE_URL, link_f13 or "")
+                    if links_f13_visuais:
+                        placeholder_links_f13.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f13_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                v_rec_exib = converte_moeda_br_para_float(input_rec_str)
+                v_est_exib = max(converte_moeda_br_para_float(input_est_str), 0.01) # Evita divisão por zero
+
+                al_exib = round(v_rec_exib / v_est_exib, 4)
+
+                if v_rec_exib == 0.0 and (link_f13.strip() == ""):
+                    pts_f13_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if al_exib == 0.0000:
+                        pts_f13_exib = 0.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Nenhuma arrecadação apurada (= 0,00)"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                    elif 0.0000 < al_exib < 0.1000:
+                        pts_f13_exib = (al_exib / 0.1000) * 50.0
+                        texto_resultado_exib = "⚠️ ALERTA DE GRADUAÇÃO (Recuperação Intermediária)"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:
+                        pts_f13_exib = 50.0
+                        texto_resultado_exib = "✅ REGULAR: Índice de recebimento adequado (≥ 10%)"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f13_exib:.2f} pontos"
+
+                str_rec_fmt = f"R$ {v_rec_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_est_fmt = f"R$ {v_est_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_al_fmt = f"{al_exib:.4f}".replace(".", ",")
+                str_perc_fmt = f"{al_exib * 100:.2f}%".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Razão:</b> {str_rec_fmt} / {str_est_fmt}<br>
+                    📊 <b>Resultado do Indicador (AL):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_al_fmt}</code> ({str_perc_fmt} de recebimento)<br>
+                    ⚖️ <b>Situação da Arrecadação:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F13", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F13", key=f"btn_salvar_f13_{ano_sel}", type="primary"):
+                    v_rec = converte_moeda_br_para_float(st.session_state.get(chave_input_rec, input_rec_str))
+                    v_est = max(converte_moeda_br_para_float(st.session_state.get(chave_input_est, input_est_str)), 0.01)
+
+                    al_calculado = round(v_rec / v_est, 4)
+
+                    if al_calculado == 0.0000:
+                        pts_f13 = 0.0
+                    elif 0.0000 < al_calculado < 0.1000:
+                        pts_f13 = (al_calculado / 0.1000) * 50.0
+                    else:
+                        pts_f13 = 50.0
+
+                    str_banco = f"{v_rec:.2f}/{v_est:.2f}"
+                    lnk_val_f13 = link_f13.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f13, dF13.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F13",
+                        valor=str_banco,
+                        pontos=pts_f13,
+                        link=lnk_val_f13,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F13"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f13,
+                        "link": lnk_val_f13,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f13 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f13_salva or "")]
+
+                    if lnk_val_f13 != evidencia_f13_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f13_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f13_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F13 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f13_salvos = float(dF13.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F13 Registrado: {pts_f13_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F13 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f13_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F13", st.session_state.get(f"links_pendentes_f13_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f13_{ano_sel}"] = False
+
     
