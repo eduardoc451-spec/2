@@ -2585,3 +2585,76 @@ def mostrar_formulario_ifiscal():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 1.4.1 • REGULAMENTAÇÃO DO PCCS (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_1_4_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.4.1 - Regulamentação do PCCS", expanded=True):
+                st.subheader("1.4.1 • Instrumento Normativo")
+                st.write(
+                    "**Informe o instrumento normativo de regulamentação do Plano de Cargos e Salários específico para seus fiscais tributários, Número e Data da publicação:**"
+                )
+                st.caption(
+                    "ℹ️ *Caso não esteja disponível na internet, recomendamos anexar conforme Instrução de Preenchimento (IP).* "
+                    "Este quesito é meramente informativo/declaratório e não gera pontuação direta."
+                )
+
+                # Estado inicial / persistente
+                d141 = res_data.get("1.4.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_141 = d141.get("valor", "")
+
+                # Chaves fixas por componente e ano
+                chave_text_141 = f"t141_in_{ano_sel}_fiscal"
+                chave_coment_141 = f"coment_1.4.1_{ano_sel}_fiscal"
+
+                val_text_141 = st.text_input(
+                    "Número e Data da publicação (Ex: Lei nº 1.234 de 10/05/2020):",
+                    value=v_salvo_141,
+                    key=chave_text_141,
+                    placeholder="Ex: Lei Ordinária Municipal nº 2.450/2021 de 15/03/2021"
+                )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("1.4.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.4.1", key=f"btn_salvar_1_4_1_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_text_141, v_salvo_141).strip()
+                    pts_141 = 0.0
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_141, d141.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="1.4.1",
+                        valor=val_salvar,
+                        pontos=pts_141,
+                        link="",
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.4.1"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_141,
+                        "link": "",
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.4.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 1.4.1: +0.0 pontos (Quesito Declaratório)</span>",
+                    unsafe_allow_html=True
+                )
+
+
+
