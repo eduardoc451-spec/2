@@ -5256,6 +5256,110 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 7.1 • REGULAMENTAÇÃO DO PROGRAMA DE ISENÇÃO (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_7_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.1 - Regulamentação do Programa de Isenção", expanded=True):
+                st.subheader("7.1 • Instrumento de Regulamentação")
+                st.write("**Informe o instrumento normativo de regulamentação do programa de isenção do IPTU, Número e Data da publicação:**")
+                st.caption("ℹ️ *Caso não esteja disponível na internet, recomendamos anexar o documento no Sistema de Questionários.*")
+
+                # Estado inicial / persistente (Pontuação fixa de 0.0)
+                d71 = res_data.get("7.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_71 = d71.get("valor", "")
+                evidencia_71_salva = d71.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_txt_71 = f"txt_71_val_{ano_sel}_fiscal"
+                chave_link_71 = f"l71_in_{ano_sel}_fiscal"
+                chave_coment_71 = f"coment_7.1_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_txt_71 = st.text_input(
+                        "Instrumento normativo (Nº e Data):",
+                        value=v_salvo_71,
+                        key=chave_txt_71,
+                        placeholder="Ex: Lei Municipal nº 1.234/2020 de 15/03/2020"
+                    )
+
+                with col2:
+                    link_71 = st.text_area(
+                        "Link/Evidência (7.1):",
+                        value=evidencia_71_salva,
+                        key=chave_link_71,
+                        placeholder="Insira os links e evidências da regulamentação...",
+                        height=100
+                    )
+                    placeholder_links_71 = st.empty()
+                    links_71_visuais = re.findall(REGEX_PURE_URL, link_71 or "")
+                    if links_71_visuais:
+                        placeholder_links_71.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_71_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("7.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.1", key=f"btn_salvar_7_1_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_txt_71, v_salvo_71).strip()
+                    lnk_val = link_71.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_71, d71.get("comentarios", ""))
+
+                    # Salva no banco de dados Neon (Item informativo: 0.0 ponto)
+                    save_resp_ifiscal(
+                        qid="7.1",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["7.1"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_71_salva or "")]
+
+                    if lnk_val != evidencia_71_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 7.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 7.1: 0,0 ponto (Quesito Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 7.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False
+
 
 
 
