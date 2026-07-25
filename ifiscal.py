@@ -11953,6 +11953,123 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("21.1", st.session_state.get(f"links_pendentes_21_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_21_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 22.0 • DIVULGAÇÃO DE DIÁRIAS E PASSAGENS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_22_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 22.0 - Diárias e Passagens ({ano_sel})", expanded=True):
+                st.subheader("22.0 • Transparência de Diárias e Passagens")
+                st.write(f"**Houve divulgação de diárias e passagens por nome de favorecido e constando data, destino, cargo e motivo de viagem em {ano_sel}?**")
+                
+                # Estado inicial / persistente
+                d220 = res_data.get("22.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc220 = ["Selecione...", "Sim – 03", "Não – 00"]
+                
+                valor_limpo_220 = str(d220.get("valor", "Selecione..."))
+                if valor_limpo_220 not in opc220:
+                    valor_limpo_220 = "Selecione..."
+                
+                evidencia_220_salva = d220.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_220 = f"rad_220_{ano_sel}_fiscal"
+                chave_link_220 = f"txt_220_{ano_sel}_fiscal"
+                chave_coment_220 = f"coment_22.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 22.0:", 
+                        opc220, 
+                        index=opc220.index(valor_limpo_220), 
+                        key=chave_rad_220
+                    )
+
+                with c2:
+                    link_220 = st.text_area(
+                        f"Link Geral do Portal de Transparência / Diárias ({ano_sel}):", 
+                        value=evidencia_220_salva, 
+                        key=chave_link_220, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_220 = st.empty()
+                    links_220_visuais = re.findall(REGEX_PURE_URL, link_220 or "")
+                    if links_220_visuais:
+                        placeholder_links_220.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_220_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("22.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 22.0", key=f"btn_salvar_22_0_{ano_sel}", type="primary"):
+                    val_220_selecionado = st.session_state.get(chave_rad_220, valor_limpo_220)
+                    lnk_val_220 = link_220.strip()
+
+                    # Cálculo da pontuação
+                    pts_220 = 3.0 if "Sim" in val_220_selecionado else 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_220, d220.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="22.0",
+                        valor=val_220_selecionado,
+                        pontos=pts_220,
+                        link=lnk_val_220,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["22.0"] = {
+                        "valor": val_220_selecionado,
+                        "pontos": pts_220,
+                        "link": lnk_val_220,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_220 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_220_salva or "")]
+
+                    if lnk_val_220 != evidencia_220_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_22_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_22_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 22.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição de pontuação
+                pts_atuais_220 = d220.get("pontos", 0.0)
+                cor_p220 = "#28a745" if pts_atuais_220 > 0 else "#dc3545"
+                st.markdown(
+                    f"<span style='color:{cor_p220}; font-weight:bold;'>"
+                    f"📊 Impacto 22.0: {pts_atuais_220} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 22.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_22_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("22.0", st.session_state.get(f"links_pendentes_22_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_22_0_{ano_sel}"] = False
+
 
 
 
