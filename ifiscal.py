@@ -13295,4 +13295,238 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F2", st.session_state.get(f"links_pendentes_f2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f2_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F3 • ANÁLISE DO RESULTADO DA EXECUÇÃO ORÇAMENTÁRIA
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f3_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F3 - Análise do Resultado da Execução Orçamentária ({ano_sel})", expanded=True):
+                st.subheader("F3 • Análise do Resultado da Execução Orçamentária – Resultado Consolidado")
+                st.write("**Razão entre a despesa executada e a receita arrecadada (R / O = V)**")
+                
+                # Tabela Oficial de Parâmetros e Pontuações do Indicador F3
+                st.markdown("""
+                | Resultado de $V$ | Condição de Cobertura Contábil | Pontuação do Indicador |
+                | :--- | :--- | :--- |
+                | Maior ou igual a 1,2 | Qualquer caso | 0 |
+                | Maior que 1,1 e menor que 1,2 | **Com** cobertura do déficit por Superávit | Graduação entre 100 e 0 |
+                | Maior que 1,0 e menor que 1,2 | **Sem** cobertura do déficit por Superávit | 0 |
+                | Maior que 1,0 e menor ou igual a 1,1 | **Com** cobertura do déficit por Superávit | 100 |
+                | Maior ou igual a 0,9 e menor ou igual a 1,0 | Qualquer caso | 100 |
+                | Maior que 0,75 e menor que 0,9 | Qualquer caso | Graduação entre 0 e 100 |
+                | Menor ou igual a 0,75 | Qualquer caso | 0 |
+                """)
+                
+                # Memórias matemáticas oficiais do indicador F3
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Fórmulas de Distribuição nos Intervalos e Regra de Cobertura ($X$):</b></p>
+                    <p style="font-size: 13px; margin-bottom: 8px;"><i>Déficit ($V > 1$): O módulo da diferença $|O - R| = X$ é comparado aos créditos abertos por superávit financeiro. Se o crédito for igual ou maior, há cobertura financeira.</i></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Se V está entre 1,1 e 1,2 (Com Cobertura):</b> <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((V – 1,2) * (-1) / 0,10) * 100</code> <br><i>Exemplo: se V = 1,15, a nota será 50,00 pontos.</i></li>
+                        <li style="margin-top: 8px;"><b>Se V está entre 0,75 e 0,90:</b> <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((V – 0,75) / 0,15) * 100</code> <br><i>Exemplo: se V = 0,80, a nota será 33,33 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função de conversão monetária BR para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (Estrutura R/O/C)
+                dF3 = res_data.get("F3") or {"valor": "0.00/1.00/0.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_r, val_salvo_o, val_salvo_c = str(dF3.get("valor", "0.00/1.00/0.00")).split("/")
+                    float_r = float(val_salvo_r)
+                    float_o = float(val_salvo_o)
+                    float_c = float(val_salvo_c)
+                except Exception:
+                    float_r, float_o, float_c = 0.0, 1.0, 0.0
+
+                str_inicial_r = f"R$ {float_r:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_o = f"R$ {float_o:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_c = f"R$ {float_c:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f3_salva = dF3.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_input_r = f"txt_f3_r_{ano_sel}_fiscal"
+                chave_input_o = f"txt_f3_o_{ano_sel}_fiscal"
+                chave_input_c = f"txt_f3_c_{ano_sel}_fiscal"
+                chave_link_f3 = f"txt_f3_link_{ano_sel}_fiscal"
+                chave_coment_f3 = f"coment_F3_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_r_str = st.text_input(
+                        "Despesa Executada (R) - R$:",
+                        value=str_inicial_r,
+                        placeholder="Ex: 1.050.000,00",
+                        key=chave_input_r
+                    )
+                    
+                    input_o_str = st.text_input(
+                        "Receita Arrecadada (O) - R$:",
+                        value=str_inicial_o,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_o
+                    )
+
+                    input_c_str = st.text_input(
+                        "Créditos por Superávit Financeiro - R$:",
+                        value=str_inicial_c,
+                        placeholder="Ex: 50.000,00",
+                        key=chave_input_c
+                    )
+
+                with c2:
+                    link_f3 = st.text_area(
+                        f"Link/Evidência (F3) ({ano_sel}):", 
+                        value=evidencia_f3_salva, 
+                        key=chave_link_f3, 
+                        placeholder="Insira os links e evidências...",
+                        height=215
+                    )
+                    
+                    placeholder_links_f3 = st.empty()
+                    links_f3_visuais = re.findall(REGEX_PURE_URL, link_f3 or "")
+                    if links_f3_visuais:
+                        placeholder_links_f3.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f3_visuais
+                                ]
+                            )
+                        )
+
+                # Exibição do cálculo projetado no momento
+                v_exec_exib = converte_moeda_br_para_float(input_r_str)
+                v_arrec_exib = max(converte_moeda_br_para_float(input_o_str), 0.01)
+                v_cred_superavit_exib = converte_moeda_br_para_float(input_c_str)
+
+                V_exib = v_exec_exib / v_arrec_exib
+                X_exib = abs(v_arrec_exib - v_exec_exib)
+                tem_cobertura_exib = v_cred_superavit_exib >= X_exib
+
+                # Motor de regras para exibição visual
+                if V_exib >= 1.2:
+                    pts_exib = 0.0
+                elif 1.1 < V_exib < 1.2:
+                    pts_exib = ((V_exib - 1.2) * (-1) / 0.10) * 100 if tem_cobertura_exib else 0.0
+                elif 1.0 < V_exib <= 1.1:
+                    pts_exib = 100.0 if tem_cobertura_exib else 0.0
+                elif 0.9 <= V_exib <= 1.0:
+                    pts_exib = 100.0
+                elif 0.75 < V_exib < 0.9:
+                    pts_exib = ((V_exib - 0.75) / 0.15) * 100
+                else: # V_exib <= 0.75
+                    pts_exib = 0.0
+
+                fmt_v_exec = f"R$ {v_exec_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                fmt_v_arrec = f"R$ {v_arrec_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                fmt_X = f"R$ {X_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                status_cobertura_exib = "🟢 Déficit Coberto por Superávit" if tem_cobertura_exib else "🔴 Déficit Não Coberto"
+                if V_exib <= 1.0:
+                    status_cobertura_exib = "🔵 Superávit Orçamentário Corrente"
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Análise Contábil:</b> {fmt_v_exec} / {fmt_v_arrec}<br>
+                    📊 <b>Resultado do Indicador (V):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{V_exib:.4f}</code><br>
+                    ⚖️ <b>Diferença em Módulo (X):</b> {fmt_X} | <b>Situação:</b> <i>{status_cobertura_exib}</i><br>
+                    🎯 <b>Pontuação Calculada:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{pts_exib:.2f} pontos</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F3", key=f"btn_salvar_f3_{ano_sel}", type="primary"):
+                    v_exec = converte_moeda_br_para_float(st.session_state.get(chave_input_r, input_r_str))
+                    v_arrec = max(converte_moeda_br_para_float(st.session_state.get(chave_input_o, input_o_str)), 0.01)
+                    v_cred_superavit = converte_moeda_br_para_float(st.session_state.get(chave_input_c, input_c_str))
+
+                    # Recálculo oficial no salvamento
+                    V_calc = v_exec / v_arrec
+                    X_calc = abs(v_arrec - v_exec)
+                    tem_cobertura_calc = v_cred_superavit >= X_calc
+
+                    if V_calc >= 1.2:
+                        pts_f3 = 0.0
+                    elif 1.1 < V_calc < 1.2:
+                        pts_f3 = ((V_calc - 1.2) * (-1) / 0.10) * 100 if tem_cobertura_calc else 0.0
+                    elif 1.0 < V_calc <= 1.1:
+                        pts_f3 = 100.0 if tem_cobertura_calc else 0.0
+                    elif 0.9 <= V_calc <= 1.0:
+                        pts_f3 = 100.0
+                    elif 0.75 < V_calc < 0.9:
+                        pts_f3 = ((V_calc - 0.75) / 0.15) * 100
+                    else: # V_calc <= 0.75
+                        pts_f3 = 0.0
+
+                    str_banco = f"{v_exec:.2f}/{v_arrec:.2f}/{v_cred_superavit:.2f}"
+                    lnk_val_f3 = link_f3.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f3, dF3.get("comentarios", ""))
+
+                    # Salva no banco de dados via iFiscal
+                    save_resp_ifiscal(
+                        qid="F3",
+                        valor=str_banco,
+                        pontos=pts_f3,
+                        link=lnk_val_f3,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data
+                    res_data["F3"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f3,
+                        "link": lnk_val_f3,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f3 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f3_salva or "")]
+
+                    if lnk_val_f3 != evidencia_f3_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Valores e cálculo do Indicador F3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f3_salvos = float(dF3.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto F3: {pts_f3_salvos:.2f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F3 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F3", st.session_state.get(f"links_pendentes_f3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f3_{ano_sel}"] = False
+
     
