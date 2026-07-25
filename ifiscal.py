@@ -10563,6 +10563,138 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("16.3", st.session_state.get(f"links_pendentes_16_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_16_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 17.0 • CONTROLE DE AÇÕES JUDICIAIS (POLO PASSIVO)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_17_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.0 - Controle de Ações Judiciais ({ano_sel})", expanded=True):
+                st.subheader("17.0 • Controle do Polo Passivo")
+                st.write(f"**A Prefeitura possui controle das ações judiciais em que é parte (polo passivo)?**")
+                
+                # Estado inicial / persistente
+                d170 = res_data.get("17.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc170 = [
+                    "Selecione...",
+                    "Sim, de todas as ações – 00",
+                    "Sim, da maior parte das ações – -01 (perde 01 ponto)",
+                    "Sim, da menor parte das ações – -03 (perde 03 pontos)",
+                    "Não – -05 (perde 05 pontos)"
+                ]
+                
+                valor_limpo_170 = str(d170.get("valor", "Selecione..."))
+                if valor_limpo_170 not in opc170:
+                    valor_limpo_170 = "Selecione..."
+                
+                evidencia_170_salva = d170.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_170 = f"rad_170_{ano_sel}_fiscal"
+                chave_link_170 = f"txt_170_{ano_sel}_fiscal"
+                chave_coment_170 = f"coment_17.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 17.0:", 
+                        opc170, 
+                        index=opc170.index(valor_limpo_170), 
+                        key=chave_rad_170
+                    )
+
+                with c2:
+                    link_170 = st.text_area(
+                        f"Link/Evidência do Sistema ou Relatório de Controle Legal ({ano_sel}):", 
+                        value=evidencia_170_salva, 
+                        key=chave_link_170, 
+                        placeholder="Insira os links e evidências...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_170 = st.empty()
+                    links_170_visuais = re.findall(REGEX_PURE_URL, link_170 or "")
+                    if links_170_visuais:
+                        placeholder_links_170.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_170_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("17.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 17.0", key=f"btn_salvar_17_0_{ano_sel}", type="primary"):
+                    val_170_selecionado = st.session_state.get(chave_rad_170, valor_limpo_170)
+                    lnk_val_170 = link_170.strip()
+
+                    # Regra de pontuação
+                    if "todas" in val_170_selecionado:
+                        pts_170 = 0.0
+                    elif "maior" in val_170_selecionado:
+                        pts_170 = -1.0
+                    elif "menor" in val_170_selecionado:
+                        pts_170 = -3.0
+                    elif "Não" in val_170_selecionado:
+                        pts_170 = -5.0
+                    else:
+                        pts_170 = 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_170, d170.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="17.0",
+                        valor=val_170_selecionado,
+                        pontos=pts_170,
+                        link=lnk_val_170,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["17.0"] = {
+                        "valor": val_170_selecionado,
+                        "pontos": pts_170,
+                        "link": lnk_val_170,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_170 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_170_salva or "")]
+
+                    if lnk_val_170 != evidencia_170_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_17_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 17.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição dinâmica da pontuação e cor do indicador
+                pts_exibido_170 = d170.get("pontos", 0.0)
+                cor_p170 = "#dc3545" if pts_exibido_170 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_p170}; font-weight:bold;'>"
+                    f"📊 Impacto 17.0: {pts_exibido_170:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 17.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_17_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.0", st.session_state.get(f"links_pendentes_17_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = False
+
 
 
 
