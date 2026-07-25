@@ -2456,3 +2456,132 @@ def mostrar_formulario_ifiscal():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = False
+
+        # =============================================================================
+        # QUESITO 1.4 • PLANO DE CARGOS E SALÁRIOS (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_1_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.4 - Plano de Cargos e Salários", expanded=True):
+                st.subheader("1.4 • PCCS Específico")
+                st.write(
+                    "**O Município possui Plano de Cargos e Salários específico para seus fiscais tributários?**"
+                )
+                st.caption(
+                    "⚠️ *Atenção: PCCS geral dos servidores públicos não é considerado PCCS específico.*"
+                )
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 1.4
+                opcoes_14 = {
+                    "Selecione...": 0.0,
+                    "Sim – 3,0": 3.0,
+                    "Não – 0,0": 0.0
+                }
+
+                # Estado inicial / persistente
+                d14 = res_data.get("1.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_14 = d14.get("valor", "Selecione...")
+
+                # Trata migração de legado caso no banco esteja salvo como "Sim – 03" ou no formato antigo
+                if "Sim" in v_salvo_14 and "3,0" not in v_salvo_14:
+                    v_salvo_14 = "Sim – 3,0"
+                elif "Não" in v_salvo_14 and "0,0" not in v_salvo_14:
+                    v_salvo_14 = "Não – 0,0"
+
+                evidencia_14_salva = d14.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_14 = f"r_14_{ano_sel}_fiscal"
+                chave_link_14 = f"l_14_txt_{ano_sel}_fiscal"
+                chave_coment_14 = f"coment_1.4_{ano_sel}_fiscal"
+
+                c14_1, c14_2 = st.columns([1, 1])
+                with c14_1:
+                    lista_opcoes_14 = list(opcoes_14.keys())
+                    idx_14 = lista_opcoes_14.index(v_salvo_14) if v_salvo_14 in lista_opcoes_14 else 0
+
+                    val_radio_14 = st.radio(
+                        "Selecione uma opção (1.4):",
+                        options=lista_opcoes_14,
+                        index=idx_14,
+                        key=chave_radio_14
+                    )
+
+                with c14_2:
+                    link_14 = st.text_area(
+                        "Link/Evidência Geral (1.4):",
+                        value=evidencia_14_salva,
+                        key=chave_link_14,
+                        placeholder="Insira o link oficial da lei do PCCS específico dos fiscais...",
+                        height=100
+                    )
+                    placeholder_links_14 = st.empty()
+                    links_14_visuais = re.findall(REGEX_PURE_URL, link_14 or "")
+                    if links_14_visuais:
+                        placeholder_links_14.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_14_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("1.4", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.4", key=f"btn_salvar_1_4_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_14, v_salvo_14)
+                    pts_14 = float(opcoes_14.get(val_salvar, 0.0))
+                    lnk_val = link_14.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_14, d14.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="1.4",
+                        valor=val_salvar,
+                        pontos=pts_14,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.4"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_14,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_14_salva or "")]
+
+                    if lnk_val != evidencia_14_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_14 = d14.get("pontos", 0.0)
+                cor_txt_14 = "#28a745" if pts_atuais_14 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_14}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.4: +{pts_atuais_14:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
