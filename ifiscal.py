@@ -5482,6 +5482,138 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("7.2", st.session_state.get(f"links_pendentes_7_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 7.3 • TOTALMENTE INDEPENDENTE (CHECKLIST)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_7_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.3 - Critérios Estabelecidos para Isenção", expanded=True):
+                st.subheader("7.3 • Critérios de Concessão de Isenção")
+                st.write("**Assinale os critérios estabelecidos para a concessão de isenção total ou parcial do IPTU: (Checklist)**")
+                
+                # Estado inicial / persistente
+                d73 = res_data.get("7.3") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                evidencia_73_salva = d73.get("link", "")
+                
+                # Carregamento seguro da lista de opções previamente marcadas
+                try:
+                    val_banco73 = d73.get("valor", "[]").replace("'", '"')
+                    sel73 = json.loads(val_banco73)
+                    if not isinstance(sel73, list): 
+                        sel73 = []
+                except:
+                    sel73 = []
+
+                opc73 = [
+                    "Aposentado, pensionista ou beneficiário de renda mensal vitalícia",
+                    "Não possuir outro imóvel",
+                    "Utilizar o único imóvel como residência",
+                    "Rendimento mensal máximo",
+                    "Valor venal máximo do imóvel",
+                    "Outros"
+                ]
+
+                # Renderização dos Checkboxes em 2 colunas
+                c3, c4 = st.columns([1, 1])
+                for idx, opcao in enumerate(opc73):
+                    target_col = c3 if idx % 2 == 0 else c4
+                    with target_col:
+                        st.checkbox(
+                            opcao, 
+                            value=(opcao in sel73), 
+                            key=f"chk_73_{idx}_{ano_sel}_fiscal"
+                        )
+
+                st.markdown("---")
+                
+                # Chaves padronizadas
+                chave_link_73 = f"l73_in_{ano_sel}_fiscal"
+                chave_coment_73 = f"coment_7.3_{ano_sel}_fiscal"
+                
+                link_73 = st.text_area(
+                    "Link/Evidência (7.3):",
+                    value=evidencia_73_salva,
+                    key=chave_link_73,
+                    placeholder="Insira os links e evidências gerais...",
+                    height=100
+                )
+                
+                # Detecção visual de links no campo
+                placeholder_links_73 = st.empty()
+                links_73_visuais = re.findall(REGEX_PURE_URL, link_73 or "")
+                if links_73_visuais:
+                    placeholder_links_73.markdown(
+                        "**🔗 Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_73_visuais
+                            ]
+                        )
+                    )
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("7.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.3", key=f"btn_salvar_7_3_{ano_sel}", type="primary"):
+                    # Coleta os checkboxes que estão marcados no momento do clique
+                    res73_atual = []
+                    for idx_c, opc_c in enumerate(opc73):
+                        if st.session_state.get(f"chk_73_{idx_c}_{ano_sel}_fiscal", False):
+                            res73_atual.append(opc_c)
+                    
+                    val_salvar_json = json.dumps(res73_atual)
+                    lnk_val = link_73.strip()
+
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_73, d73.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="7.3",
+                        valor=val_salvar_json,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["7.3"] = {
+                        "valor": val_salvar_json,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_73_salva or "")]
+
+                    if lnk_val != evidencia_73_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 7.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_73 = d73.get("pontos", 0.0)
+                cor_status_73 = "#28a745" # Sempre verde pois não tem penalidade
+                st.markdown(
+                    f"<span style='color:{cor_status_73}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 7.3: {pts_exibido_73:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 7.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.3", st.session_state.get(f"links_pendentes_7_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_3_{ano_sel}"] = False
+
 
 
 
