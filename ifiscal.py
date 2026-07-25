@@ -4732,6 +4732,120 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.3.3", st.session_state.get(f"links_pendentes_5_3_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_3_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.3.4 • PERIODICIDADE EM ANOS DA PGV (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_3_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.3.4 - Periodicidade em Anos", expanded=True):
+                st.subheader("5.3.4 • Periodicidade Estabelecida")
+                st.write("**Informe a periodicidade de revisão da PGV (em anos):**")
+                st.caption(
+                    "ℹ️ *Indique o intervalo em anos previsto em legislação para a realização da revisão da PGV (digite 0 caso não haja previsão).* "
+                )
+
+                # Estado inicial / persistente (Pontuação fixa de 0.0)
+                d534 = res_data.get("5.3.4") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                # Tratamento seguro para inicialização do valor numérico
+                try:
+                    periodicidade_inicial = int(d534.get("valor", 0))
+                except (ValueError, TypeError):
+                    periodicidade_inicial = 0
+
+                evidencia_534_salva = d534.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_num_534 = f"num_534_{ano_sel}_fiscal"
+                chave_link_534 = f"l534_in_{ano_sel}_fiscal"
+                chave_coment_534 = f"coment_5.3.4_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_num_534 = st.number_input(
+                        "Periodicidade em anos:",
+                        value=periodicidade_inicial,
+                        min_value=0,
+                        step=1,
+                        key=chave_num_534
+                    )
+
+                with col2:
+                    link_534 = st.text_area(
+                        "Link/Evidência (5.3.4):",
+                        value=evidencia_534_salva,
+                        key=chave_link_534,
+                        placeholder="Insira os links e evidências comprovando a periodicidade legal...",
+                        height=100
+                    )
+                    placeholder_links_534 = st.empty()
+                    links_534_visuais = re.findall(REGEX_PURE_URL, link_534 or "")
+                    if links_534_visuais:
+                        placeholder_links_534.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_534_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.3.4", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.3.4", key=f"btn_salvar_5_3_4_{ano_sel}", type="primary"):
+                    val_num_obtido = st.session_state.get(chave_num_534, periodicidade_inicial)
+                    val_salvar = str(val_num_obtido)
+                    lnk_val = link_534.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_534, d534.get("comentarios", ""))
+
+                    # Salva no banco de dados Neon (Item informativo: 0.0 ponto)
+                    save_resp_ifiscal(
+                        qid="5.3.4",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.3.4"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_534_salva or "")]
+
+                    if lnk_val != evidencia_534_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_3_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_3_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 5.3.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 5.3.4: 0,0 ponto (Quesito Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.3.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_3_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.3.4", st.session_state.get(f"links_pendentes_5_3_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_3_4_{ano_sel}"] = False
+
 
 
 
