@@ -4846,6 +4846,137 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.3.4", st.session_state.get(f"links_pendentes_5_3_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_3_4_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.4 • INTEGRAÇÃO COM BASE DO IPTU (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_4_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.4 - Integração com Base do IPTU", expanded=True):
+                st.subheader("5.4 • Atualização da Base de Cálculo")
+                st.write(
+                    "**Os dados da Planta Genérica de Valores (PGV) e do Cadastro Imobiliário "
+                    "atualizam a base de cálculo do IPTU?**"
+                )
+
+                # Estado inicial / persistente
+                d54 = res_data.get("5.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc54 = [
+                    "Selecione...",
+                    "Sim, de forma automática no sistema – 06",
+                    "Sim, de forma manual – 02",
+                    "Não – 00"
+                ]
+
+                v_salvo_54 = d54.get("valor", "Selecione...")
+                if v_salvo_54 not in opc54:
+                    v_salvo_54 = "Selecione..."
+
+                evidencia_54_salva = d54.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_54 = f"r54_in_{ano_sel}_fiscal"
+                chave_link_54 = f"l54_in_{ano_sel}_fiscal"
+                chave_coment_54 = f"coment_5.4_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_radio_54 = st.radio(
+                        "Selecione uma opção (5.4):",
+                        options=opc54,
+                        index=opc54.index(v_salvo_54),
+                        key=chave_radio_54
+                    )
+
+                with col2:
+                    link_54 = st.text_area(
+                        "Link/Evidência (5.4):",
+                        value=evidencia_54_salva,
+                        key=chave_link_54,
+                        placeholder="Insira os links e evidências do processo de atualização...",
+                        height=100
+                    )
+                    placeholder_links_54 = st.empty()
+                    links_54_visuais = re.findall(REGEX_PURE_URL, link_54 or "")
+                    if links_54_visuais:
+                        placeholder_links_54.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_54_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.4", res_data, sufixo="fiscal")
+
+                # Cálculo de pontuação em tempo real
+                if "automática" in val_radio_54:
+                    pts_calculados_54 = 6.0
+                elif "manual" in val_radio_54:
+                    pts_calculados_54 = 2.0
+                else:
+                    pts_calculados_54 = 0.0
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.4", key=f"btn_salvar_5_4_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_54, v_salvo_54)
+                    lnk_val = link_54.strip()
+
+                    if "automática" in val_salvar:
+                        pts_salvar = 6.0
+                    elif "manual" in val_salvar:
+                        pts_salvar = 2.0
+                    else:
+                        pts_salvar = 0.0
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_54, d54.get("comentarios", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="5.4",
+                        valor=val_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.4"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_salvar,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_54_salva or "")]
+
+                    if lnk_val != evidencia_54_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_4_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 5.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.4: {pts_calculados_54:.1f} ponto(s) aplicado(s)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.4 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.4", st.session_state.get(f"links_pendentes_5_4_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_4_{ano_sel}"] = False
+
 
 
 
