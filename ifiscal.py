@@ -4160,6 +4160,127 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.2 • PÁGINA DE DIVULGAÇÃO DA PGV (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.2 - Página de Divulgação da PGV", expanded=True):
+                st.subheader("5.2 • Divulgação Eletrônica")
+                st.write(
+                    "**Informe a página eletrônica (link na internet) de divulgação do Instrumento Normativo "
+                    "de aprovação da Planta Genérica de Valores (PGV):**"
+                )
+                st.caption("ℹ️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ***")
+
+                # Estado inicial / persistente (Pontuação fixa de 0.0)
+                d52 = res_data.get("5.2") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_52 = d52.get("valor", "")
+                evidencia_52_salva = d52.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_texto_52 = f"t52_val_{ano_sel}_fiscal"
+                chave_link_52 = f"l52_in_{ano_sel}_fiscal"
+                chave_coment_52 = f"coment_5.2_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_texto_52 = st.text_input(
+                        "Link de divulgação do instrumento (ou XYZ):",
+                        value=v_salvo_52,
+                        key=chave_texto_52,
+                        placeholder="https://... ou XYZ"
+                    )
+                    
+                    # Detecta e exibe links no campo de divulgação
+                    placeholder_detec_52 = st.empty()
+                    links_detec_52 = re.findall(REGEX_PURE_URL, val_texto_52 or "")
+                    if links_detec_52:
+                        placeholder_detec_52.markdown(
+                            "**🔗 Detectado no campo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_detec_52
+                                ]
+                            )
+                        )
+
+                with col2:
+                    link_52 = st.text_area(
+                        "Link/Evidência Geral (5.2):",
+                        value=evidencia_52_salva,
+                        key=chave_link_52,
+                        placeholder="Insira os links e evidências complementares da divulgação...",
+                        height=100
+                    )
+                    placeholder_links_52 = st.empty()
+                    links_52_visuais = re.findall(REGEX_PURE_URL, link_52 or "")
+                    if links_52_visuais:
+                        placeholder_links_52.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_52_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.2", key=f"btn_salvar_5_2_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_texto_52, v_salvo_52).strip()
+                    lnk_val = link_52.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_52, d52.get("comentario", ""))
+
+                    # Salva no banco de dados Neon (Item informativo: 0.0 ponto)
+                    save_resp_ifiscal(
+                        qid="5.2",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.2"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_52_salva or "")]
+
+                    if lnk_val != evidencia_52_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 5.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 5.2: 0,0 ponto (Quesito Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.2", st.session_state.get(f"links_pendentes_5_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_2_{ano_sel}"] = False
+
 
 
 
