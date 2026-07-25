@@ -4626,6 +4626,112 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.3.2", st.session_state.get(f"links_pendentes_5_3_2_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_3_2_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.3.3 • DATA DA ÚLTIMA REVISÃO DA PGV (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_3_3_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.3.3 - Data da Última Revisão", expanded=True):
+                st.subheader("5.3.3 • Cronologia da Última Revisão")
+                st.write("**Informe a data da última revisão da PGV:**")
+                st.caption(
+                    "ℹ️ *Informe a data de publicação da norma ou vigência da última atualização da Planta Genérica de Valores.*"
+                )
+
+                # Estado inicial / persistente (Pontuação fixa de 0.0)
+                d533 = res_data.get("5.3.3") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_533 = d533.get("valor", "")
+                evidencia_533_salva = d533.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_texto_533 = f"t533_{ano_sel}_fiscal"
+                chave_link_533 = f"l533_in_{ano_sel}_fiscal"
+                chave_coment_533 = f"coment_5.3.3_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_texto_533 = st.text_input(
+                        "Data da última revisão (Ex: DD/MM/AAAA):",
+                        value=v_salvo_533,
+                        key=chave_texto_533,
+                        placeholder="Ex: 15/12/2023"
+                    )
+
+                with col2:
+                    link_533 = st.text_area(
+                        "Link/Evidência (5.3.3):",
+                        value=evidencia_533_salva,
+                        key=chave_link_533,
+                        placeholder="Insira os links e evidências comprovando a data da revisão...",
+                        height=100
+                    )
+                    placeholder_links_533 = st.empty()
+                    links_533_visuais = re.findall(REGEX_PURE_URL, link_533 or "")
+                    if links_533_visuais:
+                        placeholder_links_533.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_533_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.3.3", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.3.3", key=f"btn_salvar_5_3_3_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_texto_533, v_salvo_533).strip()
+                    lnk_val = link_533.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_533, d533.get("comentarios", ""))
+
+                    # Salva no banco de dados Neon (Item informativo: 0.0 ponto)
+                    save_resp_ifiscal(
+                        qid="5.3.3",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.3.3"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_533_salva or "")]
+
+                    if lnk_val != evidencia_533_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_3_3_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_3_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 5.3.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 5.3.3: 0,0 ponto (Quesito Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.3.3 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_3_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.3.3", st.session_state.get(f"links_pendentes_5_3_3_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_3_3_{ano_sel}"] = False
+
 
 
 
