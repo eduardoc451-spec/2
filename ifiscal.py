@@ -2881,5 +2881,142 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("1.5", st.session_state.get(f"links_pendentes_1_5_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 1.5.1 • PERMISSÕES DO SISTEMA (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_1_5_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 1.5.1 - Permissões do Sistema", expanded=True):
+                st.subheader("1.5.1 • Permissões de Acesso e Auditoria")
+                st.write(
+                    "**Há segregação nas permissões de acesso do sistema, com identificação do usuário e registro das transações efetuadas?**"
+                )
+                st.caption(
+                    "ℹ️ *Critério: O sistema deve registrar logs auditáveis de acesso e operações por usuário individual.*"
+                )
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 1.5.1
+                opcoes_151 = {
+                    "Selecione...": 0.0,
+                    "Sim – 5,0": 5.0,
+                    "Não – 0,0": 0.0,
+                    "Ausência de segregação para lançamento, arrecadação ou fiscalização – -3,0": -3.0
+                }
+
+                # Estado inicial / persistente
+                d151 = res_data.get("1.5.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_151 = d151.get("valor", "Selecione...")
+
+                # Tratamento de legados/formatos anteriores
+                if "Sim" in v_salvo_151 and "5,0" not in v_salvo_151:
+                    v_salvo_151 = "Sim – 5,0"
+                elif "Não" in v_salvo_151 and "0,0" not in v_salvo_151:
+                    v_salvo_151 = "Não – 0,0"
+                elif "-03" in v_salvo_151 or "perde 03" in v_salvo_151:
+                    v_salvo_151 = "Ausência de segregação para lançamento, arrecadação ou fiscalização – -3,0"
+
+                evidencia_151_salva = d151.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_151 = f"r_151_{ano_sel}_fiscal"
+                chave_link_151 = f"l_151_txt_{ano_sel}_fiscal"
+                chave_coment_151 = f"coment_1.5.1_{ano_sel}_fiscal"
+
+                c151_1, c151_2 = st.columns([1, 1])
+                with c151_1:
+                    lista_opcoes_151 = list(opcoes_151.keys())
+                    idx_151 = lista_opcoes_151.index(v_salvo_151) if v_salvo_151 in lista_opcoes_151 else 0
+
+                    val_radio_151 = st.radio(
+                        "Selecione uma opção (1.5.1):",
+                        options=lista_opcoes_151,
+                        index=idx_151,
+                        key=chave_radio_151
+                    )
+
+                with c151_2:
+                    link_151 = st.text_area(
+                        "Link/Evidência (1.5.1):",
+                        value=evidencia_151_salva,
+                        key=chave_link_151,
+                        placeholder="Insira o link oficial, relatório de auditoria ou telas do sistema...",
+                        height=100
+                    )
+                    placeholder_links_151 = st.empty()
+                    links_151_visuais = re.findall(REGEX_PURE_URL, link_151 or "")
+                    if links_151_visuais:
+                        placeholder_links_151.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_151_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("1.5.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 1.5.1", key=f"btn_salvar_1_5_1_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_151, v_salvo_151)
+                    pts_151 = float(opcoes_151.get(val_salvar, 0.0))
+                    lnk_val = link_151.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_151, d151.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="1.5.1",
+                        valor=val_salvar,
+                        pontos=pts_151,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["1.5.1"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_151,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_151_salva or "")]
+
+                    if lnk_val != evidencia_151_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_1_5_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_1_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 1.5.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_151 = d151.get("pontos", 0.0)
+                if pts_atuais_151 > 0.0:
+                    cor_txt_151 = "#28a745"
+                elif pts_atuais_151 < 0.0:
+                    cor_txt_151 = "#dc3545"
+                else:
+                    cor_txt_151 = "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_151}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 1.5.1: {pts_atuais_151:+.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 1.5.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_1_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("1.5.1", st.session_state.get(f"links_pendentes_1_5_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_1_5_1_{ano_sel}"] = False
+
 
 
