@@ -12886,210 +12886,214 @@ def mostrar_formulario_ifiscal():
                     unsafe_allow_html=True
                 )
 
-    # -------------------------------------------------------------------------
-    # SEÇÃO 8: INDICADORES FINANCEIROS (F1 A F18)
-    # -------------------------------------------------------------------------
-    st.markdown('<div class="section-header"><h3>8. Indicadores Financeiros (AUDESP)</h3></div>', unsafe_allow_html=True)
+    with aba_quest:
+        st.info("Preencha as informações fiscais e financeiras do município.")
 
-    # =============================================================================
-    # BLOCO ISOLADO: INDICADOR F1 • ANÁLISE DA RECEITA (EXECUÇÃO ORÇAMENTÁRIA)
-    # =============================================================================
-    with st.container(key=f"container_bloco_ifiscal_f1_{ano_sel}", border=True):
-        with st.expander(f"📌 Indicador F1 - Análise da Receita ({ano_sel})", expanded=True):
-            st.subheader("F1 • Análise da Receita (Execução Orçamentária) – Resultado Consolidado")
-            st.write("**Divisão da receita arrecadada pela receita prevista atualizada (O / P = Q)**")
-            
-            # Tabela Oficial de Parâmetros e Pontuações do Indicador
-            st.markdown("""
-            | Resultado de $Q$ | Pontuação do Indicador |
-            | :--- | :--- |
-            | Maior ou igual a 1,5 | 0 |
-            | Maior que 1,15 e menor que 1,5 | Graduação entre 75 e 0 |
-            | Maior ou igual a 0,85 e menor ou igual a 1,15 | 75 |
-            | Maior que 0,5 e menor que 0,85 | Graduação entre 0 e 75 |
-            | Menor ou igual a 0,5 | 0 |
-            """)
-            
-            # Memórias matemáticas oficiais
-            st.markdown("""
-            <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
-                <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regras de Distribuição Proporcional nos Intervalos:</b></p>
-                <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
-                    <li><b>Para resultados maiores que 1,15 e menores que 1,5:</b> A graduação será distribuída igualitariamente no intervalo. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((Q – 1,5) * (-1) / 0,35) * 75</code> <br><i>Exemplo: se Q = 1,25, a nota do indicador será 53,57 pontos.</i></li>
-                    <li style="margin-top: 8px;"><b>Para resultados maiores que 0,5 e menores que 0,85:</b> A graduação será distribuída igualitariamente no intervalo. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((Q – 0,5) / 0,35) * 75</code> <br><i>Exemplo: se Q = 0,75, a nota do indicador será 53,57 pontos.</i></li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+    with aba_ext:
+        st.info("📊 Módulo de Indicadores Financeiros (AUDESP / Dados Externos)")
 
-            # Função de conversão monetária BR para float
-            def converte_moeda_br_para_float(texto: str) -> float:
-                if not texto:
-                    return 0.0
-                limpo = str(texto).replace("R$", "").strip()
-                if "." in limpo and "," in limpo:
-                    limpo = limpo.replace(".", "").replace(",", ".")
-                elif "," in limpo:
-                    limpo = limpo.replace(",", ".")
+        # -------------------------------------------------------------------------
+        # SEÇÃO 8: INDICADORES FINANCEIROS (F1 A F18)
+        # -------------------------------------------------------------------------
+        st.markdown('<div class="section-header"><h3>8. Indicadores Financeiros (AUDESP)</h3></div>', unsafe_allow_html=True)
+
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F1 • ANÁLISE DA RECEITA (EXECUÇÃO ORÇAMENTÁRIA)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f1_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F1 - Análise da Receita ({ano_sel})", expanded=True):
+                st.subheader("F1 • Análise da Receita (Execução Orçamentária) – Resultado Consolidado")
+                st.write("**Divisão da receita arrecadada pela receita prevista atualizada (O / P = Q)**")
+                
+                # Tabela Oficial de Parâmetros e Pontuações do Indicador
+                st.markdown("""
+                | Resultado de $Q$ | Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior ou igual a 1,5 | 0 |
+                | Maior que 1,15 e menor que 1,5 | Graduação entre 75 e 0 |
+                | Maior ou igual a 0,85 e menor ou igual a 1,15 | 75 |
+                | Maior que 0,5 e menor que 0,85 | Graduação entre 0 e 75 |
+                | Menor ou igual a 0,5 | 0 |
+                """)
+                
+                # Memórias matemáticas oficiais
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regras de Distribuição Proporcional nos Intervalos:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 1,15 e menores que 1,5:</b> A graduação será distribuída igualitariamente no intervalo. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((Q – 1,5) * (-1) / 0,35) * 75</code> <br><i>Exemplo: se Q = 1,25, a nota do indicador será 53,57 pontos.</i></li>
+                        <li style="margin-top: 8px;"><b>Para resultados maiores que 0,5 e menores que 0,85:</b> A graduação será distribuída igualitariamente no intervalo. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((Q – 0,5) / 0,35) * 75</code> <br><i>Exemplo: se Q = 0,75, a nota do indicador será 53,57 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função de conversão monetária BR para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente
+                dF1 = res_data.get("F1") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
                 try:
-                    return float(limpo)
-                except ValueError:
-                    return 0.0
+                    val_salvo_o, val_salvo_p = str(dF1.get("valor", "0.00/1.00")).split("/")
+                    float_o = float(val_salvo_o)
+                    float_p = float(val_salvo_p)
+                except Exception:
+                    float_o, float_p = 0.0, 1.0
 
-            # Estado inicial / persistente
-            dF1 = res_data.get("F1") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
-            
-            try:
-                val_salvo_o, val_salvo_p = str(dF1.get("valor", "0.00/1.00")).split("/")
-                float_o = float(val_salvo_o)
-                float_p = float(val_salvo_p)
-            except Exception:
-                float_o, float_p = 0.0, 1.0
+                str_inicial_o = f"R$ {float_o:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_p = f"R$ {float_p:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f1_salva = dF1.get("link", "")
 
-            str_inicial_o = f"R$ {float_o:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            str_inicial_p = f"R$ {float_p:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            evidencia_f1_salva = dF1.get("link", "")
+                # Chaves padronizadas para session_state
+                chave_input_o = f"txt_f1_o_{ano_sel}_fiscal"
+                chave_input_p = f"txt_f1_p_{ano_sel}_fiscal"
+                chave_link_f1 = f"txt_f1_link_{ano_sel}_fiscal"
+                chave_coment_f1 = f"coment_F1_{ano_sel}_fiscal"
 
-            # Chaves padronizadas para session_state
-            chave_input_o = f"txt_f1_o_{ano_sel}_fiscal"
-            chave_input_p = f"txt_f1_p_{ano_sel}_fiscal"
-            chave_link_f1 = f"txt_f1_link_{ano_sel}_fiscal"
-            chave_coment_f1 = f"coment_F1_{ano_sel}_fiscal"
-
-            c1, c2 = st.columns([1, 2])
-            
-            with c1:
-                input_o_str = st.text_input(
-                    "Receita Arrecadada (O) - R$:",
-                    value=str_inicial_o,
-                    placeholder="Ex: 1.500.000,00",
-                    key=chave_input_o
-                )
+                c1, c2 = st.columns([1, 2])
                 
-                input_p_str = st.text_input(
-                    "Receita Prevista Atualizada (P) - R$:",
-                    value=str_inicial_p,
-                    placeholder="Ex: 1.250.000,00",
-                    key=chave_input_p
-                )
-
-            with c2:
-                link_f1 = st.text_area(
-                    f"Link/Evidência (F1) ({ano_sel}):", 
-                    value=evidencia_f1_salva, 
-                    key=chave_link_f1, 
-                    placeholder="Insira os links e evidências...",
-                    height=130
-                )
-                
-                placeholder_links_f1 = st.empty()
-                links_f1_visuais = re.findall(REGEX_PURE_URL, link_f1 or "")
-                if links_f1_visuais:
-                    placeholder_links_f1.markdown(
-                        "**🔗 Ativos:** " 
-                        + " | ".join(
-                            [
-                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
-                                for u in links_f1_visuais
-                            ]
-                        )
+                with c1:
+                    input_o_str = st.text_input(
+                        "Receita Arrecadada (O) - R$:",
+                        value=str_inicial_o,
+                        placeholder="Ex: 1.500.000,00",
+                        key=chave_input_o
+                    )
+                    
+                    input_p_str = st.text_input(
+                        "Receita Prevista Atualizada (P) - R$:",
+                        value=str_inicial_p,
+                        placeholder="Ex: 1.250.000,00",
+                        key=chave_input_p
                     )
 
-            # Exibição do cálculo armazenado / projetado no momento
-            v_arr_exib = converte_moeda_br_para_float(input_o_str)
-            v_prev_exib = max(converte_moeda_br_para_float(input_p_str), 0.01)
-            Q_exib = v_arr_exib / v_prev_exib
+                with c2:
+                    link_f1 = st.text_area(
+                        f"Link/Evidência (F1) ({ano_sel}):", 
+                        value=evidencia_f1_salva, 
+                        key=chave_link_f1, 
+                        placeholder="Insira os links e evidências...",
+                        height=130
+                    )
+                    
+                    placeholder_links_f1 = st.empty()
+                    links_f1_visuais = re.findall(REGEX_PURE_URL, link_f1 or "")
+                    if links_f1_visuais:
+                        placeholder_links_f1.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f1_visuais
+                                ]
+                            )
+                        )
 
-            if Q_exib >= 1.5 or Q_exib <= 0.5:
-                pts_exib = 0.0
-            elif 0.85 <= Q_exib <= 1.15:
-                pts_exib = 75.0
-            elif 1.15 < Q_exib < 1.5:
-                pts_exib = ((Q_exib - 1.5) * (-1) / 0.35) * 75
-            else:
-                pts_exib = ((Q_exib - 0.5) / 0.35) * 75
+                # Exibição do cálculo projetado no momento
+                v_arr_exib = converte_moeda_br_para_float(input_o_str)
+                v_prev_exib = max(converte_moeda_br_para_float(input_p_str), 0.01)
+                Q_exib = v_arr_exib / v_prev_exib
 
-            fmt_v_arr = f"R$ {v_arr_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            fmt_v_prev = f"R$ {v_prev_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-            st.markdown(f"""
-            <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
-                📌 <b>Cálculo da Execução:</b> {fmt_v_arr} / {fmt_v_prev}<br>
-                📊 <b>Resultado do Indicador (Q):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{Q_exib:.4f}</code><br>
-                🎯 <b>Pontuação Calculada:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{pts_exib:.2f} pontos</code>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown("---")
-
-            # Bloco de comentários padronizado do iFiscal
-            bloco_comentarios_ifiscal("F1", res_data, sufixo="fiscal")
-
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Indicador F1", key=f"btn_salvar_f1_{ano_sel}", type="primary"):
-                v_arr = converte_moeda_br_para_float(st.session_state.get(chave_input_o, input_o_str))
-                v_prev = max(converte_moeda_br_para_float(st.session_state.get(chave_input_p, input_p_str)), 0.01)
-
-                # Recálculo oficial no salvamento
-                Q_calc = v_arr / v_prev
-
-                if Q_calc >= 1.5 or Q_calc <= 0.5:
-                    pts_f1 = 0.0
-                elif 0.85 <= Q_calc <= 1.15:
-                    pts_f1 = 75.0
-                elif 1.15 < Q_calc < 1.5:
-                    pts_f1 = ((Q_calc - 1.5) * (-1) / 0.35) * 75
+                if Q_exib >= 1.5 or Q_exib <= 0.5:
+                    pts_exib = 0.0
+                elif 0.85 <= Q_exib <= 1.15:
+                    pts_exib = 75.0
+                elif 1.15 < Q_exib < 1.5:
+                    pts_exib = ((Q_exib - 1.5) * (-1) / 0.35) * 75
                 else:
-                    pts_f1 = ((Q_calc - 0.5) / 0.35) * 75
+                    pts_exib = ((Q_exib - 0.5) / 0.35) * 75
 
-                str_banco = f"{v_arr:.2f}/{v_prev:.2f}"
-                lnk_val_f1 = link_f1.strip()
-                comentario_para_salvar = st.session_state.get(chave_coment_f1, dF1.get("comentarios", ""))
+                fmt_v_arr = f"R$ {v_arr_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                fmt_v_prev = f"R$ {v_prev_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-                # Salva no banco de dados
-                save_resp_ifiscal(
-                    qid="F1",
-                    valor=str_banco,
-                    pontos=pts_f1,
-                    link=lnk_val_f1,
-                    comentarios=comentario_para_salvar
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Execução:</b> {fmt_v_arr} / {fmt_v_prev}<br>
+                    📊 <b>Resultado do Indicador (Q):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{Q_exib:.4f}</code><br>
+                    🎯 <b>Pontuação Calculada:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{pts_exib:.2f} pontos</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F1", key=f"btn_salvar_f1_{ano_sel}", type="primary"):
+                    v_arr = converte_moeda_br_para_float(st.session_state.get(chave_input_o, input_o_str))
+                    v_prev = max(converte_moeda_br_para_float(st.session_state.get(chave_input_p, input_p_str)), 0.01)
+
+                    # Recálculo oficial no salvamento
+                    Q_calc = v_arr / v_prev
+
+                    if Q_calc >= 1.5 or Q_calc <= 0.5:
+                        pts_f1 = 0.0
+                    elif 0.85 <= Q_calc <= 1.15:
+                        pts_f1 = 75.0
+                    elif 1.15 < Q_calc < 1.5:
+                        pts_f1 = ((Q_calc - 1.5) * (-1) / 0.35) * 75
+                    else:
+                        pts_f1 = ((Q_calc - 0.5) / 0.35) * 75
+
+                    str_banco = f"{v_arr:.2f}/{v_prev:.2f}"
+                    lnk_val_f1 = link_f1.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f1, dF1.get("comentarios", ""))
+
+                    # Salva no banco de dados via iFiscal
+                    save_resp_ifiscal(
+                        qid="F1",
+                        valor=str_banco,
+                        pontos=pts_f1,
+                        link=lnk_val_f1,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data
+                    res_data["F1"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f1,
+                        "link": lnk_val_f1,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f1 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f1_salva or "")]
+
+                    if lnk_val_f1 != evidencia_f1_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Valores e cálculo do Indicador F1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f1_salvos = float(dF1.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto F1: {pts_f1_salvos:.2f} pontos aplicados</span>",
+                    unsafe_allow_html=True
                 )
 
-                # Atualiza estrutura res_data
-                res_data["F1"] = {
-                    "valor": str_banco,
-                    "pontos": pts_f1,
-                    "link": lnk_val_f1,
-                    "comentarios": comentario_para_salvar
-                }
+        # GATILHO DO MODAL F1 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F1", st.session_state.get(f"links_pendentes_f1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f1_{ano_sel}"] = False
 
-                # Verificação de alteração de links para modal de auditoria
-                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f1 or "")]
-                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f1_salva or "")]
-
-                if lnk_val_f1 != evidencia_f1_salva and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_f1_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_f1_{ano_sel}"] = True
-
-                st.cache_data.clear()
-                st.toast("Valores e cálculo do Indicador F1 salvos com sucesso!", icon="✅")
-                st.rerun()
-
-            # Exibição do impacto da pontuação salva
-            pts_f1_salvos = float(dF1.get("pontos", 0.0))
-            st.markdown(
-                f"<span style='color:#28a745; font-weight:bold;'>"
-                f"📊 Impacto F1: {pts_f1_salvos:.2f} pontos aplicados</span>",
-                unsafe_allow_html=True
-            )
-
-    # GATILHO DO MODAL F1 (Executado fora do container)
-    if st.session_state.get(f"gatilho_modal_f1_{ano_sel}", False):
-        if "modal_aviso_link" in globals():
-            modal_aviso_link("F1", st.session_state.get(f"links_pendentes_f1_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_f1_{ano_sel}"] = False
-
-
-
-
+    
