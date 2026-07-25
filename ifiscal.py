@@ -6089,6 +6089,122 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("8.3", st.session_state.get(f"links_pendentes_8_3_{ano_sel}", []))
             st.session_state[f"gatilho_modal_8_3_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 9.0 • TOTALMENTE INDEPENDENTE
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_9_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 9.0 - Regulamentação do ITBI", expanded=True):
+                st.subheader("9.0 • Regulamentação do ITBI")
+                st.write("**O Imposto sobre Transmissão de Bens Imóveis (ITBI) foi regulamentado?**")
+                
+                # Estado inicial / persistente
+                d90 = res_data.get("9.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc90 = ["Selecione...", "Sim", "Não"]
+                
+                v_salvo_90 = d90.get("valor", "Selecione...")
+                if v_salvo_90 not in opc90: 
+                    v_salvo_90 = "Selecione..."
+                
+                evidencia_90_salva = d90.get("link", "")
+
+                # Chaves padronizadas
+                chave_rad_90 = f"rad_90_{ano_sel}_fiscal"
+                chave_link_90 = f"l90_in_{ano_sel}_fiscal"
+                chave_coment_90 = f"coment_9.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 9.0:", 
+                        opc90, 
+                        index=opc90.index(v_salvo_90), 
+                        key=chave_rad_90
+                    )
+                with c2:
+                    link_90 = st.text_area(
+                        "Link/Evidência Geral (9.0):", 
+                        value=evidencia_90_salva, 
+                        key=chave_link_90, 
+                        placeholder="Insira os links e evidências gerais...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo
+                    placeholder_links_90 = st.empty()
+                    links_90_visuais = re.findall(REGEX_PURE_URL, link_90 or "")
+                    if links_90_visuais: 
+                        placeholder_links_90.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_90_visuais
+                                ]
+                            )
+                        )
+                
+                st.markdown("---")
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("9.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 9.0", key=f"btn_salvar_9_0_{ano_sel}", type="primary"):
+                    val_sel_90 = st.session_state.get(chave_rad_90, v_salvo_90)
+                    lnk_val_90 = link_90.strip()
+                    
+                    # Regra de Pontuação (Informativo - 0.0)
+                    pts90_nova = 0.0
+                    
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_90, d90.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="9.0",
+                        valor=val_sel_90,
+                        pontos=float(pts90_nova),
+                        link=lnk_val_90,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["9.0"] = {
+                        "valor": val_sel_90,
+                        "pontos": float(pts90_nova),
+                        "link": lnk_val_90,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_90 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_90_salva or "")]
+
+                    if lnk_val_90 != evidencia_90_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 9.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_90 = d90.get("pontos", 0.0)
+                cor_status_90 = "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_status_90}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 9.0: {pts_exibido_90:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 9.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
+
 
 
 
