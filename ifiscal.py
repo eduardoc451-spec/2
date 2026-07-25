@@ -16223,4 +16223,216 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F17", st.session_state.get(f"links_pendentes_f17_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f17_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F18 • ÍNDICE DE LIQUIDEZ IMEDIATA
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f18_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F18 - Índice de Liquidez Imediata ({ano_sel})", expanded=True):
+                st.subheader("F18 • Índice de Liquidez Imediata [IL = D / PC]")
+                st.write("**Verifica a capacidade de pagamento com recursos do ativo disponível**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Resultado do Índice $IL$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior ou igual a 1 ($IL \ge 1,0$) | ✅ 75,00 pontos (Pontuação Máxima) |
+                | Entre 0,8 e 1 ($> 0,8$ e $< 1,0$) | ⚠️ Graduação proporcional entre 0 e 75 pontos |
+                | Menor ou igual a 0,8 ($IL \le 0,8$) | 🚨 0,00 ponto (Capacidade Crítica) |
+                """)
+                st.caption("ℹ️ *Dados extraídos do Relatório de Análises Anuais Eletrônicas – RAAE, item 4.1 (Capacidade de Pagamento com Recursos do Ativo Disponível).*")
+
+                # 📝 Memória de cálculo oficial fornecida
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional no Intervalo:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 0,80 e menores que 1,00:</b> A graduação será distribuída utilizando a fórmula: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">P = ((IL - 0,80) * 75) / 0,20</code> <br><i>Exemplo: se IL = 0,8100, a nota do indicador será exatamente 3,75 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato salvo no banco: "D/PC")
+                dF18 = res_data.get("F18") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_disp, val_salvo_pc = str(dF18.get("valor", "0.00/1.00")).split("/")
+                    float_disp = float(val_salvo_disp)
+                    float_pc = float(val_salvo_pc)
+                except Exception:
+                    float_disp, float_pc = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_disp = f"R$ {float_disp:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_pc = f"R$ {float_pc:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f18_salva = dF18.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_disp = f"txt_f18_disp_{ano_sel}_fiscal"
+                chave_input_pc = f"txt_f18_pc_{ano_sel}_fiscal"
+                chave_link_f18 = f"txt_f18_link_{ano_sel}_fiscal"
+                chave_coment_f18 = f"coment_F18_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_disp_str = st.text_input(
+                        "Recursos do Ativo Disponível (D) - R$:",
+                        value=str_inicial_disp,
+                        placeholder="Ex: 81.000,00",
+                        key=chave_input_disp
+                    )
+
+                    input_pc_str = st.text_input(
+                        "Passivo Circulante (PC) - R$ (F18):",
+                        value=str_inicial_pc,
+                        placeholder="Ex: 100.000,00",
+                        key=chave_input_pc
+                    )
+
+                with c2:
+                    link_f18 = st.text_area(
+                        f"Link/Evidência (F18 - Liquidez Imediata RAAE) ({ano_sel}):", 
+                        value=evidencia_f18_salva, 
+                        key=chave_link_f18, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f18 = st.empty()
+                    links_f18_visuais = re.findall(REGEX_PURE_URL, link_f18 or "")
+                    if links_f18_visuais:
+                        placeholder_links_f18.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f18_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                v_disp_exib = converte_moeda_br_para_float(input_disp_str)
+                v_pc_exib = max(converte_moeda_br_para_float(input_pc_str), 0.01) # Trava contra divisão por zero
+                
+                il_exib = round(v_disp_exib / v_pc_exib, 4)
+
+                if v_disp_exib == 0.0 and (link_f18.strip() == ""):
+                    pts_f18_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if il_exib >= 1.0000:
+                        pts_f18_exib = 75.0
+                        texto_resultado_exib = "✅ ADEQUADO: Disponível cobre totalmente o Passivo Circulante"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    elif 0.8000 < il_exib < 1.0000:
+                        calc_pts = ((il_exib - 0.8000) * 75.0) / 0.2000
+                        pts_f18_exib = min(max(calc_pts, 0.0), 75.0)
+                        texto_resultado_exib = "⚠️ GRADUAÇÃO PROPORCIONAL: Cobertura parcial do passivo"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:
+                        pts_f18_exib = 0.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Índice de liquidez imediata muito baixo (≤ 0,80)"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f18_exib:.2f}".replace(".", ",") + " pontos"
+
+                str_disp_fmt = f"R$ {v_disp_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_pc_fmt = f"R$ {v_pc_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_il_fmt = f"{il_exib:.4f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Razão:</b> {str_disp_fmt} / {str_pc_fmt}<br>
+                    📊 <b>Resultado do Indicador (IL):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_il_fmt}</code><br>
+                    ⚖️ <b>Situação de Liquidez:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F18", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F18", key=f"btn_salvar_f18_{ano_sel}", type="primary"):
+                    v_disp = converte_moeda_br_para_float(st.session_state.get(chave_input_disp, input_disp_str))
+                    v_pc = max(converte_moeda_br_para_float(st.session_state.get(chave_input_pc, input_pc_str)), 0.01)
+                    
+                    il = round(v_disp / v_pc, 4)
+
+                    if il >= 1.0000:
+                        pts_f18 = 75.0
+                    elif 0.8000 < il < 1.0000:
+                        calc_pts = ((il - 0.8000) * 75.0) / 0.2000
+                        pts_f18 = min(max(calc_pts, 0.0), 75.0)
+                    else:
+                        pts_f18 = 0.0
+
+                    str_banco = f"{v_disp:.2f}/{v_pc:.2f}"
+                    lnk_val_f18 = link_f18.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f18, dF18.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F18",
+                        valor=str_banco,
+                        pontos=pts_f18,
+                        link=lnk_val_f18,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F18"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f18,
+                        "link": lnk_val_f18,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f18 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f18_salva or "")]
+
+                    if lnk_val_f18 != evidencia_f18_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f18_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f18_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F18 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f18_salvos = float(dF18.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F18 Registrado: {pts_f18_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F18 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f18_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F18", st.session_state.get(f"links_pendentes_f18_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f18_{ano_sel}"] = False
+
     
