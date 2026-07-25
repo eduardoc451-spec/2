@@ -16435,4 +16435,210 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F18", st.session_state.get(f"links_pendentes_f18_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f18_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F19 • LIMITE DE ENDIVIDAMENTO – REGRA DE OURO
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f19_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F19 - Limite de Endividamento – Regra de Ouro ({ano_sel})", expanded=True):
+                st.subheader("F19 • Limite de Endividamento – Regra de Ouro [RO = OC - DC - AL]")
+                st.write("**Verifica se as operações de crédito ultrapassaram o volume de despesas de capital**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Resultado da Regra de Ouro ($RO$) | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Menor ou igual a ZERO ($RO \le 0$) | ✅ 0,00 ponto (Regra Cumprida / Sem Penalidade) |
+                | Maior que ZERO ($RO > 0$) | 🚨 **REBAIXA 1 FAIXA DO I-FISCAL** (Descumprimento Crítico) |
+                """)
+                st.caption("ℹ️ *Variáveis extraídas dos demonstrativos fiscais e balanços anuais consolidados do município.*")
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Helper de formatação monetária BRL segura
+                def fmt_brl(valor: float) -> str:
+                    sinal = "-" if valor < 0 else ""
+                    return f"{sinal}R$ {abs(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                # Estado inicial / persistente (formato salvo no banco: "OC/DC/AL")
+                dF19 = res_data.get("F19") or {"valor": "0.00/0.00/0.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_oc, val_salvo_dc, val_salvo_al = str(dF19.get("valor", "0.00/0.00/0.00")).split("/")
+                    float_oc = float(val_salvo_oc)
+                    float_dc = float(val_salvo_dc)
+                    float_al = float(val_salvo_al)
+                except Exception:
+                    float_oc, float_dc, float_al = 0.0, 0.0, 0.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_oc = fmt_brl(float_oc)
+                str_inicial_dc = fmt_brl(float_dc)
+                str_inicial_al = fmt_brl(float_al)
+                evidencia_f19_salva = dF19.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_oc = f"txt_f19_oc_{ano_sel}_fiscal"
+                chave_input_dc = f"txt_f19_dc_{ano_sel}_fiscal"
+                chave_input_al = f"txt_f19_al_{ano_sel}_fiscal"
+                chave_link_f19 = f"txt_f19_link_{ano_sel}_fiscal"
+                chave_coment_f19 = f"coment_F19_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_oc_str = st.text_input(
+                        "Operações de Crédito Realizadas (OC) - R$:",
+                        value=str_inicial_oc,
+                        placeholder="Ex: 500.000,00",
+                        key=chave_input_oc
+                    )
+
+                    input_dc_str = st.text_input(
+                        "Despesas de Capital Liquidadas (DC) - R$:",
+                        value=str_inicial_dc,
+                        placeholder="Ex: 600.000,00",
+                        key=chave_input_dc
+                    )
+
+                    input_al_str = st.text_input(
+                        "Autorizações por Maioria Absoluta (AL) - R$:",
+                        value=str_inicial_al,
+                        placeholder="Ex: 50.000,00",
+                        key=chave_input_al
+                    )
+
+                with c2:
+                    link_f19 = st.text_area(
+                        f"Link/Evidência (F19 - Regra de Ouro Balanços) ({ano_sel}):", 
+                        value=evidencia_f19_salva, 
+                        key=chave_link_f19, 
+                        placeholder="Insira os links e evidências...",
+                        height=210
+                    )
+                    
+                    placeholder_links_f19 = st.empty()
+                    links_f19_visuais = re.findall(REGEX_PURE_URL, link_f19 or "")
+                    if links_f19_visuais:
+                        placeholder_links_f19.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f19_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real (Sem salvar até o clique do botão)
+                v_oc_exib = converte_moeda_br_para_float(input_oc_str)
+                v_dc_exib = converte_moeda_br_para_float(input_dc_str)
+                v_al_exib = converte_moeda_br_para_float(input_al_str)
+                
+                v_ro_exib = round(v_oc_exib - v_dc_exib - v_al_exib, 2)
+
+                if v_oc_exib == 0.0 and v_dc_exib == 0.0 and v_al_exib == 0.0 and (link_f19.strip() == ""):
+                    pts_f19_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ Verificar Regra"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    pts_f19_exib = 0.0
+                    if v_ro_exib > 0.00:
+                        texto_resultado_exib = "🚨 CRÍTICO: Regra de Ouro Descumprida! Rebaixar 1 faixa do i-Fiscal"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                    else:
+                        texto_resultado_exib = "✅ REGULAR: Operações de crédito compatíveis com os investimentos"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+
+                    texto_pontuacao_exib = "0,00 pontos"
+
+                str_oc_fmt = fmt_brl(v_oc_exib)
+                str_dc_fmt = fmt_brl(v_dc_exib)
+                str_al_fmt = fmt_brl(v_al_exib)
+                str_ro_fmt = fmt_brl(v_ro_exib)
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Fórmula (RO = OC - DC - AL):</b> {str_oc_fmt} - {str_dc_fmt} - {str_al_fmt}<br>
+                    📊 <b>Resultado da Regra (RO):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_ro_fmt}</code><br>
+                    ⚖️ <b>Situação Constitucional:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F19", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F19", key=f"btn_salvar_f19_{ano_sel}", type="primary"):
+                    v_oc = converte_moeda_br_para_float(st.session_state.get(chave_input_oc, input_oc_str))
+                    v_dc = converte_moeda_br_para_float(st.session_state.get(chave_input_dc, input_dc_str))
+                    v_al = converte_moeda_br_para_float(st.session_state.get(chave_input_al, input_al_str))
+                    
+                    v_ro = round(v_oc - v_dc - v_al, 2)
+                    pts_f19 = 0.0
+
+                    str_banco = f"{v_oc:.2f}/{v_dc:.2f}/{v_al:.2f}"
+                    lnk_val_f19 = link_f19.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f19, dF19.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F19",
+                        valor=str_banco,
+                        pontos=pts_f19,
+                        link=lnk_val_f19,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F19"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f19,
+                        "link": lnk_val_f19,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f19 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f19_salva or "")]
+
+                    if lnk_val_f19 != evidencia_f19_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f19_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f19_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F19 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f19_salvos = float(dF19.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F19 Registrado: {pts_f19_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F19 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f19_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F19", st.session_state.get(f"links_pendentes_f19_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f19_{ano_sel}"] = False
+
     
