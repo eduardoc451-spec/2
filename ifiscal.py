@@ -12070,6 +12070,138 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("22.0", st.session_state.get(f"links_pendentes_22_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_22_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 22.1 • ENDEREÇO ELETRÔNICO DE DIÁRIAS E PASSAGENS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_22_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 22.1 - Endereço Eletrônico de Divulgação ({ano_sel})", expanded=True):
+                st.subheader("22.1 • URL Direta de Diárias e Passagens")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação de diárias e passagens:**")
+                st.caption("ℹ️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ***")
+                
+                # Estado inicial / persistente
+                d221 = res_data.get("22.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_221 = str(d221.get("valor", ""))
+                evidencia_221_salva = d221.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_val_221 = f"txt_221_val_{ano_sel}_fiscal"
+                chave_link_221 = f"txt_lnk_221_{ano_sel}_fiscal"
+                chave_coment_221 = f"coment_22.1_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    val_221_input = st.text_input(
+                        "Link de divulgação das diárias e passagens (ou XYZ):", 
+                        value=v_salvo_221, 
+                        key=chave_val_221,
+                        placeholder="Ex: https://... ou XYZ"
+                    )
+                    
+                    # Detecção e exibição visual dos links no próprio valor informado
+                    placeholder_val_221 = st.empty()
+                    links_val_visuais = re.findall(REGEX_PURE_URL, val_221_input or "")
+                    if links_val_visuais:
+                        placeholder_val_221.markdown(
+                            "**🔗 Link Informado:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_val_visuais
+                                ]
+                            )
+                        )
+
+                with c4:
+                    link_221 = st.text_area(
+                        f"Evidência Adicional ({ano_sel}):", 
+                        value=evidencia_221_salva, 
+                        key=chave_link_221, 
+                        placeholder="Insira os links e evidências adicionais...",
+                        height=100
+                    )
+                    
+                    # Detecção e exibição visual dos links na evidência secundária
+                    placeholder_links_221 = st.empty()
+                    links_221_visuais = re.findall(REGEX_PURE_URL, link_221 or "")
+                    if links_221_visuais:
+                        placeholder_links_221.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_221_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("22.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 22.1", key=f"btn_salvar_22_1_{ano_sel}", type="primary"):
+                    val_221_final = st.session_state.get(chave_val_221, v_salvo_221).strip()
+                    lnk_val_221 = link_221.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_221, d221.get("comentarios", ""))
+
+                    # Quesito meramente informativo (pontuação fixa em 0.0)
+                    save_resp_ifiscal(
+                        qid="22.1",
+                        valor=val_221_final,
+                        pontos=0.0,
+                        link=lnk_val_221,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["22.1"] = {
+                        "valor": val_221_final,
+                        "pontos": 0.0,
+                        "link": lnk_val_221,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal (Varre valor principal e evidência)
+                    links_atuais_val = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, val_221_final or "")]
+                    links_antigos_val = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_221 or "")]
+                    
+                    links_atuais_lnk = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_221 or "")]
+                    links_antigos_lnk = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_221_salva or "")]
+
+                    # Combinação dos links novos pendentes de auditoria
+                    links_pendentes = []
+                    if val_221_final != v_salvo_221 and links_atuais_val and links_atuais_val != links_antigos_val:
+                        links_pendentes.extend(links_atuais_val)
+                    if lnk_val_221 != evidencia_221_salva and links_atuais_lnk and links_atuais_lnk != links_antigos_lnk:
+                        links_pendentes.extend(links_atuais_lnk)
+
+                    if links_pendentes:
+                        st.session_state[f"links_pendentes_22_1_{ano_sel}"] = list(set(links_pendentes))
+                        st.session_state[f"gatilho_modal_22_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("URL/Valor e comentários do Quesito 22.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação informativa (sempre 0.0)
+                st.markdown(
+                    "<span style='color:#28a745; font-weight:bold;'>"
+                    "📊 Impacto 22.1: 0.0 pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 22.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_22_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("22.1", st.session_state.get(f"links_pendentes_22_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_22_1_{ano_sel}"] = False
+
 
 
 
