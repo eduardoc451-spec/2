@@ -16641,4 +16641,236 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F19", st.session_state.get(f"links_pendentes_f19_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f19_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F20 • PERCENTUAL DA TAXA DE INVESTIMENTO
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f20_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F20 - Percentual da Taxa de Investimento ({ano_sel})", expanded=True):
+                st.subheader("F20 • Percentual da Taxa de Investimento [(L + F) / M = N]")
+                st.write("**Mede a taxa de investimento real líquida em relação à receita total arrecadada**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Resultado do Índice $N$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior ou igual a 0,15 ($N \ge 0,15$) | ✅ 50,00 pontos (Pontuação Máxima) |
+                | Entre 0,02 e 0,15 ($> 0,02$ e $< 0,15$) | ⚠️ Graduação proporcional entre 0 e 50 pontos |
+                | Menor ou igual a 0,02 ($N \le 0,02$) | 🚨 0,00 ponto (Baixo Índice de Investimento) |
+                """)
+                st.caption("ℹ️ *Despesa classificada no elemento '44 - Investimentos' (Portaria MPOG nº 163/2001) via Sistema AUDESP.*")
+
+                # Memória de cálculo oficial fornecida
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regra de Distribuição Proporcional no Intervalo:</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 0,02 e menores que 0,15:</b> A graduação será distribuída utilizando a fórmula: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">P = ((N – 0,02) / 0,13) * 50</code> <br><i>Exemplo: se N = 0,1000 (10% de taxa), a nota do indicador será exatamente 30,77 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Helper de formatação monetária BRL segura
+                def fmt_brl(valor: float) -> str:
+                    sinal = "-" if valor < 0 else ""
+                    return f"{sinal}R$ {abs(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                # Estado inicial / persistente (formato salvo no banco: "L/F/M")
+                dF20 = res_data.get("F20") or {"valor": "0.00/0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_l, val_salvo_f, val_salvo_m = str(dF20.get("valor", "0.00/0.00/1.00")).split("/")
+                    float_l = float(val_salvo_l)
+                    float_f = float(val_salvo_f)
+                    float_m = float(val_salvo_m)
+                except Exception:
+                    float_l, float_f, float_m = 0.0, 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_l = fmt_brl(float_l)
+                str_inicial_f = fmt_brl(float_f)
+                str_inicial_m = fmt_brl(float_m)
+                evidencia_f20_salva = dF20.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_l = f"txt_f20_l_{ano_sel}_fiscal"
+                chave_input_f = f"txt_f20_f_{ano_sel}_fiscal"
+                chave_input_m = f"txt_f20_m_{ano_sel}_fiscal"
+                chave_link_f20 = f"txt_f20_link_{ano_sel}_fiscal"
+                chave_coment_f20 = f"coment_F20_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_l_str = st.text_input(
+                        "Despesa Liquidada Total - Cat. 44 (L) - R$:",
+                        value=str_inicial_l,
+                        placeholder="Ex: 90.000,00",
+                        key=chave_input_l
+                    )
+
+                    input_f_str = st.text_input(
+                        "Liq. Restos a Pagar Não Processados (F) - R$:",
+                        value=str_inicial_f,
+                        placeholder="Ex: 10.000,00",
+                        key=chave_input_f
+                    )
+
+                    input_m_str = st.text_input(
+                        "Receita Total Arrecadada no Período (M) - R$:",
+                        value=str_inicial_m,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_m
+                    )
+
+                with c2:
+                    link_f20 = st.text_area(
+                        f"Link/Evidência (F20 - Taxa de Investimento AUDESP) ({ano_sel}):", 
+                        value=evidencia_f20_salva, 
+                        key=chave_link_f20, 
+                        placeholder="Insira os links e evidências...",
+                        height=210
+                    )
+                    
+                    placeholder_links_f20 = st.empty()
+                    links_f20_visuais = re.findall(REGEX_PURE_URL, link_f20 or "")
+                    if links_f20_visuais:
+                        placeholder_links_f20.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f20_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real (Sem salvar até o clique do botão)
+                v_l_exib = converte_moeda_br_para_float(input_l_str)
+                v_f_exib = converte_moeda_br_para_float(input_f_str)
+                v_m_exib = max(converte_moeda_br_para_float(input_m_str), 0.01)  # Proteção contra divisão por zero
+                
+                N_exib = round((v_l_exib + v_f_exib) / v_m_exib, 4)
+
+                if v_l_exib == 0.0 and v_f_exib == 0.0 and (link_f20.strip() == ""):
+                    pts_f20_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if N_exib >= 0.1500:
+                        pts_f20_exib = 50.0
+                        texto_resultado_exib = "✅ EXCELENTE: Alto percentual de aplicação em investimentos"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    elif 0.0200 < N_exib < 0.1500:
+                        pts_f20_exib = ((N_exib - 0.0200) / 0.1300) * 50.0
+                        texto_resultado_exib = "⚠️ GRADUAÇÃO PROPORCIONAL: Nível intermediário de investimentos"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:  # N_exib <= 0.0200
+                        pts_f20_exib = 0.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Índice de investimento igual ou abaixo do limite de tolerância (≤ 2%)"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f20_exib:.2f} pontos".replace(".", ",")
+
+                str_l_fmt = fmt_brl(v_l_exib)
+                str_f_fmt = fmt_brl(v_f_exib)
+                str_m_fmt = fmt_brl(v_m_exib)
+                str_n_fmt = f"{N_exib:.4f}".replace(".", ",")
+                str_n_pct = f"{N_exib * 100:.2f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Equação [(L + F) / M]:</b> ({str_l_fmt} + {str_f_fmt}) / {str_m_fmt}<br>
+                    📊 <b>Resultado da Taxa (N):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_n_fmt}</code> ({str_n_pct}% de aplicação)<br>
+                    ⚖️ <b>Situação de Alocação:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F20", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F20", key=f"btn_salvar_f20_{ano_sel}", type="primary"):
+                    v_l = converte_moeda_br_para_float(st.session_state.get(chave_input_l, input_l_str))
+                    v_f = converte_moeda_br_para_float(st.session_state.get(chave_input_f, input_f_str))
+                    v_m = max(converte_moeda_br_para_float(st.session_state.get(chave_input_m, input_m_str)), 0.01)
+
+                    N = round((v_l + v_f) / v_m, 4)
+
+                    if v_l == 0.0 and v_f == 0.0 and (link_f20.strip() == ""):
+                        pts_f20 = 0.0
+                    else:
+                        if N >= 0.1500:
+                            pts_f20 = 50.0
+                        elif 0.0200 < N < 0.1500:
+                            pts_f20 = ((N - 0.0200) / 0.1300) * 50.0
+                        else:
+                            pts_f20 = 0.0
+
+                    str_banco = f"{v_l:.2f}/{v_f:.2f}/{v_m:.2f}"
+                    lnk_val_f20 = link_f20.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f20, dF20.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F20",
+                        valor=str_banco,
+                        pontos=pts_f20,
+                        link=lnk_val_f20,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F20"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f20,
+                        "link": lnk_val_f20,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f20 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f20_salva or "")]
+
+                    if lnk_val_f20 != evidencia_f20_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f20_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f20_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F20 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f20_salvos = float(dF20.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F20 Registrado: {pts_f20_salvos:.2f} pontos registrados no sistema</span>".replace(".", ","),
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F20 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f20_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F20", st.session_state.get(f"links_pendentes_f20_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f20_{ano_sel}"] = False
+
     
