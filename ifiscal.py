@@ -230,57 +230,30 @@ def get_connection():
 
 
 def init_db_ifiscal():
-    """Inicializa ou atualiza a tabela EXCLUSIVA do i-Fiscal no PostgreSQL."""
+    """Inicializa a tabela EXCLUSIVA do i-Fiscal no PostgreSQL."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                # 1. Cria a tabela base caso não exista
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS respostas_ifiscal (
-                        id VARCHAR(100) NOT NULL,
+                        id SERIAL PRIMARY KEY,
                         ano INT NOT NULL,
-                        PRIMARY KEY (id, ano)
+                        quesito VARCHAR(50) NOT NULL,
+                        resposta TEXT,
+                        pontos DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                        detalhes JSONB DEFAULT '{}'::jsonb,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT unq_ano_quesito_ifiscal UNIQUE(ano, quesito)
                     );
-                    """
-                )
-                # 2. Converte id para VARCHAR se for INT antigo
-                cursor.execute(
-                    """
-                    ALTER TABLE respostas_ifiscal 
-                    ALTER COLUMN id TYPE VARCHAR(100) USING id::VARCHAR;
-                    """
-                )
-                # 3. Garante que exista a chave primária composta (id, ano) para o ON CONFLICT funcionar
-                cursor.execute(
-                    """
-                    DO $$
-                    BEGIN
-                        IF NOT EXISTS (
-                            SELECT 1 FROM pg_constraint WHERE conname = 'respostas_ifiscal_pkey'
-                        ) THEN
-                            ALTER TABLE respostas_ifiscal ADD CONSTRAINT respostas_ifiscal_pkey PRIMARY KEY (id, ano);
-                        END IF;
-                    END $$;
-                    """
-                )
-                # 4. Garante a existência de todas as colunas necessárias
-                cursor.execute(
-                    """
-                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS valor TEXT;
-                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS pontos NUMERIC DEFAULT 0;
-                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS link TEXT;
-                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS comentarios TEXT;
-                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-                    ALTER TABLE respostas_ifiscal ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
                     """
                 )
             conn.commit()
     except Exception as e:
-        logging.error(f"Erro ao inicializar/atualizar tabela respostas_ifiscal: {e}")
+        logging.error(f"Erro ao inicializar tabela respostas_ifiscal: {e}")
 
 
-# Inicializa/Atualiza a tabela do iFiscal ao importar
+# Inicializa a tabela do iFiscal ao importar
 try:
     init_db_ifiscal()
 except Exception as e:
@@ -294,26 +267,25 @@ def load_respostas_ifiscal(ano):
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, valor, pontos, link, comentarios FROM respostas_ifiscal WHERE ano = %s",
+                    "SELECT quesito, resposta, pontos, detalhes FROM respostas_ifiscal WHERE ano = %s",
                     (int(ano),),
                 )
                 rows = cursor.fetchall()
                 for row in rows:
-                    qid, valor, pontos, link, comentarios_raw = row
-                    try:
-                        comentarios_lista = (
-                            json.loads(comentarios_raw)
-                            if comentarios_raw
-                            else []
-                        )
-                    except Exception:
-                        comentarios_lista = []
+                    quesito, resposta, pontos, detalhes_raw = row
+                    
+                    detalhes = detalhes_raw if isinstance(detalhes_raw, dict) else {}
+                    if isinstance(detalhes_raw, str):
+                        try:
+                            detalhes = json.loads(detalhes_raw)
+                        except Exception:
+                            detalhes = {}
 
-                    dados_ano[str(qid)] = {
-                        "valor": valor,
+                    dados_ano[str(quesito)] = {
+                        "valor": resposta or "",
                         "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link or "",
-                        "comentarios": comentarios_lista,
+                        "link": detalhes.get("link", ""),
+                        "comentarios": detalhes.get("comentarios", []),
                     }
     except Exception as e:
         logging.error(f"Erro ao carregar respostas_ifiscal do Neon: {e}")
@@ -329,11 +301,11 @@ def save_resp_ifiscal(qid, valor, pontos, link, comentarios=None):
     if not ano_sel:
         return
 
-    comentarios_json = (
-        json.dumps(comentarios, ensure_ascii=False)
-        if comentarios is not None
-        else "[]"
-    )
+    detalhes_obj = {
+        "link": str(link or ""),
+        "comentarios": comentarios if comentarios is not None else []
+    }
+    detalhes_json = json.dumps(detalhes_obj, ensure_ascii=False)
     timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
@@ -341,22 +313,20 @@ def save_resp_ifiscal(qid, valor, pontos, link, comentarios=None):
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO respostas_ifiscal (id, ano, valor, pontos, link, comentarios, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id, ano) DO UPDATE SET
-                        valor = EXCLUDED.valor,
+                    INSERT INTO respostas_ifiscal (ano, quesito, resposta, pontos, detalhes, atualizado_em)
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+                    ON CONFLICT (ano, quesito) DO UPDATE SET
+                        resposta = EXCLUDED.resposta,
                         pontos = EXCLUDED.pontos,
-                        link = EXCLUDED.link,
-                        comentarios = COALESCE(EXCLUDED.comentarios, respostas_ifiscal.comentarios),
+                        detalhes = EXCLUDED.detalhes,
                         atualizado_em = EXCLUDED.atualizado_em;
                     """,
                     (
-                        str(qid),
                         int(ano_sel),
-                        str(valor),
-                        float(pontos),
-                        str(link),
-                        comentarios_json,
+                        str(qid),
+                        str(valor or ""),
+                        float(pontos or 0.0),
+                        detalhes_json,
                         timestamp_atual,
                     ),
                 )
@@ -537,32 +507,30 @@ def get_all_years_data_ifiscal():
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, ano, valor, pontos, link, comentarios FROM respostas_ifiscal ORDER BY ano DESC"
+                    "SELECT quesito, ano, resposta, pontos, detalhes FROM respostas_ifiscal ORDER BY ano DESC"
                 )
                 rows = cursor.fetchall()
                 for row in rows:
-                    qid, ano, valor, pontos, link, comentarios_raw = row
-                    try:
-                        comentarios_lista = (
-                            json.loads(comentarios_raw)
-                            if comentarios_raw
-                            else []
-                        )
-                    except Exception:
-                        comentarios_lista = []
+                    quesito, ano, resposta, pontos, detalhes_raw = row
+                    
+                    detalhes = detalhes_raw if isinstance(detalhes_raw, dict) else {}
+                    if isinstance(detalhes_raw, str):
+                        try:
+                            detalhes = json.loads(detalhes_raw)
+                        except Exception:
+                            detalhes = {}
 
                     if ano not in all_data:
                         all_data[ano] = {}
-                    all_data[ano][str(qid)] = {
-                        "valor": valor,
+                    all_data[ano][str(quesito)] = {
+                        "valor": resposta or "",
                         "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link or "",
-                        "comentarios": comentarios_lista,
+                        "link": detalhes.get("link", ""),
+                        "comentarios": detalhes.get("comentarios", []),
                     }
     except Exception as e:
         logging.error(f"Erro ao buscar histórico do iFiscal no Neon: {e}")
     return all_data
-    
 # =============================================================================
 # 2. GERADOR DO RELATÓRIO PDF (i-Fiscal)
 # =============================================================================
