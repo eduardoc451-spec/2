@@ -7973,6 +7973,133 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("12.1.1", st.session_state.get(f"links_pendentes_12_1_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_12_1_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 12.1.2 • URL DO NORMATIVO (TRAVA XYZ)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_12_1_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 12.1.2 - URL de Divulgação ({ano_sel})", expanded=True):
+                st.subheader("12.1.2 • Endereço Eletrônico da Norma")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação do instrumento normativo de regulamentação:**")
+                st.caption("ℹ️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ** (Aplica penalidade de -03 pontos).*")
+                
+                # Estado inicial / persistente
+                d1212 = res_data.get("12.1.2") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_1212 = d1212.get("valor", "")
+                evidencia_1212_salva = d1212.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_txt_1212 = f"txt_1212_{ano_sel}_fiscal"
+                chave_link_1212 = f"txt_lnk_1212_{ano_sel}_fiscal"
+                chave_coment_1212 = f"coment_12.1.2_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    v1212_input = st.text_input(
+                        "Página eletrônica (ou XYZ) - 12.1.2:", 
+                        value=v_salvo_1212, 
+                        key=chave_txt_1212,
+                        placeholder="https://... ou XYZ"
+                    )
+                    
+                    # Visualização de links detectados na URL informada
+                    if v1212_input and v1212_input.strip().upper() != "XYZ":
+                        links_url_1212 = re.findall(REGEX_PURE_URL, v1212_input or "")
+                        if links_url_1212:
+                            st.markdown(
+                                "**🔗 URL Informada:** " 
+                                + " | ".join(
+                                    [
+                                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                        for u in links_url_1212
+                                    ]
+                                )
+                            )
+
+                with c2:
+                    link_1212 = st.text_area(
+                        "Evidência Adicional (12.1.2):", 
+                        value=evidencia_1212_salva, 
+                        key=chave_link_1212, 
+                        placeholder="Insira os links e evidências complementares...",
+                        height=100
+                    )
+                    
+                    # Detecção visual de links no campo de evidências
+                    placeholder_links_1212 = st.empty()
+                    links_1212_visuais = re.findall(REGEX_PURE_URL, link_1212 or "")
+                    if links_1212_visuais:
+                        placeholder_links_1212.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_1212_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("12.1.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 12.1.2", key=f"btn_salvar_12_1_2_{ano_sel}", type="primary"):
+                    val_1212 = v1212_input.strip()
+                    lnk_val_1212 = link_1212.strip()
+                    
+                    # Cálculo de pontuação conforme a Trava XYZ (-3.0 se XYZ, caso contrário 0.0)
+                    pts1212_nova = -3.0 if val_1212.upper() == "XYZ" else 0.0
+
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_1212, d1212.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="12.1.2",
+                        valor=val_1212,
+                        pontos=float(pts1212_nova),
+                        link=lnk_val_1212,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["12.1.2"] = {
+                        "valor": val_1212,
+                        "pontos": float(pts1212_nova),
+                        "link": lnk_val_1212,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links combinados (URL informada + Evidências) para modal de auditoria
+                    lk_combinados_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, f"{val_1212} {lnk_val_1212}")]
+                    lk_combinados_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, f"{v_salvo_1212} {evidencia_1212_salva}")]
+
+                    if lk_combinados_atuais and lk_combinados_atuais != lk_combinados_antigos:
+                        st.session_state[f"links_pendentes_12_1_2_{ano_sel}"] = lk_combinados_atuais
+                        st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 12.1.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação (Destaque dinâmico: vermelho para penalidade XYZ)
+                pts_exibido_1212 = d1212.get("pontos", 0.0)
+                cor_impacto_1212 = "#dc3545" if pts_exibido_1212 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_impacto_1212}; font-weight:bold;'>"
+                    f"📊 Impacto 12.1.2: {pts_exibido_1212:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 12.1.2 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_12_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.1.2", st.session_state.get(f"links_pendentes_12_1_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_12_1_2_{ano_sel}"] = False
+
 
 
 
