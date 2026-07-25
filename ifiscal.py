@@ -4977,6 +4977,176 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.4", st.session_state.get(f"links_pendentes_5_4_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_4_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 6.0 • CRITÉRIOS DE ALÍQUOTA DO IPTU (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_6_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 6.0 - Critérios de Alíquota do IPTU", expanded=True):
+                st.subheader("6.0 • Critérios de Cobrança do IPTU")
+                st.write(
+                    "**Sobre a alíquota do IPTU, quais critérios o município instituiu "
+                    "para a cobrança do imposto? (Checklist)**"
+                )
+
+                # Busca e sanitiza dados anteriores do banco
+                d60 = res_data.get("6.0") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                evidencia_60_salva = d60.get("link", "")
+
+                try:
+                    val_banco = d60.get("valor", "[]").replace("'", '"')
+                    sel60 = json.loads(val_banco)
+                    if not isinstance(sel60, list):
+                        sel60 = []
+                except Exception:
+                    sel60 = []
+
+                opcoes_tela_60 = [
+                    "Alíquotas progressivas em razão do valor do imóvel – 01",
+                    "Alíquotas diferenciadas em razão da localização do imóvel – 0,5",
+                    "Alíquotas diferenciadas em razão do uso do imóvel – 0,5",
+                    "Outros – 00",
+                    "Não há diferenciação nas alíquotas dos imóveis – -01 (perde 01 ponto)"
+                ]
+
+                # Chaves fixas por componente e ano
+                chave_link_60 = f"txt_60_{ano_sel}_fiscal"
+                chave_coment_60 = f"coment_6.0_{ano_sel}_fiscal"
+
+                # Layout de exibição dos Checkboxes (Duas colunas)
+                c1, c2 = st.columns([1, 1])
+                res60_selecionados = []
+
+                for idx, opcao in enumerate(opcoes_tela_60):
+                    target_col = c1 if idx % 2 == 0 else c2
+                    with target_col:
+                        pode_marcar = opcao in sel60
+                        marcado = st.checkbox(
+                            opcao,
+                            value=pode_marcar,
+                            key=f"chk_60_{idx}_{ano_sel}_fiscal"
+                        )
+                        if marcado:
+                            res60_selecionados.append(opcao)
+
+                # Lógica excludente: se marcou 'Não há diferenciação', prevalece isoladamente
+                opc_penalidade = "Não há diferenciação nas alíquotas dos imóveis – -01 (perde 01 ponto)"
+                if opc_penalidade in res60_selecionados:
+                    res60_selecionados = [opc_penalidade]
+
+                # Cálculo de pontuação em tempo real para exibição
+                pts_calculados_60 = 0.0
+                if opc_penalidade in res60_selecionados:
+                    pts_calculados_60 = -1.0
+                else:
+                    for item in res60_selecionados:
+                        if "progressivas" in item:
+                            pts_calculados_60 += 1.0
+                        elif "localização" in item:
+                            pts_calculados_60 += 0.5
+                        elif "uso" in item:
+                            pts_calculados_60 += 0.5
+
+                st.markdown("---")
+
+                # Campo de Entrada de Link/Evidência
+                link_60 = st.text_area(
+                    "Link/Evidência (Legislação das Alíquotas do IPTU - 6.0):",
+                    value=evidencia_60_salva,
+                    key=chave_link_60,
+                    placeholder="Insira os links e evidências da legislação municipal...",
+                    height=100
+                )
+
+                placeholder_links_60 = st.empty()
+                links_60_visuais = re.findall(REGEX_PURE_URL, link_60 or "")
+                if links_60_visuais:
+                    placeholder_links_60.markdown(
+                        "**🔗 Ativos (Evidência 6.0):** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_60_visuais
+                            ]
+                        )
+                    )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("6.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 6.0", key=f"btn_salvar_6_0_{ano_sel}", type="primary"):
+                    # Coleta atualizada dos checkboxes no momento do clique
+                    res60_final = []
+                    for idx_c, opc_c in enumerate(opcoes_tela_60):
+                        if st.session_state.get(f"chk_60_{idx_c}_{ano_sel}_fiscal", False):
+                            res60_final.append(opc_c)
+
+                    if opc_penalidade in res60_final:
+                        res60_final = [opc_penalidade]
+
+                    # Recálculo final dos pontos
+                    pts_final_60 = 0.0
+                    if opc_penalidade in res60_final:
+                        pts_final_60 = -1.0
+                    else:
+                        for item in res60_final:
+                            if "progressivas" in item:
+                                pts_final_60 += 1.0
+                            elif "localização" in item:
+                                pts_final_60 += 0.5
+                            elif "uso" in item:
+                                pts_final_60 += 0.5
+
+                    lnk_val_60 = link_60.strip()
+                    valor_json_60 = json.dumps(res60_final)
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_60, d60.get("comentarios", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="6.0",
+                        valor=valor_json_60,
+                        pontos=pts_final_60,
+                        link=lnk_val_60,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["6.0"] = {
+                        "valor": valor_json_60,
+                        "pontos": pts_final_60,
+                        "link": lnk_val_60,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_60 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_60_salva or "")]
+
+                    if lnk_val_60 != evidencia_60_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_6_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 6.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 6.0: {pts_calculados_60:.1f} ponto(s) aplicado(s)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 6.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_6_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = False
+
 
 
 
