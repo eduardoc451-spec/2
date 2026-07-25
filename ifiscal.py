@@ -15119,4 +15119,170 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F11", st.session_state.get(f"links_pendentes_f11_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f11_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F12 • PONTUALIDADE NA PRESTAÇÃO DE CONTAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f12_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F12 - Pontualidade na Prestação de Contas ({ano_sel})", expanded=True):
+                st.subheader("F12 • Pontualidade na Prestação de Contas")
+                st.write("**Cumprimento dos prazos de envio de Atas, Pareceres, Balancetes, Mapas de Precatórios e Conciliações**")
+                
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Situação da Entrega | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Encaminhou no prazo | ✅ 50,00 pontos (Pontuação Máxima) |
+                | Encaminhou fora do prazo | ⚠️ 25,00 pontos (Penalidade Parcial) |
+                | Não encaminhou | 🚨 0,00 ponto (Sem pontuação) |
+                """)
+                st.caption("ℹ️ *Informações extraídas do Sistema AUDESP – Relatório de Situação de Entrega.*")
+
+                # Estado inicial / persistente no banco
+                dF12 = res_data.get("F12") or {"valor": "Aguardando preenchimento...", "pontos": 0.0, "link": "", "comentarios": ""}
+                val_salvo_status = dF12.get("valor", "Aguardando preenchimento...")
+                evidencia_f12_salva = dF12.get("link", "")
+
+                opcoes_status = [
+                    "Aguardando preenchimento...",
+                    "Encaminhou no prazo",
+                    "Encaminhou fora do prazo",
+                    "Não encaminhou"
+                ]
+
+                try:
+                    idx_inicial = opcoes_status.index(val_salvo_status)
+                except ValueError:
+                    idx_inicial = 0
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_sb_f12 = f"sb_f12_status_{ano_sel}_fiscal"
+                chave_link_f12 = f"txt_f12_link_{ano_sel}_fiscal"
+                chave_coment_f12 = f"coment_F12_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    status_selecionado = st.selectbox(
+                        "Situação da entrega dos documentos no AUDESP:",
+                        options=opcoes_status,
+                        index=idx_inicial,
+                        key=chave_sb_f12
+                    )
+
+                with c2:
+                    link_f12 = st.text_area(
+                        f"Link/Evidência (F12 - Situação de Entrega AUDESP) ({ano_sel}):", 
+                        value=evidencia_f12_salva, 
+                        key=chave_link_f12, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f12 = st.empty()
+                    links_f12_visuais = re.findall(REGEX_PURE_URL, link_f12 or "")
+                    if links_f12_visuais:
+                        placeholder_links_f12.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f12_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real conforme regra do indicador
+                if status_selecionado == "Encaminhou no prazo":
+                    pts_f12_exib = 50.0
+                    texto_resultado_exib = "✅ REGULAR: Documentação enviada tempestivamente"
+                    estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    texto_pontuacao_exib = "50,00 pontos"
+                elif status_selecionado == "Encaminhou fora do prazo":
+                    pts_f12_exib = 25.0
+                    texto_resultado_exib = "⚠️ ALERTA: Remessa em atraso apurada no relatório"
+                    estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    texto_pontuacao_exib = "25,00 pontos"
+                elif status_selecionado == "Não encaminhou":
+                    pts_f12_exib = 0.0
+                    texto_resultado_exib = "🚨 CRÍTICO: Ausência de prestação de contas obrigatória"
+                    estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                    texto_pontuacao_exib = "0,00 pontos"
+                else:
+                    pts_f12_exib = 0.0
+                    texto_resultado_exib = "Aguardando seleção do status..."
+                    estilo_status_exib = "color: #64748b;"
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Critério Avaliado:</b> Atas, Pareceres, Balancetes, Precatórios, Conciliações e Questionário IEG-M<br>
+                    ⚖️ <b>Status da Prestação:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F12", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F12", key=f"btn_salvar_f12_{ano_sel}", type="primary"):
+                    status_final = st.session_state.get(chave_sb_f12, status_selecionado)
+
+                    if status_final == "Encaminhou no prazo":
+                        pts_f12 = 50.0
+                    elif status_final == "Encaminhou fora do prazo":
+                        pts_f12 = 25.0
+                    else:
+                        pts_f12 = 0.0
+
+                    lnk_val_f12 = link_f12.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f12, dF12.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F12",
+                        valor=status_final,
+                        pontos=pts_f12,
+                        link=lnk_val_f12,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F12"] = {
+                        "valor": status_final,
+                        "pontos": pts_f12,
+                        "link": lnk_val_f12,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f12 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f12_salva or "")]
+
+                    if lnk_val_f12 != evidencia_f12_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f12_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f12_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Status e pontuação do Indicador F12 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f12_salvos = float(dF12.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F12 Registrado: {pts_f12_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F12 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f12_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F12", st.session_state.get(f"links_pendentes_f12_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f12_{ano_sel}"] = False
+
     
