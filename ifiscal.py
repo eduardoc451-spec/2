@@ -13096,4 +13096,203 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F1", st.session_state.get(f"links_pendentes_f1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F2 • ANÁLISE DA DESPESA (EXECUÇÃO ORÇAMENTÁRIA)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f2_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F2 - Análise da Despesa ({ano_sel})", expanded=True):
+                st.subheader("F2 • Análise da Despesa (Execução Orçamentária) – Resultado Consolidado")
+                st.write("**Divisão da despesa executada pela despesa fixada final (R / S = T)**")
+                
+                # Tabela Oficial de Parâmetros e Pontuações do Indicador F2
+                st.markdown("""
+                | Resultado de $T$ | Pontuação do Indicador |
+                | :--- | :--- |
+                | Maior ou igual a 1,1 | 0 |
+                | Maior que 1,0 e menor que 1,1 | Graduação entre 75 e 0 |
+                | Maior ou igual a 0,9 e menor ou igual a 1,0 | 75 |
+                | Maior que 0,5 e menor que 0,9 | Graduação entre 0 e 75 |
+                | Menor ou igual a 0,5 | 0 |
+                """)
+                
+                # Memórias matemáticas oficiais do indicador F2
+                st.markdown("""
+                <div style="background-color: #f8fafc; padding: 12px; border-radius: 4px; border-left: 3px solid #64748b; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px; font-size: 13px;">📊 <b>Regras de Distribuição Proporcional nos Intervalos (Despesa):</b></p>
+                    <ul style="font-size: 13px; margin-left: 15px; padding-left: 0px;">
+                        <li><b>Para resultados maiores que 1,0 e menores que 1,1:</b> A graduação será distribuída igualitariamente no intervalo. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((T – 1,1) * (-1) / 0,10) * 75</code> <br><i>Exemplo: se T = 1,05, a nota do indicador será 37,50 pontos.</i></li>
+                        <li style="margin-top: 8px;"><b>Para resultados maiores que 0,5 e menores que 0,9:</b> A graduação será distribuída igualitariamente no intervalo. Matematicamente: <br><code style="background-color: #e2e8f0; padding: 2px 5px;">((T – 0,5) / 0,40) * 75</code> <br><i>Exemplo: se T = 0,75, a nota do indicador será 46,88 pontos.</i></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Função de conversão monetária BR para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente
+                dF2 = res_data.get("F2") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_r, val_salvo_s = str(dF2.get("valor", "0.00/1.00")).split("/")
+                    float_r = float(val_salvo_r)
+                    float_s = float(val_salvo_s)
+                except Exception:
+                    float_r, float_s = 0.0, 1.0
+
+                str_inicial_r = f"R$ {float_r:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_s = f"R$ {float_s:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f2_salva = dF2.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_input_r = f"txt_f2_r_{ano_sel}_fiscal"
+                chave_input_s = f"txt_f2_s_{ano_sel}_fiscal"
+                chave_link_f2 = f"txt_f2_link_{ano_sel}_fiscal"
+                chave_coment_f2 = f"coment_F2_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+                
+                with c1:
+                    input_r_str = st.text_input(
+                        "Despesa Executada (R) - R$:",
+                        value=str_inicial_r,
+                        placeholder="Ex: 1.050.000,00",
+                        key=chave_input_r
+                    )
+                    
+                    input_s_str = st.text_input(
+                        "Despesa Fixada Final (S) - R$:",
+                        value=str_inicial_s,
+                        placeholder="Ex: 1.000.000,00",
+                        key=chave_input_s
+                    )
+
+                with c2:
+                    link_f2 = st.text_area(
+                        f"Link/Evidência (F2) ({ano_sel}):", 
+                        value=evidencia_f2_salva, 
+                        key=chave_link_f2, 
+                        placeholder="Insira os links e evidências...",
+                        height=130
+                    )
+                    
+                    placeholder_links_f2 = st.empty()
+                    links_f2_visuais = re.findall(REGEX_PURE_URL, link_f2 or "")
+                    if links_f2_visuais:
+                        placeholder_links_f2.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f2_visuais
+                                ]
+                            )
+                        )
+
+                # Exibição do cálculo projetado no momento
+                v_exec_exib = converte_moeda_br_para_float(input_r_str)
+                v_fix_exib = max(converte_moeda_br_para_float(input_s_str), 0.01)
+                T_exib = v_exec_exib / v_fix_exib
+
+                if T_exib >= 1.1 or T_exib <= 0.5:
+                    pts_exib = 0.0
+                elif 0.9 <= T_exib <= 1.0:
+                    pts_exib = 75.0
+                elif 1.0 < T_exib < 1.1:
+                    pts_exib = ((T_exib - 1.1) * (-1) / 0.10) * 75
+                else: # Faixa entre 0.5 e 0.9
+                    pts_exib = ((T_exib - 0.5) / 0.40) * 75
+
+                fmt_v_exec = f"R$ {v_exec_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                fmt_v_fix = f"R$ {v_fix_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Execução:</b> {fmt_v_exec} / {fmt_v_fix}<br>
+                    📊 <b>Resultado do Indicador (T):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{T_exib:.4f}</code><br>
+                    🎯 <b>Pontuação Calculada:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{pts_exib:.2f} pontos</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F2", key=f"btn_salvar_f2_{ano_sel}", type="primary"):
+                    v_exec = converte_moeda_br_para_float(st.session_state.get(chave_input_r, input_r_str))
+                    v_fix = max(converte_moeda_br_para_float(st.session_state.get(chave_input_s, input_s_str)), 0.01)
+
+                    # Recálculo oficial no salvamento
+                    T_calc = v_exec / v_fix
+
+                    if T_calc >= 1.1 or T_calc <= 0.5:
+                        pts_f2 = 0.0
+                    elif 0.9 <= T_calc <= 1.0:
+                        pts_f2 = 75.0
+                    elif 1.0 < T_calc < 1.1:
+                        pts_f2 = ((T_calc - 1.1) * (-1) / 0.10) * 75
+                    else: # Faixa entre 0.5 e 0.9
+                        pts_f2 = ((T_calc - 0.5) / 0.40) * 75
+
+                    str_banco = f"{v_exec:.2f}/{v_fix:.2f}"
+                    lnk_val_f2 = link_f2.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f2, dF2.get("comentarios", ""))
+
+                    # Salva no banco de dados via iFiscal
+                    save_resp_ifiscal(
+                        qid="F2",
+                        valor=str_banco,
+                        pontos=pts_f2,
+                        link=lnk_val_f2,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data
+                    res_data["F2"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f2,
+                        "link": lnk_val_f2,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f2 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f2_salva or "")]
+
+                    if lnk_val_f2 != evidencia_f2_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Valores e cálculo do Indicador F2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do impacto da pontuação salva
+                pts_f2_salvos = float(dF2.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto F2: {pts_f2_salvos:.2f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F2 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F2", st.session_state.get(f"links_pendentes_f2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f2_{ano_sel}"] = False
+
     
