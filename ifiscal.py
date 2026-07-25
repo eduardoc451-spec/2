@@ -11557,6 +11557,153 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("20.0", st.session_state.get(f"links_pendentes_20_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_20_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 20.1 • CHECKLIST DE ITENS DA DESPESA
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_20_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 20.1 - Checklist de Itens da Despesa ({ano_sel})", expanded=True):
+                st.subheader("20.1 • Detalhamento das Despesas em Tempo Real")
+                st.write("**Assinale os itens das despesas divulgados em tempo real (Checklist):**")
+                
+                # Estado inicial / persistente
+                d201 = res_data.get("20.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": ""}
+                evidencia_201_salva = d201.get("link", "")
+                
+                # Desserialização do valor salvo
+                try:
+                    val_banco201 = str(d201.get("valor", "[]")).replace("'", '"')
+                    sel201 = json.loads(val_banco201)
+                    if not isinstance(sel201, list):
+                        sel201 = []
+                except Exception:
+                    sel201 = []
+
+                opcoes_201 = {
+                    "Valor empenhado – 0,3": 0.3,
+                    "Valor liquidado – 0,3": 0.3,
+                    "Valor pago – 0,3": 0.3,
+                    "Número do processo da execução - nº empenho – 0,3": 0.3,
+                    "Unidade Orçamentária - UO – 0,3": 0.3,
+                    "Função – 0,3": 0.3,
+                    "Subfunção – 0,3": 0.3,
+                    "Categoria Econômica da despesa – 0,3": 0.3,
+                    "Grupo de Natureza da despesa – 0,3": 0.3,
+                    "Modalidade de aplicação – 0,3": 0.3,
+                    "Elemento – 0,6": 0.6,
+                    "Subelemento – 0,6": 0.6,
+                    "Fonte de recurso – 0,3": 0.3,
+                    "Favorecido do pagamento – 0,3": 0.3,
+                    "Modalidade da licitação – 0,3": 0.3,
+                    "Número do processo licitatório – 0,3": 0.3,
+                    "Bem fornecido ou serviço prestado – 0,3": 0.3,
+                    "Outros – 0,3": 0.3
+                }
+
+                # Chaves padronizadas para session_state
+                chave_link_201 = f"txt_201_{ano_sel}_fiscal"
+                chave_coment_201 = f"coment_20.1_{ano_sel}_fiscal"
+
+                c3, c4 = st.columns([1, 1])
+                with c3:
+                    for idx, (opcao, _) in enumerate(opcoes_201.items()):
+                        st.checkbox(
+                            opcao, 
+                            value=(opcao in sel201), 
+                            key=f"chk_201_{idx}_{ano_sel}_fiscal"
+                        )
+
+                with c4:
+                    link_201 = st.text_area(
+                        f"Link/Evidência das Despesas ({ano_sel}):", 
+                        value=evidencia_201_salva, 
+                        key=chave_link_201, 
+                        placeholder="Insira os links e evidências...",
+                        height=320
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_201 = st.empty()
+                    links_201_visuais = re.findall(REGEX_PURE_URL, link_201 or "")
+                    if links_201_visuais:
+                        placeholder_links_201.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_201_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("20.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 20.1", key=f"btn_salvar_20_1_{ano_sel}", type="primary"):
+                    res201_temp = []
+                    pts_acumulados = 0.0
+
+                    # Apuração dos checkboxes selecionados
+                    for idx_chk, (opcao_chk, pontos_chk) in enumerate(opcoes_201.items()):
+                        chk_key = f"chk_201_{idx_chk}_{ano_sel}_fiscal"
+                        if st.session_state.get(chk_key, False):
+                            res201_temp.append(opcao_chk)
+                            pts_acumulados += pontos_chk
+
+                    pts_finais_201 = round(pts_acumulados, 2)
+                    valor_json_201 = json.dumps(res201_temp)
+                    lnk_val_201 = link_201.strip()
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_201, d201.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="20.1",
+                        valor=valor_json_201,
+                        pontos=float(pts_finais_201),
+                        link=lnk_val_201,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["20.1"] = {
+                        "valor": valor_json_201,
+                        "pontos": float(pts_finais_201),
+                        "link": lnk_val_201,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_201 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_201_salva or "")]
+
+                    if lnk_val_201 != evidencia_201_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_20_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_20_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Checklist e comentários do Quesito 20.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição da pontuação acumulada
+                pts_atuais_201 = d201.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Impacto 20.1: {pts_atuais_201} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 20.1 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_20_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("20.1", st.session_state.get(f"links_pendentes_20_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_20_1_{ano_sel}"] = False
+
 
 
 
