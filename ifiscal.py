@@ -17299,10 +17299,6 @@ def mostrar_formulario_ifiscal():
             st.subheader("📈 Série Histórica de Pontuação")
             st.caption("Acompanhamento da evolução da pontuação fiscal do município ao longo dos anos")
 
-                with aba_graf:
-                st.subheader("📈 Série Histórica de Pontuação")
-                st.caption("Acompanhamento da evolução da pontuação fiscal do município ao longo dos anos")
-
                 # -------------------------------------------------------------------------
                 # 1. RECUPERAÇÃO DA SÉRIE HISTÓRICA DE PONTOS POR ANO
                 # -------------------------------------------------------------------------
