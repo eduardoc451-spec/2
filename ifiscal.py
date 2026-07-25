@@ -12202,6 +12202,141 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("22.1", st.session_state.get(f"links_pendentes_22_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_22_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: QUESITO 23.0 • REPASSES CORRENTES AO RGPS
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_23_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 23.0 - Repasses Correntes RGPS ({ano_sel})", expanded=True):
+                st.subheader("23.0 • Repasses Correntes (RGPS)")
+                st.write(f"**Os repasses para o Regime Geral de Previdência Social (RGPS) da competência de {ano_sel} foram realizados em qual prazo?**")
+                
+                # Estado inicial / persistente
+                d230 = res_data.get("23.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": ""}
+                opc230 = [
+                    "Selecione...",
+                    "Todos os repasses foram dentro do prazo legal – 00",
+                    "A maior parte dos repasses recolhidos até 30 dias após o vencimento – -04 (perde 04 pontos)",
+                    "A maior parte dos repasses recolhidos de 31 a 90 dias do vencimento – -15 (perde 15 pontos)",
+                    "A maior parte dos repasses recolhidos acima de 90 dias do vencimento – -21 (perde 21 pontos)",
+                    "Os repasses não foram realizados – -30 (perde 30 pontos)"
+                ]
+                
+                valor_limpo_230 = str(d230.get("valor", "Selecione..."))
+                if valor_limpo_230 not in opc230:
+                    valor_limpo_230 = "Selecione..."
+                
+                evidencia_230_salva = d230.get("link", "")
+
+                # Chaves padronizadas para session_state
+                chave_rad_230 = f"rad_230_{ano_sel}_fiscal"
+                chave_link_230 = f"txt_230_{ano_sel}_fiscal"
+                chave_coment_230 = f"coment_23.0_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.radio(
+                        "Selecione 23.0:", 
+                        opc230, 
+                        index=opc230.index(valor_limpo_230), 
+                        key=chave_rad_230
+                    )
+
+                with c2:
+                    link_230 = st.text_area(
+                        f"Link/Evidência de Comprovantes de Repasse / GFIP / GPS ({ano_sel}):", 
+                        value=evidencia_230_salva, 
+                        key=chave_link_230, 
+                        placeholder="Insira os links e evidências...",
+                        height=140
+                    )
+                    
+                    # Detecção e exibição visual dos links no campo
+                    placeholder_links_230 = st.empty()
+                    links_230_visuais = re.findall(REGEX_PURE_URL, link_230 or "")
+                    if links_230_visuais:
+                        placeholder_links_230.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_230_visuais
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("23.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 23.0", key=f"btn_salvar_23_0_{ano_sel}", type="primary"):
+                    val_230_selecionado = st.session_state.get(chave_rad_230, valor_limpo_230)
+                    lnk_val_230 = link_230.strip()
+
+                    # Cálculo da pontuação conforme a opção selecionada
+                    if "dentro do prazo" in val_230_selecionado:
+                        pts_230 = 0.0
+                    elif "até 30 dias" in val_230_selecionado:
+                        pts_230 = -4.0
+                    elif "31 a 90 dias" in val_230_selecionado:
+                        pts_230 = -15.0
+                    elif "acima de 90 dias" in val_230_selecionado:
+                        pts_230 = -21.0
+                    elif "não foram realizados" in val_230_selecionado:
+                        pts_230 = -30.0
+                    else:
+                        pts_230 = 0.0
+
+                    # Captura o comentário atualizado da sessão
+                    comentario_para_salvar = st.session_state.get(chave_coment_230, d230.get("comentarios", ""))
+
+                    # Salva no banco de dados via função do iFiscal
+                    save_resp_ifiscal(
+                        qid="23.0",
+                        valor=val_230_selecionado,
+                        pontos=pts_230,
+                        link=lnk_val_230,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["23.0"] = {
+                        "valor": val_230_selecionado,
+                        "pontos": pts_230,
+                        "link": lnk_val_230,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para acionamento do modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_230 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_230_salva or "")]
+
+                    if lnk_val_230 != evidencia_230_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_23_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_23_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Opção e comentários do Quesito 23.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição de pontuação
+                pts_atuais_230 = d230.get("pontos", 0.0)
+                cor_p230 = "#dc3545" if pts_atuais_230 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_p230}; font-weight:bold;'>"
+                    f"📊 Impacto 23.0: {pts_atuais_230} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 23.0 (Executado fora da caixa do container)
+        if st.session_state.get(f"gatilho_modal_23_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("23.0", st.session_state.get(f"links_pendentes_23_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_23_0_{ano_sel}"] = False
+
 
 
 
