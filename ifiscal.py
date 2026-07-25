@@ -15707,4 +15707,162 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F14", st.session_state.get(f"links_pendentes_f14_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f14_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F15 • ALERTAS DO SISTEMA AUDESP
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f15_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F15 - Alertas do Sistema AUDESP ({ano_sel})", expanded=True):
+                st.subheader("F15 • Alertas do Sistema AUDESP")
+                st.write("**Quantidade total de alertas gerados pelo sistema eletrônico no exercício**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Quantidade de Alertas | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Menor ou igual a 20 ($\le 20$) | ✅ 25,00 pontos (Pontuação Máxima) |
+                | Entre 21 e 40 ($> 20$ e $\le 40$) | ⚠️ 10,00 pontos (Atenção / Nota Parcial) |
+                | Maior ou igual a 41 ($\ge 41$) | 🚨 0,00 ponto (Volume Crítico de Alertas) |
+                """)
+                st.caption("ℹ️ *Informações extraídas do módulo de controle do Sistema AUDESP.*")
+
+                # Estado inicial / persistente do banco
+                dF15 = res_data.get("F15") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_alertas = int(float(dF15.get("valor", 0)))
+                except Exception:
+                    val_salvo_alertas = 0
+
+                evidencia_f15_salva = dF15.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_f15 = f"num_f15_alertas_{ano_sel}_fiscal"
+                chave_link_f15 = f"txt_f15_link_{ano_sel}_fiscal"
+                chave_coment_f15 = f"coment_F15_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    qtd_alertas = st.number_input(
+                        "Quantidade total de alertas gerados no ano:",
+                        min_value=0,
+                        max_value=9999,
+                        value=val_salvo_alertas,
+                        step=1,
+                        format="%d",
+                        key=chave_input_f15
+                    )
+
+                with c2:
+                    link_f15 = st.text_area(
+                        f"Link/Evidência (F15 - Painel de Alertas AUDESP) ({ano_sel}):", 
+                        value=evidencia_f15_salva, 
+                        key=chave_link_f15, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f15 = st.empty()
+                    links_f15_visuais = re.findall(REGEX_PURE_URL, link_f15 or "")
+                    if links_f15_visuais:
+                        placeholder_links_f15.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f15_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                if qtd_alertas <= 20:
+                    pts_f15_exib = 25.0
+                    texto_resultado_exib = f"✅ ADEQUADO: Baixo volume de alertas ({qtd_alertas})"
+                    estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    texto_pontuacao_exib = "25,00 pontos"
+                elif 20 < qtd_alertas <= 40:
+                    pts_f15_exib = 10.0
+                    texto_resultado_exib = f"⚠️ ATENÇÃO: Volume moderado de inconformidades ({qtd_alertas})"
+                    estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    texto_pontuacao_exib = "10,00 pontos"
+                else:
+                    pts_f15_exib = 0.0
+                    texto_resultado_exib = f"🚨 EXCESSO: Alto índice de ocorrências sistêmicas ({qtd_alertas})"
+                    estilo_status_exib = "color: #dc2626; font-weight: bold;"
+                    texto_pontuacao_exib = "0,00 pontos"
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Métrica Avaliada:</b> Concentração de inconformidades contábeis e de gestão<br>
+                    📊 <b>Quantidade Registrada:</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{qtd_alertas} alertas</code><br>
+                    ⚖️ <b>Situação Institucional:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F15", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F15", key=f"btn_salvar_f15_{ano_sel}", type="primary"):
+                    v_alertas = st.session_state.get(chave_input_f15, qtd_alertas)
+
+                    if v_alertas <= 20:
+                        pts_f15 = 25.0
+                    elif 20 < v_alertas <= 40:
+                        pts_f15 = 10.0
+                    else:
+                        pts_f15 = 0.0
+
+                    lnk_val_f15 = link_f15.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f15, dF15.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F15",
+                        valor=str(v_alertas),
+                        pontos=pts_f15,
+                        link=lnk_val_f15,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F15"] = {
+                        "valor": str(v_alertas),
+                        "pontos": pts_f15,
+                        "link": lnk_val_f15,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f15 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f15_salva or "")]
+
+                    if lnk_val_f15 != evidencia_f15_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f15_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f15_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F15 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f15_salvos = float(dF15.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F15 Registrado: {pts_f15_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F15 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f15_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F15", st.session_state.get(f"links_pendentes_f15_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f15_{ano_sel}"] = False
+
     
