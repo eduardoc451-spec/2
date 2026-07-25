@@ -1575,7 +1575,65 @@ def confirmar_zerar_dialog_ifiscal(ano):
 
 
 # =============================================================================
-# 2. SIDEBAR E PAINEL - iFiscal
+# 2. DIÁLOGO E BANCO - ZERAR DADOS DO iFISCAL
+# =============================================================================
+
+
+def zerar_banco_ifiscal_por_ano(ano: int):
+    """Apaga fisicamente as respostas do i-Fiscal para o ano selecionado no Neon DB."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                # Garante exclusão/zeramento estritamente na tabela do iFiscal
+                cursor.execute(
+                    "DELETE FROM respostas_ifiscal WHERE ano = %s;", (int(ano),)
+                )
+            conn.commit()
+
+        # Limpa caches em memória
+        st.cache_data.clear()
+
+        # Limpa chaves do session_state associadas ao ano
+        chave_ss = f"respostas_ifiscal_{ano}"
+        if chave_ss in st.session_state:
+            del st.session_state[chave_ss]
+
+        return True
+    except Exception as e:
+        logging.error(f"Erro ao zerar i-Fiscal no banco: {e}")
+        return False
+
+
+@st.dialog("⚠️ Confirmar Zeramento - i-Fiscal")
+def confirmar_zerar_dialog_ifiscal(ano):
+    st.warning(
+        f"Tem certeza que deseja apagar **TODAS** as respostas e pontos do i-Fiscal para o ano de **{ano}**?"
+    )
+    st.write(
+        "Esta ação é irreversível e removerá as evidências e comentários do banco de dados."
+    )
+
+    col_sim, col_nao = st.columns(2)
+    with col_sim:
+        if st.button(
+            "🔥 Sim, Zerar Dados", type="primary", use_container_width=True
+        ):
+            if zerar_banco_ifiscal_por_ano(ano):
+                st.toast(
+                    f"Dados do i-Fiscal para {ano} foram zerados com sucesso!",
+                    icon="🗑️",
+                )
+                st.rerun()
+            else:
+                st.error("Erro ao tentar zerar os dados no banco.")
+
+    with col_nao:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+# =============================================================================
+# 2. SIDEBAR E PAINEL - iFiscal (CORRIGIDO)
 # =============================================================================
 
 
@@ -1583,20 +1641,19 @@ def render_sidebar():
     st.sidebar.title("🏛️ Painel de Controle - i-Fiscal")
     anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
 
-    # Seleção do ano no session_state
     ano_sel = st.sidebar.selectbox(
         "Ano de Referência:", anos, key="ano_referencia_ifiscal"
     )
 
-    # Função de carregamento das respostas
-    res_data = (
-        load_respostas_ifiscal(ano_sel)
-        if "load_respostas_ifiscal" in globals()
-        else load_respostas(ano_sel)
-    )
+    # Força a busca da função específica do iFiscal sem recuar para tabelas genéricas
+    if "load_respostas_ifiscal" in globals():
+        res_data = load_respostas_ifiscal(ano_sel)
+    else:
+        res_data = load_respostas(ano_sel)
 
+    # Garante conversão float para não travar o cálculo de pontuação
     total_pts = sum(
-        item.get("pontos", 0.0)
+        float(item.get("pontos", 0.0))
         for item in res_data.values()
         if isinstance(item, dict)
     )
@@ -1631,7 +1688,9 @@ def render_sidebar():
                 res_data, ano_sel=ano_sel, total_pts=total_pts
             ).getvalue()
         elif "gerar_relatorio_pdf" in globals():
-            pdf_bytes = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
+            pdf_bytes = gerar_relatorio_pdf(
+                res_data, ano_sel, total_pts, faixa
+            )
 
         st.download_button(
             label="📄 Baixar PDF",
@@ -1655,29 +1714,24 @@ def render_sidebar():
 
 
 # =============================================================================
-# 3. GRÁFICOS E HISTÓRICO - iFiscal
+# 3. GRÁFICOS E HISTÓRICO - iFiscal (CORRIGIDO)
 # =============================================================================
 
 
 def get_all_years_data_ifiscal() -> dict:
-    """Busca o histórico de dados de todos os anos salvos no banco e session_state."""
+    """Busca o histórico de dados EXCLUSIVAMENTE do i-Fiscal."""
     all_data = {}
 
-    # 1. Carrega via Banco PostgreSQL (Neon)
+    # 1. Carrega estritamente da tabela respostas_ifiscal no Neon
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                try:
-                    cursor.execute(
-                        "SELECT DISTINCT ano FROM respostas_ifiscal ORDER BY ano"
-                    )
-                except Exception:
-                    conn.rollback()
-                    cursor.execute(
-                        "SELECT DISTINCT ano FROM respostas ORDER BY ano"
-                    )
-
+                # NENHUM fallback para 'respostas' aqui! Apenas 'respostas_ifiscal'
+                cursor.execute(
+                    "SELECT DISTINCT ano FROM respostas_ifiscal ORDER BY ano"
+                )
                 anos_banco = [row[0] for row in cursor.fetchall()]
+
                 for a in anos_banco:
                     all_data[a] = (
                         load_respostas_ifiscal(a)
@@ -1685,11 +1739,9 @@ def get_all_years_data_ifiscal() -> dict:
                         else load_respostas(a)
                     )
     except Exception as e:
-        logging.error(
-            f"Erro ao buscar histórico de anos i-Fiscal no banco: {e}"
-        )
+        logging.error(f"Erro ao buscar histórico de anos i-Fiscal no banco: {e}")
 
-    # 2. Carrega via Session State (captura dados dinâmicos em memória)
+    # 2. Carrega dados temporários do Session State do i-Fiscal
     prefixo = "respostas_ifiscal_"
     for key in list(st.session_state.keys()):
         if key.startswith(prefixo):
@@ -1712,9 +1764,9 @@ def grafico_pontos_por_ano(all_data):
     for ano in anos:
         res = all_data[ano]
         total = sum(
-            v.get("pontos", 0.0)
+            float(v.get("pontos", 0.0))
             for k, v in res.items()
-            if isinstance(v, dict) and not k.startswith("COM_")
+            if isinstance(v, dict) and not str(k).startswith("COM_")
         )
         totais.append(total)
 
