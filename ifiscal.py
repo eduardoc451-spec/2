@@ -16023,4 +16023,204 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F16", st.session_state.get(f"links_pendentes_f16_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f16_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F17 • RESULTADO PRIMÁRIO (OPERACIONAL)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f17_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F17 - Resultado Primário (Operacional) ({ano_sel})", expanded=True):
+                st.subheader("F17 • Resultado Primário (Operacional) [RP = RR - DL]")
+                st.write("**Mede a capacidade do município de reduzir seu endividamento estrutural**")
+
+                # Tabela Oficial de Regras de Pontuação
+                st.markdown(r"""
+                | Resultado Primário ($RP$) | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Acima de ZERO ($RP > 0$) | ✅ 75,00 pontos (Superávit Primário) |
+                | Igual a ZERO ($RP = 0$) | ⚠️ 40,00 pontos (Equilíbrio Limite) |
+                | Abaixo de ZERO ($RP < 0$) | 🚨 0,00 ponto (Déficit Primário) |
+                """)
+                st.caption("ℹ️ *Dados extraídos da linha 'RESULTADO PRIMÁRIO (VIII-XVII)' do Demonstrativo do Resultado Primário do 6º bimestre (Item GF20 - AUDESP).*")
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Estado inicial / persistente (formato salvo no banco: "RR/DL")
+                dF17 = res_data.get("F17") or {"valor": "0.00/0.00", "pontos": 40.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_rr, val_salvo_dl = str(dF17.get("valor", "0.00/0.00")).split("/")
+                    float_rr = float(val_salvo_rr)
+                    float_dl = float(val_salvo_dl)
+                except Exception:
+                    float_rr, float_dl = 0.0, 0.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_rr = f"R$ {float_rr:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_inicial_dl = f"R$ {float_dl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                evidencia_f17_salva = dF17.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_rr = f"txt_f17_rr_{ano_sel}_fiscal"
+                chave_input_dl = f"txt_f17_dl_{ano_sel}_fiscal"
+                chave_link_f17 = f"txt_f17_link_{ano_sel}_fiscal"
+                chave_coment_f17 = f"coment_F17_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_rr_str = st.text_input(
+                        "Receitas Realizadas (RR) - R$:",
+                        value=str_inicial_rr,
+                        placeholder="Ex: 1.500.000,00",
+                        key=chave_input_rr
+                    )
+
+                    input_dl_str = st.text_input(
+                        "Despesas Liquidadas (DL) - R$:",
+                        value=str_inicial_dl,
+                        placeholder="Ex: 1.400.000,00",
+                        key=chave_input_dl
+                    )
+
+                with c2:
+                    link_f17 = st.text_area(
+                        f"Link/Evidência (F17 - Demonstrativo Primário AUDESP) ({ano_sel}):", 
+                        value=evidencia_f17_salva, 
+                        key=chave_link_f17, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f17 = st.empty()
+                    links_f17_visuais = re.findall(REGEX_PURE_URL, link_f17 or "")
+                    if links_f17_visuais:
+                        placeholder_links_f17.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f17_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real
+                v_rr_exib = converte_moeda_br_para_float(input_rr_str)
+                v_dl_exib = converte_moeda_br_para_float(input_dl_str)
+                v_rp_exib = round(v_rr_exib - v_dl_exib, 2)
+
+                if v_rr_exib == 0.0 and v_dl_exib == 0.0 and (link_f17.strip() == ""):
+                    pts_f17_exib = 40.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "40,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if v_rp_exib > 0.00:
+                        pts_f17_exib = 75.0
+                        texto_resultado_exib = "✅ SUPERÁVIT: Capacidade de redução do endividamento"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    elif v_rp_exib == 0.00:
+                        pts_f17_exib = 40.0
+                        texto_resultado_exib = "⚠️ EQUILÍBRIO: Receitas equivalentes às despesas liquidadas"
+                        estilo_status_exib = "color: #d97706; font-weight: bold;"
+                    else:
+                        pts_f17_exib = 0.0
+                        texto_resultado_exib = "🚨 DÉFICIT: Tendência de aumento do endividamento municipal"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+
+                    texto_pontuacao_exib = f"{pts_f17_exib:.2f} pontos"
+
+                str_rr_fmt = f"R$ {v_rr_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                str_dl_fmt = f"R$ {v_dl_exib:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
+                sinal_exib = "-" if v_rp_exib < 0 else ""
+                str_rp_fmt = f"{sinal_exib}R$ {abs(v_rp_exib):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Fórmula (RP = RR - DL):</b> {str_rr_fmt} - {str_dl_fmt}<br>
+                    📊 <b>Resultado Primário Apurado (RP):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_rp_fmt}</code><br>
+                    ⚖️ <b>Situação Fiscal:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #1e40af;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F17", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F17", key=f"btn_salvar_f17_{ano_sel}", type="primary"):
+                    v_rr = converte_moeda_br_para_float(st.session_state.get(chave_input_rr, input_rr_str))
+                    v_dl = converte_moeda_br_para_float(st.session_state.get(chave_input_dl, input_dl_str))
+                    v_rp = round(v_rr - v_dl, 2)
+
+                    if v_rp > 0.00:
+                        pts_f17 = 75.0
+                    elif v_rp == 0.00:
+                        pts_f17 = 40.0
+                    else:
+                        pts_f17 = 0.0
+
+                    str_banco = f"{v_rr:.2f}/{v_dl:.2f}"
+                    lnk_val_f17 = link_f17.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f17, dF17.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F17",
+                        valor=str_banco,
+                        pontos=pts_f17,
+                        link=lnk_val_f17,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F17"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f17,
+                        "link": lnk_val_f17,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f17 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f17_salva or "")]
+
+                    if lnk_val_f17 != evidencia_f17_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f17_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f17_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F17 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f17_salvos = float(dF17.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F17 Registrado: {pts_f17_salvos:.2f} pontos registrados no sistema</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F17 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f17_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F17", st.session_state.get(f"links_pendentes_f17_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f17_{ano_sel}"] = False
+
     
