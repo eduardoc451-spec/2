@@ -17093,4 +17093,206 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("F21", st.session_state.get(f"links_pendentes_f21_{ano_sel}", []))
             st.session_state[f"gatilho_modal_f21_{ano_sel}"] = False
 
+        # =============================================================================
+        # BLOCO ISOLADO: INDICADOR F22 • LIQUIDEZ DOS RESTOS A PAGAR
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_f22_{ano_sel}", border=True):
+            with st.expander(f"📌 Indicador F22 - Liquidez dos Restos a Pagar ({ano_sel})", expanded=True):
+                st.subheader("F22 • Liquidez dos Restos a Pagar [LRP = RPA / D]")
+                st.write("**Mede a capacidade de pagamento do estoque de restos a pagar com base na disponibilidade de caixa**")
+
+                # Tabela Oficial de Regras de Pontuação (Penalidades)
+                st.markdown(r"""
+                | Resultado do Índice $LRP$ | Impacto / Pontuação do Indicador |
+                | :--- | :--- |
+                | Menor ou igual a 1 ($LRP \le 1$) | ✅ 0,00 ponto (Cobertura de Caixa Suficiente / Sem Penalidade) |
+                | Maior que 1 ($LRP > 1$) | 🚨 -5,00 pontos (Caixa Insuficiente para Cobrir Restos a Pagar) |
+                """)
+                st.caption("ℹ️ *Variáveis extraídas do Relatório de Análises Anuais Eletrônicas (RAAE) e do Relatório de Instrução (RI).*")
+
+                # Função para higienizar e converter strings monetárias brasileiras para float
+                def converte_moeda_br_para_float(texto: str) -> float:
+                    if not texto:
+                        return 0.0
+                    limpo = str(texto).replace("R$", "").replace(" ", "").strip()
+                    if "." in limpo and "," in limpo:
+                        limpo = limpo.replace(".", "").replace(",", ".")
+                    elif "," in limpo:
+                        limpo = limpo.replace(",", ".")
+                    try:
+                        return float(limpo)
+                    except ValueError:
+                        return 0.0
+
+                # Helper de formatação monetária BRL segura
+                def fmt_brl(valor: float) -> str:
+                    sinal = "-" if valor < 0 else ""
+                    return f"{sinal}R$ {abs(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                # Estado inicial / persistente (formato salvo no banco: "RPA/D")
+                dF22 = res_data.get("F22") or {"valor": "0.00/1.00", "pontos": 0.0, "link": "", "comentarios": ""}
+                
+                try:
+                    val_salvo_rpa, val_salvo_d = str(dF22.get("valor", "0.00/1.00")).split("/")
+                    float_rpa = float(val_salvo_rpa)
+                    float_d = float(val_salvo_d)
+                except Exception:
+                    float_rpa, float_d = 0.0, 1.0
+
+                # Formatação monetária inicial para exibição
+                str_inicial_rpa = fmt_brl(float_rpa)
+                str_inicial_d = fmt_brl(float_d)
+                evidencia_f22_salva = dF22.get("link", "")
+
+                # Chaves padronizadas para o session_state do iFiscal
+                chave_input_rpa = f"txt_f22_rpa_{ano_sel}_fiscal"
+                chave_input_d = f"txt_f22_d_{ano_sel}_fiscal"
+                chave_link_f22 = f"txt_f22_link_{ano_sel}_fiscal"
+                chave_coment_f22 = f"coment_F22_{ano_sel}_fiscal"
+
+                c1, c2 = st.columns([1, 2])
+
+                with c1:
+                    input_rpa_str = st.text_input(
+                        "Estoque de Restos a Pagar - Proc. e Não Proc. (RPA) - R$:",
+                        value=str_inicial_rpa,
+                        placeholder="Ex: 150.000,00",
+                        key=chave_input_rpa
+                    )
+
+                    input_d_str = st.text_input(
+                        "Disponibilidade de Caixa / Disponível (D) - R$:",
+                        value=str_inicial_d,
+                        placeholder="Ex: 200.000,00",
+                        key=chave_input_d
+                    )
+
+                with c2:
+                    link_f22 = st.text_area(
+                        f"Link/Evidência (F22 - Liquidez Restos a Pagar RAAE/RI) ({ano_sel}):", 
+                        value=evidencia_f22_salva, 
+                        key=chave_link_f22, 
+                        placeholder="Insira os links e evidências...",
+                        height=150
+                    )
+                    
+                    placeholder_links_f22 = st.empty()
+                    links_f22_visuais = re.findall(REGEX_PURE_URL, link_f22 or "")
+                    if links_f22_visuais:
+                        placeholder_links_f22.markdown(
+                            "**🔗 Ativos:** " 
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                                    for u in links_f22_visuais
+                                ]
+                            )
+                        )
+
+                # Cálculo projetado em tempo real (Sem salvar até o clique do botão)
+                v_rpa_exib = converte_moeda_br_para_float(input_rpa_str)
+                v_d_exib = max(converte_moeda_br_para_float(input_d_str), 0.01)  # Proteção contra divisão por zero
+                
+                LRP_exib = round(v_rpa_exib / v_d_exib, 4)
+
+                if v_rpa_exib == 0.0 and (link_f22.strip() == ""):
+                    pts_f22_exib = 0.0
+                    texto_resultado_exib = "Aguardando preenchimento..."
+                    texto_pontuacao_exib = "⏳ 0,00 pontos"
+                    estilo_status_exib = "color: #64748b;"
+                else:
+                    if LRP_exib <= 1.0000:
+                        pts_f22_exib = 0.0
+                        texto_resultado_exib = "✅ ADEQUADO: O saldo em caixa cobre integralmente as obrigações de restos a pagar"
+                        estilo_status_exib = "color: #16a34a; font-weight: bold;"
+                    else:  # LRP_exib > 1.0000
+                        pts_f22_exib = -5.0
+                        texto_resultado_exib = "🚨 CRÍTICO: Despesas postergadas sem suficiência de caixa financeira"
+                        estilo_status_exib = "color: #dc2626; font-weight: bold;"
+
+                    sinal_pontos = "" if pts_f22_exib >= 0 else " "
+                    texto_pontuacao_exib = f"{sinal_pontos}{pts_f22_exib:.2f} pontos".replace(".", ",")
+
+                str_rpa_fmt = fmt_brl(v_rpa_exib)
+                str_d_fmt = fmt_brl(v_d_exib)
+                str_lrp_fmt = f"{LRP_exib:.4f}".replace(".", ",")
+
+                st.markdown(f"""
+                <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    📌 <b>Cálculo da Razão (RPA / D):</b> {str_rpa_fmt} / {str_d_fmt}<br>
+                    📊 <b>Resultado do Indicador (LRP):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{str_lrp_fmt}</code><br>
+                    ⚖️ <b>Suficiência de Caixa:</b> <span style="{estilo_status_exib}">{texto_resultado_exib}</span><br>
+                    🎯 <b>Glosa/Impacto na Pontuação:</b> <code style="font-size: 15px; font-weight: bold; color: #dc2626;">{texto_pontuacao_exib}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                # Bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("F22", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL ATÔMICO
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Indicador F22", key=f"btn_salvar_f22_{ano_sel}", type="primary"):
+                    v_rpa = converte_moeda_br_para_float(st.session_state.get(chave_input_rpa, input_rpa_str))
+                    v_d = max(converte_moeda_br_para_float(st.session_state.get(chave_input_d, input_d_str)), 0.01)
+
+                    LRP = round(v_rpa / v_d, 4)
+
+                    if v_rpa == 0.0 and (link_f22.strip() == ""):
+                        pts_f22 = 0.0
+                    else:
+                        if LRP <= 1.0000:
+                            pts_f22 = 0.0
+                        else:
+                            pts_f22 = -5.0
+
+                    str_banco = f"{v_rpa:.2f}/{v_d:.2f}"
+                    lnk_val_f22 = link_f22.strip()
+                    comentario_para_salvar = st.session_state.get(chave_coment_f22, dF22.get("comentarios", ""))
+
+                    # Salva no banco de dados via infraestrutura do iFiscal
+                    save_resp_ifiscal(
+                        qid="F22",
+                        valor=str_banco,
+                        pontos=pts_f22,
+                        link=lnk_val_f22,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza estrutura res_data em memória
+                    res_data["F22"] = {
+                        "valor": str_banco,
+                        "pontos": pts_f22,
+                        "link": lnk_val_f22,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de alteração de links para modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val_f22 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_f22_salva or "")]
+
+                    if lnk_val_f22 != evidencia_f22_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_f22_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_f22_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Métricas do Indicador F22 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status de salvamento
+                pts_f22_salvos = float(dF22.get("pontos", 0.0))
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Status F22 Registrado: {pts_f22_salvos:.2f} pontos registrados no sistema</span>".replace(".", ","),
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL F22 (Executado fora do container)
+        if st.session_state.get(f"gatilho_modal_f22_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("F22", st.session_state.get(f"links_pendentes_f22_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_f22_{ano_sel}"] = False
+
     
