@@ -3417,5 +3417,119 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 4.0 • REVISÃO DO CADASTRO IMOBILIÁRIO (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_4_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 4.0 - Procedimento de Revisão do Cadastro Imobiliário", expanded=True):
+                st.subheader("4.0 • Instituição de Revisão Periódica")
+                st.write("**Foi instituído procedimento de revisão do cadastro imobiliário estabelecendo a sua periodicidade?**")
+                st.caption(
+                    "⚠️ **Obs.:** *A mera atualização cadastral por solicitação do contribuinte realizada de forma pontual e esporádica, "
+                    "sem qualquer convocação ou iniciativa por parte da Prefeitura Municipal, não será considerada na questão como revisão "
+                    "periódica e geral do Cadastro imobiliário.*"
+                )
+
+                # Opções de Seleção
+                opc40 = ["Selecione...", "Sim", "Não"]
+
+                # Estado inicial / persistente
+                d40 = res_data.get("4.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_40 = d40.get("valor", "Selecione...")
+                if v_salvo_40 not in opc40:
+                    v_salvo_40 = "Selecione..."
+                evidencia_40_salva = d40.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_40 = f"r_40_in_{ano_sel}_fiscal"
+                chave_link_40 = f"l_40_in_{ano_sel}_fiscal"
+                chave_coment_40 = f"coment_4.0_{ano_sel}_fiscal"
+
+                # Layout de entrada (Radio e Link em 2 colunas)
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    v_radio_40 = st.radio(
+                        "Selecione uma opção (4.0):",
+                        options=opc40,
+                        index=opc40.index(v_salvo_40),
+                        key=chave_radio_40
+                    )
+                with col2:
+                    link_40 = st.text_area(
+                        "Link/Evidência Geral (4.0):",
+                        value=evidencia_40_salva,
+                        key=chave_link_40,
+                        placeholder="Insira os links e evidências pertinentes...",
+                        height=100
+                    )
+                    placeholder_links_40 = st.empty()
+                    links_40_visuais = re.findall(REGEX_PURE_URL, link_40 or "")
+                    if links_40_visuais:
+                        placeholder_links_40.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_40_visuais
+                                ]
+                            )
+                        )
+
+                # Bloco de comentários do quesito
+                bloco_comentarios_ifiscal("4.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 4.0", key=f"btn_salvar_4_0_{ano_sel}", type="primary"):
+                    val_sel_40 = st.session_state.get(chave_radio_40, v_salvo_40)
+                    lnk_val = link_40.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_40, d40.get("comentario", ""))
+
+                    # Salva no banco de dados (Pontuação zero / informativa)
+                    save_resp_ifiscal(
+                        qid="4.0",
+                        valor=val_sel_40,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário res_data localmente
+                    res_data["4.0"] = {
+                        "valor": val_sel_40,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_40_salva or "")]
+
+                    if lnk_val != evidencia_40_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 4.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico de pontuação
+                pts_atuais_40 = d40.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 4.0: {pts_atuais_40:+.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 4.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_4_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
+
 
 
