@@ -1,42 +1,101 @@
-import io
-import sqlite3
-import re
 import json
-import datetime
+import logging
+import os
+import re
+import sys
+import warnings
+from datetime import date, datetime
 from io import BytesIO
-from datetime import datetime, date
-import streamlit as st
-st.set_page_config(
-    page_title="i-Saúde - Validação Municipal",
-    page_icon="⚕️",
-    layout="wide"
-)
-st.markdown("""
-    <meta name="google" content="notranslate" />
-    <style>
-        html, body, div, span, p, h1, h2, h3, h4, h5, h6, label {
-            unicode-bidi: isolate;
-        }
-        .stMarkdown, div[data-testid="stMetricValue"], div[data-testid="stMetricDelta"], label {
-            translate: no !important;
-        }
-        label, p, span, div {
-            text-transform: none !important;
-            font-variant: normal !important;
-        }
-    </style>
-    <script>
-        document.documentElement.setAttribute('lang', 'pt-BR');
-        document.documentElement.classList.add('notranslate');
-    </script>
-""", unsafe_allow_html=True)
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
-import plotly.graph_objects as go
+
 import plotly.express as px
+import plotly.graph_objects as go
+import psycopg2
+import streamlit as st
 from plotly.subplots import make_subplots
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
+
+# =============================================================================
+# IMPORTS DO REPORTLAB (CORRIGIDOS COM ALINHAMENTOS ENUMS)
+# =============================================================================
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.shapes import Drawing, String
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+# =============================================================================
+# CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (iSaúde)
+# =============================================================================
+styles = getSampleStyleSheet()
+
+# Estilo Padrão para Tabelas (Evita NameError: style_tabela_padrao)
+style_tabela_padrao = ParagraphStyle(
+    "TabelaPadrao",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_LEFT,
+)
+
+# Estilo Centralizado
+style_tabela_centro = ParagraphStyle(
+    "TabelaCentro",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_CENTER,
+)
+
+# Estilo Alinhado à Esquerda
+style_tabela_esquerda = ParagraphStyle(
+    "TabelaEsquerda",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_LEFT,
+)
+
+# Estilo Alinhado à Direita
+style_tabela_direita = ParagraphStyle(
+    "TabelaDireita",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_RIGHT,
+)
+
+# Estilo para Cabeçalhos de Tabela
+style_tabela_cabecalho = ParagraphStyle(
+    "TabelaCabecalho",
+    parent=styles["Normal"],
+    fontName="Helvetica-Bold",
+    fontSize=9,
+    leading=11,
+    alignment=TA_CENTER,
+    textColor=colors.whitesmoke,
+)
+
+# -----------------------------------------------------------------------------
+# CONFIGURAÇÕES INICIAIS E SUPRESSÃO DE WARNINGS
+# -----------------------------------------------------------------------------
+warnings.filterwarnings("ignore")
+logging.getLogger("streamlit").setLevel(logging.ERROR)
+
 PONTUACOES_MAX_ISAUDE = {
     "1": 5, "2": 10, "3": 10, "3.1": 4, "3.2": 4, "4": 6, "5": 4, "6": 5, "7": 3, "8": 2,
     "9": 18, "9.2": 5, "10": 100, "11": 10, "11.2": 2, "12.0": 10, "12.1": 50, "12.2": 40,
@@ -46,7 +105,8 @@ PONTUACOES_MAX_ISAUDE = {
     "35.1": 15, "35.2": 10, "36": 40, "36.1": 40, "37": 90, "S2": 20, "S3": 25, "S4": 10,
     "S5": 10, "S6": 100, "S7": 20, "S17": 25, "S18": 25, "S19": 25, "S20": 25
 }
-CATEGORIAS_MAP = {
+
+CATEGORIAS_MAP_ISAUDE = {
     "atencao_basica": {
         "label": "1.0 Atenção Básica",
         "qids": ["1", "2", "3", "3.1", "3.2", "4", "5", "6", "7", "8", "9", "9.2"]
@@ -72,6 +132,334 @@ CATEGORIAS_MAP = {
         "qids": ["S2", "S3", "S4", "S5", "S6", "S7", "S17", "S18", "S19", "S20"] 
     }
 }
+
+# =============================================================================
+# MODAL DE AVISO AUTOMÁTICO - iSaúde
+# =============================================================================
+@st.dialog("⚠️ Atenção! Evidência em Link Externo (iSaúde)")
+def modal_aviso_link_isaude(qid, links_encontrados):
+    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    for lk in links_encontrados:
+        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
+
+    st.markdown("""
+    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
+
+    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
+    """)
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}_saude"):
+        st.rerun()
+
+# =============================================================================
+# BANCO DE DADOS NEON (ISOLADO PARA O iSAÚDE)
+# =============================================================================
+def get_connection():
+    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
+    return psycopg2.connect(st.secrets["DATABASE_URL"], sslmode="require")
+
+
+def init_db_isaude():
+    """Inicializa a tabela EXCLUSIVA do i-Saúde no PostgreSQL."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS respostas_isaude (
+                        id SERIAL PRIMARY KEY,
+                        ano INT NOT NULL,
+                        quesito VARCHAR(50) NOT NULL,
+                        resposta TEXT,
+                        pontos DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                        detalhes JSONB DEFAULT '{}'::jsonb,
+                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT unq_ano_quesito_isaude UNIQUE(ano, quesito)
+                    );
+                    """
+                )
+            conn.commit()
+    except Exception as e:
+        logging.error(f"Erro ao inicializar tabela respostas_isaude: {e}")
+
+
+# Inicializa a tabela do iSaúde ao importar
+try:
+    init_db_isaude()
+except Exception as e:
+    logging.error(f"Erro na inicialização da tabela respostas_isaude: {e}")
+
+
+def load_respostas_isaude(ano):
+    """Carrega EXCLUSIVAMENTE as respostas do i-Saúde do banco."""
+    dados_ano = {}
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT quesito, resposta, pontos, detalhes FROM respostas_isaude WHERE ano = %s",
+                    (int(ano),),
+                )
+                rows = cursor.fetchall()
+                for row in rows:
+                    quesito, resposta, pontos, detalhes_raw = row
+                    
+                    detalhes = detalhes_raw if isinstance(detalhes_raw, dict) else {}
+                    if isinstance(detalhes_raw, str):
+                        try:
+                            detalhes = json.loads(detalhes_raw)
+                        except Exception:
+                            detalhes = {}
+
+                    dados_ano[str(quesito)] = {
+                        "valor": resposta or "",
+                        "pontos": float(pontos) if pontos is not None else 0.0,
+                        "link": detalhes.get("link", ""),
+                        "comentarios": detalhes.get("comentarios", []),
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao carregar respostas_isaude do Neon: {e}")
+    return dados_ano
+
+
+def save_resp_isaude(qid, valor, pontos, link, comentarios=None):
+    """Salva a resposta do i-Saúde isolada na tabela respostas_isaude."""
+    ano_sel = st.session_state.get(
+        "ano_referencia_isaude",
+        st.session_state.get("ano_referencia_global"),
+    )
+    if not ano_sel:
+        return
+
+    detalhes_obj = {
+        "link": str(link or ""),
+        "comentarios": comentarios if comentarios is not None else []
+    }
+    detalhes_json = json.dumps(detalhes_obj, ensure_ascii=False)
+    timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO respostas_isaude (ano, quesito, resposta, pontos, detalhes, atualizado_em)
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+                    ON CONFLICT (ano, quesito) DO UPDATE SET
+                        resposta = EXCLUDED.resposta,
+                        pontos = EXCLUDED.pontos,
+                        detalhes = EXCLUDED.detalhes,
+                        atualizado_em = EXCLUDED.atualizado_em;
+                    """,
+                    (
+                        int(ano_sel),
+                        str(qid),
+                        str(valor or ""),
+                        float(pontos or 0.0),
+                        detalhes_json,
+                        timestamp_atual,
+                    ),
+                )
+            conn.commit()
+    except Exception as e:
+        st.error(f"Erro ao salvar {qid} na tabela respostas_isaude: {e}")
+
+
+def bloco_comentarios_isaude(questao_id, res_data, sufixo="saude"):
+    """Gera o diálogo interno com histórico e gerenciamento de comentários do iSaúde."""
+    ano_sel = st.session_state.get(
+        "ano_referencia_isaude", datetime.now().year
+    )
+    usuario_atual = st.session_state.get(
+        "username", st.session_state.get("usuario", "Usuário Anônimo")
+    )
+
+    id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
+    key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
+    key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
+
+    if key_estado_limpar not in st.session_state:
+        st.session_state[key_estado_limpar] = False
+
+    st.markdown("---")
+    dados_questao = res_data.get(questao_id, {})
+    historico = dados_questao.get("comentarios", [])
+
+    status_global = "Resolvido"
+    for com in historico:
+        if "status_definido" in com:
+            status_global = com["status_definido"]
+
+    badge_status = (
+        "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+    )
+
+    with st.expander(
+        f"💬 Diálogo Interno {id_chave} | Status: {badge_status}",
+        expanded=(status_global == "Pendente"),
+    ):
+        st.markdown(
+            "<b style='font-size: 13px;'>Status Atual do Quesito:</b>",
+            unsafe_allow_html=True,
+        )
+        opcoes_status = ["Resolvido", "Pendente"]
+        idx_status_atual = (
+            opcoes_status.index(status_global)
+            if status_global in opcoes_status
+            else 0
+        )
+
+        novo_status_clicado = st.radio(
+            f"Definir status para {id_chave}:",
+            options=opcoes_status,
+            index=idx_status_atual,
+            horizontal=True,
+            key=f"rad_status_{id_chave}_{ano_sel}",
+            label_visibility="collapsed",
+        )
+
+        if novo_status_clicado != status_global:
+            log_mudanca = {
+                "autor": "Sistema / " + usuario_atual,
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
+                "status_definido": novo_status_clicado,
+            }
+            historico.append(log_mudanca)
+            save_resp_isaude(
+                qid=questao_id,
+                valor=dados_questao.get("valor", ""),
+                pontos=dados_questao.get("pontos", 0.0),
+                link=dados_questao.get("link", ""),
+                comentarios=historico,
+            )
+            st.rerun()
+
+        st.markdown(
+            "<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True
+        )
+
+        if historico:
+            for idx, com in enumerate(historico):
+                col_balao, col_lixeira = st.columns([11, 1])
+                with col_balao:
+                    if "Sistema /" in com["autor"]:
+                        st.markdown(
+                            f"""
+                            <div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
+                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{com['autor']} - {com['data']}</span>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057; font-style: italic;">{com['texto']}</p>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.markdown(
+                            f"""
+                            <div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #0d9488;">
+                                <span style="font-size: 11px; color: #0d9488; font-weight: bold;">{com['autor']}</span>
+                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{com['data']}</span>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{com['texto']}</p>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+                with col_lixeira:
+                    st.markdown(
+                        "<div style='margin-top: 10px;'></div>",
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "🗑️",
+                        key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}",
+                        help="Excluir este comentário",
+                    ):
+                        historico.pop(idx)
+                        save_resp_isaude(
+                            qid=questao_id,
+                            valor=dados_questao.get("valor", ""),
+                            pontos=dados_questao.get("pontos", 0.0),
+                            link=dados_questao.get("link", ""),
+                            comentarios=historico,
+                        )
+                        st.rerun()
+        else:
+            st.markdown(
+                "<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            "<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>",
+            unsafe_allow_html=True,
+        )
+
+        if st.session_state[key_estado_limpar]:
+            st.session_state[key_texto] = ""
+            st.session_state[key_estado_limpar] = False
+
+        novo_texto = st.text_area(
+            "Digite sua mensagem:",
+            key=key_texto,
+            height=80,
+            label_visibility="collapsed",
+        )
+
+        if st.button(
+            "Postar Comentário",
+            key=f"btn_com_{id_chave}_{ano_sel}",
+            type="primary",
+        ):
+            if novo_texto.strip():
+                nova_mensagem = {
+                    "autor": usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": novo_texto.strip(),
+                    "status_definido": status_global,
+                }
+                historico.append(nova_mensagem)
+                save_resp_isaude(
+                    qid=questao_id,
+                    valor=dados_questao.get("valor", ""),
+                    pontos=dados_questao.get("pontos", 0.0),
+                    link=dados_questao.get("link", ""),
+                    comentarios=historico,
+                )
+                st.session_state[key_estado_limpar] = True
+                st.rerun()
+
+
+def get_all_years_data_isaude():
+    """Busca histórico EXCLUSIVO do i-Saúde no Neon."""
+    all_data = {}
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT quesito, ano, resposta, pontos, detalhes FROM respostas_isaude ORDER BY ano DESC"
+                )
+                rows = cursor.fetchall()
+                for row in rows:
+                    quesito, ano, resposta, pontos, detalhes_raw = row
+                    
+                    detalhes = detalhes_raw if isinstance(detalhes_raw, dict) else {}
+                    if isinstance(detalhes_raw, str):
+                        try:
+                            detalhes = json.loads(detalhes_raw)
+                        except Exception:
+                            detalhes = {}
+
+                    if ano not in all_data:
+                        all_data[ano] = {}
+                    all_data[ano][str(quesito)] = {
+                        "valor": resposta or "",
+                        "pontos": float(pontos) if pontos is not None else 0.0,
+                        "link": detalhes.get("link", ""),
+                        "comentarios": detalhes.get("comentarios", []),
+                    }
+    except Exception as e:
+        logging.error(f"Erro ao buscar histórico do iSaúde no Neon: {e}")
+    return all_data
 
 # =============================================================================
 # CALLBACKS DE SALVAMENTO (Para isolar e proteger o estado síncrono)
