@@ -4051,5 +4051,115 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 5.1 • DETALHAMENTO NORMATIVO DA PGV (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_5_1_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 5.1 - Instrumento Normativo da PGV", expanded=True):
+                st.subheader("5.1 • Detalhamento Normativo")
+                st.write(
+                    "**Informe o Instrumento normativo de aprovação da Planta Genérica de Valores (PGV), "
+                    "Número e Data da publicação:**"
+                )
+                st.caption(
+                    "ℹ️ *Caso não esteja disponível na internet, recomendamos anexar o documento no Sistema de Questionários.*"
+                )
+
+                # Estado inicial / persistente (Pontuação fixa de 0.0)
+                d51 = res_data.get("5.1") or {"valor": "", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_51 = d51.get("valor", "")
+                evidencia_51_salva = d51.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_texto_51 = f"t51_val_{ano_sel}_fiscal"
+                chave_link_51 = f"l51_in_{ano_sel}_fiscal"
+                chave_coment_51 = f"coment_5.1_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    val_texto_51 = st.text_input(
+                        "Instrumento normativo de aprovação (Nº e Data):",
+                        value=v_salvo_51,
+                        key=chave_texto_51,
+                        placeholder="Ex: Lei Municipal nº 1.234/2022, publicada em 15/12/2022"
+                    )
+
+                with col2:
+                    link_51 = st.text_area(
+                        "Link/Evidência (5.1):",
+                        value=evidencia_51_salva,
+                        key=chave_link_51,
+                        placeholder="Insira os links da norma, diário oficial ou documento da PGV...",
+                        height=100
+                    )
+                    placeholder_links_51 = st.empty()
+                    links_51_visuais = re.findall(REGEX_PURE_URL, link_51 or "")
+                    if links_51_visuais:
+                        placeholder_links_51.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_51_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("5.1", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 5.1", key=f"btn_salvar_5_1_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_texto_51, v_salvo_51).strip()
+                    lnk_val = link_51.strip()
+
+                    # Captura o comentário atual do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_51, d51.get("comentario", ""))
+
+                    # Salva no banco de dados Neon (pontuação é 0.0 por ser quesito informativo/descritivo)
+                    save_resp_ifiscal(
+                        qid="5.1",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["5.1"] = {
+                        "valor": val_salvar,
+                        "pontos": 0.0,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_51_salva or "")]
+
+                    if lnk_val != evidencia_51_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 5.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 5.1: 0,0 ponto (Quesito Informativo)</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 5.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = False
+
+
 
 
