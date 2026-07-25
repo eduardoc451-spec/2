@@ -3018,5 +3018,134 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("1.5.1", st.session_state.get(f"links_pendentes_1_5_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_5_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 2.0 • RESPONSÁVEL PELA CONTABILIDADE (MODELO PADRONIZADO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_2_0_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 2.0 - Responsável pela Contabilidade", expanded=True):
+                st.subheader("2.0 • Provimento do Cargo de Contabilidade")
+                st.write(
+                    "**O servidor responsável pela contabilidade do município é ocupante de cargo de provimento efetivo?**"
+                )
+                st.caption(
+                    "ℹ️ *Critério: O responsável técnico pela contabilidade municipal deve ter vínculo efetivo (concurso público).* "
+                )
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iFiscal 2.0
+                opcoes_20 = {
+                    "Selecione...": 0.0,
+                    "Sim – 4,0": 4.0,
+                    "Não – 0,0": 0.0
+                }
+
+                # Estado inicial / persistente
+                d20 = res_data.get("2.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+                v_salvo_20 = d20.get("valor", "Selecione...")
+
+                # Tratamento de legados/formatos anteriores (ex: "Sim – 04")
+                if "Sim" in v_salvo_20 and "4,0" not in v_salvo_20:
+                    v_salvo_20 = "Sim – 4,0"
+                elif "Não" in v_salvo_20 and "0,0" not in v_salvo_20:
+                    v_salvo_20 = "Não – 0,0"
+
+                evidencia_20_salva = d20.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_20 = f"r_20_{ano_sel}_fiscal"
+                chave_link_20 = f"l_20_txt_{ano_sel}_fiscal"
+                chave_coment_20 = f"coment_2.0_{ano_sel}_fiscal"
+
+                c20_1, c20_2 = st.columns([1, 1])
+                with c20_1:
+                    lista_opcoes_20 = list(opcoes_20.keys())
+                    idx_20 = lista_opcoes_20.index(v_salvo_20) if v_salvo_20 in lista_opcoes_20 else 0
+
+                    val_radio_20 = st.radio(
+                        "Selecione uma opção (2.0):",
+                        options=lista_opcoes_20,
+                        index=idx_20,
+                        key=chave_radio_20
+                    )
+
+                with c20_2:
+                    link_20 = st.text_area(
+                        "Link/Evidência (2.0):",
+                        value=evidencia_20_salva,
+                        key=chave_link_20,
+                        placeholder="Insira o link oficial (termo de posse, edital de concurso, portal da transparência...)",
+                        height=100
+                    )
+                    placeholder_links_20 = st.empty()
+                    links_20_visuais = re.findall(REGEX_PURE_URL, link_20 or "")
+                    if links_20_visuais:
+                        placeholder_links_20.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_20_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios_ifiscal("2.0", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 2.0", key=f"btn_salvar_2_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_20, v_salvo_20)
+                    pts_20 = float(opcoes_20.get(val_salvar, 0.0))
+                    lnk_val = link_20.strip()
+
+                    # Captura o comentário do session_state
+                    comentario_para_salvar = st.session_state.get(chave_coment_20, d20.get("comentario", ""))
+
+                    # Salva no banco de dados Neon
+                    save_resp_ifiscal(
+                        qid="2.0",
+                        valor=val_salvar,
+                        pontos=pts_20,
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o dicionário local res_data
+                    res_data["2.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_20,
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Validação de novos links para acionar o modal
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_20_salva or "")]
+
+                    if lnk_val != evidencia_20_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_2_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e comentário do Quesito 2.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Resumo dinâmico e impacto de pontuação
+                pts_atuais_20 = d20.get("pontos", 0.0)
+                cor_txt_20 = "#28a745" if pts_atuais_20 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_20}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 2.0: +{pts_atuais_20:.1f} pontos</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 2.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_2_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = False
+
 
 
