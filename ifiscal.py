@@ -5360,6 +5360,128 @@ def mostrar_formulario_ifiscal():
                 modal_aviso_link("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []))
             st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = False
 
+        # =============================================================================
+        # QUESITO 7.2 • DIVULGAÇÃO ELETRÔNICA DA REGULAMENTAÇÃO (PADRÃO iGov/iFiscal)
+        # =============================================================================
+        with st.container(key=f"container_bloco_ifiscal_7_2_{ano_sel}", border=True):
+            with st.expander("📌 Quesito 7.2 - Página de Divulgação da Isenção", expanded=True):
+                st.subheader("7.2 • Divulgação Eletrônica da Regulamentação")
+                st.write("**Informe a página eletrônica (link na internet) de divulgação do Instrumento normativo de regulamentação do programa de isenção do IPTU:**")
+                st.caption("⚠️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ** (Aplica penalidade de -03 pontos).*")
+
+                # Estado inicial / persistente
+                d72 = res_data.get("7.2") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": ""}
+                v_salvo_72 = d72.get("valor", "")
+                evidencia_72_salva = d72.get("link", "")
+
+                # Chaves padronizadas por componente e ano
+                chave_txt_72 = f"txt_72_val_{ano_sel}_fiscal"
+                chave_link_72 = f"l72_in_{ano_sel}_fiscal"
+                chave_coment_72 = f"coment_7.2_{ano_sel}_fiscal"
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    v_input_72 = st.text_input(
+                        "Link de divulgação da isenção (ou XYZ):",
+                        value=v_salvo_72,
+                        key=chave_txt_72,
+                        placeholder="https://... ou XYZ"
+                    )
+                    
+                    # Detecção visual no próprio campo de input
+                    lk_detec_72 = re.findall(REGEX_PURE_URL, v_input_72 or "")
+                    if lk_detec_72:
+                        st.markdown(
+                            "**🔗 Detectado no campo:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in lk_detec_72
+                                ]
+                            )
+                        )
+
+                with col2:
+                    link_72 = st.text_area(
+                        "Link/Evidência Geral (7.2):",
+                        value=evidencia_72_salva,
+                        key=chave_link_72,
+                        placeholder="Insira os links e evidências gerais...",
+                        height=100
+                    )
+                    placeholder_links_72 = st.empty()
+                    links_72_visuais = re.findall(REGEX_PURE_URL, link_72 or "")
+                    if links_72_visuais:
+                        placeholder_links_72.markdown(
+                            "**🔗 Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_72_visuais
+                                ]
+                            )
+                        )
+
+                # Renderiza o bloco de comentários padronizado do iFiscal
+                bloco_comentarios_ifiscal("7.2", res_data, sufixo="fiscal")
+
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
+                if st.button("💾 Salvar Quesito 7.2", key=f"btn_salvar_7_2_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_txt_72, v_salvo_72).strip()
+                    lnk_val = link_72.strip()
+
+                    # Regra de cálculo de pontuação (-3.0 para XYZ, caso contrário 0.0)
+                    pts72_nova = -3.0 if val_salvar.upper() == "XYZ" else 0.0
+
+                    # Captura o comentário atualizado
+                    comentario_para_salvar = st.session_state.get(chave_coment_72, d72.get("comentarios", ""))
+
+                    # Salva no banco de dados
+                    save_resp_ifiscal(
+                        qid="7.2",
+                        valor=val_salvar,
+                        pontos=float(pts72_nova),
+                        link=lnk_val,
+                        comentarios=comentario_para_salvar
+                    )
+
+                    # Atualiza o estado local res_data
+                    res_data["7.2"] = {
+                        "valor": val_salvar,
+                        "pontos": float(pts72_nova),
+                        "link": lnk_val,
+                        "comentarios": comentario_para_salvar
+                    }
+
+                    # Verificação de novos links para acionar o modal de auditoria
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_72_salva or "")]
+
+                    if lnk_val != evidencia_72_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações e comentários do Quesito 7.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição do status da pontuação
+                pts_exibido_72 = d72.get("pontos", 0.0)
+                cor_status_72 = "#dc3545" if pts_exibido_72 < 0 else "#28a745"
+                st.markdown(
+                    f"<span style='color:{cor_status_72}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 7.2: {pts_exibido_72:.1f} pontos aplicados</span>",
+                    unsafe_allow_html=True
+                )
+
+        # GATILHO DO MODAL 7.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.2", st.session_state.get(f"links_pendentes_7_2_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_7_2_{ano_sel}"] = False
+
 
 
 
