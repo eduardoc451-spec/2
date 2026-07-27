@@ -39,7 +39,7 @@ from reportlab.platypus import (
 # =============================================================================
 styles = getSampleStyleSheet()
 
-# Estilo Padrão para Tabelas (Evita NameError: style_tabela_padrao)
+# Estilo Padrão para Tabelas
 style_tabela_padrao = ParagraphStyle(
     "TabelaPadrao",
     parent=styles["Normal"],
@@ -465,16 +465,8 @@ def get_all_years_data_isaude():
 # 2. GERADOR DO RELATÓRIO PDF (i-Saúde)
 # =============================================================================
 
-import ast
-from io import BytesIO
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-
-
 def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
+    """Gera o documento PDF consolidado para o i-Saúde."""
     buffer = BytesIO()
 
     doc = SimpleDocTemplate(
@@ -486,6 +478,101 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         bottomMargin=50,
     )
     elements = []
-    styles = getSampleStyleSheet()
 
-   
+    # Título do Relatório
+    title_style = ParagraphStyle(
+        "DocTitle",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#0d9488"),
+    )
+
+    subtitle_style = ParagraphStyle(
+        "DocSubTitle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=11,
+        leading=14,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#4b5563"),
+    )
+
+    elements.append(Paragraph("Relatório de Avaliação - i-Saúde", title_style))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(f"Ano de Referência: <b>{ano}</b> | Pontuação Total: <b>{total:.2f} pts</b> ({faixa})", subtitle_style))
+    elements.append(Spacer(1, 15))
+
+    # Tabela com resumo por Categoria
+    tabela_resumo_dados = [
+        [
+            Paragraph("Categoria / Eixo", style_tabela_cabecalho),
+            Paragraph("Pontuação Obtida", style_tabela_cabecalho),
+        ]
+    ]
+
+    for cat_key, cat_info in CATEGORIAS_MAP_ISAUDE.items():
+        pts_cat = sum(dados.get(qid, {}).get("pontos", 0.0) for qid in cat_info["qids"])
+        tabela_resumo_dados.append([
+            Paragraph(cat_info["label"], style_tabela_esquerda),
+            Paragraph(f"{pts_cat:.2f}", style_tabela_centro),
+        ])
+
+    t_resumo = Table(tabela_resumo_dados, colWidths=[350, 185])
+    t_resumo.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d9488")),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ])
+    )
+    elements.append(t_resumo)
+    elements.append(Spacer(1, 15))
+
+    # Detalhamento de Respostas
+    elements.append(Paragraph("Detalhamento por Quesito", ParagraphStyle("SectionHeader", fontName="Helvetica-Bold", fontSize=14, leading=16, textColor=colors.HexColor("#0f172a"))))
+    elements.append(Spacer(1, 10))
+
+    tabela_detalhes_dados = [
+        [
+            Paragraph("Quesito", style_tabela_cabecalho),
+            Paragraph("Resposta", style_tabela_cabecalho),
+            Paragraph("Pontos", style_tabela_cabecalho),
+            Paragraph("Evidência / Link", style_tabela_cabecalho),
+        ]
+    ]
+
+    for qid, info in dados.items():
+        val = info.get("valor", "-")
+        pts = info.get("pontos", 0.0)
+        link = info.get("link", "-")
+        tabela_detalhes_dados.append([
+            Paragraph(str(qid), style_tabela_centro),
+            Paragraph(str(val), style_tabela_esquerda),
+            Paragraph(f"{pts:.2f}", style_tabela_centro),
+            Paragraph(str(link), style_tabela_esquerda),
+        ])
+
+    t_detalhes = Table(tabela_detalhes_dados, colWidths=[60, 200, 60, 215])
+    t_detalhes.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ])
+    )
+    elements.append(t_detalhes)
+
+    doc.build(elements)
+    pdf_out = buffer.getvalue()
+    buffer.close()
+    return pdf_out
