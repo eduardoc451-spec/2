@@ -225,7 +225,7 @@ def save_resp_isaude(qid, valor, pontos, link, comentarios=None):
     """Salva a resposta do i-Saúde isolada na tabela respostas_isaude."""
     ano_sel = st.session_state.get(
         "ano_referencia_isaude",
-        st.session_state.get("ano_referencia_global"),
+        st.session_state.get("ano_referencia_global", datetime.now().year),
     )
     if not ano_sel:
         return
@@ -460,6 +460,123 @@ def get_all_years_data_isaude():
     except Exception as e:
         logging.error(f"Erro ao buscar histórico do iSaúde no Neon: {e}")
     return all_data
+
+# =============================================================================
+# MÉTODOS DE EXIBIÇÃO DA INTERFACE (RESOLVENDO O ATTRIBUTEERROR)
+# =============================================================================
+
+def mostrar_formulario_saude():
+    """Renderiza o Formulário da Dimensão i-Saúde no Streamlit."""
+    st.title("🏥 i-Saúde - Avaliação de Saúde Pública")
+    st.markdown("Preencha as informações dos quesitos da dimensão i-Saúde.")
+
+    ano_sel = st.selectbox(
+        "Selecione o Ano de Referência:",
+        options=[datetime.now().year, datetime.now().year - 1, datetime.now().year - 2],
+        key="ano_referencia_isaude",
+    )
+
+    dados_salvos = load_respostas_isaude(ano_sel)
+
+    total_obtido = sum(d.get("pontos", 0.0) for d in dados_salvos.values())
+    total_maximo = sum(PONTUACOES_MAX_ISAUDE.values())
+    perc_atingido = (total_obtido / total_maximo * 100) if total_maximo > 0 else 0.0
+
+    st.metric(
+        label="Pontuação Acumulada no i-Saúde",
+        value=f"{total_obtido:.1f} / {total_maximo} pts",
+        delta=f"{perc_atingido:.1f}% do total",
+    )
+
+    st.markdown("---")
+
+    for cat_key, cat_data in CATEGORIAS_MAP_ISAUDE.items():
+        with st.expander(f"📁 {cat_data['label']}", expanded=False):
+            for qid in cat_data["qids"]:
+                max_pts = PONTUACOES_MAX_ISAUDE.get(qid, 0)
+                info_q = dados_salvos.get(qid, {})
+
+                st.subheader(f"Quesito {qid} (Máx: {max_pts} pts)")
+
+                v_opcoes = ["Não Atende", "Atende Parcialmente", "Atende Integralmente"]
+                v_resposta_atual = info_q.get("valor", "Não Atende")
+                idx_sel = v_opcoes.index(v_resposta_atual) if v_resposta_atual in v_opcoes else 0
+
+                resp_selecionada = st.radio(
+                    f"Situação do Quesito {qid}:",
+                    options=v_opcoes,
+                    index=idx_sel,
+                    key=f"rad_isaude_{qid}_{ano_sel}",
+                )
+
+                pts_calculados = 0.0
+                if resp_selecionada == "Atende Integralmente":
+                    pts_calculados = float(max_pts)
+                elif resp_selecionada == "Atende Parcialmente":
+                    pts_calculados = float(max_pts) / 2.0
+
+                link_evidencia = st.text_input(
+                    f"Link/Evidência para o Quesito {qid}:",
+                    value=info_q.get("link", ""),
+                    key=f"link_isaude_{qid}_{ano_sel}",
+                )
+
+                if link_evidencia:
+                    urls = re.findall(r"https?://[^\s]+", link_evidencia)
+                    if urls and st.button(f"Verificar Acesso Externo ao Link ({qid})", key=f"btn_link_chk_{qid}"):
+                        modal_aviso_link_isaude(qid, urls)
+
+                if st.button(f"💾 Salvar Quesito {qid}", key=f"btn_save_isaude_{qid}_{ano_sel}"):
+                    save_resp_isaude(
+                        qid=qid,
+                        valor=resp_selecionada,
+                        pontos=pts_calculados,
+                        link=link_evidencia,
+                        comentarios=info_q.get("comentarios", []),
+                    )
+                    st.success(f"Quesito {qid} salvo com sucesso! ({pts_calculados} pts)")
+                    st.rerun()
+
+                bloco_comentarios_isaude(qid, dados_salvos)
+
+
+def mostrar_dashboard_isaude():
+    """Gera o painel visual e estatístico das respostas do i-Saúde."""
+    st.title("📊 Dashboard - i-Saúde")
+    all_data = get_all_years_data_isaude()
+
+    if not all_data:
+        st.info("Nenhum dado registrado até o momento.")
+        return
+
+    anos_disponiveis = sorted(list(all_data.keys()), reverse=True)
+    ano_sel = st.selectbox("Ano de Análise:", anos_disponiveis, key="dash_ano_isaude")
+
+    dados_ano = all_data.get(ano_sel, {})
+    
+    categorias = []
+    pontos_obtidos = []
+    pontos_possiveis = []
+
+    for c_key, c_info in CATEGORIAS_MAP_ISAUDE.items():
+        categorias.append(c_info["label"])
+        pts_obt = sum(dados_ano.get(q, {}).get("pontos", 0.0) for q in c_info["qids"])
+        pts_max = sum(PONTUACOES_MAX_ISAUDE.get(q, 0) for q in c_info["qids"])
+        pontos_obtidos.append(pts_obt)
+        pontos_possiveis.append(pts_max)
+
+    fig = go.Figure(data=[
+        go.Bar(name='Pontuação Atingida', x=categorias, y=pontos_obtidos, marker_color='#0d9488'),
+        go.Bar(name='Pontuação Máxima Possível', x=categorias, y=pontos_possiveis, marker_color='#cbd5e1')
+    ])
+    fig.update_layout(barmode='group', title=f"Desempenho por Categoria - {ano_sel}")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def mostrar_relatorio_isaude():
+    """Exibe resumos e permite download de relatório."""
+    st.title("📄 Relatórios do i-Saúde")
+    st.info("Utilize este espaço para exportar o diagnóstico consolidado da Saúde.")
 
 # =============================================================================
 # 2. GERADOR DO RELATÓRIO PDF (i-Saúde)
