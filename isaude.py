@@ -576,3 +576,95 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
     pdf_out = buffer.getvalue()
     buffer.close()
     return pdf_out
+
+# =============================================================================
+# PÁGINA PRINCIPAL / FORMULÁRIO DO i-SAÚDE
+# =============================================================================
+def mostrar_formulario_saude():
+    st.title("🏥 Formulário de Avaliação — i-Saúde")
+    
+    # Seleção de Ano na Session State
+    if "ano_referencia_isaude" not in st.session_state:
+        st.session_state["ano_referencia_isaude"] = datetime.now().year
+
+    ano_sel = st.selectbox(
+        "Selecione o Ano de Referência:",
+        options=[2024, 2025, 2026],
+        index=2 if datetime.now().year >= 2026 else 0,
+        key="select_ano_isaude_main"
+    )
+    st.session_state["ano_referencia_isaude"] = ano_sel
+
+    # Carrega as respostas salvas do banco de dados Neon
+    respostas = load_respostas_isaude(ano_sel)
+
+    # Cálculo da Pontuação Total
+    total_pontos = sum(item.get("pontos", 0.0) for item in respostas.values())
+    
+    # Faixas de Classificação
+    if total_pontos >= 800:
+        faixa = "Ótimo / Excelência"
+    elif total_pontos >= 600:
+        faixa = "Bom"
+    elif total_pontos >= 400:
+        faixa = "Regular"
+    else:
+        faixa = "Ineficiente / Crítico"
+
+    # Exibição de Métricas
+    col1, col2 = st.columns(2)
+    col1.metric("Pontuação Total", f"{total_pontos:.2f} pts")
+    col2.metric("Classificação", faixa)
+
+    st.markdown("---")
+
+    # Botão para Download do PDF
+    pdf_bytes = gerar_relatorio_pdf_isaude(respostas, ano_sel, total_pontos, faixa)
+    st.download_button(
+        label="📄 Baixar Relatório em PDF",
+        data=pdf_bytes,
+        file_name=f"relatorio_isaude_{ano_sel}.pdf",
+        mime="application/pdf",
+        type="primary"
+    )
+
+    st.markdown("---")
+
+    # Renderização por Categorias
+    for cat_key, cat_info in CATEGORIAS_MAP_ISAUDE.items():
+        with st.expander(f"📌 {cat_info['label']}", expanded=False):
+            for qid in cat_info["qids"]:
+                dados_q = respostas.get(qid, {})
+                st.markdown(f"**Quesito {qid}** *(Max: {PONTUACOES_MAX_ISAUDE.get(qid, 0)} pts)*")
+                
+                col_val, col_pts, col_link = st.columns([3, 2, 4])
+                
+                val_atual = dados_q.get("valor", "")
+                pts_atual = dados_q.get("pontos", 0.0)
+                link_atual = dados_q.get("link", "")
+
+                novo_val = col_val.text_input(f"Resposta ({qid})", value=val_atual, key=f"input_val_{qid}_{ano_sel}")
+                novo_pts = col_pts.number_input(
+                    f"Pontos ({qid})", 
+                    value=float(pts_atual), 
+                    max_value=float(PONTUACOES_MAX_ISAUDE.get(qid, 100.0)),
+                    min_value=0.0,
+                    key=f"input_pts_{qid}_{ano_sel}"
+                )
+                novo_link = col_link.text_input(f"Link Evidência ({qid})", value=link_atual, key=f"input_link_{qid}_{ano_sel}")
+
+                # Verifica links externos para disparar o aviso
+                if novo_link and "http" in novo_link and novo_link != link_atual:
+                    links = re.findall(r'https?://[^\s]+', novo_link)
+                    if links:
+                        modal_aviso_link_isaude(qid, links)
+
+                # Botão de salvar por quesito
+                if (novo_val != val_atual) or (novo_pts != pts_atual) or (novo_link != link_atual):
+                    save_resp_isaude(qid, novo_val, novo_pts, novo_link, dados_q.get("comentarios", []))
+                    st.success(f"Quesito {qid} atualizado!")
+                    st.rerun()
+
+                # Diálogo de comentários
+                bloco_comentarios_isaude(qid, respostas)
+                st.markdown("---")
