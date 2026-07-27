@@ -14,6 +14,13 @@ import streamlit as st
 from plotly.subplots import make_subplots
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
+import json
+import logging
+import warnings
+from datetime import datetime
+
+import psycopg2
+import streamlit as st
 
 # =============================================================================
 # IMPORTS DO REPORTLAB (CORRIGIDOS COM ALINHAMENTOS ENUMS)
@@ -460,7 +467,6 @@ def get_all_years_data_isaude():
     except Exception as e:
         logging.error(f"Erro ao buscar histórico do iSaúde no Neon: {e}")
     return all_data
-
 # =============================================================================
 # MÉTODOS DE EXIBIÇÃO DA INTERFACE (RESOLVENDO O ATTRIBUTEERROR)
 # =============================================================================
