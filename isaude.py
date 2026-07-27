@@ -467,6 +467,35 @@ def get_all_years_data_isaude():
     except Exception as e:
         logging.error(f"Erro ao buscar histórico do iSaúde no Neon: {e}")
     return all_data
+
+# =============================================================================
+# CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (iSaúde)
+# =============================================================================
+styles = getSampleStyleSheet()
+
+# --- ESTILOS DE CAPA (ADICIONE ESTE BLOCO) ---
+style_titulo_capa = ParagraphStyle(
+    "TituloCapaISaude",
+    parent=styles["Normal"],
+    fontName="Helvetica-Bold",
+    fontSize=24,
+    leading=28,
+    alignment=TA_CENTER,
+    textColor=colors.HexColor("#0D9488"),  # Cor customizada (ex: Teal)
+    spaceAfter=15,
+)
+
+style_subtitulo_capa = ParagraphStyle(
+    "SubtituloCapaISaude",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=14,
+    leading=18,
+    alignment=TA_CENTER,
+    textColor=colors.HexColor("#4B5563"),
+    spaceAfter=30,
+)
+
 # =============================================================================
 # MÉTODOS DE EXIBIÇÃO DA INTERFACE (RESOLVENDO O ATTRIBUTEERROR)
 # =============================================================================
