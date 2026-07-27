@@ -1512,19 +1512,3 @@ def render_graficos(res_data_atual, ano_sel):
     st.plotly_chart(grafico_pontos_por_ano(all_data), use_container_width=True)
 
 
-# =============================================================================
-# 4. FORMULÁRIO PRINCIPAL - i-Saúde
-# =============================================================================
-
-
-def mostrar_formulario_isaude():
-    total_pts, res_data, ano_sel = render_sidebar()
-
-    st.title(f"🏥 Gestão e Fiscalização da Saúde (i-Saúde) - {ano_sel}")
-
-    aba_quest, aba_ext, aba_graf = st.tabs(
-        ["📋 Questionário i-Saúde", "🌐 Dados Externos", "📊 Gráficos"]
-    )
-
-    with aba_quest:
-        st.info("Preencha as informações da área da saúde do município.")
