@@ -1071,3 +1071,199 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
             
         if chave_mae not in TETOS_VALIDOS:
             continue
+
+import logging
+import re
+import plotly.graph_objects as go
+import streamlit as st
+
+# =============================================================================
+# 4. SIDEBAR - iSaúde
+# =============================================================================
+
+def zerar_questionario_isaude(ano: int):
+    """Deleta todas as respostas do ano selecionado da tabela do iSaúde."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM respostas_isaude WHERE ano = %s",
+                    (int(ano),)
+                )
+            conn.commit()
+        st.cache_data.clear()  # Limpa o cache após deletar
+    except Exception as e:
+        st.error(f"Erro ao zerar questionário iSaúde: {e}")
+
+
+@st.dialog("⚠️ Zerar Respostas do iSaúde")
+def confirmar_zerar_dialog_isaude(ano):
+    st.warning(f"Tem certeza que deseja apagar TODAS as respostas do iSaúde para o ano {ano}?")
+    st.write("Esta ação é irreversível e excluirá os dados salvos no banco Neon.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔴 Sim, Zerar Tudo", type="primary", use_container_width=True):
+            try:
+                zerar_questionario_isaude(ano)
+                st.session_state[f"respostas_isaude_{ano}"] = {}
+                st.toast("Respostas do iSaúde zeradas com sucesso!", icon="🗑️")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao zerar banco: {e}")
+
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+def calcular_faixa_isaude(total_pts: float, total_max: float = 688.1):
+    """Calcula o percentual atingido e classifica em faixas iSaúde."""
+    perc = (total_pts / total_max * 100) if total_max > 0 else 0.0
+    
+    if perc <= 30.0:
+        faixa, cor = "Crítico", "#ef4444"
+    elif perc <= 55.0:
+        faixa, cor = "Básico", "#f97316"
+    elif perc <= 75.0:
+        faixa, cor = "Intermediário", "#eab308"
+    elif perc <= 90.0:
+        faixa, cor = "Aprimorado", "#22c55e"
+    else:
+        faixa, cor = "Excelência", "#16a34a"
+        
+    return faixa, cor, perc
+
+
+def render_sidebar_isaude():
+    st.sidebar.title("🛠️ Painel de Controle - iSaúde")
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    
+    # Define o ano selecionado na session_state para sincronização
+    ano_sel = st.sidebar.selectbox(
+        "Ano de Referência:", 
+        anos, 
+        key="ano_referencia_isaude"
+    )
+
+    res_data = load_respostas_isaude(ano_sel)
+    total_pts = sum(item.get("pontos", 0.0) for item in res_data.values())
+    total_max = sum(PONTUACOES_MAX_ISAUDE.values())
+
+    faixa, cor, perc = calcular_faixa_isaude(total_pts, total_max)
+
+    st.sidebar.metric(
+        label="Pontuação iSaúde", 
+        value=f"{total_pts:.1f} / {total_max:.0f} pts",
+        delta=f"{perc:.1f}% Atingido"
+    )
+    st.sidebar.markdown(
+        f"**Desempenho:** <span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
+        unsafe_allow_html=True
+    )
+
+    st.sidebar.divider()
+    
+    col1, col2 = st.sidebar.columns(2)
+    
+    # Botão de Download do Relatório em PDF do iSaúde
+    with col1:
+        # Nota: Certifique-se de ter a função `gerar_relatorio_pdf_isaude` definida em seu arquivo de relatórios
+        pdf_bytes = gerar_relatorio_pdf_isaude(res_data, ano_sel, total_pts, faixa) if 'gerar_relatorio_pdf_isaude' in globals() else b""
+        st.download_button(
+            label="📄 Baixar PDF",
+            data=pdf_bytes,
+            file_name=f"Relatorio_iSaude_{ano_sel}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+
+    # Botão para abrir o Modal de confirmação de exclusão
+    with col2:
+        if st.button("🔄 Zerar", help="Limpar todas as respostas do iSaúde para o ano selecionado", use_container_width=True):
+            confirmar_zerar_dialog_isaude(ano_sel)
+
+    return total_pts, res_data, ano_sel
+
+
+# =============================================================================
+# 5. GRÁFICOS E HISTÓRICO - iSaúde
+# =============================================================================
+
+def get_faixa_isaude(total: float, total_max: float = 688.1):
+    faixa, _, _ = calcular_faixa_isaude(total, total_max)
+    return faixa
+
+
+def grafico_pontos_por_ano_isaude(all_data):
+    """Gráfico de barras vertical com pontos totais por ano para a dimensão iSaúde."""
+    anos = sorted(all_data.keys())
+    totais = []
+    cores = []
+    total_max = sum(PONTUACOES_MAX_ISAUDE.values())
+    
+    for ano in anos:
+        res = all_data[ano]
+        total = sum(v.get("pontos", 0.0) for k, v in res.items() if not str(k).startswith("COM_"))
+        totais.append(total)
+        
+        _, cor, _ = calcular_faixa_isaude(total, total_max)
+        cores.append(cor)
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[str(a) for a in anos],
+        y=totais,
+        marker_color=cores,
+        text=[f"{t:.1f} pts" for t in totais],
+        textposition="outside",
+        hovertemplate="<b>Ano: %{x}</b><br>iSaúde Total: %{y:.1f} pts<extra></extra>",
+    ))
+    
+    fig.update_layout(
+        title="Índice Histórico iSaúde por Exercício",
+        xaxis_title="Ano",
+        yaxis_title="Pontuação iSaúde",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        showlegend=False,
+        height=400,
+    )
+    
+    return fig
+
+
+def render_graficos_isaude(res_data_atual, ano_sel):
+    st.header("📊 Painel de Análise do iSaúde")
+    
+    all_data = get_all_years_data_isaude()
+    
+    if not all_data:
+        st.info("Nenhum dado do iSaúde registrado ainda. Preencha os itens para visualizar os gráficos.")
+        return
+
+    st.plotly_chart(grafico_pontos_por_ano_isaude(all_data), use_container_width=True)
+
+
+# =============================================================================
+# 6. FORMULÁRIO PRINCIPAL - iSaúde
+# =============================================================================
+
+def mostrar_formulario_saude():
+    dados_sidebar = render_sidebar_isaude()
+    
+    if dados_sidebar and len(dados_sidebar) == 3:
+        total_pts, res_data, ano_sel = dados_sidebar
+    else:
+        total_pts, res_data, ano_sel = 0.0, {}, 2026
+
+    st.title(f"🏥 Saúde Pública (iSaúde) - Exercício {ano_sel}")
+
+    aba_quest, aba_graf = st.tabs(["📋 Questionário iSaúde", "📊 Gráficos & Desempenho"])
+    
+    with aba_quest:
+        # Código de renderização das categorias e quesitos do iSaúde
+        pass
+        
+    with aba_graf:
+        render_graficos_isaude(res_data, ano_sel)
