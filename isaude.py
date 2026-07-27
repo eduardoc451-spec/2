@@ -607,6 +607,10 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         "S5.2": -10.0,
         "S6.1": -30.0,
     }
+import reportlab.lib.colors as rl_colors
+from reportlab.lib.styles import ParagraphStyle as Alias_Style
+from reportlab.platypus import PageBreak, Paragraph, ParagraphStyle, SimpleDocTemplate, Spacer, Table, TableStyle
+
 # -------------------------------------------------------------------------
 # FOLHA 1: CAPA
 # -------------------------------------------------------------------------
@@ -1069,9 +1073,6 @@ elements.append(Spacer(1, 15))
 # -------------------------------------------------------------------------
 # 5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU) - FORMATADO I-FISCAL
 # -------------------------------------------------------------------------
-import reportlab.lib.colors as rl_colors
-from reportlab.lib.styles import ParagraphStyle as Alias_Style
-
 elements.append(Paragraph("<b>5. ALINHAMENTO COM A AGENDA 2030 (METAS ODS / ONU)</b>", styles["h2"]))
 elements.append(Spacer(1, 6))
 
@@ -1195,12 +1196,42 @@ for qid in quesitos_validos_ods:
 
     analise_ods.append({"qid": qid, "metas": metas, "status": status, "resp": resp})
 
-    # -------------------------------------------------------------------------
-    # CONSTRUÇÃO DO PDF
-    # -------------------------------------------------------------------------
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
+# --- RENDERIZAÇÃO DA TABELA DA AGENDA 2030 (ODS) ---
+if analise_ods:
+    data_ods = [[
+        Paragraph("Quesito", style_th),
+        Paragraph("Metas ODS/ONU", style_th),
+        Paragraph("Status de Alinhamento", style_th),
+        Paragraph("Evidência / Resposta", style_th)
+    ]]
+    for item in analise_ods:
+        cor_status = "#2e7d32" if "Atendido" in item["status"] and "Não" not in item["status"] else "#c0392b"
+        if "Parcialmente" in item["status"] or "%" in item["status"]:
+            cor_status = "#d35400"
+            
+        status_fmt = f"<font color='{cor_status}'><b>{item['status']}</b></font>"
+        data_ods.append([
+            Paragraph(item["qid"], style_tabela_centro),
+            Paragraph(item["metas"], style_tabela_centro),
+            Paragraph(status_fmt, style_tabela_centro),
+            Paragraph(item["resp"], style_tabela_padrao)
+        ])
+    tabela_ods = Table(data_ods, colWidths=[65, 85, 110, 230])
+    tabela_ods.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#27ae60")),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#27ae60")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(tabela_ods)
+    elements.append(Spacer(1, 15))
+
+# -------------------------------------------------------------------------
+# CONSTRUÇÃO DO PDF (FORA DO LOOP)
+# -------------------------------------------------------------------------
+doc.build(elements)
+buffer.seek(0)
+return buffer
 
 import logging
 import plotly.graph_objects as go
