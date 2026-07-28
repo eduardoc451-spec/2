@@ -1,4 +1,7 @@
-import json
+import re
+
+# Padrão Regex para extração de URLs completas (HTTP/HTTPS)
+REGEX_PURE_URL = r"(https?://[^\s]+)"import json
 import logging
 import os
 import re
