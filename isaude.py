@@ -220,8 +220,15 @@ from psycopg2.extras import RealDictCursor
 # Certifique-se de que get_connection() esteja importada do seu módulo centralizado.
 # ex: from database import get_connection
 
+
+import json
+import logging
+import streamlit as st
+from datetime import datetime
+from psycopg2.extras import RealDictCursor
+
 # =============================================================================
-# GESTÃO DE ESTADO E PERSISTÊNCIA - iSaúde (com sincronização Neon PostgreSQL)
+# GESTÃO DE ESTADO E PERSISTÊNCIA NEON POSTGRES - iSaúde
 # =============================================================================
 
 def get_ano_atual_isaude() -> int:
@@ -229,21 +236,18 @@ def get_ano_atual_isaude() -> int:
     return int(
         st.session_state.get("ano_referencia_isaude")
         or st.session_state.get("ano_referencia_global")
-        or datetime.now().year
+        or 2026
     )
 
 
 def load_respostas_isaude(ano: int = None, forcar_recarga: bool = False) -> dict:
-    """
-    Carrega respostas do Neon para o st.session_state.
-    Passe `forcar_recarga=True` para obrigar a releitura do banco Neon.
-    """
+    """Carrega respostas do Neon PostgreSQL diretamente para o st.session_state."""
     if ano is None:
         ano = get_ano_atual_isaude()
 
     key_ano = f"respostas_isaude_{ano}"
 
-    # Se pedir recarga forçada ou se a chave não existir no estado local, busca do Neon
+    # Recarrega se solicitado ou se ainda não existir no Session State
     if forcar_recarga or key_ano not in st.session_state:
         st.session_state[key_ano] = {}
         try:
@@ -256,8 +260,6 @@ def load_respostas_isaude(ano: int = None, forcar_recarga: bool = False) -> dict
                     rows = cursor.fetchall()
                     for r in rows:
                         detalhes = r.get('detalhes') or {}
-                        
-                        # Garante parsing correto do JSON caso venha como string do Neon
                         if isinstance(detalhes, str):
                             try:
                                 detalhes = json.loads(detalhes)
@@ -273,15 +275,13 @@ def load_respostas_isaude(ano: int = None, forcar_recarga: bool = False) -> dict
                             "detalhes": detalhes
                         }
         except Exception as e:
-            logging.error(f"Erro ao carregar respostas do banco iSaúde no Neon: {e}")
+            logging.error(f"Erro ao carregar respostas do banco iSaúde: {e}")
 
     return st.session_state[key_ano]
 
 
 def save_resp_isaude(qid, valor, pontos, link="", comentarios=None, comentario=""):
-    """
-    Salva no Neon PostgreSQL na tabela `respostas_isaude` e força a atualização imediata.
-    """
+    """Salva a resposta no Neon PostgreSQL e sincroniza o estado local reativamente."""
     ano_int = get_ano_atual_isaude()
     key_ano = f"respostas_isaude_{ano_int}"
 
@@ -302,7 +302,18 @@ def save_resp_isaude(qid, valor, pontos, link="", comentarios=None, comentario="
         "comentario": str(comentario or "")
     }
 
-    # 1. Gravação no PostgreSQL / Neon
+    # 1. ATUALIZAÇÃO IMEDIATA DO SESSION STATE
+    st.session_state[key_ano][str(qid)] = {
+        "valor": str(valor or ""),
+        "pontos": float(pontos or 0.0),
+        "link": str(link or ""),
+        "comentarios": comentarios,
+        "comentario": str(comentario or ""),
+        "detalhes": dados_detalhes,
+        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    # 2. PERSISTÊNCIA NO BANCO DE DADOS NEON
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -324,15 +335,14 @@ def save_resp_isaude(qid, valor, pontos, link="", comentarios=None, comentario="
                 ))
             conn.commit()
 
-            # 2. Força recarga imediata do cache local após salvar
+            # Força sincronização do cache local
             load_respostas_isaude(ano=ano_int, forcar_recarga=True)
             return True
 
     except Exception as e:
-        logging.error(f"Erro ao salvar resposta do iSaúde no banco Neon: {e}")
+        logging.error(f"Erro ao salvar no Neon (iSaúde): {e}")
         st.error(f"Erro ao salvar no banco Neon: {e}")
         return False
-
 
 # =============================================================================
 # 3. PAINEL DE RESUMO E PONTUAÇÃO (DESEMPENHO DO ISAÚDE)
