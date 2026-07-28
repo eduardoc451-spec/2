@@ -30,7 +30,7 @@ from reportlab.platypus import (
 import streamlit as st
 
 # Importação de funções utilitárias compartilhadas
-from utils import bloco_comentarios
+from utils import bloco_comentarios, modal_aviso_link, save_resp
 
 # Constantes e Regex Globais
 REGEX_PURE_URL = r"(https?://[^\s]+)"
