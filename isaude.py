@@ -29,38 +29,70 @@ from reportlab.platypus import (
 )
 import streamlit as st
 
-# Constantes e Regex Globais
+# =============================================================================
+# CONSTANTES E REGEX GLOBAIS
+# =============================================================================
 REGEX_PURE_URL = r"(https?://[^\s]+)"
 
-# Importação das funções utilitárias compartilhadas
+# =============================================================================
+# IMPORTAÇÃO DAS FUNÇÕES UTILITÁRIAS COMPARTILHADAS (UTILS)
+# =============================================================================
 try:
     from utils import (
         bloco_comentarios,
+        get_connection,
+        load_respostas_isaude,
         modal_aviso_link,
         render_sidebar_isaude,
-        save_resp,
+        save_resp_isaude,
     )
 except ImportError:
-    # Fallback de segurança caso alguma função não esteja no utils.py
+    logging.warning("Módulo utils.py não encontrado. Carregando funções fallback de segurança.")
+
+    def get_connection():
+        """Conexão fallback com banco Neon usando URL das Secrets do Streamlit."""
+        db_url = st.secrets.get("postgres", {}).get("url") or os.getenv("DATABASE_URL")
+        return psycopg2.connect(db_url)
+
+    def load_respostas_isaude(ano: int = None, forcar_recarga: bool = False) -> dict:
+        """Fallback local para carregar respostas do iSaúde."""
+        ano_sel = ano or st.session_state.get("ano_referencia_isaude", 2026)
+        key_ano = f"respostas_isaude_{ano_sel}"
+        return st.session_state.get(key_ano, {})
+
+    def save_resp_isaude(qid, valor, pontos, link="", comentarios=None, comentario=""):
+        """Fallback para manter na memória caso utils falhe."""
+        ano_sel = st.session_state.get("ano_referencia_isaude", 2026)
+        key_ano = f"respostas_isaude_{ano_sel}"
+        if key_ano not in st.session_state:
+            st.session_state[key_ano] = {}
+
+        st.session_state[key_ano][str(qid)] = {
+            "valor": str(valor),
+            "pontos": float(pontos),
+            "link": str(link),
+            "comentario": str(comentario),
+            "detalhes": {"link": str(link), "comentario": str(comentario)}
+        }
+        return True
+
     def bloco_comentarios(qid: str, res_data: dict, ano_sel: int):
-        d_item = res_data.get(qid, {})
+        d_item = res_data.get(str(qid), {})
         coment_salvo = d_item.get("comentario", "")
-        st.text_area(
+        return st.text_area(
             "💬 Observações / Comentários:",
             value=coment_salvo,
-            key=f"coment_{qid}_{ano_sel}",
+            key=f"coment_isaude_{qid}_{ano_sel}",
             placeholder="Escreva aqui observações ou justificativas...",
             height=80,
         )
-
-    def save_resp(*args, **kwargs):
-        pass
 
     def modal_aviso_link(*args, **kwargs):
         pass
 
     def render_sidebar_isaude(*args, **kwargs):
         return 0, {}, datetime.now().year
+        
 # =============================================================================
 # CONFIGURAÇÃO COMPLETA DE ESTILOS DE RELATÓRIO (PDF) - iSaúde
 # =============================================================================
