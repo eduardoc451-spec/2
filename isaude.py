@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from io import BytesIO
+import html
 import json
 import logging
 import os
