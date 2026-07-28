@@ -1,31 +1,17 @@
-import re
-REGEX_PURE_URL = r"(https?://[^\s]+)"import json
+from datetime import date, datetime
+from io import BytesIO
+import json
 import logging
 import os
 import re
 import sys
 import warnings
-from datetime import date, datetime
-from io import BytesIO
 
 import plotly.express as px
 import plotly.graph_objects as go
 import psycopg2
-import streamlit as st
-from plotly.subplots import make_subplots
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
-import json
-import logging
-import warnings
-from datetime import datetime
-
-import psycopg2
-import streamlit as st
-
-# =============================================================================
-# IMPORTS DO REPORTLAB (CORRIGIDOS COM ALINHAMENTOS ENUMS)
-# =============================================================================
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.shapes import Drawing, String
 from reportlab.lib import colors
@@ -41,6 +27,10 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+import streamlit as st
+
+# Constantes e Regex Globais
+REGEX_PURE_URL = r"(https?://[^\s]+)"
 # =============================================================================
 # CONFIGURAÇÃO COMPLETA DE ESTILOS DE RELATÓRIO (PDF) - iSaúde
 # =============================================================================
