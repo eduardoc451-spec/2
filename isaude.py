@@ -29,11 +29,25 @@ from reportlab.platypus import (
 )
 import streamlit as st
 
-# Importação de funções utilitárias compartilhadas
-from utils import bloco_comentarios, modal_aviso_link, save_resp
+# Importação das funções do seu arquivo utils.py
+try:
+    from utils import bloco_comentarios
+except ImportError:
+    # Fallback caso a função não esteja no utils
+    def bloco_comentarios(qid: str, res_data: dict, ano_sel: int):
+        d_item = res_data.get(qid, {})
+        coment_salvo = d_item.get("comentario", "")
+        st.text_area(
+            "💬 Observações / Comentários:",
+            value=coment_salvo,
+            key=f"coment_{qid}_{ano_sel}",
+            placeholder="Escreva aqui observações ou justificativas...",
+            height=80,
+        )
 
 # Constantes e Regex Globais
 REGEX_PURE_URL = r"(https?://[^\s]+)"
+
 # =============================================================================
 # CONFIGURAÇÃO COMPLETA DE ESTILOS DE RELATÓRIO (PDF) - iSaúde
 # =============================================================================
