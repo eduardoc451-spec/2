@@ -29,11 +29,19 @@ from reportlab.platypus import (
 )
 import streamlit as st
 
-# Importação das funções do seu arquivo utils.py
+# Constantes e Regex Globais
+REGEX_PURE_URL = r"(https?://[^\s]+)"
+
+# Importação das funções utilitárias compartilhadas
 try:
-    from utils import bloco_comentarios
+    from utils import (
+        bloco_comentarios,
+        modal_aviso_link,
+        render_sidebar_isaude,
+        save_resp,
+    )
 except ImportError:
-    # Fallback caso a função não esteja no utils
+    # Fallback de segurança caso alguma função não esteja no utils.py
     def bloco_comentarios(qid: str, res_data: dict, ano_sel: int):
         d_item = res_data.get(qid, {})
         coment_salvo = d_item.get("comentario", "")
@@ -45,9 +53,14 @@ except ImportError:
             height=80,
         )
 
-# Constantes e Regex Globais
-REGEX_PURE_URL = r"(https?://[^\s]+)"
+    def save_resp(*args, **kwargs):
+        pass
 
+    def modal_aviso_link(*args, **kwargs):
+        pass
+
+    def render_sidebar_isaude(*args, **kwargs):
+        return 0, {}, datetime.now().year
 # =============================================================================
 # CONFIGURAÇÃO COMPLETA DE ESTILOS DE RELATÓRIO (PDF) - iSaúde
 # =============================================================================
