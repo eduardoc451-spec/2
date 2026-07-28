@@ -10,6 +10,7 @@ import warnings
 import plotly.express as px
 import plotly.graph_objects as go
 import psycopg2
+from utils import bloco_comentarios
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from reportlab.graphics.charts.barcharts import VerticalBarChart
