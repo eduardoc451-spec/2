@@ -1656,7 +1656,7 @@ def mostrar_formulario_saude():
                     )
 
                     # Salva no banco de dados Neon
-                    save_resp(
+                    save_resp_isaude(
                         qid="1.0",
                         valor=val_salvar,
                         pontos=pts_10,
