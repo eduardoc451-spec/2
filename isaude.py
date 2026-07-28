@@ -10,7 +10,6 @@ import warnings
 import plotly.express as px
 import plotly.graph_objects as go
 import psycopg2
-from utils import bloco_comentarios
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from reportlab.graphics.charts.barcharts import VerticalBarChart
@@ -29,6 +28,9 @@ from reportlab.platypus import (
     TableStyle,
 )
 import streamlit as st
+
+# Importação de funções utilitárias compartilhadas
+from utils import bloco_comentarios
 
 # Constantes e Regex Globais
 REGEX_PURE_URL = r"(https?://[^\s]+)"
