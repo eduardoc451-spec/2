@@ -531,25 +531,63 @@ style_subtitulo_capa = ParagraphStyle(
 # =============================================================================
 
 def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
-    """Gera o documento PDF consolidado para o i-Saúde."""
+    """Gera o documento PDF consolidado para o i-Saúde com Comparativo Histórico."""
     
-    # 1. TRATAMENTO DE PARÂMETROS E ANOS (EVITA NAMEERROR DE ano_ant)
+    # -------------------------------------------------------------------------
+    # 1. TRATAMENTO DE ANOS E DADOS HISTÓRICOS
+    # -------------------------------------------------------------------------
     try:
-        ano_num = int(ano)
+        ano_atual = int(ano)
     except (ValueError, TypeError):
-        ano_num = datetime.now().year
+        ano_atual = datetime.now().year
 
-    ano_ant = ano_num - 1
+    ano_ant = ano_atual - 1
 
-    # Se all_data não for fornecido na chamada, busca no banco de dados
+    # Busca histórico do banco se não for passado como argumento
     if all_data is None:
         try:
             all_data = get_all_years_data_isaude()
         except Exception:
             all_data = {}
 
-    buffer = BytesIO()
+    # -------------------------------------------------------------------------
+    # 2. CÁLCULO DE VARIÁVEIS E TENDÊNCIA HISTÓRICA (EVITA NAMEERROR)
+    # -------------------------------------------------------------------------
+    nota_atual = float(total)
+    faixa_real_atual = str(faixa)
 
+    # Busca dados do ano anterior para comparação
+    dados_ano_ant = all_data.get(ano_ant) or all_data.get(str(ano_ant))
+
+    if dados_ano_ant:
+        if isinstance(dados_ano_ant, dict):
+            nota_ant = float(dados_ano_ant.get("pontuacao_total", 0.0))
+        else:
+            nota_ant = float(dados_ano_ant)
+
+        variacao_pontos = nota_atual - nota_ant
+        
+        if nota_ant > 0:
+            variacao_pct = (variacao_pontos / nota_ant) * 100
+            texto_percentual = f"{variacao_pct:+.1f}%"
+        else:
+            texto_percentual = "N/A"
+
+        if variacao_pontos > 0:
+            seta_tendencia = "▲"
+        elif variacao_pontos < 0:
+            seta_tendencia = "▼"
+        else:
+            seta_tendencia = "="
+    else:
+        variacao_pontos = 0.0
+        texto_percentual = "Sem dados ant."
+        seta_tendencia = "-"
+
+    # -------------------------------------------------------------------------
+    # 3. CONFIGURAÇÃO DE ESTILOS DO REPORTLAB
+    # -------------------------------------------------------------------------
+    buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
@@ -560,7 +598,6 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
     )
     elements = []
 
-    # --- INICIALIZAÇÃO E DEFINIÇÃO DE ESTILOS DO REPORTLAB ---
     styles = getSampleStyleSheet()
 
     style_tabela_cabecalho = ParagraphStyle(
@@ -589,15 +626,6 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         fontSize=9,
         leading=11,
         alignment=TA_CENTER,
-    )
-
-    style_tabela_direita = ParagraphStyle(
-        "TabelaDireita",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=11,
-        alignment=TA_RIGHT,
     )
 
     title_style = ParagraphStyle(
@@ -629,18 +657,59 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         textColor=colors.HexColor("#0f172a"),
     )
 
-    # --- CONSTRUÇÃO DOS ELEMENTOS DO PDF ---
+    # -------------------------------------------------------------------------
+    # 4. CONSTRUÇÃO DO PDF
+    # -------------------------------------------------------------------------
+    # Cabeçalho Principal
     elements.append(Paragraph("Relatório de Avaliação - i-Saúde", title_style))
     elements.append(Spacer(1, 6))
     elements.append(
         Paragraph(
-            f"Ano de Referência: <b>{ano}</b> | Pontuação Total: <b>{total:.2f} pts</b> ({faixa})",
+            f"Ano de Referência: <b>{ano_atual}</b> | Pontuação Total: <b>{nota_atual:.2f} pts</b> ({faixa_real_atual})",
             subtitle_style,
         )
     )
     elements.append(Spacer(1, 15))
 
-    # Tabela com resumo por Categoria (Largura total: 535pt)
+    # Tabela de Comparativo / Tendência Histórica
+    elements.append(Paragraph("Resumo do Período e Evolução", section_header_style))
+    elements.append(Spacer(1, 6))
+
+    tabela_tendencia_dados = [
+        [
+            Paragraph("Ano", style_tabela_cabecalho),
+            Paragraph("Pontuação", style_tabela_cabecalho),
+            Paragraph("Faixa", style_tabela_cabecalho),
+            Paragraph("Variação (Pts)", style_tabela_cabecalho),
+            Paragraph("Variação (%)", style_tabela_cabecalho),
+        ],
+        [
+            Paragraph(str(ano_atual), style_tabela_centro),
+            Paragraph(f"{nota_atual:.2f} pts", style_tabela_centro),
+            Paragraph(str(faixa_real_atual), style_tabela_centro),
+            Paragraph(f"{seta_tendencia} {variacao_pontos:+.2f} pts", style_tabela_centro),
+            Paragraph(f"{seta_tendencia} {texto_percentual}", style_tabela_centro),
+        ],
+    ]
+
+    t_tendencia = Table(tabela_tendencia_dados, colWidths=[65, 110, 140, 110, 110])
+    t_tendencia.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ])
+    )
+    elements.append(t_tendencia)
+    elements.append(Spacer(1, 15))
+
+    # Tabela com Resumo por Categoria
+    elements.append(Paragraph("Desempenho por Categoria / Eixo", section_header_style))
+    elements.append(Spacer(1, 6))
+
     tabela_resumo_dados = [
         [
             Paragraph("Categoria / Eixo", style_tabela_cabecalho),
@@ -662,16 +731,16 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
             ("ALIGN", (0, 0), (-1, -1), "LEFT"),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
         ])
     )
     elements.append(t_resumo)
     elements.append(Spacer(1, 15))
 
-    # Detalhamento de Respostas
+    # Detalhamento por Quesito
     elements.append(Paragraph("Detalhamento por Quesito", section_header_style))
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 6))
 
     tabela_detalhes_dados = [
         [
@@ -686,10 +755,10 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         val = info.get("valor", "-")
         pts = info.get("pontos", 0.0)
         link = info.get("link", "-")
-        
-        # Escapar caracteres de URL para o XML do ReportLab não quebrar
+
+        # Escapar URL para não causar erro no parser de texto do ReportLab
         link_formatado = html.escape(str(link)) if link else "-"
-        
+
         tabela_detalhes_dados.append([
             Paragraph(str(qid), style_tabela_centro),
             Paragraph(str(val), style_tabela_esquerda),
