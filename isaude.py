@@ -531,11 +531,9 @@ style_subtitulo_capa = ParagraphStyle(
 # =============================================================================
 
 def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
-    """Gera o documento PDF consolidado para o i-Saúde com Comparativo Histórico."""
+    """Gera o documento PDF consolidado para o i-Saúde sem dependências externas incorretas."""
     
-    # -------------------------------------------------------------------------
     # 1. TRATAMENTO DE ANOS E DADOS HISTÓRICOS
-    # -------------------------------------------------------------------------
     try:
         ano_atual = int(ano)
     except (ValueError, TypeError):
@@ -543,27 +541,26 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
 
     ano_ant = ano_atual - 1
 
-    # Busca histórico do banco se não for passado como argumento
     if all_data is None:
         try:
             all_data = get_all_years_data_isaude()
         except Exception:
             all_data = {}
 
-    # -------------------------------------------------------------------------
-    # 2. CÁLCULO DE VARIÁVEIS E TENDÊNCIA HISTÓRICA (EVITA NAMEERROR)
-    # -------------------------------------------------------------------------
-    nota_atual = float(total)
-    faixa_real_atual = str(faixa)
+    # 2. CÁLCULO DE VARIÁVEIS DE TENDÊNCIA
+    nota_atual = float(total) if total is not None else 0.0
+    faixa_real_atual = str(faixa) if faixa else "N/A"
 
-    # Busca dados do ano anterior para comparação
     dados_ano_ant = all_data.get(ano_ant) or all_data.get(str(ano_ant))
 
     if dados_ano_ant:
         if isinstance(dados_ano_ant, dict):
             nota_ant = float(dados_ano_ant.get("pontuacao_total", 0.0))
         else:
-            nota_ant = float(dados_ano_ant)
+            try:
+                nota_ant = float(dados_ano_ant)
+            except (ValueError, TypeError):
+                nota_ant = 0.0
 
         variacao_pontos = nota_atual - nota_ant
         
@@ -584,9 +581,7 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         texto_percentual = "Sem dados ant."
         seta_tendencia = "-"
 
-    # -------------------------------------------------------------------------
-    # 3. CONFIGURAÇÃO DE ESTILOS DO REPORTLAB
-    # -------------------------------------------------------------------------
+    # 3. CONFIGURAÇÃO DO REPORTLAB
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -657,10 +652,7 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         textColor=colors.HexColor("#0f172a"),
     )
 
-    # -------------------------------------------------------------------------
-    # 4. CONSTRUÇÃO DO PDF
-    # -------------------------------------------------------------------------
-    # Cabeçalho Principal
+    # 4. MONTAGEM DO CONTEÚDO DO PDF
     elements.append(Paragraph("Relatório de Avaliação - i-Saúde", title_style))
     elements.append(Spacer(1, 6))
     elements.append(
@@ -706,7 +698,7 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
     elements.append(t_tendencia)
     elements.append(Spacer(1, 15))
 
-    # Tabela com Resumo por Categoria
+    # Tabela com Resumo por Categoria (i-Saúde)
     elements.append(Paragraph("Desempenho por Categoria / Eixo", section_header_style))
     elements.append(Spacer(1, 6))
 
@@ -717,12 +709,15 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         ]
     ]
 
-    for cat_key, cat_info in CATEGORIAS_MAP_ISAUDE.items():
-        pts_cat = sum(dados.get(qid, {}).get("pontos", 0.0) for qid in cat_info["qids"])
-        tabela_resumo_dados.append([
-            Paragraph(cat_info["label"], style_tabela_esquerda),
-            Paragraph(f"{pts_cat:.2f}", style_tabela_centro),
-        ])
+    # Utiliza CATEGORIAS_MAP_ISAUDE ou fallback seguro
+    mapa_categorias = globals().get("CATEGORIAS_MAP_ISAUDE", {})
+    if mapa_categorias:
+        for cat_key, cat_info in mapa_categorias.items():
+            pts_cat = sum(dados.get(qid, {}).get("pontos", 0.0) for qid in cat_info.get("qids", []))
+            tabela_resumo_dados.append([
+                Paragraph(str(cat_info.get("label", cat_key)), style_tabela_esquerda),
+                Paragraph(f"{pts_cat:.2f}", style_tabela_centro),
+            ])
 
     t_resumo = Table(tabela_resumo_dados, colWidths=[385, 150])
     t_resumo.setStyle(
@@ -752,11 +747,15 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
     ]
 
     for qid, info in dados.items():
-        val = info.get("valor", "-")
-        pts = info.get("pontos", 0.0)
-        link = info.get("link", "-")
+        if isinstance(info, dict):
+            val = info.get("valor", "-")
+            pts = info.get("pontos", 0.0)
+            link = info.get("link", "-")
+        else:
+            val = str(info)
+            pts = 0.0
+            link = "-"
 
-        # Escapar URL para não causar erro no parser de texto do ReportLab
         link_formatado = html.escape(str(link)) if link else "-"
 
         tabela_detalhes_dados.append([
@@ -779,6 +778,12 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         ])
     )
     elements.append(t_detalhes)
+
+    # 5. GERAR PDF
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
 
     # -------------------------------------------------------------------------
     # FOLHA 1: CAPA
