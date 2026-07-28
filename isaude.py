@@ -242,25 +242,13 @@ def modal_aviso_link_isaude(qid, links_encontrados):
 
 import json
 import logging
+import re
 import streamlit as st
 from datetime import datetime
 from psycopg2.extras import RealDictCursor
 
 # =============================================================================
-# 1. FUNÇÃO DE CONEXÃO AO BANCO NEON POSTGRESQL (Ajuste se necessário)
-# =============================================================================
-# Certifique-se de que get_connection() esteja importada do seu módulo centralizado.
-# ex: from database import get_connection
-
-
-import json
-import logging
-import streamlit as st
-from datetime import datetime
-from psycopg2.extras import RealDictCursor
-
-# =============================================================================
-# GESTÃO DE ESTADO E PERSISTÊNCIA NEON POSTGRES - iSaúde
+# 1. GESTÃO DE ESTADO E PERSISTÊNCIA NEON POSTGRES - iSaúde
 # =============================================================================
 
 def get_ano_atual_isaude() -> int:
@@ -279,7 +267,6 @@ def load_respostas_isaude(ano: int = None, forcar_recarga: bool = False) -> dict
 
     key_ano = f"respostas_isaude_{ano}"
 
-    # Recarrega se solicitado ou se ainda não existir no Session State
     if forcar_recarga or key_ano not in st.session_state:
         st.session_state[key_ano] = {}
         try:
@@ -376,6 +363,135 @@ def save_resp_isaude(qid, valor, pontos, link="", comentarios=None, comentario="
         st.error(f"Erro ao salvar no banco Neon: {e}")
         return False
 
+
+# =============================================================================
+# 2. COMPONENTE DE DIÁLOGO INTERNO E COMENTÁRIOS (SISTEMA AVANÇADO)
+# =============================================================================
+
+def bloco_comentarios_isaude(questao_id: str, res_data: dict, sufixo: str = None):
+    """Gera o diálogo interno avançado com histórico, status e salvamento direto no Neon."""
+    ano_sel = get_ano_atual_isaude()
+    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+
+    id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
+    key_texto = f"v_txt_com_isaude_{id_chave}_{ano_sel}"
+    key_estado_limpar = f"limpar_input_isaude_{id_chave}_{ano_sel}"
+    key_radio = f"rad_status_isaude_{id_chave}_{ano_sel}"
+
+    if key_estado_limpar not in st.session_state:
+        st.session_state[key_estado_limpar] = False
+
+    dados_questao = res_data.get(str(questao_id), {})
+    historico = list(dados_questao.get("comentarios", []))
+
+    status_global = "Resolvido"
+    for com in historico:
+        if isinstance(com, dict) and "status_definido" in com:
+            status_global = com["status_definido"]
+
+    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+
+    with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
+        opcoes_status = ["Resolvido", "Pendente"]
+        idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
+
+        novo_status_clicado = st.radio(
+            f"Definir status para {id_chave}:",
+            options=opcoes_status,
+            index=idx_status_atual,
+            horizontal=True,
+            key=key_radio
+        )
+
+        # 1. Alteração de Status Automática
+        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
+            log_mudanca = {
+                "autor": "Sistema / " + usuario_atual,
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
+                "status_definido": novo_status_clicado
+            }
+            historico.append(log_mudanca)
+            save_resp_isaude(
+                qid=questao_id,
+                valor=dados_questao.get("valor", ""),
+                pontos=dados_questao.get("pontos", 0.0),
+                link=dados_questao.get("link", ""),
+                comentarios=historico,
+                comentario=dados_questao.get("comentario", "")
+            )
+            st.rerun()
+
+        # 2. Renderização do Histórico de Balões de Comentários
+        if historico:
+            for idx, com in enumerate(historico):
+                if not isinstance(com, dict):
+                    continue
+                col_balao, col_lixeira = st.columns([11, 1])
+
+                with col_balao:
+                    autor = com.get('autor', 'Anônimo')
+                    data_com = com.get('data', '')
+                    texto_com = com.get('texto', '')
+
+                    if "Sistema /" in autor:
+                        st.markdown(
+                            f"""<div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
+                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{autor} - {data_com}</span>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            f"""<div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e88e5;">
+                                <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">{autor}</span> 
+                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{data_com}</span>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
+                        )
+
+                with col_lixeira:
+                    if st.button("🗑️", key=f"btn_del_com_isaude_{id_chave}_{idx}_{ano_sel}"):
+                        historico.pop(idx)
+                        save_resp_isaude(
+                            qid=questao_id,
+                            valor=dados_questao.get("valor", ""),
+                            pontos=dados_questao.get("pontos", 0.0),
+                            link=dados_questao.get("link", ""),
+                            comentarios=historico,
+                            comentario=dados_questao.get("comentario", "")
+                        )
+                        st.rerun()
+
+        # Limpeza reativa da caixa de texto
+        if st.session_state[key_estado_limpar]:
+            st.session_state[key_texto] = ""
+            st.session_state[key_estado_limpar] = False
+
+        novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
+
+        # 3. Botão para Postar Novo Comentário
+        if st.button("Postar Comentário", key=f"btn_com_isaude_{id_chave}_{ano_sel}", type="primary"):
+            if novo_texto.strip():
+                nova_mensagem = {
+                    "autor": usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": novo_texto.strip(),
+                    "status_definido": status_global
+                }
+                historico.append(nova_mensagem)
+                save_resp_isaude(
+                    qid=questao_id,
+                    valor=dados_questao.get("valor", ""),
+                    pontos=dados_questao.get("pontos", 0.0),
+                    link=dados_questao.get("link", ""),
+                    comentarios=historico,
+                    comentario=dados_questao.get("comentario", "")
+                )
+                st.session_state[key_estado_limpar] = True
+                st.rerun()
+
+
 # =============================================================================
 # 3. PAINEL DE RESUMO E PONTUAÇÃO (DESEMPENHO DO ISAÚDE)
 # =============================================================================
@@ -402,7 +518,6 @@ def render_dashboard_isaude(questoes: list):
     progresso_pct = (preenchidos / total_quesitos * 100) if total_quesitos > 0 else 0
     nota_final = (pontuacao_obtida / pontuacao_maxima * 10) if pontuacao_maxima > 0 else 0.0
 
-    # Renderização visual dos cartões de indicadores
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Ano de Referência", f"{ano}")
@@ -418,7 +533,7 @@ def render_dashboard_isaude(questoes: list):
 
 
 # =============================================================================
-# 4. RENDERIZADOR DE QUESITOS E FORMULÁRIO (PADRÃO IAMB)
+# 4. RENDERIZADOR DE QUESITOS E FORMULÁRIO (PADRÃO IAMB INTEGRADO COM COMENTÁRIOS)
 # =============================================================================
 
 def render_modulo_isaude(questoes_isaude: list):
@@ -476,9 +591,8 @@ def render_modulo_isaude(questoes_isaude: list):
             )
 
             # Ação de Salvar por Quesito
-            if st.button(f"Salvar Quesito {qid}", key=f"btn_save_isaude_{ano}_{qid}"):
+            if st.button(f"Salvar Quesito {qid}", key=f"btn_save_isaude_{ano}_{qid}", type="primary"):
                 if opcao_sel != "-- Selecione --":
-                    # Calcula a pontuação correspondente
                     pts = float(pontos_map.get(opcao_sel, 0.0))
                     
                     sucesso = save_resp_isaude(
@@ -490,10 +604,19 @@ def render_modulo_isaude(questoes_isaude: list):
                     )
                     
                     if sucesso:
-                        st.success(f"Quesito {qid} salvo com sucesso!")
+                        st.toast(f"Quesito {qid} salvo com sucesso!", icon="✅")
+                        
+                        # Modal de link (se houver a função)
+                        links = re.findall(r'https?://[^\s]+', link_input)
+                        if links and "modal_aviso_link" in globals():
+                            modal_aviso_link(qid, links)
+                            
                         st.rerun()
                 else:
                     st.warning("Selecione uma opção válida antes de salvar.")
+
+            # INTEGRAÇÃO DO DIÁLOGO INTERNO / HISTÓRICO DE COMENTÁRIOS
+            bloco_comentarios_isaude(qid, respostas)
 
 # =============================================================================
 # CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (iSaúde)
