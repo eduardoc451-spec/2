@@ -1774,6 +1774,8 @@ def mostrar_formulario_saude():
 
         # GATILHO DO MODAL 1.0 (Fora do container principal)
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-            if "modal_aviso_link" in globals():
+            if "modal_aviso_link_isaude" in globals():
+                modal_aviso_link_isaude("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
+            elif "modal_aviso_link" in globals():
                 modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
