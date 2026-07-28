@@ -46,55 +46,39 @@ from reportlab.platypus import (
 # =============================================================================
 styles = getSampleStyleSheet()
 
-# Estilo Padrão para Tabelas
-style_tabela_padrao = ParagraphStyle(
-    "TabelaPadrao",
-    parent=styles["Normal"],
-    fontName="Helvetica",
-    fontSize=9,
-    leading=11,
-    alignment=TA_LEFT,
-)
-
-# Estilo Centralizado
-style_tabela_centro = ParagraphStyle(
-    "TabelaCentro",
-    parent=styles["Normal"],
-    fontName="Helvetica",
-    fontSize=9,
-    leading=11,
-    alignment=TA_CENTER,
-)
-
-# Estilo Alinhado à Esquerda
-style_tabela_esquerda = ParagraphStyle(
-    "TabelaEsquerda",
-    parent=styles["Normal"],
-    fontName="Helvetica",
-    fontSize=9,
-    leading=11,
-    alignment=TA_LEFT,
-)
-
-# Estilo Alinhado à Direita
-style_tabela_direita = ParagraphStyle(
-    "TabelaDireita",
-    parent=styles["Normal"],
-    fontName="Helvetica",
-    fontSize=9,
-    leading=11,
-    alignment=TA_RIGHT,
-)
-
-# Estilo para Cabeçalhos de Tabela
-style_tabela_cabecalho = ParagraphStyle(
-    "TabelaCabecalho",
+# --- ESTILOS DA CAPA DO RELATÓRIO ---
+style_titulo_capa = ParagraphStyle(
+    "TituloCapaISaude",
     parent=styles["Normal"],
     fontName="Helvetica-Bold",
-    fontSize=9,
-    leading=11,
+    fontSize=24,
+    leading=28,
     alignment=TA_CENTER,
-    textColor=colors.whitesmoke,
+    textColor=colors.HexColor("#0D9488"),
+    spaceAfter=15,
+)
+
+style_subtitulo_capa = ParagraphStyle(
+    "SubtituloCapaISaude",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=14,
+    leading=18,
+    alignment=TA_CENTER,
+    textColor=colors.HexColor("#4B5563"),
+    spaceAfter=20,
+)
+
+# ➔ ADICIONE ESTA LINHA:
+style_ano_capa = ParagraphStyle(
+    "AnoCapaISaude",
+    parent=styles["Normal"],
+    fontName="Helvetica-Bold",
+    fontSize=16,
+    leading=20,
+    alignment=TA_CENTER,
+    textColor=colors.HexColor("#1F2937"),
+    spaceAfter=25,
 )
 
 # -----------------------------------------------------------------------------
