@@ -208,316 +208,250 @@ def modal_aviso_link_isaude(qid, links_encontrados):
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}_saude"):
         st.rerun()
 
+import json
+import logging
+import streamlit as st
+from datetime import datetime
+from psycopg2.extras import RealDictCursor
+
 # =============================================================================
-# BANCO DE DADOS NEON (ISOLADO PARA O iSAÚDE)
+# 1. FUNÇÃO DE CONEXÃO AO BANCO NEON POSTGRESQL (Ajuste se necessário)
 # =============================================================================
-def get_connection():
-    """Conecta ao banco Neon PostgreSQL usando st.secrets."""
-    return psycopg2.connect(st.secrets["DATABASE_URL"], sslmode="require")
+# Certifique-se de que get_connection() esteja importada do seu módulo centralizado.
+# ex: from database import get_connection
 
+# =============================================================================
+# 2. GESTÃO DE ESTADO E PERSISTÊNCIA NEON POSTGRES - iSaúde (Padrão iAMB)
+# =============================================================================
 
-def init_db_isaude():
-    """Inicializa a tabela EXCLUSIVA do i-Saúde no PostgreSQL."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS respostas_isaude (
-                        id SERIAL PRIMARY KEY,
-                        ano INT NOT NULL,
-                        quesito VARCHAR(50) NOT NULL,
-                        resposta TEXT,
-                        pontos DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-                        detalhes JSONB DEFAULT '{}'::jsonb,
-                        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT unq_ano_quesito_isaude UNIQUE(ano, quesito)
-                    );
-                    """
-                )
-            conn.commit()
-    except Exception as e:
-        logging.error(f"Erro ao inicializar tabela respostas_isaude: {e}")
-
-
-# Inicializa a tabela do iSaúde ao importar
-try:
-    init_db_isaude()
-except Exception as e:
-    logging.error(f"Erro na inicialização da tabela respostas_isaude: {e}")
-
-
-def load_respostas_isaude(ano):
-    """Carrega EXCLUSIVAMENTE as respostas do i-Saúde do banco."""
-    dados_ano = {}
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT quesito, resposta, pontos, detalhes FROM respostas_isaude WHERE ano = %s",
-                    (int(ano),),
-                )
-                rows = cursor.fetchall()
-                for row in rows:
-                    quesito, resposta, pontos, detalhes_raw = row
-                    
-                    detalhes = detalhes_raw if isinstance(detalhes_raw, dict) else {}
-                    if isinstance(detalhes_raw, str):
-                        try:
-                            detalhes = json.loads(detalhes_raw)
-                        except Exception:
-                            detalhes = {}
-
-                    dados_ano[str(quesito)] = {
-                        "valor": resposta or "",
-                        "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": detalhes.get("link", ""),
-                        "comentarios": detalhes.get("comentarios", []),
-                    }
-    except Exception as e:
-        logging.error(f"Erro ao carregar respostas_isaude do Neon: {e}")
-    return dados_ano
-
-
-def save_resp_isaude(qid, valor, pontos, link, comentarios=None):
-    """Salva a resposta do i-Saúde isolada na tabela respostas_isaude."""
-    ano_sel = st.session_state.get(
-        "ano_referencia_isaude",
-        st.session_state.get("ano_referencia_global", datetime.now().year),
+def get_ano_atual_isaude() -> int:
+    """Recupera o ano de referência ativo para o iSaúde."""
+    return int(
+        st.session_state.get("ano_referencia_isaude")
+        or st.session_state.get("ano_referencia_global")
+        or datetime.now().year
     )
-    if not ano_sel:
-        return
 
-    detalhes_obj = {
+
+def load_respostas_isaude(ano: int = None) -> dict:
+    """Carrega respostas do st.session_state ou do Neon para o iSaúde (modelo iAMB)."""
+    if ano is None:
+        ano = get_ano_atual_isaude()
+
+    key_ano = f"respostas_isaude_{ano}"
+
+    if key_ano not in st.session_state:
+        st.session_state[key_ano] = {}
+        try:
+            with get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(
+                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_isaude WHERE ano = %s",
+                        (int(ano),)
+                    )
+                    rows = cursor.fetchall()
+                    for r in rows:
+                        detalhes = r.get('detalhes') or {}
+                        if isinstance(detalhes, str):
+                            try:
+                                detalhes = json.loads(detalhes)
+                            except Exception:
+                                detalhes = {}
+
+                        st.session_state[key_ano][str(r['quesito'])] = {
+                            "valor": r['resposta'] or "",
+                            "pontos": float(r['pontos'] or 0.0),
+                            "link": detalhes.get("link", ""),
+                            "comentarios": detalhes.get("comentarios", []),
+                            "comentario": detalhes.get("comentario", ""),
+                            "detalhes": detalhes
+                        }
+        except Exception as e:
+            logging.error(f"Erro ao carregar respostas do banco iSaúde: {e}")
+
+    return st.session_state[key_ano]
+
+
+def save_resp_isaude(qid, valor, pontos, link="", comentarios=None, comentario=""):
+    """Salva no Session State e sincroniza no Neon em tempo real (Modelo iAMB)."""
+    ano_int = get_ano_atual_isaude()
+    key_ano = f"respostas_isaude_{ano_int}"
+
+    if key_ano not in st.session_state:
+        st.session_state[key_ano] = {}
+
+    dados_atuais = st.session_state[key_ano].get(str(qid), {})
+
+    if comentarios is None:
+        comentarios = dados_atuais.get("comentarios", [])
+
+    if not comentario:
+        comentario = dados_atuais.get("comentario", "")
+
+    dados_detalhes = {
         "link": str(link or ""),
-        "comentarios": comentarios if comentarios is not None else []
+        "comentarios": comentarios,
+        "comentario": str(comentario or "")
     }
-    detalhes_json = json.dumps(detalhes_obj, ensure_ascii=False)
-    timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # 1. ATUALIZAÇÃO IMEDIATA DO SESSION STATE (Garante reação imediata no Dashboard)
+    dados_salvar = {
+        "valor": str(valor or ""),
+        "pontos": float(pontos or 0.0),
+        "link": str(link or ""),
+        "comentarios": comentarios,
+        "comentario": str(comentario or ""),
+        "detalhes": dados_detalhes,
+        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    st.session_state[key_ano][str(qid)] = dados_salvar
+
+    # 2. PERSISTÊNCIA REATIVA NO POSTGRESQL (NEON)
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    """
+                cursor.execute("""
                     INSERT INTO respostas_isaude (ano, quesito, resposta, pontos, detalhes, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s::jsonb, %s)
-                    ON CONFLICT (ano, quesito) DO UPDATE SET
+                    VALUES (%s, %s, %s, %s, %s::jsonb, CURRENT_TIMESTAMP)
+                    ON CONFLICT (ano, quesito)
+                    DO UPDATE SET
                         resposta = EXCLUDED.resposta,
                         pontos = EXCLUDED.pontos,
                         detalhes = EXCLUDED.detalhes,
-                        atualizado_em = EXCLUDED.atualizado_em;
-                    """,
-                    (
-                        int(ano_sel),
-                        str(qid),
-                        str(valor or ""),
-                        float(pontos or 0.0),
-                        detalhes_json,
-                        timestamp_atual,
-                    ),
-                )
+                        atualizado_em = CURRENT_TIMESTAMP;
+                """, (
+                    int(ano_int),
+                    str(qid),
+                    str(valor or ""),
+                    float(pontos or 0.0),
+                    json.dumps(dados_detalhes, ensure_ascii=False)
+                ))
             conn.commit()
+            return True
     except Exception as e:
-        st.error(f"Erro ao salvar {qid} na tabela respostas_isaude: {e}")
+        logging.error(f"Erro ao salvar resposta do iSaúde no Neon: {e}")
+        st.error(f"Erro ao salvar no banco Neon: {e}")
+        return False
 
 
-def bloco_comentarios_isaude(questao_id, res_data, sufixo="saude"):
-    """Gera o diálogo interno com histórico e gerenciamento de comentários do iSaúde."""
-    ano_sel = st.session_state.get(
-        "ano_referencia_isaude", datetime.now().year
-    )
-    usuario_atual = st.session_state.get(
-        "username", st.session_state.get("usuario", "Usuário Anônimo")
-    )
+# =============================================================================
+# 3. PAINEL DE RESUMO E PONTUAÇÃO (DESEMPENHO DO ISAÚDE)
+# =============================================================================
 
-    id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
-    key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
-    key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
+def render_dashboard_isaude(questoes: list):
+    """Exibe os cartões de status e progresso do iSaúde."""
+    ano = get_ano_atual_isaude()
+    respostas = load_respostas_isaude(ano)
 
-    if key_estado_limpar not in st.session_state:
-        st.session_state[key_estado_limpar] = False
+    total_quesitos = len(questoes)
+    preenchidos = 0
+    pontuacao_obtida = 0.0
+    pontuacao_maxima = 0.0
 
+    for q in questoes:
+        qid = str(q["id"])
+        peso_max = float(q.get("peso", 1.0))
+        pontuacao_maxima += peso_max
+
+        if qid in respostas and respostas[qid].get("valor"):
+            preenchidos += 1
+            pontuacao_obtida += float(respostas[qid].get("pontos", 0.0))
+
+    progresso_pct = (preenchidos / total_quesitos * 100) if total_quesitos > 0 else 0
+    nota_final = (pontuacao_obtida / pontuacao_maxima * 10) if pontuacao_maxima > 0 else 0.0
+
+    # Renderização visual dos cartões de indicadores
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Ano de Referência", f"{ano}")
+    with col2:
+        st.metric("Quesitos Preenchidos", f"{preenchidos} / {total_quesitos}", f"{progresso_pct:.1f}%")
+    with col3:
+        st.metric("Pontuação Total", f"{pontuacao_obtida:.2f} / {pontuacao_maxima:.2f}")
+    with col4:
+        st.metric("Nota iSaúde", f"{nota_final:.2f} / 10.0")
+
+    st.progress(min(progresso_pct / 100.0, 1.0))
     st.markdown("---")
-    dados_questao = res_data.get(questao_id, {})
-    historico = dados_questao.get("comentarios", [])
 
-    status_global = "Resolvido"
-    for com in historico:
-        if "status_definido" in com:
-            status_global = com["status_definido"]
 
-    badge_status = (
-        "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
-    )
+# =============================================================================
+# 4. RENDERIZADOR DE QUESITOS E FORMULÁRIO (PADRÃO IAMB)
+# =============================================================================
 
-    with st.expander(
-        f"💬 Diálogo Interno {id_chave} | Status: {badge_status}",
-        expanded=(status_global == "Pendente"),
-    ):
-        st.markdown(
-            "<b style='font-size: 13px;'>Status Atual do Quesito:</b>",
-            unsafe_allow_html=True,
-        )
-        opcoes_status = ["Resolvido", "Pendente"]
-        idx_status_atual = (
-            opcoes_status.index(status_global)
-            if status_global in opcoes_status
-            else 0
-        )
+def render_modulo_isaude(questoes_isaude: list):
+    """Interface principal do módulo iSaúde."""
+    st.title("🏥 iSaúde - Índice de Saúde")
+    
+    # 1. Renderiza o resumo dinâmico
+    render_dashboard_isaude(questoes_isaude)
 
-        novo_status_clicado = st.radio(
-            f"Definir status para {id_chave}:",
-            options=opcoes_status,
-            index=idx_status_atual,
-            horizontal=True,
-            key=f"rad_status_{id_chave}_{ano_sel}",
-            label_visibility="collapsed",
-        )
+    ano = get_ano_atual_isaude()
+    respostas = load_respostas_isaude(ano)
 
-        if novo_status_clicado != status_global:
-            log_mudanca = {
-                "autor": "Sistema / " + usuario_atual,
-                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
-                "status_definido": novo_status_clicado,
-            }
-            historico.append(log_mudanca)
-            save_resp_isaude(
-                qid=questao_id,
-                valor=dados_questao.get("valor", ""),
-                pontos=dados_questao.get("pontos", 0.0),
-                link=dados_questao.get("link", ""),
-                comentarios=historico,
-            )
-            st.rerun()
+    st.subheader("Formulário de Avaliação")
 
-        st.markdown(
-            "<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True
-        )
+    for questao in questoes_isaude:
+        qid = str(questao["id"])
+        titulo = questao.get("titulo", f"Quesito {qid}")
+        opcoes = questao.get("opcoes", ["Sim", "Não"])
+        pontos_map = questao.get("pontos_map", {})
+        
+        # Recupera dados salvos previamente
+        resp_salva = respostas.get(qid, {})
+        val_atual = resp_salva.get("valor", "")
+        link_atual = resp_salva.get("link", "")
+        obs_atual = resp_salva.get("comentario", "")
 
-        if historico:
-            for idx, com in enumerate(historico):
-                col_balao, col_lixeira = st.columns([11, 1])
-                with col_balao:
-                    if "Sistema /" in com["autor"]:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
-                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{com['autor']} - {com['data']}</span>
-                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057; font-style: italic;">{com['texto']}</p>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                    else:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #0d9488;">
-                                <span style="font-size: 11px; color: #0d9488; font-weight: bold;">{com['autor']}</span>
-                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{com['data']}</span>
-                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{com['texto']}</p>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
+        # Índice padrão para o Selectbox
+        idx_padrao = 0
+        if val_atual in opcoes:
+            idx_padrao = opcoes.index(val_atual) + 1
 
-                with col_lixeira:
-                    st.markdown(
-                        "<div style='margin-top: 10px;'></div>",
-                        unsafe_allow_html=True,
-                    )
-                    if st.button(
-                        "🗑️",
-                        key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}",
-                        help="Excluir este comentário",
-                    ):
-                        historico.pop(idx)
-                        save_resp_isaude(
-                            qid=questao_id,
-                            valor=dados_questao.get("valor", ""),
-                            pontos=dados_questao.get("pontos", 0.0),
-                            link=dados_questao.get("link", ""),
-                            comentarios=historico,
-                        )
-                        st.rerun()
-        else:
-            st.markdown(
-                "<p style='font-size: 12px; color: #999; font-style: italic;'>Nenhum comentário enviado ainda.</p>",
-                unsafe_allow_html=True,
+        opcoes_com_vazio = ["-- Selecione --"] + opcoes
+
+        with st.expander(f"**{qid} - {titulo}**", expanded=False):
+            # Campo de Resposta
+            opcao_sel = st.selectbox(
+                f"Resposta para {qid}",
+                options=opcoes_com_vazio,
+                index=idx_padrao,
+                key=f"select_isaude_{ano}_{qid}"
             )
 
-        st.markdown(
-            "<b style='font-size: 13px;'>Adicionar Novo Comentário:</b>",
-            unsafe_allow_html=True,
-        )
+            # Evidência / Link
+            link_input = st.text_input(
+                "Link da Evidência / Comprovação:",
+                value=link_atual,
+                key=f"link_isaude_{ano}_{qid}"
+            )
 
-        if st.session_state[key_estado_limpar]:
-            st.session_state[key_texto] = ""
-            st.session_state[key_estado_limpar] = False
+            # Observações adicionais
+            obs_input = st.text_area(
+                "Observações / Justificativa:",
+                value=obs_atual,
+                key=f"obs_isaude_{ano}_{qid}"
+            )
 
-        novo_texto = st.text_area(
-            "Digite sua mensagem:",
-            key=key_texto,
-            height=80,
-            label_visibility="collapsed",
-        )
-
-        if st.button(
-            "Postar Comentário",
-            key=f"btn_com_{id_chave}_{ano_sel}",
-            type="primary",
-        ):
-            if novo_texto.strip():
-                nova_mensagem = {
-                    "autor": usuario_atual,
-                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "texto": novo_texto.strip(),
-                    "status_definido": status_global,
-                }
-                historico.append(nova_mensagem)
-                save_resp_isaude(
-                    qid=questao_id,
-                    valor=dados_questao.get("valor", ""),
-                    pontos=dados_questao.get("pontos", 0.0),
-                    link=dados_questao.get("link", ""),
-                    comentarios=historico,
-                )
-                st.session_state[key_estado_limpar] = True
-                st.rerun()
-
-
-def get_all_years_data_isaude():
-    """Busca histórico EXCLUSIVO do i-Saúde no Neon."""
-    all_data = {}
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT quesito, ano, resposta, pontos, detalhes FROM respostas_isaude ORDER BY ano DESC"
-                )
-                rows = cursor.fetchall()
-                for row in rows:
-                    quesito, ano, resposta, pontos, detalhes_raw = row
+            # Ação de Salvar por Quesito
+            if st.button(f"Salvar Quesito {qid}", key=f"btn_save_isaude_{ano}_{qid}"):
+                if opcao_sel != "-- Selecione --":
+                    # Calcula a pontuação correspondente
+                    pts = float(pontos_map.get(opcao_sel, 0.0))
                     
-                    detalhes = detalhes_raw if isinstance(detalhes_raw, dict) else {}
-                    if isinstance(detalhes_raw, str):
-                        try:
-                            detalhes = json.loads(detalhes_raw)
-                        except Exception:
-                            detalhes = {}
-
-                    if ano not in all_data:
-                        all_data[ano] = {}
-                    all_data[ano][str(quesito)] = {
-                        "valor": resposta or "",
-                        "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": detalhes.get("link", ""),
-                        "comentarios": detalhes.get("comentarios", []),
-                    }
-    except Exception as e:
-        logging.error(f"Erro ao buscar histórico do iSaúde no Neon: {e}")
-    return all_data
+                    sucesso = save_resp_isaude(
+                        qid=qid,
+                        valor=opcao_sel,
+                        pontos=pts,
+                        link=link_input,
+                        comentario=obs_input
+                    )
+                    
+                    if sucesso:
+                        st.success(f"Quesito {qid} salvo com sucesso!")
+                        st.rerun()
+                else:
+                    st.warning("Selecione uma opção válida antes de salvar.")
 
 # =============================================================================
 # CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (iSaúde)
