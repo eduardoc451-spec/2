@@ -661,7 +661,37 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
     )
     elements = []
 
-    # Título do Relatório
+    # --- INICIALIZAÇÃO DE ESTILOS DO REPORTLAB ---
+    styles = getSampleStyleSheet()
+
+    style_tabela_cabecalho = ParagraphStyle(
+        "TabelaCabecalho",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=9,
+        leading=11,
+        alignment=TA_CENTER,
+        textColor=colors.whitesmoke,
+    )
+
+    style_tabela_esquerda = ParagraphStyle(
+        "TabelaEsquerda",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        alignment=TA_LEFT,
+    )
+
+    style_tabela_centro = ParagraphStyle(
+        "TabelaCentro",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        alignment=TA_CENTER,
+    )
+
     title_style = ParagraphStyle(
         "DocTitle",
         parent=styles["Heading1"],
@@ -682,6 +712,7 @@ def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
         textColor=colors.HexColor("#4b5563"),
     )
 
+    # --- CONSTRUÇÃO DOS ELEMENTOS DO PDF ---
     elements.append(Paragraph("Relatório de Avaliação - i-Saúde", title_style))
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(f"Ano de Referência: <b>{ano}</b> | Pontuação Total: <b>{total:.2f} pts</b> ({faixa})", subtitle_style))
