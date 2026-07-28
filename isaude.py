@@ -40,13 +40,60 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
-
 # =============================================================================
-# CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (iSaúde)
+# CONFIGURAÇÃO COMPLETA DE ESTILOS DE RELATÓRIO (PDF) - iSaúde
 # =============================================================================
 styles = getSampleStyleSheet()
 
-# --- ESTILOS DA CAPA DO RELATÓRIO ---
+# --- ESTILOS DE TABELA ---
+style_tabela_padrao = ParagraphStyle(
+    "TabelaPadrao",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_LEFT,
+)
+
+style_tabela_centro = ParagraphStyle(
+    "TabelaCentro",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_CENTER,
+)
+
+style_tabela_esquerda = ParagraphStyle(
+    "TabelaEsquerda",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_LEFT,
+)
+
+style_tabela_direita = ParagraphStyle(
+    "TabelaDireita",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=9,
+    leading=11,
+    alignment=TA_RIGHT,
+)
+
+# ➔ VARIÁVEL DO ERRO:
+style_tabela_cabecalho = ParagraphStyle(
+    "TabelaCabecalho",
+    parent=styles["Normal"],
+    fontName="Helvetica-Bold",
+    fontSize=9,
+    leading=11,
+    alignment=TA_CENTER,
+    textColor=colors.whitesmoke,
+)
+
+# --- ESTILOS DE CAPA E TÍTULOS DO RELATÓRIO ---
 style_titulo_capa = ParagraphStyle(
     "TituloCapaISaude",
     parent=styles["Normal"],
@@ -69,7 +116,6 @@ style_subtitulo_capa = ParagraphStyle(
     spaceAfter=20,
 )
 
-# ➔ ADICIONE ESTA LINHA:
 style_ano_capa = ParagraphStyle(
     "AnoCapaISaude",
     parent=styles["Normal"],
