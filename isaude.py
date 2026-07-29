@@ -3584,3 +3584,106 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_11_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("11.2", st.session_state.get(f"links_pendentes_11_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 12.0 • ESTRATÉGIA DE SAÚDE DA FAMÍLIA (ESF)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_12_0_{ano_sel}", border=True):
+            with st.expander(f"📌 QUESITO 12.0 • Estratégia de Saúde da Família (ESF) como Prioridade em {ano_sel}", expanded=True):
+                st.subheader(f"12.0 • Priorização da ESF em {ano_sel}")
+                st.write(
+                    f"**O município adotou a Estratégia de Saúde da Família em sua rede de serviços como a estratégia prioritária de organização da Atenção Básica em {ano_sel}?**"
+                )
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 12.0' para registrar.*")
+
+                opts_12_0 = {
+                    "Selecione...": 0.0,
+                    "Sim – 10": 10.0,
+                    "Não – 00": 0.0
+                }
+
+                # Recupera os dados atuais do banco
+                d12_0 = res_data.get("12.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_12_0 = d12_0.get("valor", "Selecione...")
+                l_salvo_12_0 = d12_0.get("link", "")
+
+                c25, c26 = st.columns([1, 1])
+
+                with c25:
+                    idx_12_0 = list(opts_12_0.keys()).index(v_salvo_12_0) if v_salvo_12_0 in opts_12_0 else 0
+                    sel_12_0 = st.radio(
+                        "Alternativas para o quesito 12.0:",
+                        options=list(opts_12_0.keys()),
+                        index=idx_12_0,
+                        key=f"rb_saude_12_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c26:
+                    link_12_0_input = st.text_area(
+                        "Link/Evidência (Plano Municipal de Saúde ou normativas de reorganização da atenção básica):",
+                        value=l_salvo_12_0,
+                        key=f"txt_saude_12_0_{ano_sel}",
+                        height=100
+                    )
+
+                    # Varre a área de texto em busca de URLs ativas
+                    links_12_0_visuais = re.findall(REGEX_PURE_URL, link_12_0_input or "")
+                    if links_12_0_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_12_0_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("12.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 12.0", key=f"btn_salvar_12_0_{ano_sel}", type="primary"):
+                    val_sel_12_0 = sel_12_0 if sel_12_0 is not None else "Selecione..."
+                    val_lk_12_0 = link_12_0_input.strip()
+                    pts_12_0 = opts_12_0.get(val_sel_12_0, 0.0)
+                    comentarios_historico = d12_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="12.0",
+                        valor=val_sel_12_0,
+                        pontos=pts_12_0,
+                        link=val_lk_12_0,
+                        comentarios=comentarios_historico
+                    )
+
+                    # Verificação de disparo do modal de aviso para novos links digitados
+                    links_atuais_12_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_12_0_input or "")]
+                    links_antigos_12_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_12_0 or "")]
+
+                    if (val_sel_12_0 != v_salvo_12_0 or val_lk_12_0 != l_salvo_12_0) and links_atuais_12_0 and links_atuais_12_0 != links_antigos_12_0:
+                        st.session_state[f"links_pendentes_12_0_{ano_sel}"] = links_atuais_12_0
+                        st.session_state[f"gatilho_modal_12_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 12.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_12_0 = d12_0.get("pontos", 0.0)
+                cor_txt_12_0 = "#28a745" if pts_atuais_12_0 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_12_0}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 12.0: +{pts_atuais_12_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 12.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_12_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.0", st.session_state.get(f"links_pendentes_12_0_{ano_sel}", []), ano_sel)
