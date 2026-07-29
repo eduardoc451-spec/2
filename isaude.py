@@ -1891,3 +1891,223 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_2_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 3.0 • APROVAÇÃO DA PAS (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_3_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 3.0 - Aprovação da Programação Anual de Saúde (PAS) {ano_sel}", expanded=True):
+                st.subheader(f"3.0 • Aprovação da Programação Anual de Saúde (PAS) {ano_sel}")
+                st.write(
+                    f"**Quando ocorreu a aprovação da Programação Anual de Saúde de {ano_sel} pelo Conselho Municipal de Saúde?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.0' para registrar.*")
+
+                # Mapeamento de Opções e Pontuações do Quesito 3.0
+                opcoes_30 = {
+                    "Selecione...": 0.0,
+                    f"Até prazo de envio à Câmara Municipal do projeto de lei de diretrizes orçamentárias {ano_sel} – 10": 10.0,
+                    f"Aprovado após prazo de envio à Câmara Municipal do projeto de lei de diretrizes orçamentárias {ano_sel}, mas antes da aprovação da LDO {ano_sel} pela Câmara Municipal – 07": 7.0,
+                    f"Aprovado após a aprovação da LDO {ano_sel} pela Câmara Municipal – 03": 3.0,
+                    "Não aprovado – 00": 0.0,
+                }
+
+                # Estado inicial / persistente
+                d30 = res_data.get("3.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_30 = d30.get("valor", "Selecione...")
+                evidencia_30_salva = d30.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_30 = f"r_30_{ano_sel}"
+                chave_link_30 = f"l_30_txt_{ano_sel}"
+
+                c30_1, c30_2 = st.columns([1, 1])
+                with c30_1:
+                    lista_opcoes_30 = list(opcoes_30.keys())
+                    idx_30 = lista_opcoes_30.index(v_salvo_30) if v_salvo_30 in lista_opcoes_30 else 0
+
+                    val_radio_30 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_30,
+                        index=idx_30,
+                        key=chave_radio_30,
+                    )
+
+                with c30_2:
+                    link_30 = st.text_area(
+                        f"Link/Evidência (Ata/Resolução do CMS de aprovação da PAS pareada com a LDO {ano_sel}):",
+                        value=evidencia_30_salva,
+                        key=chave_link_30,
+                        placeholder="Insira o link oficial referente ao quesito 3.0...",
+                        height=100,
+                    )
+                    placeholder_links_30 = st.empty()
+                    links_30_visuais = re.findall(REGEX_PURE_URL, link_30 or "")
+                    if links_30_visuais:
+                        placeholder_links_30.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_30_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("3.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 3.0", key=f"btn_salvar_3_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_30, v_salvo_30)
+                    pts_30 = float(opcoes_30.get(val_salvar, 0.0))
+                    lnk_val = link_30.strip()
+
+                    comentarios_historico = d30.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="3.0",
+                        valor=val_salvar,
+                        pontos=pts_30,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_30_salva or "")]
+
+                    if lnk_val != evidencia_30_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 3.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_30 = d30.get("pontos", 0.0)
+                cor_txt_30 = "#28a745" if pts_atuais_30 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_30}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 3.0: +{pts_atuais_30:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 3.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 3.1 • EXECUÇÃO DAS AÇÕES DA PAS (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_3_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 3.1 - Execução das Ações Previstas na PAS {ano_sel}", expanded=True):
+                st.subheader(f"3.1 • Execução das Ações Previstas na PAS {ano_sel}")
+                st.write(
+                    f"**As ações previstas na Programação Anual de Saúde de {ano_sel} foram executadas?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.1' para registrar.*")
+
+                # Mapeamento de Opções e Pontuações do Quesito 3.1
+                opcoes_31 = {
+                    "Selecione...": 0.0,
+                    "Sim, todas as ações foram executadas – 04": 4.0,
+                    "Sim, a maior parte das ações foram executadas – 02": 2.0,
+                    "Sim, a menor parte das ações foram executadas – 01": 1.0,
+                    "Nenhuma ação foi executada – 00": 0.0,
+                }
+
+                # Estado inicial / persistente
+                d31 = res_data.get("3.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_31 = d31.get("valor", "Selecione...")
+                evidencia_31_salva = d31.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_31 = f"r_31_{ano_sel}"
+                chave_link_31 = f"l_31_txt_{ano_sel}"
+
+                c31_1, c31_2 = st.columns([1, 1])
+                with c31_1:
+                    lista_opcoes_31 = list(opcoes_31.keys())
+                    idx_31 = lista_opcoes_31.index(v_salvo_31) if v_salvo_31 in lista_opcoes_31 else 0
+
+                    val_radio_31 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_31,
+                        index=idx_31,
+                        key=chave_radio_31,
+                    )
+
+                with c31_2:
+                    link_31 = st.text_area(
+                        "Link/Evidência (Relatório Anual de Gestão - RAG, balanço de metas físicas):",
+                        value=evidencia_31_salva,
+                        key=chave_link_31,
+                        placeholder="Insira o link oficial referente ao quesito 3.1...",
+                        height=100,
+                    )
+                    placeholder_links_31 = st.empty()
+                    links_31_visuais = re.findall(REGEX_PURE_URL, link_31 or "")
+                    if links_31_visuais:
+                        placeholder_links_31.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_31_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("3.1", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 3.1", key=f"btn_salvar_3_1_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_31, v_salvo_31)
+                    pts_31 = float(opcoes_31.get(val_salvar, 0.0))
+                    lnk_val = link_31.strip()
+
+                    comentarios_historico = d31.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="3.1",
+                        valor=val_salvar,
+                        pontos=pts_31,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_31_salva or "")]
+
+                    if lnk_val != evidencia_31_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_31 = d31.get("pontos", 0.0)
+                cor_txt_31 = "#28a745" if pts_atuais_31 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_31}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 3.1: +{pts_atuais_31:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 3.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []), ano_sel)
