@@ -10977,3 +10977,244 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_19_5_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("19.5", st.session_state.get(f"links_pendentes_19_5_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # SEÇÃO 20 - VIGILÂNCIA EM SAÚDE
+        # =============================================================================
+        st.subheader("🛡️ Seção 20 - Vigilância em Saúde")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 20.0 - GESTÃO DE INSUMOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_gestao_insumos_20_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 20.0 • Tipos de Insumos sob Gestão Municipal ({ano_sel})", expanded=True):
+                st.subheader(f"20.0 • Tipos de Insumos sob Gestão Municipal ({ano_sel})")
+                st.write("**Sobre Vigilância em Saúde, a Prefeitura realiza gestão de quais tipos de insumos?**")
+                st.caption("ℹ️ *Marque as opções aplicáveis, informe o link de evidência e clique no botão 'Salvar Quesito 20.0' para registrar os dados.*")
+
+                d20_0 = res_data.get("20.0") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_200 = d20_0.get("valor", "")
+                l_salvo_200 = d20_0.get("link", "")
+
+                v20_0_list = v_salvo_200.split("|") if v_salvo_200 else []
+
+                c200_1, c200_2 = st.columns([1, 1])
+
+                with c200_1:
+                    st.write("📋 **Selecione os tipos de insumos sob gestão:**")
+                    insumo_imuno = st.checkbox(
+                        "Imunobiológicos (soros, vacinas e imunoglobulinas)",
+                        value="Imunobiológicos" in v20_0_list,
+                        key=f"chk_20_0_imuno_{ano_sel}"
+                    )
+                    insumo_diag = st.checkbox(
+                        "Meios de diagnóstico laboratorial para as doenças sob monitoramento epidemiológico",
+                        value="Diagnóstico" in v20_0_list,
+                        key=f"chk_20_0_diag_{ano_sel}"
+                    )
+                    insumo_vetor = st.checkbox(
+                        "Controle de vetores (inseticidas, larvicidas)",
+                        value="Vetores" in v20_0_list,
+                        key=f"chk_20_0_vetor_{ano_sel}"
+                    )
+                    pts_20_0 = 0.0
+
+                with c200_2:
+                    link_20_0_input = st.text_area(
+                        "Link/Evidência de atos, relatórios de estoque ou sistema de controle (20.0):",
+                        value=l_salvo_200,
+                        key=f"txt_link_20_0_insumos_{ano_sel}",
+                        height=180
+                    )
+
+                    links_200_visuais = re.findall(REGEX_PURE_URL, link_20_0_input or "")
+                    if links_200_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_200_visuais]
+                            )
+                        )
+
+                # Montagem da string dos selecionados
+                selecionados_20_0 = []
+                if insumo_imuno:
+                    selecionados_20_0.append("Imunobiológicos")
+                if insumo_diag:
+                    selecionados_20_0.append("Diagnóstico")
+                if insumo_vetor:
+                    selecionados_20_0.append("Vetores")
+
+                str_20_0 = "|".join(selecionados_20_0)
+
+                # Chat de comentários
+                bloco_comentarios_isaude("20.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 20.0", key=f"btn_salvar_20_0_insumos_{ano_sel}", type="primary"):
+                    val_str_200 = str_20_0
+                    val_lk_200 = link_20_0_input.strip()
+                    comentarios_200 = d20_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="20.0",
+                        valor=val_str_200,
+                        pontos=pts_20_0,
+                        link=val_lk_200,
+                        comentarios=comentarios_200
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_200 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_20_0_input or "")]
+                    links_antigos_200 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_200 or "")]
+
+                    if (val_str_200 != v_salvo_200 or val_lk_200 != l_salvo_200) and links_atuais_200 and links_atuais_200 != links_antigos_200:
+                        st.session_state[f"links_pendentes_20_0_{ano_sel}"] = links_atuais_200
+                        st.session_state[f"gatilho_modal_20_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 20.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 20.0: +{pts_20_0:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 20.0
+        if st.session_state.get(f"gatilho_modal_20_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("20.0", st.session_state.get(f"links_pendentes_20_0_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 20.1 - USO DE FRIGOBAR
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_uso_frigobar_20_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 20.1 • Uso de Frigobar para Imunobiológicos ({ano_sel})", expanded=True):
+                st.subheader(f"20.1 • Uso de Frigobar para Imunobiológicos ({ano_sel})")
+                st.write(
+                    "**A Prefeitura utiliza frigobar para refrigeração, manutenção, monitoramento e controle "
+                    "da temperatura dos imunobiológicos (soros, vacinas e imunoglobulinas)?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 20.1' para registrar os dados.*")
+
+                d20_1 = res_data.get("20.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_201 = d20_1.get("valor", "Selecione...")
+                l_salvo_201 = d20_1.get("link", "")
+
+                opts_20_1 = [
+                    "Selecione...",
+                    "Sim, em todos os estabelecimentos de saúde sob gestão municipal",
+                    "Sim, na maior parte dos estabelecimentos de saúde sob gestão municipal",
+                    "Sim, na menor parte dos estabelecimentos de saúde sob gestão municipal",
+                    "Não"
+                ]
+
+                c201_1, c201_2 = st.columns([1, 1])
+
+                with c201_1:
+                    st.write("📋 **Selecione a extensão de uso de frigobar:**")
+                    idx_201 = opts_20_1.index(v_salvo_201) if v_salvo_201 in opts_20_1 else 0
+
+                    sel_20_1 = st.radio(
+                        "Uso de Frigobar:",
+                        options=opts_20_1,
+                        index=idx_201,
+                        key=f"rad_20_1_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    opcoes_pts_201 = {
+                        "Sim, em todos os estabelecimentos de saúde sob gestão municipal": -5.0,
+                        "Sim, na maior parte dos estabelecimentos de saúde sob gestão municipal": -3.0,
+                        "Sim, na menor parte dos estabelecimentos de saúde sob gestão municipal": -1.0,
+                        "Não": 0.0,
+                        "Selecione...": 0.0
+                    }
+                    pts_20_1 = opcoes_pts_201.get(sel_20_1, 0.0)
+
+                with c201_2:
+                    link_20_1_input = st.text_area(
+                        "Link/Evidência de inventários de equipamentos de rede de frio ou relatórios de vistoria (20.1):",
+                        value=l_salvo_201,
+                        key=f"txt_link_20_1_frigobar_{ano_sel}",
+                        height=180
+                    )
+
+                    links_201_visuais = re.findall(REGEX_PURE_URL, link_20_1_input or "")
+                    if links_201_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_201_visuais]
+                            )
+                        )
+
+                # Feedback visual de regra
+                if sel_20_1 != "Selecione..." and pts_20_1 < 0:
+                    st.error(f"⚠️ Penalidade aplicada: {pts_20_1:.1f} pontos devido ao uso inadequado de frigobar para imunobiológicos.")
+                elif sel_20_1 == "Não":
+                    st.success("✅ Regular: O município não utiliza frigobares para armazenamento de imunobiológicos.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("20.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 20.1", key=f"btn_salvar_20_1_frigobar_{ano_sel}", type="primary"):
+                    val_str_201 = sel_20_1
+                    val_lk_201 = link_20_1_input.strip()
+                    comentarios_201 = d20_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="20.1",
+                        valor=val_str_201,
+                        pontos=pts_20_1,
+                        link=val_lk_201,
+                        comentarios=comentarios_201
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_201 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_20_1_input or "")]
+                    links_antigos_201 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_201 or "")]
+
+                    if (val_str_201 != v_salvo_201 or val_lk_201 != l_salvo_201) and links_atuais_201 and links_atuais_201 != links_antigos_201:
+                        st.session_state[f"links_pendentes_20_1_{ano_sel}"] = links_atuais_201
+                        st.session_state[f"gatilho_modal_20_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 20.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_20_1 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 20.1: {pts_20_1:.1f} pontos (Penalidade)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 20.1: +{pts_20_1:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 20.1
+        if st.session_state.get(f"gatilho_modal_20_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("20.1", st.session_state.get(f"links_pendentes_20_1_{ano_sel}", []), ano_sel)
