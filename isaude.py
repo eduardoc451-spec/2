@@ -9956,3 +9956,208 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_5_4_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.5.4", st.session_state.get(f"links_pendentes_18_5_4_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.5.5 - QUANTIDADE DE VAGAS OFERTADAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_vagas_ofertadas_18_5_5_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.5.5 • Quantidade de Vagas Ofertadas pelo Município ({ano_sel})", expanded=True):
+                st.subheader(f"18.5.5 • Quantidade de Vagas Ofertadas pelo Município ({ano_sel})")
+                st.write("**Informe a quantidade de vagas ofertadas pelo município por categoria:**")
+                st.caption("ℹ️ *Preencha a quantidade das vagas, informe o link de evidência e clique no botão 'Salvar Quesito 18.5.5' para registrar os dados.*")
+
+                d18_5_5 = res_data.get("18.5.5") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_1855 = d18_5_5.get("valor", "")
+                l_salvo_1855 = d18_5_5.get("link", "")
+
+                vals_1855 = v_salvo_1855.split("|") if v_salvo_1855 else []
+                tipos_vagas_ofertadas = [
+                    "I - CAPS I", "II - CAPS II", "III - CAPS III", "IV - CAPS AD",
+                    "V - CAPS AD II", "VI - CAPS AD III", "VII - CAPS i", "VIII - CAPS i II",
+                    "IX - CAPS AD IV", "X - Unidade de Acolhimento Adulto", "XI - Unidade de Acolhimento Infantil"
+                ]
+
+                dict_vals_1855 = {t: 0 for t in tipos_vagas_ofertadas}
+                for v in vals_1855:
+                    if ":" in v:
+                        partes = v.split(":", 1)
+                        if partes[0] in dict_vals_1855:
+                            try:
+                                dict_vals_1855[partes[0]] = int(partes[1])
+                            except ValueError:
+                                pass
+
+                c1855_1, c1855_2 = st.columns([1, 1])
+
+                with c1855_1:
+                    st.write("📋 **Informe o quantitativo de vagas ofertadas:**")
+                    novos_vals_1855 = []
+                    for t in tipos_vagas_ofertadas:
+                        qtd_vagas_of = st.number_input(
+                            f"{t}:",
+                            min_value=0,
+                            step=1,
+                            value=dict_vals_1855[t],
+                            key=f"q1855_v_{t}_{ano_sel}"
+                        )
+                        novos_vals_1855.append(f"{t}:{qtd_vagas_of}")
+
+                    string_estruturada_18_5_5 = "|".join(novos_vals_1855)
+                    pts_18_5_5 = 0.0
+
+                with c1855_2:
+                    link_18_5_5_input = st.text_area(
+                        "Documento ou portaria instrutiva com a capacidade operacional declarada (18.5.5):",
+                        value=l_salvo_1855,
+                        key=f"txt_link_18_5_5_vagas_{ano_sel}",
+                        height=350
+                    )
+
+                    links_1855_visuais = re.findall(REGEX_PURE_URL, link_18_5_5_input or "")
+                    if links_1855_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1855_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.5.5", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.5.5", key=f"btn_salvar_18_5_5_vagas_{ano_sel}", type="primary"):
+                    val_str_1855 = string_estruturada_18_5_5
+                    val_lk_1855 = link_18_5_5_input.strip()
+                    comentarios_1855 = d18_5_5.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.5.5",
+                        valor=val_str_1855,
+                        pontos=pts_18_5_5,
+                        link=val_lk_1855,
+                        comentarios=comentarios_1855
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_1855 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_5_5_input or "")]
+                    links_antigos_1855 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_1855 or "")]
+
+                    if (val_str_1855 != v_salvo_1855 or val_lk_1855 != l_salvo_1855) and links_atuais_1855 and links_atuais_1855 != links_antigos_1855:
+                        st.session_state[f"links_pendentes_18_5_5_{ano_sel}"] = links_atuais_1855
+                        st.session_state[f"gatilho_modal_18_5_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.5.5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 18.5.5: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.5.5
+        if st.session_state.get(f"gatilho_modal_18_5_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.5.5", st.session_state.get(f"links_pendentes_18_5_5_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 18.6 - PROGRAMA DE VOLTA PARA CASA
+        # =============================================================================
+        with st.container(key=f"container_bloco_pvc_18_6_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.6 • Adesão ao Programa De Volta para Casa ({ano_sel})", expanded=True):
+                st.subheader(f"18.6 • Adesão ao Programa De Volta para Casa ({ano_sel})")
+                st.write("**O município aderiu formalmente ao programa “De Volta para Casa” (PVC)?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 18.6' para registrar os dados.*")
+
+                d18_6 = res_data.get("18.6") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_186 = d18_6.get("valor", "Selecione...")
+                l_salvo_186 = d18_6.get("link", "")
+
+                c186_1, c186_2 = st.columns([1, 1])
+
+                with c186_1:
+                    st.write("📋 **Selecione a opção correspondente:**")
+                    opts_18_6 = ["Selecione...", "Sim", "Não"]
+                    idx_186 = opts_18_6.index(v_salvo_186) if v_salvo_186 in opts_18_6 else 0
+                    
+                    sel_18_6 = st.radio(
+                        "Adesão PVC:",
+                        options=opts_18_6,
+                        index=idx_186,
+                        key=f"q186_rad_{ano_sel}"
+                    )
+                    pts_18_6 = 0.0
+
+                with c186_2:
+                    link_18_6_input = st.text_area(
+                        "Termo de adesão ao PVC ou termo de compromisso federal/estadual (18.6):",
+                        value=l_salvo_186,
+                        key=f"txt_link_18_6_pvc_{ano_sel}",
+                        height=200
+                    )
+
+                    links_186_visuais = re.findall(REGEX_PURE_URL, link_18_6_input or "")
+                    if links_186_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_186_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.6", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.6", key=f"btn_salvar_18_6_pvc_{ano_sel}", type="primary"):
+                    val_str_186 = sel_18_6
+                    val_lk_186 = link_18_6_input.strip()
+                    comentarios_186 = d18_6.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.6",
+                        valor=val_str_186,
+                        pontos=pts_18_6,
+                        link=val_lk_186,
+                        comentarios=comentarios_186
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_186 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_6_input or "")]
+                    links_antigos_186 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_186 or "")]
+
+                    if (val_str_186 != v_salvo_186 or val_lk_186 != l_salvo_186) and links_atuais_186 and links_atuais_186 != links_antigos_186:
+                        st.session_state[f"links_pendentes_18_6_{ano_sel}"] = links_atuais_186
+                        st.session_state[f"gatilho_modal_18_6_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.6 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 18.6: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.6
+        if st.session_state.get(f"gatilho_modal_18_6_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.6", st.session_state.get(f"links_pendentes_18_6_{ano_sel}", []), ano_sel)
