@@ -12888,7 +12888,222 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("28.1", st.session_state.get(f"links_pendentes_28_1_{ano_sel}", []), ano_sel)
 
-        st.markdown('</div>', unsafe_allow_html=True)  # Fecha o card geral da Seção 28
+        # -----------------------------------------------------------------------------
+        # QUESITO 28.2 - SERVIÇOS FORA DO PORTAL CROSS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_servicos_fora_cross_28_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 28.2 • Serviços com Lista de Espera Fora do Portal CROSS ({ano_sel})", expanded=True):
+                st.subheader(f"28.2 • Serviços com Lista de Espera Fora do Portal CROSS ({ano_sel})")
+                st.write("**Assinale os serviços da Atenção Especializada com lista de espera que não foram inseridos no sistema de regulação do governo estadual (Portal CROSS):**")
+                st.caption("ℹ️ *Selecione as opções correspondentes, informe o link de evidência e clique no botão 'Salvar Quesito 28.2' para registrar os dados.*")
+
+                d28_2 = res_data.get("28.2") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_282 = d28_2.get("valor", "").split("|") if d28_2.get("valor") else []
+                l_salvo_282 = d28_2.get("link", "")
+
+                servicos_specs = {
+                    "consultas": "Consultas por especialidade",
+                    "exames": "Exames",
+                    "terapias": "Terapias / tratamentos",
+                    "medicamentos": "Medicamentos",
+                    "opm": "OPM",
+                    "cirurgias": "Cirurgias eletivas",
+                    "outros": "Outros"
+                }
+
+                c282_1, c282_2 = st.columns([1, 1])
+                chks_28_2 = []
+                keys_servicos = list(servicos_specs.keys())
+                metade_servicos = (len(keys_servicos) + 1) // 2
+
+                with c282_1:
+                    for k in keys_servicos[:metade_servicos]:
+                        marcado = st.checkbox(
+                            servicos_specs[k],
+                            value=k in v_salvo_282,
+                            key=f"chk_28_2_{k}_{ano_sel}"
+                        )
+                        if marcado:
+                            chks_28_2.append(k)
+
+                with c282_2:
+                    for k in keys_servicos[metade_servicos:]:
+                        marcado = st.checkbox(
+                            servicos_specs[k],
+                            value=k in v_salvo_282,
+                            key=f"chk_28_2_{k}_{ano_sel}"
+                        )
+                        if marcado:
+                            chks_28_2.append(k)
+
+                link_28_2_input = st.text_area(
+                    "Link/Evidência dos serviços fora do portal CROSS (28.2):",
+                    value=l_salvo_282,
+                    key=f"txt_link_28_2_servicos_fora_{ano_sel}",
+                    height=120
+                )
+
+                placeholder_links_282 = st.empty()
+                links_282_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_2_input or "")]
+                if links_282_visuais:
+                    placeholder_links_282.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_282_visuais])
+                    )
+
+                # Feedback visual
+                if chks_28_2:
+                    itens_txt = ", ".join([servicos_specs[k] for k in chks_28_2])
+                    st.success(f"✅ Itens selecionados: **{itens_txt}**")
+                else:
+                    st.warning("⚠️ Nenhum serviço selecionado.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("28.2", res_data)
+
+                # Impacto de pontuação
+                pts_28_2 = 0.0
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 28.2: +{pts_28_2:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 28.2", key=f"btn_salvar_28_2_servicos_fora_{ano_sel}", type="primary"):
+                    val_str_282 = "|".join(chks_28_2)
+                    val_lk_282 = link_28_2_input.strip()
+                    comentarios_282 = d28_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="28.2",
+                        valor=val_str_282,
+                        pontos=pts_28_2,
+                        link=val_lk_282,
+                        comentarios=comentarios_282
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_282 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_2_input or "")]
+                    links_antigos_282 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_282 or "")]
+
+                    if (val_str_282 != d28_2.get("valor", "") or val_lk_282 != l_salvo_282) and links_atuais_282 and links_atuais_282 != links_antigos_282:
+                        st.session_state[f"links_pendentes_28_2_{ano_sel}"] = links_atuais_282
+                        st.session_state[f"gatilho_modal_28_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 28.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 28.2
+        if st.session_state.get(f"gatilho_modal_28_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("28.2", st.session_state.get(f"links_pendentes_28_2_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 28.2.1 - MAIORES TEMPOS DE ESPERA: CONSULTAS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_maiores_esperas_consultas_28_2_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 28.2.1 • Top 3 Consultas Médicas com Maior Tempo de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"28.2.1 • Top 3 Consultas Médicas com Maior Tempo de Espera ({ano_sel})")
+                st.write("**Informe as 3 consultas médicas com maior tempo de espera:**")
+                st.caption("ℹ️ *Preencha as especialidades e os respectivos dias de espera, informe o link e clique no botão 'Salvar Quesito 28.2.1' para registrar os dados.*")
+
+                d28_2_1 = res_data.get("28.2.1") or {
+                    "valor": "|||||",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_2821 = d28_2_1.get("valor", "|||||").split("|")
+                while len(v_salvo_2821) < 6:
+                    v_salvo_2821.append("")
+
+                l_salvo_2821 = d28_2_1.get("link", "")
+
+                c2821_1, c2821_2 = st.columns([1, 1])
+                with c2821_1:
+                    esp_1 = st.text_input("1ª Especialidade médica:", value=v_salvo_2821[0], key=f"txt_2821_esp1_{ano_sel}")
+                    tempo_1 = st.number_input("Tempo médio de espera 1 (em dias):", min_value=0, value=int(v_salvo_2821[1]) if v_salvo_2821[1].isdigit() else 0, key=f"num_2821_t1_{ano_sel}")
+
+                    esp_2 = st.text_input("2ª Especialidade médica:", value=v_salvo_2821[2], key=f"txt_2821_esp2_{ano_sel}")
+                    tempo_2 = st.number_input("Tempo médio de espera 2 (em dias):", min_value=0, value=int(v_salvo_2821[3]) if v_salvo_2821[3].isdigit() else 0, key=f"num_2821_t2_{ano_sel}")
+
+                    esp_3 = st.text_input("3ª Especialidade médica:", value=v_salvo_2821[4], key=f"txt_2821_esp3_{ano_sel}")
+                    tempo_3 = st.number_input("Tempo médio de espera 3 (em dias):", min_value=0, value=int(v_salvo_2821[5]) if v_salvo_2821[5].isdigit() else 0, key=f"num_2821_t3_{ano_sel}")
+
+                with c2821_2:
+                    link_28_2_1_input = st.text_area(
+                        "Link/Evidência do tempo de espera das consultas (28.2.1):",
+                        value=l_salvo_2821,
+                        key=f"txt_link_28_2_1_maiores_esperas_{ano_sel}",
+                        height=210
+                    )
+
+                placeholder_links_2821 = st.empty()
+                links_2821_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_2_1_input or "")]
+                if links_2821_visuais:
+                    placeholder_links_2821.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_2821_visuais])
+                    )
+
+                # Feedback visual
+                preenchidos = [esp for esp in [esp_1, esp_2, esp_3] if esp.strip()]
+                if preenchidos:
+                    st.success(f"✅ Especialidades informadas: **{', '.join(preenchidos)}**")
+                else:
+                    st.warning("⚠️ Nenhuma especialidade informada.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("28.2.1", res_data)
+
+                # Impacto de pontuação
+                pts_28_2_1 = 0.0
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 28.2.1: +{pts_28_2_1:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 28.2.1", key=f"btn_salvar_28_2_1_maiores_esperas_{ano_sel}", type="primary"):
+                    val_str_2821 = f"{esp_1.strip()}|{tempo_1}|{esp_2.strip()}|{tempo_2}|{esp_3.strip()}|{tempo_3}"
+                    val_lk_2821 = link_28_2_1_input.strip()
+                    comentarios_2821 = d28_2_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="28.2.1",
+                        valor=val_str_2821,
+                        pontos=pts_28_2_1,
+                        link=val_lk_2821,
+                        comentarios=comentarios_2821
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_2821 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_2_1_input or "")]
+                    links_antigos_2821 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_2821 or "")]
+
+                    if (val_str_2821 != d28_2_1.get("valor", "") or val_lk_2821 != l_salvo_2821) and links_atuais_2821 and links_atuais_2821 != links_antigos_2821:
+                        st.session_state[f"links_pendentes_28_2_1_{ano_sel}"] = links_atuais_2821
+                        st.session_state[f"gatilho_modal_28_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 28.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 28.2.1
+        if st.session_state.get(f"gatilho_modal_28_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("28.2.1", st.session_state.get(f"links_pendentes_28_2_1_{ano_sel}", []), ano_sel)
 
        
         
