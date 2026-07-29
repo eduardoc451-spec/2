@@ -5123,3 +5123,336 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_15_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.2", st.session_state.get(f"links_pendentes_15_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 15.2.1 • SELEÇÃO DE MEDIDAS APLICADAS PARA EXAMES
+        # =============================================================================
+        with st.container(key=f"card_medidas_aplicadas_exames_15_2_1_{ano_sel}", border=True):
+            with st.expander(f"📋 QUESITO 15.2.1 • Rol de Medidas em Exames Laboratoriais em {ano_sel}", expanded=True):
+                st.subheader(f"15.2.1 • Ações Preventivas e de Confirmação ({ano_sel})")
+                st.write(f"**Assinale as medidas utilizadas para a redução da taxa de absenteísmo de exames médicos na Atenção Básica em {ano_sel}:**")
+                st.caption("ℹ️ *Selecione as opções desejadas, preencha as evidências e clique no botão 'Salvar Quesito 15.2.1' para registrar.*")
+
+                d15_2_1 = res_data.get("15.2.1") or {
+                    "valor": "[]",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                try:
+                    salvos_15_2_1 = json.loads(d15_2_1.get("valor", "[]"))
+                except Exception:
+                    salvos_15_2_1 = []
+
+                l_salvo_15_2_1 = d15_2_1.get("link", "")
+
+                c53, c54 = st.columns([1, 1])
+                with c53:
+                    chk_ex_m1 = st.checkbox(
+                        "Informar e sensibilizar as equipes/profissionais a respeito do absenteísmo e promover capacitações",
+                        value="ex_m1" in salvos_15_2_1,
+                        key=f"chk_15_2_1_m1_ex_{ano_sel}"
+                    )
+                    chk_ex_m2 = st.checkbox(
+                        "Criação de Central de relacionamento para usuário SUS, com disponibilização de canal direto de comunicação",
+                        value="ex_m2" in salvos_15_2_1,
+                        key=f"chk_15_2_1_m2_ex_{ano_sel}"
+                    )
+                    chk_ex_m3 = st.checkbox(
+                        "Ligação telefônica ou outro meio de comunicação para confirmação do exame e presença do paciente",
+                        value="ex_m3" in salvos_15_2_1,
+                        key=f"chk_15_2_1_m3_ex_{ano_sel}"
+                    )
+                    chk_ex_m4 = st.checkbox(
+                        "Orientação das famílias e busca ativa dos faltosos pelos Agentes Comunitários de Saúde (ACS)",
+                        value="ex_m4" in salvos_15_2_1,
+                        key=f"chk_15_2_1_m4_ex_{ano_sel}"
+                    )
+                    chk_ex_m5 = st.checkbox(
+                        "Promoção de campanhas de conscientização",
+                        value="ex_m5" in salvos_15_2_1,
+                        key=f"chk_15_2_1_m5_ex_{ano_sel}"
+                    )
+                    chk_ex_m6 = st.checkbox(
+                        "Outros",
+                        value="ex_m6" in salvos_15_2_1,
+                        key=f"chk_15_2_1_m6_ex_{ano_sel}"
+                    )
+
+                    medidas_ex_selecionadas = []
+                    if chk_ex_m1: medidas_ex_selecionadas.append("ex_m1")
+                    if chk_ex_m2: medidas_ex_selecionadas.append("ex_m2")
+                    if chk_ex_m3: medidas_ex_selecionadas.append("ex_m3")
+                    if chk_ex_m4: medidas_ex_selecionadas.append("ex_m4")
+                    if chk_ex_m5: medidas_ex_selecionadas.append("ex_m5")
+                    if chk_ex_m6: medidas_ex_selecionadas.append("ex_m6")
+
+                with c54:
+                    link_15_2_1_input = st.text_area(
+                        "Link/Evidência (Comprovantes de rotinas de confirmação, campanhas, prints de sistemas de comunicação ou relatórios das centrais de exames):",
+                        value=l_salvo_15_2_1,
+                        key=f"txt_saude_15_2_1_exames_{ano_sel}",
+                        height=210
+                    )
+
+                    links_15_2_1_visuais = re.findall(REGEX_PURE_URL, link_15_2_1_input or "")
+                    if links_15_2_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_15_2_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("15.2.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 15.2.1", key=f"btn_salvar_15_2_1_{ano_sel}", type="primary"):
+                    str_15_2_1_val = json.dumps(medidas_ex_selecionadas)
+                    val_lk_15_2_1 = link_15_2_1_input.strip()
+                    comentarios_15_2_1 = d15_2_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="15.2.1",
+                        valor=str_15_2_1_val,
+                        pontos=0.0,
+                        link=val_lk_15_2_1,
+                        comentarios=comentarios_15_2_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_15_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_15_2_1_input or "")]
+                    links_antigos_15_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_15_2_1 or "")]
+
+                    if (str_15_2_1_val != d15_2_1.get("valor", "[]") or val_lk_15_2_1 != l_salvo_15_2_1) and links_atuais_15_2_1 and links_atuais_15_2_1 != links_antigos_15_2_1:
+                        st.session_state[f"links_pendentes_15_2_1_{ano_sel}"] = links_atuais_15_2_1
+                        st.session_state[f"gatilho_modal_15_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 15.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 15.2.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_15_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.2.1", st.session_state.get(f"links_pendentes_15_2_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 16.0 • PRONTUÁRIO ELETRÔNICO NA ATENÇÃO BÁSICA
+        # =============================================================================
+        with st.container(key=f"container_bloco_pep_atencao_basica_16_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 16.0 - Prontuário Eletrônico na Atenção Básica ({ano_sel})", expanded=True):
+                st.subheader(f"16.0 • Prontuário Eletrônico na Atenção Básica ({ano_sel})")
+                st.write(f"**O município implantou o Prontuário Eletrônico do Paciente na Atenção Básica em {ano_sel}?**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 16.0' para registrar.*")
+
+                opts_16_0 = {
+                    "Selecione...": 0.0,
+                    "Sim, para todos os procedimentos da saúde – 10": 10.0,
+                    "Sim, para a maior parte dos procedimentos da saúde – 07": 7.0,
+                    "Sim, para a menor parte dos procedimentos da saúde – 03": 3.0,
+                    "Não – 00": 0.0
+                }
+
+                d16_0 = res_data.get("16.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_16_0 = d16_0.get("valor", "Selecione...")
+                l_salvo_16_0 = d16_0.get("link", "")
+
+                c160_1, c160_2 = st.columns([1, 1])
+                with c160_1:
+                    lista_opcoes_16_0 = list(opts_16_0.keys())
+                    idx_salvo_16_0 = lista_opcoes_16_0.index(v_salvo_16_0) if v_salvo_16_0 in opts_16_0 else 0
+
+                    sel_16_0 = st.radio(
+                        "Implantação do PEP:",
+                        options=lista_opcoes_16_0,
+                        index=idx_salvo_16_0,
+                        key=f"r_16_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c160_2:
+                    link_16_0_input = st.text_area(
+                        "Link/Evidência (Contrato de software, relatórios de implantação do PEP ou telas do sistema em funcionamento):",
+                        value=l_salvo_16_0,
+                        key=f"t_16_0_{ano_sel}",
+                        height=130
+                    )
+
+                    links_16_0_visuais = re.findall(REGEX_PURE_URL, link_16_0_input or "")
+                    if links_16_0_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_16_0_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("16.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 16.0", key=f"btn_salvar_16_0_{ano_sel}", type="primary"):
+                    val_sel_16_0 = sel_16_0 if sel_16_0 is not None else "Selecione..."
+                    val_lk_16_0 = link_16_0_input.strip()
+                    pts_16_0 = opts_16_0.get(val_sel_16_0, 0.0)
+                    comentarios_16_0 = d16_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="16.0",
+                        valor=val_sel_16_0,
+                        pontos=pts_16_0,
+                        link=val_lk_16_0,
+                        comentarios=comentarios_16_0
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_16_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_16_0_input or "")]
+                    links_antigos_16_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_16_0 or "")]
+
+                    if (val_sel_16_0 != v_salvo_16_0 or val_lk_16_0 != l_salvo_16_0) and links_atuais_16_0 and links_atuais_16_0 != links_antigos_16_0:
+                        st.session_state[f"links_pendentes_16_0_{ano_sel}"] = links_atuais_16_0
+                        st.session_state[f"gatilho_modal_16_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 16.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_16_0 = d16_0.get("pontos", 0.0)
+                cor_txt_16_0 = "#28a745" if pts_atuais_16_0 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_16_0}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 16.0: +{pts_atuais_16_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 16.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_16_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.0", st.session_state.get(f"links_pendentes_16_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 16.1 • SERVIÇOS INSERIDOS NO PRONTUÁRIO ELETRÔNICO
+        # =============================================================================
+        with st.container(key=f"container_bloco_servicos_pep_16_1_{ano_sel}", border=True):
+            with st.expander(f"📋 QUESITO 16.1 • Serviços Integrados ao Prontuário Eletrônico em {ano_sel}", expanded=True):
+                st.subheader(f"16.1 • Escopo Funcional do PEP ({ano_sel})")
+                st.write(f"**Assinale os serviços da Atenção Básica inseridos no Prontuário Eletrônico do Paciente em {ano_sel}:**")
+                st.caption("ℹ️ *A pontuação deste quesito é cumulativa (1 ponto por serviço assinalado, exceto 'Outros').*")
+                st.caption("ℹ️ *Selecione as opções desejadas, preencha as evidências e clique no botão 'Salvar Quesito 16.1' para registrar.*")
+
+                d16_1 = res_data.get("16.1") or {
+                    "valor": "[]",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                try:
+                    salvos_16_1 = json.loads(d16_1.get("valor", "[]"))
+                except Exception:
+                    salvos_16_1 = []
+
+                l_salvo_16_1 = d16_1.get("link", "")
+
+                c57, c58 = st.columns([1, 1])
+                with c57:
+                    chk_pep1 = st.checkbox("Atendimento pela ESF – 01", value="pep1" in salvos_16_1, key=f"chk_16_1_pep1_{ano_sel}")
+                    chk_pep2 = st.checkbox("Consultas médicas em Atenção Primária – 01", value="pep2" in salvos_16_1, key=f"chk_16_1_pep2_{ano_sel}")
+                    chk_pep3 = st.checkbox("Exames laboratoriais – 01", value="pep3" in salvos_16_1, key=f"chk_16_1_pep3_{ano_sel}")
+                    chk_pep4 = st.checkbox("Terapias / tratamentos – 01", value="pep4" in salvos_16_1, key=f"chk_16_1_pep4_{ano_sel}")
+                    chk_pep5 = st.checkbox("Medicamentos – 01", value="pep5" in salvos_16_1, key=f"chk_16_1_pep5_{ano_sel}")
+                    chk_pep6 = st.checkbox("Outros – 00", value="pep6" in salvos_16_1, key=f"chk_16_1_pep6_{ano_sel}")
+
+                    # Cálculo dinâmico e cumulativo da pontuação
+                    servicos_selecionados = []
+                    pts_calculados_16_1 = 0.0
+
+                    if chk_pep1:
+                        servicos_selecionados.append("pep1")
+                        pts_calculados_16_1 += 1.0
+                    if chk_pep2:
+                        servicos_selecionados.append("pep2")
+                        pts_calculados_16_1 += 1.0
+                    if chk_pep3:
+                        servicos_selecionados.append("pep3")
+                        pts_calculados_16_1 += 1.0
+                    if chk_pep4:
+                        servicos_selecionados.append("pep4")
+                        pts_calculados_16_1 += 1.0
+                    if chk_pep5:
+                        servicos_selecionados.append("pep5")
+                        pts_calculados_16_1 += 1.0
+                    if chk_pep6:
+                        servicos_selecionados.append("pep6")
+
+                with c58:
+                    link_16_1_input = st.text_area(
+                        "Link/Evidência (Telas exemplares do PEP mostrando os módulos ativos de ESF, exames, receitas ou terapias):",
+                        value=l_salvo_16_1,
+                        key=f"txt_saude_16_1_pep_{ano_sel}",
+                        height=210
+                    )
+
+                    links_16_1_visuais = re.findall(REGEX_PURE_URL, link_16_1_input or "")
+                    if links_16_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_16_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("16.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 16.1", key=f"btn_salvar_16_1_{ano_sel}", type="primary"):
+                    str_16_1_val = json.dumps(servicos_selecionados)
+                    val_lk_16_1 = link_16_1_input.strip()
+                    comentarios_16_1 = d16_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="16.1",
+                        valor=str_16_1_val,
+                        pontos=pts_calculados_16_1,
+                        link=val_lk_16_1,
+                        comentarios=comentarios_16_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_16_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_16_1_input or "")]
+                    links_antigos_16_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_16_1 or "")]
+
+                    if (str_16_1_val != d16_1.get("valor", "[]") or val_lk_16_1 != l_salvo_16_1) and links_atuais_16_1 and links_atuais_16_1 != links_antigos_16_1:
+                        st.session_state[f"links_pendentes_16_1_{ano_sel}"] = links_atuais_16_1
+                        st.session_state[f"gatilho_modal_16_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 16.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_16_1 = d16_1.get("pontos", 0.0)
+                cor_txt_16_1 = "#28a745" if pts_atuais_16_1 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_16_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 16.1: +{pts_atuais_16_1:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 16.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_16_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("16.1", st.session_state.get(f"links_pendentes_16_1_{ano_sel}", []), ano_sel)
