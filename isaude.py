@@ -13909,3 +13909,303 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_30_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("30.0", st.session_state.get(f"links_pendentes_30_0_{ano_sel}", []), ano_sel)
+
+# -----------------------------------------------------------------------------
+        # QUESITO 30.1 - POSSUI CENTRAL DE REGULAÇÃO
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_central_regulacao_30_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 30.1 • Central de Regulação ({ano_sel})", expanded=True):
+                st.subheader(f"30.1 • Central de Regulação ({ano_sel})")
+                st.write("**O Complexo Regulador Municipal possui Central de Regulação?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 30.1' para registrar as alterações.*")
+
+                opts_30_1 = ["Selecione...", "Sim", "Não"]
+
+                d30_1 = res_data.get("30.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_301 = d30_1.get("valor", "Selecione...")
+                idx_30_1 = opts_30_1.index(v_salvo_301) if v_salvo_301 in opts_30_1 else 0
+                l_salvo_301 = d30_1.get("link", "")
+
+                c301_1, c301_2 = st.columns([1, 1])
+                with c301_1:
+                    sel_30_1 = st.radio(
+                        "Possui central:",
+                        options=opts_30_1,
+                        index=idx_30_1,
+                        key=f"rad_30_1_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c301_2:
+                    link_30_1_input = st.text_area(
+                        "Link/Evidência da Central de Regulação (30.1):",
+                        value=l_salvo_301,
+                        key=f"txt_link_30_1_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_301 = st.empty()
+                links_301_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_30_1_input or "")]
+                if links_301_visuais:
+                    placeholder_links_301.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_301_visuais])
+                    )
+
+                # Feedback visual e Pontuação
+                pts_30_1 = 0.0
+                if sel_30_1 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_30_1}**")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("30.1", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 30.1: +{pts_30_1:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 30.1", key=f"btn_salvar_30_1_{ano_sel}", type="primary"):
+                    val_str_301 = sel_30_1
+                    val_lk_301 = link_30_1_input.strip()
+                    comentarios_301 = d30_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="30.1",
+                        valor=val_str_301,
+                        pontos=pts_30_1,
+                        link=val_lk_301,
+                        comentarios=comentarios_301
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_301 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_30_1_input or "")]
+                    links_antigos_301 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_301 or "")]
+
+                    if (val_str_301 != d30_1.get("valor", "") or val_lk_301 != l_salvo_301) and links_atuais_301 and links_atuais_301 != links_antigos_301:
+                        st.session_state[f"links_pendentes_30_1_{ano_sel}"] = links_atuais_301
+                        st.session_state[f"gatilho_modal_30_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 30.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 30.1
+        if st.session_state.get(f"gatilho_modal_30_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("30.1", st.session_state.get(f"links_pendentes_30_1_{ano_sel}", []), ano_sel)
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 30.1.1 - TIPOS DE CENTRAL UTILIZADOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_tipos_central_30_1_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 30.1.1 • Tipos de Central de Regulação Utilizados ({ano_sel})", expanded=True):
+                st.subheader(f"30.1.1 • Tipos de Central de Regulação Utilizados ({ano_sel})")
+                st.write("**Assinale os tipos de central de regulação municipal ou regional utilizados pelo município:**")
+                st.caption("ℹ️ *Selecione as opções desejadas, informe o link de comprovação e clique no botão 'Salvar Quesito 30.1.1' para registrar os dados.*")
+
+                d30_1_1 = res_data.get("30.1.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_3011 = d30_1_1.get("valor", "").split("|")
+                l_salvo_3011 = d30_1_1.get("link", "")
+
+                central_specs = {
+                    "urgencia": {"text": "Central de Urgência – 03", "pts": 3.0},
+                    "internacoes": {"text": "Central de Internações – 03", "pts": 3.0},
+                    "consultas_servicos": {"text": "Central de Consultas e Serviços de Apoio Diagnóstico e terapêutico – 03", "pts": 3.0}
+                }
+
+                c3011_1, c3011_2 = st.columns([1, 1])
+                chks_selecionados_3011 = []
+                pts_totais_30_1_1 = 0.0
+
+                with c3011_1:
+                    for k, spec in central_specs.items():
+                        marcado = st.checkbox(
+                            spec["text"],
+                            value=k in v_salvo_3011,
+                            key=f"chk_30_1_1_{k}_{ano_sel}"
+                        )
+                        if marcado:
+                            chks_selecionados_3011.append(k)
+                            pts_totais_30_1_1 += spec["pts"]
+
+                with c3011_2:
+                    link_30_1_1_input = st.text_area(
+                        "Link/Evidência dos tipos de central (30.1.1):",
+                        value=l_salvo_3011,
+                        key=f"txt_link_30_1_1_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_3011 = st.empty()
+                links_3011_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_30_1_input or "")]
+                if links_3011_visuais:
+                    placeholder_links_3011.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_3011_visuais])
+                    )
+
+                # Feedback visual
+                if chks_selecionados_3011:
+                    st.success(f"✅ {len(chks_selecionados_3011)} opção(ões) selecionada(s).")
+                else:
+                    st.warning("⚠️ Nenhum tipo de central foi selecionado.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("30.1.1", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#198754; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 30.1.1: +{pts_totais_30_1_1:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 30.1.1", key=f"btn_salvar_30_1_1_{ano_sel}", type="primary"):
+                    val_str_3011 = "|".join(chks_selecionados_3011)
+                    val_lk_3011 = link_30_1_1_input.strip()
+                    comentarios_3011 = d30_1_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="30.1.1",
+                        valor=val_str_3011,
+                        pontos=pts_totais_30_1_1,
+                        link=val_lk_3011,
+                        comentarios=comentarios_3011
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_3011 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_30_1_1_input or "")]
+                    links_antigos_3011 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_3011 or "")]
+
+                    if (val_str_3011 != d30_1_1.get("valor", "") or val_lk_3011 != l_salvo_3011) and links_atuais_3011 and links_atuais_3011 != links_antigos_3011:
+                        st.session_state[f"links_pendentes_30_1_1_{ano_sel}"] = links_atuais_3011
+                        st.session_state[f"gatilho_modal_30_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 30.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 30.1.1
+        if st.session_state.get(f"gatilho_modal_30_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("30.1.1", st.session_state.get(f"links_pendentes_30_1_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # SEÇÃO 31 - ATENÇÃO PRÉ-HOSPITALAR E SAMU 192
+        # =============================================================================
+        st.markdown("### 🚑 Seção 31 - Atenção Pré-Hospitalar e SAMU 192")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 31.0 - SERVIÇO PRÉ-HOSPITALAR E INTEGRAÇÃO SAMU 192
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_pre_hospitalar_samu_31_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 31.0 • Serviço Pré-Hospitalar e Integração SAMU 192 ({ano_sel})", expanded=True):
+                st.subheader(f"31.0 • Serviço Pré-Hospitalar e Integração SAMU 192 ({ano_sel})")
+                st.write("**O município possui serviços de atenção pré-hospitalar e Central Samu 192 ou integra Central Samu 192 de abrangência regional?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 31.0' para registrar as alterações.*")
+
+                opts_31_0 = ["Selecione...", "Sim", "Não"]
+
+                d31_0 = res_data.get("31.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_310 = d31_0.get("valor", "Selecione...")
+                idx_31_0 = opts_31_0.index(v_salvo_310) if v_salvo_310 in opts_31_0 else 0
+                l_salvo_310 = d31_0.get("link", "")
+
+                c310_1, c310_2 = st.columns([1, 1])
+                with c310_1:
+                    sel_31_0 = st.radio(
+                        "Atenção pré-hospitalar / SAMU:",
+                        options=opts_31_0,
+                        index=idx_31_0,
+                        key=f"rad_31_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c310_2:
+                    link_31_0_input = st.text_area(
+                        "Link/Evidência da atenção pré-hospitalar / SAMU (31.0):",
+                        value=l_salvo_310,
+                        key=f"txt_link_31_0_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_310 = st.empty()
+                links_310_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_0_input or "")]
+                if links_310_visuais:
+                    placeholder_links_310.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_310_visuais])
+                    )
+
+                # Feedback visual e Pontuação Informativa
+                pts_31_0 = 0.0
+                if sel_31_0 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_31_0}**")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("31.0", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 31.0: +{pts_31_0:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 31.0", key=f"btn_salvar_31_0_{ano_sel}", type="primary"):
+                    val_str_310 = sel_31_0
+                    val_lk_310 = link_31_0_input.strip()
+                    comentarios_310 = d31_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="31.0",
+                        valor=val_str_310,
+                        pontos=pts_31_0,
+                        link=val_lk_310,
+                        comentarios=comentarios_310
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_310 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_0_input or "")]
+                    links_antigos_310 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_310 or "")]
+
+                    if (val_str_310 != d31_0.get("valor", "") or val_lk_310 != l_salvo_310) and links_atuais_310 and links_atuais_310 != links_antigos_310:
+                        st.session_state[f"links_pendentes_31_0_{ano_sel}"] = links_atuais_310
+                        st.session_state[f"gatilho_modal_31_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 31.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 31.0
+        if st.session_state.get(f"gatilho_modal_31_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("31.0", st.session_state.get(f"links_pendentes_31_0_{ano_sel}", []), ano_sel)
