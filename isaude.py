@@ -1659,7 +1659,7 @@ def mostrar_formulario_saude():
             "ℹ *Atenção à consistência dos dados salvos no banco. Salvamento automático via callback.*"
         )
 
-   # =============================================================================
+  # =============================================================================
         # QUESITO 1.0 • PLANO MUNICIPAL DE SAÚDE (MODELO PADRONIZADO iGov / iSaúde)
         # =============================================================================
         with st.container(key=f"container_bloco_isaude_1_0_{ano_sel}", border=True):
