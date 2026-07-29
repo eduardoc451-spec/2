@@ -9124,3 +9124,107 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_3_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.3", st.session_state.get(f"links_pendentes_18_3_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.4 - INDICADORES ESPECÍFICOS DA ATENÇÃO PSICOSSOCIAL
+        # =============================================================================
+        with st.container(key=f"container_bloco_indicadores_18_4_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.4 • Indicadores da Atenção Psicossocial ({ano_sel})", expanded=True):
+                st.subheader(f"18.4 • Indicadores da Atenção Psicossocial ({ano_sel})")
+                st.write("**O município possui indicadores específicos para a Atenção Psicossocial?**")
+                st.caption("ℹ️ *Selecione uma alternativa, informe o link de evidência e clique no botão 'Salvar Quesito 18.4' para registrar os dados.*")
+
+                d18_4 = res_data.get("18.4") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_184 = d18_4.get("valor", "Selecione...")
+                l_salvo_184 = d18_4.get("link", "")
+
+                opts_18_4 = {
+                    "Selecione...": 0.0,
+                    "Sim – 00": 0.0,
+                    "Não – -05 (perde 05 pontos)": -5.0
+                }
+
+                labels_184 = list(opts_18_4.keys())
+                if v_salvo_184 not in labels_184:
+                    v_salvo_184 = "Selecione..."
+
+                idx_184 = labels_184.index(v_salvo_184)
+
+                c184_1, c184_2 = st.columns([1, 1])
+
+                with c184_1:
+                    st.write("📋 **Selecione uma alternativa:**")
+                    sel_18_4 = st.radio(
+                        "Possui indicadores específicos:",
+                        options=labels_184,
+                        index=idx_184,
+                        key=f"rad_indicadores_18_4_sel_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    pts_18_4 = opts_18_4.get(sel_18_4, 0.0)
+
+                with c184_2:
+                    link_18_4_input = st.text_area(
+                        "Link/Evidência dos Indicadores (18.4):",
+                        value=l_salvo_184,
+                        key=f"txt_link_18_4_indicadores_{ano_sel}",
+                        height=150
+                    )
+
+                    links_184_visuais = re.findall(REGEX_PURE_URL, link_18_4_input or "")
+                    if links_184_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_184_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.4", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.4", key=f"btn_salvar_18_4_indicadores_{ano_sel}", type="primary"):
+                    val_str_184 = sel_18_4
+                    val_lk_184 = link_18_4_input.strip()
+                    comentarios_184 = d18_4.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.4",
+                        valor=val_str_184,
+                        pontos=pts_18_4,
+                        link=val_lk_184,
+                        comentarios=comentarios_184
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_184 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_4_input or "")]
+                    links_antigos_184 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_184 or "")]
+
+                    if (val_str_184 != v_salvo_184 or val_lk_184 != l_salvo_184) and links_atuais_184 and links_atuais_184 != links_antigos_184:
+                        st.session_state[f"links_pendentes_18_4_{ano_sel}"] = links_atuais_184
+                        st.session_state[f"gatilho_modal_18_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição dinâmica do impacto de pontuação
+                if sel_18_4 == "Selecione...":
+                    st.markdown("<span style='color:#6c757d; font-weight:bold;'>📊 Pontuação Aplicada no Quesito 18.4: Aguardando seleção...</span>", unsafe_allow_html=True)
+                elif pts_18_4 < 0:
+                    st.markdown(f"<span style='color:#dc3545; font-weight:bold;'>📊 Pontuação Aplicada no Quesito 18.4: {pts_18_4:.1f} pontos (Penalidade)</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<span style='color:#28a745; font-weight:bold;'>📊 Pontuação Aplicada no Quesito 18.4: +{pts_18_4:.1f} pontos</span>", unsafe_allow_html=True)
+
+        # GATILHO DO MODAL 18.4
+        if st.session_state.get(f"gatilho_modal_18_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.4", st.session_state.get(f"links_pendentes_18_4_{ano_sel}", []), ano_sel)
