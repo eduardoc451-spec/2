@@ -8916,3 +8916,108 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_2_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.2.1", st.session_state.get(f"links_pendentes_18_2_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.2.1.1 - METAS ATINGIDAS NO EXERCÍCIO ANTERIOR
+        # =============================================================================
+        with st.container(key=f"container_bloco_metas_18_2_1_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.2.1.1 • Metas Atingidas no Exercício Anterior ({ano_sel})", expanded=True):
+                st.subheader(f"18.2.1.1 • Metas Atingidas no Exercício Anterior ({ano_sel})")
+                st.write("**As metas estabelecidas para o exercício 2025 foram atingidas?**")
+                st.caption("ℹ️ *Selecione uma alternativa, informe o link de evidência e clique no botão 'Salvar Quesito 18.2.1.1' para registrar os dados.*")
+
+                d18_2_1_1 = res_data.get("18.2.1.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_18211 = d18_2_1_1.get("valor", "Selecione...")
+                l_salvo_18211 = d18_2_1_1.get("link", "")
+
+                opts_18_2_1_1 = {
+                    "Selecione...": 0.0,
+                    "Sim, todas as metas foram atingidas": 0.0,
+                    "Sim, a maior parte das metas foram atingidas": 0.0,
+                    "Sim, a menor parte das metas foram atingidas": 0.0,
+                    "Não": 0.0
+                }
+
+                labels_18211 = list(opts_18_2_1_1.keys())
+                if v_salvo_18211 not in labels_18211:
+                    v_salvo_18211 = "Selecione..."
+
+                idx_18211 = labels_18211.index(v_salvo_18211)
+
+                c18211_1, c18211_2 = st.columns([1, 1])
+
+                with c18211_1:
+                    st.write("📋 **Selecione uma alternativa:**")
+                    sel_18_2_1_1 = st.radio(
+                        "Metas atingidas:",
+                        options=labels_18211,
+                        index=idx_18211,
+                        key=f"rad_metas_18_2_1_1_sel_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    pts_18_2_1_1 = opts_18_2_1_1.get(sel_18_2_1_1, 0.0)
+
+                with c18211_2:
+                    link_18_2_1_1_input = st.text_area(
+                        "Link/Evidência do Relatório de Metas (18.2.1.1):",
+                        value=l_salvo_18211,
+                        key=f"txt_link_18_2_1_1_metas_{ano_sel}",
+                        height=150
+                    )
+
+                    links_18211_visuais = re.findall(REGEX_PURE_URL, link_18_2_1_1_input or "")
+                    if links_18211_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_18211_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.2.1.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.2.1.1", key=f"btn_salvar_18_2_1_1_metas_{ano_sel}", type="primary"):
+                    val_str_18211 = sel_18_2_1_1
+                    val_lk_18211 = link_18_2_1_1_input.strip()
+                    comentarios_18211 = d18_2_1_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.2.1.1",
+                        valor=val_str_18211,
+                        pontos=pts_18_2_1_1,
+                        link=val_lk_18211,
+                        comentarios=comentarios_18211
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_18211 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_2_1_1_input or "")]
+                    links_antigos_18211 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_18211 or "")]
+
+                    if (val_str_18211 != v_salvo_18211 or val_lk_18211 != l_salvo_18211) and links_atuais_18211 and links_atuais_18211 != links_antigos_18211:
+                        st.session_state[f"links_pendentes_18_2_1_1_{ano_sel}"] = links_atuais_18211
+                        st.session_state[f"gatilho_modal_18_2_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.2.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 18.2.1.1: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.2.1.1
+        if st.session_state.get(f"gatilho_modal_18_2_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.2.1.1", st.session_state.get(f"links_pendentes_18_2_1_1_{ano_sel}", []), ano_sel)
