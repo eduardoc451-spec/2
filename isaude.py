@@ -13203,7 +13203,6 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("28.2.2", st.session_state.get(f"links_pendentes_28_2_2_{ano_sel}", []), ano_sel)
 
-
         # -----------------------------------------------------------------------------
         # QUESITO 28.2.3 - MAIORES TEMPOS DE ESPERA: TERAPIAS
         # -----------------------------------------------------------------------------
