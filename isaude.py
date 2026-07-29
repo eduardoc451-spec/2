@@ -14209,3 +14209,377 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_31_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("31.0", st.session_state.get(f"links_pendentes_31_0_{ano_sel}", []), ano_sel)
+
+# -----------------------------------------------------------------------------
+        # QUESITO 31.1 - TEMPO DE RESPOSTA DO SAMU (TMR)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_tempo_resposta_samu_31_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 31.1 • Tempo de Resposta em Minutos dos Atendimentos do SAMU ({ano_sel})", expanded=True):
+                st.subheader(f"31.1 • Tempo de Resposta em Minutos dos Atendimentos do SAMU ({ano_sel})")
+                st.write("**Informe o tempo de resposta em minutos dos atendimentos do SAMU (ou equivalente):**")
+                st.caption("ℹ️ *Preencha os tempos numéricos, informe o link de comprovação e clique no botão 'Salvar Quesito 31.1' para registrar as alterações.*")
+
+                # Cálculo dinâmico dos anos baseado no ano selecionado
+                try:
+                    ano_atual_int = int(ano_sel)
+                except (ValueError, TypeError):
+                    ano_atual_int = 2025
+
+                ano_tmr2 = ano_atual_int - 2
+                ano_tmr1 = ano_atual_int - 1
+                ano_tmr = ano_atual_int
+
+                st.caption(
+                    f"ℹ️ *Fórmula de avaliação baseada no Ano Selecionado ({ano_tmr}):* "
+                    f"Melhoria ou Estabilidade = 0.0 pontos | Piora [TMR > ({ano_tmr2} + {ano_tmr1}) / 2] = -5.0 pontos"
+                )
+
+                d31_1 = res_data.get("31.1") or {
+                    "valor": "0|0|0|0|0|0|0|0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_311 = (d31_1.get("valor") or "0|0|0|0|0|0|0|0|0").split("|")
+                while len(v_salvo_311) < 9:
+                    v_salvo_311.append("0")
+
+                l_salvo_311 = d31_1.get("link", "")
+
+                c311_1, c311_2 = st.columns([1.2, 1])
+
+                with c311_1:
+                    df_tmr_inicial = pd.DataFrame(
+                        {
+                            "Mínimo (min)": [int(v_salvo_311[0]) if v_salvo_311[0].isdigit() else 0, int(v_salvo_311[3]) if v_salvo_311[3].isdigit() else 0, int(v_salvo_311[6]) if v_salvo_311[6].isdigit() else 0],
+                            "Médio (min)": [int(v_salvo_311[1]) if v_salvo_311[1].isdigit() else 0, int(v_salvo_311[4]) if v_salvo_311[4].isdigit() else 0, int(v_salvo_311[7]) if v_salvo_311[7].isdigit() else 0],
+                            "Máximo (min)": [int(v_salvo_311[2]) if v_salvo_311[2].isdigit() else 0, int(v_salvo_311[5]) if v_salvo_311[5].isdigit() else 0, int(v_salvo_311[8]) if v_salvo_311[8].isdigit() else 0]
+                        },
+                        index=[f"Ano {ano_tmr2} (TMR-2)", f"Ano {ano_tmr1} (TMR-1)", f"Ano {ano_tmr} (Atual)"]
+                    )
+
+                    df_tmr_editado = st.data_editor(
+                        df_tmr_inicial,
+                        key=f"editor_tmr_31_1_{ano_sel}",
+                        use_container_width=True,
+                        column_config={
+                            "Mínimo (min)": st.column_config.NumberColumn(min_value=0, step=1, format="%d"),
+                            "Médio (min)": st.column_config.NumberColumn(min_value=0, step=1, format="%d"),
+                            "Máximo (min)": st.column_config.NumberColumn(min_value=0, step=1, format="%d")
+                        }
+                    )
+
+                    tmr2_min = int(df_tmr_editado.iloc[0]["Mínimo (min)"])
+                    tmr2_med = int(df_tmr_editado.iloc[0]["Médio (min)"])
+                    tmr2_max = int(df_tmr_editado.iloc[0]["Máximo (min)"])
+
+                    tmr1_min = int(df_tmr_editado.iloc[1]["Mínimo (min)"])
+                    tmr1_med = int(df_tmr_editado.iloc[1]["Médio (min)"])
+                    tmr1_max = int(df_tmr_editado.iloc[1]["Máximo (min)"])
+
+                    tmr_min = int(df_tmr_editado.iloc[2]["Mínimo (min)"])
+                    tmr_med = int(df_tmr_editado.iloc[2]["Médio (min)"])
+                    tmr_max = int(df_tmr_editado.iloc[2]["Máximo (min)"])
+
+                with c311_2:
+                    link_31_1_input = st.text_area(
+                        "Link/Evidência do Tempo de Resposta do SAMU (31.1):",
+                        value=l_salvo_311,
+                        key=f"txt_link_31_1_{ano_sel}",
+                        height=150
+                    )
+
+                placeholder_links_311 = st.empty()
+                links_311_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_1_input or "")]
+                if links_311_visuais:
+                    placeholder_links_311.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_311_visuais])
+                    )
+
+                # Regra e cálculo de pontuação
+                meta_media = (tmr2_med + tmr1_med) / 2.0
+                
+                m1, m2 = st.columns(2)
+                m1.metric(label=f"Média dos Anos Anteriores ({ano_tmr2} e {ano_tmr1})", value=f"{meta_media:.1f} min")
+                m2.metric(label=f"Tempo Médio Atual ({ano_tmr})", value=f"{tmr_med} min", delta=f"{tmr_med - meta_media:.1f} min", delta_color="inverse")
+
+                if tmr2_med == 0 and tmr1_med == 0 and tmr_med == 0:
+                    pts_31_1 = 0.0
+                    st.info("ℹ️ **Status:** Preencha os tempos médios dos anos para calcular a regra de pontuação.")
+                elif tmr_med > meta_media:
+                    pts_31_1 = -5.0
+                    st.error(f"⚠️ O Tempo Médio de Resposta atual ({tmr_med} min) é maior que a média anterior ({meta_media:.1f} min). Penalidade Aplicada: `-5.0 pontos`.")
+                else:
+                    pts_31_1 = 0.0
+                    st.success(f"✅ O Tempo Médio de Resposta atual ({tmr_med} min) manteve estabilidade ou melhoria em relação à média anterior ({meta_media:.1f} min). Sem penalidade: `0.0 pontos`.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("31.1", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 31.1: {pts_31_1:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 31.1", key=f"btn_salvar_31_1_{ano_sel}", type="primary"):
+                    val_str_311 = f"{tmr2_min}|{tmr2_med}|{tmr2_max}|{tmr1_min}|{tmr1_med}|{tmr1_max}|{tmr_min}|{tmr_med}|{tmr_max}"
+                    val_lk_311 = link_31_1_input.strip()
+                    comentarios_311 = d31_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="31.1",
+                        valor=val_str_311,
+                        pontos=pts_31_1,
+                        link=val_lk_311,
+                        comentarios=comentarios_311
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_311 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_1_input or "")]
+                    links_antigos_311 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_311 or "")]
+
+                    if (val_str_311 != d31_1.get("valor", "") or val_lk_311 != l_salvo_311) and links_atuais_311 and links_atuais_311 != links_antigos_311:
+                        st.session_state[f"links_pendentes_31_1_{ano_sel}"] = links_atuais_311
+                        st.session_state[f"gatilho_modal_31_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 31.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 31.1
+        if st.session_state.get(f"gatilho_modal_31_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("31.1", st.session_state.get(f"links_pendentes_31_1_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 31.2 - COMPOSIÇÃO MÍNIMA DA CENTRAL DE REGULAÇÃO DE URGÊNCIAS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_composicao_central_31_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 31.2 • Composição Mínima das Equipes da Central de Regulação ({ano_sel})", expanded=True):
+                st.subheader(f"31.2 • Composição Mínima das Equipes da Central de Regulação ({ano_sel})")
+                st.write("**As equipes da Central de Regulação das Urgências tiveram ao menos a composição mínima estipulada na legislação no decorrer do exercício?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 31.2' para registrar as alterações.*")
+
+                opts_31_2 = [
+                    "Selecione...",
+                    "Todas as equipes tinham composição mínima – 00",
+                    "A maior parte das equipes tinham composição mínima – -03 (perde 03 pontos)",
+                    "A menor parte das equipes tinham composição mínima – -07 (perde 07 pontos)",
+                    "Nenhuma equipe tinha composição mínima – -10 (perde 10 pontos)"
+                ]
+
+                d31_2 = res_data.get("31.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_312 = d31_2.get("valor", "Selecione...")
+                idx_31_2 = opts_31_2.index(v_salvo_312) if v_salvo_312 in opts_31_2 else 0
+                l_salvo_312 = d31_2.get("link", "")
+
+                c312_1, c312_2 = st.columns([1, 1])
+                with c312_1:
+                    sel_31_2 = st.radio(
+                        "Composição Central de Regulação:",
+                        options=opts_31_2,
+                        index=idx_31_2,
+                        key=f"rad_31_2_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c312_2:
+                    link_31_2_input = st.text_area(
+                        "Link/Evidência da composição da Central de Regulação (31.2):",
+                        value=l_salvo_312,
+                        key=f"txt_link_31_2_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_312 = st.empty()
+                links_312_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_2_input or "")]
+                if links_312_visuais:
+                    placeholder_links_312.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_312_visuais])
+                    )
+
+                # Tabela de Pontuação
+                opcoes_pts_312 = {
+                    "Todas as equipes tinham composição mínima – 00": 0.0,
+                    "A maior parte das equipes tinham composição mínima – -03 (perde 03 pontos)": -3.0,
+                    "A menor parte das equipes tinham composição mínima – -07 (perde 07 pontos)": -7.0,
+                    "Nenhuma equipe tinha composição mínima – -10 (perde 10 pontos)": -10.0,
+                    "Selecione...": 0.0
+                }
+                pts_31_2 = opcoes_pts_312.get(sel_31_2, 0.0)
+
+                # Feedback visual
+                if sel_31_2 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                elif pts_31_2 < 0:
+                    st.error(f"⚠️ Opção selecionada: **{sel_31_2}** (Penalidade: `{pts_31_2:.1f} pontos`)")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_31_2}** (Conformidade atingida)")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("31.2", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 31.2: {pts_31_2:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 31.2", key=f"btn_salvar_31_2_{ano_sel}", type="primary"):
+                    val_str_312 = sel_31_2
+                    val_lk_312 = link_31_2_input.strip()
+                    comentarios_312 = d31_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="31.2",
+                        valor=val_str_312,
+                        pontos=pts_31_2,
+                        link=val_lk_312,
+                        comentarios=comentarios_312
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_312 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_2_input or "")]
+                    links_antigos_312 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_312 or "")]
+
+                    if (val_str_312 != d31_2.get("valor", "") or val_lk_312 != l_salvo_312) and links_atuais_312 and links_atuais_312 != links_antigos_312:
+                        st.session_state[f"links_pendentes_31_2_{ano_sel}"] = links_atuais_312
+                        st.session_state[f"gatilho_modal_31_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 31.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 31.2
+        if st.session_state.get(f"gatilho_modal_31_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("31.2", st.session_state.get(f"links_pendentes_31_2_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 31.3 - COMPOSIÇÃO MÍNIMA DAS UNIDADES MÓVEIS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_composicao_unidades_moveis_31_3_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 31.3 • Composição Mínima das Equipes das Unidades Móveis ({ano_sel})", expanded=True):
+                st.subheader(f"31.3 • Composição Mínima das Equipes das Unidades Móveis ({ano_sel})")
+                st.write("**As equipes das Unidades Móveis tiveram ao menos a composição mínima estipulada na legislação no decorrer do exercício?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 31.3' para registrar as alterações.*")
+
+                opts_31_3 = [
+                    "Selecione...",
+                    "Todas as equipes tinham composição mínima – 00",
+                    "A maior parte das equipes tinham composição mínima – -10 (perde 10 pontos)",
+                    "A menor parte das equipes tinham composição mínima – -15 (perde 15 pontos)",
+                    "Nenhuma equipe tinha composição mínima – -20 (perde 20 pontos)"
+                ]
+
+                d31_3 = res_data.get("31.3") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_313 = d31_3.get("valor", "Selecione...")
+                idx_31_3 = opts_31_3.index(v_salvo_313) if v_salvo_313 in opts_31_3 else 0
+                l_salvo_313 = d31_3.get("link", "")
+
+                c313_1, c313_2 = st.columns([1, 1])
+                with c313_1:
+                    sel_31_3 = st.radio(
+                        "Composição Unidades Móveis:",
+                        options=opts_31_3,
+                        index=idx_31_3,
+                        key=f"rad_31_3_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c313_2:
+                    link_31_3_input = st.text_area(
+                        "Link/Evidência da composição das Unidades Móveis (31.3):",
+                        value=l_salvo_313,
+                        key=f"txt_link_31_3_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_313 = st.empty()
+                links_313_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_3_input or "")]
+                if links_313_visuais:
+                    placeholder_links_313.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_313_visuais])
+                    )
+
+                # Tabela de Pontuação
+                opcoes_pts_313 = {
+                    "Todas as equipes tinham composição mínima – 00": 0.0,
+                    "A maior parte das equipes tinham composição mínima – -10 (perde 10 pontos)": -10.0,
+                    "A menor parte das equipes tinham composição mínima – -15 (perde 15 pontos)": -15.0,
+                    "Nenhuma equipe tinha composição mínima – -20 (perde 20 pontos)": -20.0,
+                    "Selecione...": 0.0
+                }
+                pts_31_3 = opcoes_pts_313.get(sel_31_3, 0.0)
+
+                # Feedback visual
+                if sel_31_3 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                elif pts_31_3 < 0:
+                    st.error(f"⚠️ Opção selecionada: **{sel_31_3}** (Penalidade: `{pts_31_3:.1f} pontos`)")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_31_3}** (Conformidade atingida)")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("31.3", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 31.3: {pts_31_3:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 31.3", key=f"btn_salvar_31_3_{ano_sel}", type="primary"):
+                    val_str_313 = sel_31_3
+                    val_lk_313 = link_31_3_input.strip()
+                    comentarios_313 = d31_3.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="31.3",
+                        valor=val_str_313,
+                        pontos=pts_31_3,
+                        link=val_lk_313,
+                        comentarios=comentarios_313
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_313 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_31_3_input or "")]
+                    links_antigos_313 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_313 or "")]
+
+                    if (val_str_313 != d31_3.get("valor", "") or val_lk_313 != l_salvo_313) and links_atuais_313 and links_atuais_313 != links_antigos_313:
+                        st.session_state[f"links_pendentes_31_3_{ano_sel}"] = links_atuais_313
+                        st.session_state[f"gatilho_modal_31_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 31.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 31.3
+        if st.session_state.get(f"gatilho_modal_31_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("31.3", st.session_state.get(f"links_pendentes_31_3_{ano_sel}", []), ano_sel)
