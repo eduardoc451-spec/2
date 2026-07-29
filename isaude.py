@@ -228,7 +228,7 @@ CATEGORIAS_MAP_ISAUDE = {
 # MODAL DE AVISO AUTOMÁTICO - iSaúde
 # =============================================================================
 @st.dialog("⚠️ Atenção! Evidência em Link Externo (iSaúde)")
-def modal_aviso_link_isaude(qid, links_encontrados):
+def modal_aviso_link_isaude(qid, links_encontrados, ano_sel):
     st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
     for lk in links_encontrados:
         st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
@@ -238,10 +238,9 @@ def modal_aviso_link_isaude(qid, links_encontrados):
 
     Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
     """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}_saude"):
-        # Reseta a flag correspondente para fechar o modal
-        key_gatilho = f"gatilho_modal_{qid.replace('.', '_')}_{ano_sel}"
-        st.session_state[key_gatilho] = False
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid.replace('.', '_')}_{ano_sel}_saude"):
+        # Reseta o gatilho exatamente com a chave correta
+        st.session_state[f"gatilho_modal_{qid.replace('.', '_')}_{ano_sel}"] = False
         st.rerun()
 
 import json
