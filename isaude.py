@@ -1754,6 +1754,7 @@ def mostrar_formulario_saude():
                     links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
                     links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
 
+                    # Se detectou novo link, ativa o modal antes de recarregar a tela
                     if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
                         st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
@@ -1775,4 +1776,4 @@ def mostrar_formulario_saude():
         # GATILHO DO MODAL 1.0 (Fora do container principal)
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
-                modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []), ano_sel)e
+                modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
