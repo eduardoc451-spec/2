@@ -11516,3 +11516,291 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_20_3_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("20.3", st.session_state.get(f"links_pendentes_20_3_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # SEÇÃO 21 - ARBOVIROSES (ANÁLISE)
+        # =============================================================================
+        st.subheader("🦟 Seção 21 - Monitoramento de Arboviroses")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 21.0 - ANÁLISE SEMANAL DE DADOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_analise_arboviroses_21_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 21.0 • Análise Semanal de Dados ({ano_sel})", expanded=True):
+                st.subheader(f"21.0 • Análise Semanal de Dados ({ano_sel})")
+                st.write(
+                    "**O município analisa semanalmente os dados de casos de arboviroses, "
+                    "acompanhando a tendência dos casos e verificando as variações entre as semanas epidemiológicas?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 21.0' para registrar os dados.*")
+
+                d21_0 = res_data.get("21.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_210 = d21_0.get("valor", "Selecione...")
+                l_salvo_210 = d21_0.get("link", "")
+
+                # Dicionário de opções com os pontos explicitados nos rótulos
+                opcoes_map_21_0 = {
+                    "Selecione...": {"label": "Selecione...", "pts": 0.0},
+                    "Sim": {
+                        "label": "Sim (10.0 pts)",
+                        "pts": 10.0
+                    },
+                    "Não": {
+                        "label": "Não (0.0 pt)",
+                        "pts": 0.0
+                    },
+                    "Não houve casos de arboviroses": {
+                        "label": "Não houve casos de arboviroses (10.0 pts)",
+                        "pts": 10.0
+                    }
+                }
+
+                opts_21_0_chaves = list(opcoes_map_21_0.keys())
+                opts_21_0_labels = [opcoes_map_21_0[k]["label"] for k in opts_21_0_chaves]
+
+                # Localização do índice salvo (compatível com textos legados contendo pontuação)
+                idx_210 = 0
+                for i, k in enumerate(opts_21_0_chaves):
+                    if v_salvo_210 == k or v_salvo_210.startswith(k) or v_salvo_210 == opcoes_map_21_0[k]["label"]:
+                        idx_210 = i
+                        break
+
+                c210_1, c210_2 = st.columns([1, 1])
+
+                with c210_1:
+                    st.write("📋 **Selecione o status da análise de dados:**")
+
+                    label_selecionada_210 = st.radio(
+                        "Análise Semanal:",
+                        options=opts_21_0_labels,
+                        index=idx_210,
+                        key=f"rad_21_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    chave_selecionada_210 = opts_21_0_chaves[opts_21_0_labels.index(label_selecionada_210)]
+                    pts_21_0 = opcoes_map_21_0[chave_selecionada_210]["pts"]
+
+                with c210_2:
+                    link_21_0_input = st.text_area(
+                        "Link/Evidência de boletins epidemiológicos ou relatórios de monitoramento (21.0):",
+                        value=l_salvo_210,
+                        key=f"txt_link_21_0_arbovirose_{ano_sel}",
+                        height=180
+                    )
+
+                    links_210_visuais = re.findall(REGEX_PURE_URL, link_21_0_input or "")
+                    if links_210_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_210_visuais]
+                            )
+                        )
+
+                # Feedback visual de regra
+                if chave_selecionada_210 in ["Sim", "Não houve casos de arboviroses"]:
+                    st.success("✅ Meta Atingida: Monitoramento epidemiológico semanal realizado adequadamente.")
+                elif chave_selecionada_210 == "Não":
+                    st.warning("⚠️ Atenção: O município não realiza a análise semanal dos dados de arboviroses.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("21.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 21.0", key=f"btn_salvar_21_0_arbovirose_{ano_sel}", type="primary"):
+                    val_str_210 = chave_selecionada_210
+                    val_lk_210 = link_21_0_input.strip()
+                    comentarios_210 = d21_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="21.0",
+                        valor=val_str_210,
+                        pontos=pts_21_0,
+                        link=val_lk_210,
+                        comentarios=comentarios_210
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_210 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_21_0_input or "")]
+                    links_antigos_210 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_210 or "")]
+
+                    if (val_str_210 != v_salvo_210 or val_lk_210 != l_salvo_210) and links_atuais_210 and links_atuais_210 != links_antigos_210:
+                        st.session_state[f"links_pendentes_21_0_{ano_sel}"] = links_atuais_210
+                        st.session_state[f"gatilho_modal_21_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 21.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_21_0 > 0:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 21.0: +{pts_21_0:.1f} pontos (Meta Atingida)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 21.0: +{pts_21_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 21.0
+        if st.session_state.get(f"gatilho_modal_21_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("21.0", st.session_state.get(f"links_pendentes_21_0_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # SEÇÃO 22 - ARBOVIROSES (INVESTIGAÇÃO)
+        # =============================================================================
+        st.subheader("🔍 Seção 22 - Investigação de Arboviroses")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 22.0 - INVESTIGAÇÃO DE CASOS, SURTOS E ÓBITOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_investigacao_arboviroses_22_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 22.0 • Investigação de Casos, Surtos e Óbitos ({ano_sel})", expanded=True):
+                st.subheader(f"22.0 • Investigação de Casos, Surtos e Óbitos ({ano_sel})")
+                st.write(
+                    "**O município investiga casos notificados, surtos e óbitos de arboviroses?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 22.0' para registrar os dados.*")
+
+                d22_0 = res_data.get("22.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_220 = d22_0.get("valor", "Selecione...")
+                l_salvo_220 = d22_0.get("link", "")
+
+                # Dicionário de opções com os pontos explicitados nos rótulos
+                opcoes_map_22_0 = {
+                    "Selecione...": {"label": "Selecione...", "pts": 0.0},
+                    "Sim, investiga todos os casos": {
+                        "label": "Sim, investiga todos os casos (30.0 pts)",
+                        "pts": 30.0
+                    },
+                    "Sim, investiga parte dos casos": {
+                        "label": "Sim, investiga parte dos casos (15.0 pts)",
+                        "pts": 15.0
+                    },
+                    f"Não houve casos em {ano_sel}": {
+                        "label": f"Não houve casos em {ano_sel} (30.0 pts)",
+                        "pts": 30.0
+                    },
+                    "Não investiga": {
+                        "label": "Não investiga (0.0 pt)",
+                        "pts": 0.0
+                    }
+                }
+
+                opts_22_0_chaves = list(opcoes_map_22_0.keys())
+                opts_22_0_labels = [opcoes_map_22_0[k]["label"] for k in opts_22_0_chaves]
+
+                # Localização do índice salvo (compatível com textos legados)
+                idx_220 = 0
+                for i, k in enumerate(opts_22_0_chaves):
+                    if v_salvo_220 == k or v_salvo_220.startswith(k.split(" em ")[0]) or v_salvo_220 == opcoes_map_22_0[k]["label"]:
+                        idx_220 = i
+                        break
+
+                c220_1, c220_2 = st.columns([1, 1])
+
+                with c220_1:
+                    st.write("📋 **Selecione o nível de investigação:**")
+
+                    label_selecionada_220 = st.radio(
+                        "Investigação de Casos:",
+                        options=opts_22_0_labels,
+                        index=idx_220,
+                        key=f"rad_22_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    chave_selecionada_220 = opts_22_0_chaves[opts_22_0_labels.index(label_selecionada_220)]
+                    pts_22_0 = opcoes_map_22_0[chave_selecionada_220]["pts"]
+
+                with c220_2:
+                    link_22_0_input = st.text_area(
+                        "Link/Evidência de fichas de investigação no SINAN, relatórios de surto ou comitê de óbito (22.0):",
+                        value=l_salvo_220,
+                        key=f"txt_link_22_0_investigacao_{ano_sel}",
+                        height=180
+                    )
+
+                    links_220_visuais = re.findall(REGEX_PURE_URL, link_22_0_input or "")
+                    if links_220_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_220_visuais]
+                            )
+                        )
+
+                # Feedback visual de regra
+                if chave_selecionada_220 in ["Sim, investiga todos os casos", f"Não houve casos em {ano_sel}"]:
+                    st.success("✅ Meta Atingida: Cobertura total de investigação de casos/óbitos.")
+                elif chave_selecionada_220 == "Sim, investiga parte dos casos":
+                    st.warning("⚠️ Meta Parcial: Nem todos os casos notificados passam por investigação epidemiológica.")
+                elif chave_selecionada_220 == "Não investiga":
+                    st.error("❌ Em não conformidade: O município não investiga os casos notificados de arboviroses.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("22.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 22.0", key=f"btn_salvar_22_0_investigacao_{ano_sel}", type="primary"):
+                    val_str_220 = chave_selecionada_220
+                    val_lk_220 = link_22_0_input.strip()
+                    comentarios_220 = d22_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="22.0",
+                        valor=val_str_220,
+                        pontos=pts_22_0,
+                        link=val_lk_220,
+                        comentarios=comentarios_220
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_220 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_22_0_input or "")]
+                    links_antigos_220 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_220 or "")]
+
+                    if (val_str_220 != v_salvo_220 or val_lk_220 != l_salvo_220) and links_atuais_220 and links_atuais_220 != links_antigos_220:
+                        st.session_state[f"links_pendentes_22_0_{ano_sel}"] = links_atuais_220
+                        st.session_state[f"gatilho_modal_22_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 22.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_22_0 > 0:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 22.0: +{pts_22_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 22.0: +{pts_22_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 22.0
+        if st.session_state.get(f"gatilho_modal_22_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("22.0", st.session_state.get(f"links_pendentes_22_0_{ano_sel}", []), ano_sel)
