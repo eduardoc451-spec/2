@@ -2788,3 +2788,227 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_7_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 8.0 • RELATÓRIO ANUAL DE GESTÃO (RAG)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_8_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 8.0 - Relatório Anual de Gestão (RAG) de {ano_sel}", expanded=True):
+                st.subheader(f"8.0 • Encaminhamento do RAG de {ano_sel}")
+                st.write(
+                    f"**O Relatório Anual de Gestão de {ano_sel} foi encaminhado ao Conselho Municipal de Saúde até 30/03/{ano_sel + 1} (ano seguinte ao da execução financeira)?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.0' para registrar.*")
+
+                # Mapeamento de Opções e Pontuações do Quesito 8.0
+                opcoes_80 = {
+                    "Selecione...": 0.0,
+                    "Sim, meio eletrônico – 02": 2.0,
+                    "Sim, meio físico – 02": 2.0,
+                    "Não – 00": 0.0,
+                }
+
+                # Estado inicial / persistente
+                d80 = res_data.get("8.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_80 = d80.get("valor", "Selecione...")
+                evidencia_80_salva = d80.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_80 = f"r_80_{ano_sel}"
+                chave_link_80 = f"l_80_txt_{ano_sel}"
+
+                c80_1, c80_2 = st.columns([1, 1])
+                with c80_1:
+                    lista_opcoes_80 = list(opcoes_80.keys())
+                    idx_80 = lista_opcoes_80.index(v_salvo_80) if v_salvo_80 in lista_opcoes_80 else 0
+
+                    val_radio_80 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_80,
+                        index=idx_80,
+                        key=chave_radio_80,
+                    )
+
+                with c80_2:
+                    link_80 = st.text_area(
+                        "Link/Evidência (Ofício de encaminhamento protocolado no CMS ou comprovante do DigiSUS):",
+                        value=evidencia_80_salva,
+                        key=chave_link_80,
+                        placeholder="Insira o link oficial referente ao quesito 8.0...",
+                        height=110,
+                    )
+                    placeholder_links_80 = st.empty()
+                    links_80_visuais = re.findall(REGEX_PURE_URL, link_80 or "")
+                    if links_80_visuais:
+                        placeholder_links_80.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_80_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("8.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 8.0", key=f"btn_salvar_8_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_80, v_salvo_80)
+                    pts_80 = float(opcoes_80.get(val_salvar, 0.0))
+                    lnk_val = link_80.strip()
+
+                    comentarios_historico = d80.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="8.0",
+                        valor=val_salvar,
+                        pontos=pts_80,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_80_salva or "")]
+
+                    if lnk_val != evidencia_80_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_8_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 8.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_80 = d80.get("pontos", 0.0)
+                cor_txt_80 = "#28a745" if pts_atuais_80 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_80}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 8.0: +{pts_atuais_80:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 8.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_8_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("8.0", st.session_state.get(f"links_pendentes_8_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 9.0 • PARECER CONCLUSIVO DO RAG
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_9_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 9.0 - Parecer Conclusivo sobre o RAG de {ano_sel}", expanded=True):
+                st.subheader(f"9.0 • Status do Parecer do RAG ({ano_sel})")
+                st.write(
+                    f"**O Parecer Conclusivo sobre o Relatório Anual de Gestão de {ano_sel} foi 'aprovado sem ressalvas', 'aprovado com ressalvas' ou 'irregular/não aprovado'?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 9.0' para registrar.*")
+
+                # Mapeamento de Opções e Pontuações do Quesito 9.0
+                opcoes_90 = {
+                    "Selecione...": 0.0,
+                    "Aprovado sem ressalvas – 18": 18.0,
+                    "Aprovado com ressalvas – 10": 10.0,
+                    "Irregular/Não aprovado – 00": 0.0,
+                    "Não apreciado – -10": -10.0,
+                }
+
+                # Estado inicial / persistente
+                d90 = res_data.get("9.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_90 = d90.get("valor", "Selecione...")
+                evidencia_90_salva = d90.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_90 = f"r_90_{ano_sel}"
+                chave_link_90 = f"l_90_txt_{ano_sel}"
+
+                c90_1, c90_2 = st.columns([1, 1])
+                with c90_1:
+                    lista_opcoes_90 = list(opcoes_90.keys())
+                    idx_90 = lista_opcoes_90.index(v_salvo_90) if v_salvo_90 in lista_opcoes_90 else 0
+
+                    val_radio_90 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_90,
+                        index=idx_90,
+                        key=chave_radio_90,
+                    )
+
+                with c90_2:
+                    link_90 = st.text_area(
+                        "Link/Evidência (Resolução do CMS contendo o Parecer Conclusivo homologado):",
+                        value=evidencia_90_salva,
+                        key=chave_link_90,
+                        placeholder="Insira o link oficial referente ao quesito 9.0...",
+                        height=140,
+                    )
+                    placeholder_links_90 = st.empty()
+                    links_90_visuais = re.findall(REGEX_PURE_URL, link_90 or "")
+                    if links_90_visuais:
+                        placeholder_links_90.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_90_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("9.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 9.0", key=f"btn_salvar_9_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_90, v_salvo_90)
+                    pts_90 = float(opcoes_90.get(val_salvar, 0.0))
+                    lnk_val = link_90.strip()
+
+                    comentarios_historico = d90.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="9.0",
+                        valor=val_salvar,
+                        pontos=pts_90,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_90_salva or "")]
+
+                    if lnk_val != evidencia_90_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 9.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_90 = d90.get("pontos", 0.0)
+                if pts_atuais_90 > 0.0:
+                    cor_txt_90 = "#28a745"
+                elif pts_atuais_90 < 0.0:
+                    cor_txt_90 = "#dc3545"
+                else:
+                    cor_txt_90 = "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_90}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 9.0: {pts_atuais_90:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 9.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []), ano_sel)
