@@ -9021,3 +9021,106 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_2_1_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.2.1.1", st.session_state.get(f"links_pendentes_18_2_1_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.3 - TERMO DE ADESÃO AO PROGRAMA RECOMEÇO
+        # =============================================================================
+        with st.container(key=f"container_bloco_recomeco_18_3_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.3 • Adesão ao Programa Recomeço ({ano_sel})", expanded=True):
+                st.subheader(f"18.3 • Adesão ao Programa Recomeço ({ano_sel})")
+                st.write("**O Município formalizou termo de adesão com o Programa Recomeço (Art. 7º, Decreto nº 61.674/2015) ou outro programa que venha a substituí-lo?**")
+                st.caption("ℹ️ *Selecione uma alternativa, informe o link de evidência e clique no botão 'Salvar Quesito 18.3' para registrar os dados.*")
+
+                d18_3 = res_data.get("18.3") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_183 = d18_3.get("valor", "Selecione...")
+                l_salvo_183 = d18_3.get("link", "")
+
+                opts_18_3 = {
+                    "Selecione...": 0.0,
+                    "Sim": 0.0,
+                    "Não": 0.0
+                }
+
+                labels_183 = list(opts_18_3.keys())
+                if v_salvo_183 not in labels_183:
+                    v_salvo_183 = "Selecione..."
+
+                idx_183 = labels_183.index(v_salvo_183)
+
+                c183_1, c183_2 = st.columns([1, 1])
+
+                with c183_1:
+                    st.write("📋 **Selecione uma alternativa:**")
+                    sel_18_3 = st.radio(
+                        "Formalizou adesão:",
+                        options=labels_183,
+                        index=idx_183,
+                        key=f"rad_recomeco_18_3_sel_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    pts_18_3 = opts_18_3.get(sel_18_3, 0.0)
+
+                with c183_2:
+                    link_18_3_input = st.text_area(
+                        "Link/Evidência da Publicação do Termo de Adesão (18.3):",
+                        value=l_salvo_183,
+                        key=f"txt_link_18_3_recomeco_{ano_sel}",
+                        height=150
+                    )
+
+                    links_183_visuais = re.findall(REGEX_PURE_URL, link_18_3_input or "")
+                    if links_183_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_183_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.3", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.3", key=f"btn_salvar_18_3_recomeco_{ano_sel}", type="primary"):
+                    val_str_183 = sel_18_3
+                    val_lk_183 = link_18_3_input.strip()
+                    comentarios_183 = d18_3.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.3",
+                        valor=val_str_183,
+                        pontos=pts_18_3,
+                        link=val_lk_183,
+                        comentarios=comentarios_183
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_183 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_3_input or "")]
+                    links_antigos_183 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_183 or "")]
+
+                    if (val_str_183 != v_salvo_183 or val_lk_183 != l_salvo_183) and links_atuais_183 and links_atuais_183 != links_antigos_183:
+                        st.session_state[f"links_pendentes_18_3_{ano_sel}"] = links_atuais_183
+                        st.session_state[f"gatilho_modal_18_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 18.3: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.3
+        if st.session_state.get(f"gatilho_modal_18_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.3", st.session_state.get(f"links_pendentes_18_3_{ano_sel}", []), ano_sel)
