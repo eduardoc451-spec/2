@@ -8153,3 +8153,106 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_8_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.8", st.session_state.get(f"links_pendentes_17_8_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.9 - HOSPITAL OU SANTA CASA SOB GESTÃO MUNICIPAL (INFORMATIVO)
+        # =============================================================================
+        with st.container(key=f"container_bloco_hospital_santa_casa_17_9_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.9 - Hospital ou Santa Casa sob Gestão Municipal ({ano_sel})", expanded=True):
+                st.subheader(f"17.9 • Hospital ou Santa Casa sob Gestão Municipal ({ano_sel})")
+                st.write(f"**17.9 O município possui hospital ou Santa Casa sob sua gestão?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência/SCNES e clique no botão 'Salvar Quesito 17.9' para registrar.*")
+
+                d17_9 = res_data.get("17.9") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_9 = d17_9.get("valor", "Selecione...")
+                l_salvo_17_9 = d17_9.get("link", "")
+
+                opts_17_9 = [
+                    "Selecione...",
+                    "Sim",
+                    "Não"
+                ]
+                if v_salvo_17_9 not in opts_17_9:
+                    v_salvo_17_9 = "Selecione..."
+
+                idx_17_9 = opts_17_9.index(v_salvo_17_9)
+
+                c179_1, c179_2 = st.columns([1, 1])
+
+                with c179_1:
+                    st.write("🏥 **Selecione uma alternativa:**")
+                    sel_17_9 = st.radio(
+                        "Possui hospital/Santa Casa sob gestão:",
+                        options=opts_17_9,
+                        index=idx_17_9,
+                        key=f"rad_hosp_17_9_sel_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    # Quesito apenas informativo (pontuação 0.0)
+                    pts_17_9 = 0.0
+
+                with c179_2:
+                    link_17_9_input = st.text_area(
+                        "Link/Evidência ou Cadastro do SCNES do Hospital/Santa Casa (17.9):",
+                        value=l_salvo_17_9,
+                        key=f"txt_link_17_9_hosp_{ano_sel}",
+                        height=180
+                    )
+
+                    links_17_9_visuais = re.findall(REGEX_PURE_URL, link_17_9_input or "")
+                    if links_17_9_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_9_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.9", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.9", key=f"btn_salvar_17_9_hosp_{ano_sel}", type="primary"):
+                    val_str_17_9 = sel_17_9
+                    val_lk_17_9 = link_17_9_input.strip()
+                    comentarios_17_9 = d17_9.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.9",
+                        valor=val_str_17_9,
+                        pontos=pts_17_9,
+                        link=val_lk_17_9,
+                        comentarios=comentarios_17_9
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_9 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_9_input or "")]
+                    links_antigos_17_9 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_9 or "")]
+
+                    if (val_str_17_9 != v_salvo_17_9 or val_lk_17_9 != l_salvo_17_9) and links_atuais_17_9 and links_atuais_17_9 != links_antigos_17_9:
+                        st.session_state[f"links_pendentes_17_9_{ano_sel}"] = links_atuais_17_9
+                        st.session_state[f"gatilho_modal_17_9_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.9 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_9 = d17_9.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.9: {pts_atuais_17_9:+.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.9
+        if st.session_state.get(f"gatilho_modal_17_9_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.9", st.session_state.get(f"links_pendentes_17_9_{ano_sel}", []), ano_sel)
