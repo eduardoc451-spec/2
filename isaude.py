@@ -12642,5 +12642,253 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("27.0", st.session_state.get(f"links_pendentes_27_0_{ano_sel}", []), ano_sel)
 
+
+        # =============================================================================
+        # SEÇÃO 28 - CONTROLE DA FILA DE ESPERA (ATENÇÃO ESPECIALIZADA)
+        # =============================================================================
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.subheader("⏳ Seção 28 - Controle da Fila de Espera")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 28.0 - CONTROLE DA FILA (FORA DO CROSS)
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_controle_fila_28_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 28.0 • Controle da Fila de Espera (Atenção Especializada - {ano_sel})", expanded=True):
+                st.subheader(f"28.0 • Controle da Fila de Espera (Atenção Especializada - {ano_sel})")
+                st.write("**O município possui controle da fila de espera para os atendimentos da Atenção Especializada que não foram inseridos no sistema de regulação do governo estadual (Portal CROSS)?**")
+                st.caption("ℹ️ *Refere-se ao Município como Unidade Solicitante.*")
+                st.caption("ℹ️ *Selecione a opção correspondente, informe o link de evidência e clique no botão 'Salvar Quesito 28.0' para registrar os dados.*")
+
+                opts_28_0 = [
+                    "Selecione...",
+                    "Sim, com a relação nominal de pacientes e tempo de espera para todos os serviços da Atenção Especializada com fila de espera – 05",
+                    "Sim, com a relação nominal de pacientes e tempo de espera para a maior parte dos serviços da Atenção Especializada com fila de espera – 02",
+                    "Sim, com a relação nominal de pacientes e tempo de espera para a menor parte dos serviços da Atenção Especializada com fila de espera – 01",
+                    "Não possui controle da fila de espera – 00",
+                    "Não possui fila de espera além da inserida no sistema de regulação do governo estadual (Portal CROSS) – 05"
+                ]
+
+                d28_0 = res_data.get("28.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_280 = d28_0.get("valor", "Selecione...")
+                l_salvo_280 = d28_0.get("link", "")
+                idx_28_0 = opts_28_0.index(v_salvo_280) if v_salvo_280 in opts_28_0 else 0
+
+                c280_1, c280_2 = st.columns([1, 1])
+                with c280_1:
+                    sel_28_0 = st.radio(
+                        "Controle da fila:",
+                        options=opts_28_0,
+                        index=idx_28_0,
+                        key=f"rad_28_0_{ano_sel}"
+                    )
+                    
+                    opcoes_pts_280 = {
+                        "Sim, com a relação nominal de pacientes e tempo de espera para todos os serviços da Atenção Especializada com fila de espera – 05": 5.0,
+                        "Sim, com a relação nominal de pacientes e tempo de espera para a maior parte dos serviços da Atenção Especializada com fila de espera – 02": 2.0,
+                        "Sim, com a relação nominal de pacientes e tempo de espera para a menor parte dos serviços da Atenção Especializada com fila de espera – 01": 1.0,
+                        "Não possui controle da fila de espera – 00": 0.0,
+                        "Não possui fila de espera além da inserida no sistema de regulação do governo estadual (Portal CROSS) – 05": 5.0,
+                        "Selecione...": 0.0
+                    }
+                    pts_28_0 = opcoes_pts_280.get(sel_28_0, 0.0)
+
+                with c280_2:
+                    link_28_0_input = st.text_area(
+                        "Link/Evidência do controle da fila de espera (28.0):",
+                        value=l_salvo_280,
+                        key=f"txt_link_28_0_controle_{ano_sel}",
+                        height=120
+                    )
+
+                placeholder_links_280 = st.empty()
+                links_280_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_0_input or "")]
+                if links_280_visuais:
+                    placeholder_links_280.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_280_visuais])
+                    )
+
+                # Feedback visual
+                if sel_28_0 != "Selecione...":
+                    st.success(f"✅ Opção selecionada: **{sel_28_0}**")
+                else:
+                    st.warning("⚠️ Nenhuma opção selecionada.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("28.0", res_data)
+
+                # Impacto de pontuação
+                if pts_28_0 > 0:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 28.0: +{pts_28_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 28.0: +{pts_28_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 28.0", key=f"btn_salvar_28_0_controle_{ano_sel}", type="primary"):
+                    val_str_280 = sel_28_0
+                    val_lk_280 = link_28_0_input.strip()
+                    comentarios_280 = d28_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="28.0",
+                        valor=val_str_280,
+                        pontos=pts_28_0,
+                        link=val_lk_280,
+                        comentarios=comentarios_280
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_280 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_0_input or "")]
+                    links_antigos_280 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_280 or "")]
+
+                    if (val_str_280 != v_salvo_280 or val_lk_280 != l_salvo_280) and links_atuais_280 and links_atuais_280 != links_antigos_280:
+                        st.session_state[f"links_pendentes_28_0_{ano_sel}"] = links_atuais_280
+                        st.session_state[f"gatilho_modal_28_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 28.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 28.0
+        if st.session_state.get(f"gatilho_modal_28_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("28.0", st.session_state.get(f"links_pendentes_28_0_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 28.1 - TIPO DE CONTROLE
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_tipo_controle_fila_28_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 28.1 • Tipo de Controle da Lista de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"28.1 • Tipo de Controle da Lista de Espera ({ano_sel})")
+                st.write("**Assinale o tipo de controle da lista de espera para os atendimentos da Atenção Especializada que não foram inseridos no sistema de regulação do governo estadual:**")
+                st.caption("ℹ️ *Atenção: Planilha eletrônica não é considerada sistema informatizado.*")
+                st.caption("ℹ️ *Selecione a opção correspondente, informe o link de evidência e clique no botão 'Salvar Quesito 28.1' para registrar os dados.*")
+
+                opts_28_1 = [
+                    "Selecione...",
+                    "Em sistema informatizado – 05",
+                    "De forma manual – -05 (perde 05 pontos)"
+                ]
+
+                d28_1 = res_data.get("28.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_281 = d28_1.get("valor", "Selecione...")
+                l_salvo_281 = d28_1.get("link", "")
+                idx_28_1 = opts_28_1.index(v_salvo_281) if v_salvo_281 in opts_28_1 else 0
+
+                c281_1, c281_2 = st.columns([1, 1])
+                with c281_1:
+                    sel_28_1 = st.radio(
+                        "Tipo de controle:",
+                        options=opts_28_1,
+                        index=idx_28_1,
+                        key=f"rad_28_1_{ano_sel}"
+                    )
+                    
+                    opcoes_pts_281 = {
+                        "Em sistema informatizado – 05": 5.0,
+                        "De forma manual – -05 (perde 05 pontos)": -5.0,
+                        "Selecione...": 0.0
+                    }
+                    pts_28_1 = opcoes_pts_281.get(sel_28_1, 0.0)
+
+                with c281_2:
+                    link_28_1_input = st.text_area(
+                        "Link/Evidência do tipo de controle da fila (28.1):",
+                        value=l_salvo_281,
+                        key=f"txt_link_28_1_tipo_controle_{ano_sel}",
+                        height=120
+                    )
+
+                placeholder_links_281 = st.empty()
+                links_281_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_1_input or "")]
+                if links_281_visuais:
+                    placeholder_links_281.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_281_visuais])
+                    )
+
+                # Feedback visual
+                if sel_28_1 != "Selecione...":
+                    st.success(f"✅ Opção selecionada: **{sel_28_1}**")
+                else:
+                    st.warning("⚠️ Nenhuma opção selecionada.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("28.1", res_data)
+
+                # Impacto de pontuação
+                if pts_28_1 > 0:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 28.1: +{pts_28_1:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+                elif pts_28_1 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"⚠️ Penalidade Aplicada no Quesito 28.1: {pts_28_1:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 28.1: +{pts_28_1:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 28.1", key=f"btn_salvar_28_1_tipo_controle_{ano_sel}", type="primary"):
+                    val_str_281 = sel_28_1
+                    val_lk_281 = link_28_1_input.strip()
+                    comentarios_281 = d28_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="28.1",
+                        valor=val_str_281,
+                        pontos=pts_28_1,
+                        link=val_lk_281,
+                        comentarios=comentarios_281
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_281 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_1_input or "")]
+                    links_antigos_281 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_281 or "")]
+
+                    if (val_str_281 != v_salvo_281 or val_lk_281 != l_salvo_281) and links_atuais_281 and links_atuais_281 != links_antigos_281:
+                        st.session_state[f"links_pendentes_28_1_{ano_sel}"] = links_atuais_281
+                        st.session_state[f"gatilho_modal_28_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 28.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 28.1
+        if st.session_state.get(f"gatilho_modal_28_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("28.1", st.session_state.get(f"links_pendentes_28_1_{ano_sel}", []), ano_sel)
+
+        st.markdown('</div>', unsafe_allow_html=True)  # Fecha o card geral da Seção 28
+
        
         
