@@ -8256,3 +8256,131 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_9_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.9", st.session_state.get(f"links_pendentes_17_9_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.9.1 - TAXA DE OCUPAÇÃO HOSPITALAR DA REDE PRÓPRIA
+        # =============================================================================
+        with st.container(key=f"container_bloco_taxa_ocupacao_hospitalar_17_9_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.9.1 - Taxa de Ocupação Hospitalar da Rede Própria ({ano_sel})", expanded=True):
+                st.subheader(f"17.9.1 • Taxa de Ocupação Hospitalar da Rede Própria ({ano_sel})")
+                st.write(f"**17.9.1 Informe o total de pacientes-dia e leitos-dia para fins de cálculo da Taxa de Ocupação (TO):**")
+                st.caption("ℹ️ *Preencha os dados operacionais e clique no botão 'Salvar Quesito 17.9.1' para registrar os pontos.*")
+
+                d17_9_1 = res_data.get("17.9.1") or {
+                    "valor": "0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_9_1 = d17_9_1.get("valor", "0|0")
+                l_salvo_17_9_1 = d17_9_1.get("link", "")
+
+                partes_leitos = v_salvo_17_9_1.split("|") if v_salvo_17_9_1 else ["0", "0"]
+                val_pa_salvo = partes_leitos[0] if len(partes_leitos) > 0 else "0"
+                val_le_salvo = partes_leitos[1] if len(partes_leitos) > 1 else "0"
+
+                c1791_1, c1791_2 = st.columns([1, 1])
+
+                with c1791_1:
+                    st.write(f"📊 **Dados Operacionais ({ano_sel}):**")
+
+                    inp_pa = st.text_input(
+                        f"Total de pacientes-dia atendidos em {ano_sel} (PA):",
+                        value=val_pa_salvo,
+                        key=f"txt_1791_pa_hosp_{ano_sel}"
+                    )
+
+                    inp_le = st.text_input(
+                        f"Número total de leitos-dia disponíveis em {ano_sel} (LE):",
+                        value=val_le_salvo,
+                        key=f"txt_1791_le_hosp_{ano_sel}"
+                    )
+
+                    def converter_campo_leitos(val):
+                        try:
+                            return float(str(val).replace(".", "").replace(",", ".").strip()) if val else 0.0
+                        except Exception:
+                            return 0.0
+
+                    pa_float = converter_campo_leitos(inp_pa)
+                    le_float = converter_campo_leitos(inp_le)
+
+                    # Cálculo da Taxa de Ocupação
+                    if pa_float == 0.0 and le_float == 0.0:
+                        st.info("💡 Aguardando o preenchimento dos dados operacionais.")
+                        pts_17_9_1 = 0.0
+                    elif le_float > 0:
+                        taxa_to = (pa_float / le_float) * 100.0
+                        st.markdown(f"📈 **Taxa de Ocupação Calculada (TO):** `{taxa_to:.2f}%`")
+
+                        if 75.0 <= taxa_to <= 90.0:
+                            pts_17_9_1 = 0.0
+                        else:
+                            pts_17_9_1 = -5.0
+                    else:
+                        st.markdown("⚠️ **Aviso:** O número de leitos-dia deve ser maior que zero para o cálculo.")
+                        pts_17_9_1 = -5.0
+
+                    string_estruturada_leitos = f"{inp_pa}|{inp_le}"
+
+                with c1791_2:
+                    link_17_9_1_input = st.text_area(
+                        f"Link/Evidência ou Relatório do SIH/SUS (Movimentação de Leitos) em {ano_sel}:",
+                        value=l_salvo_17_9_1,
+                        key=f"txt_link_17_9_1_ocupacao_{ano_sel}",
+                        height=240
+                    )
+
+                    links_17_9_1_visuais = re.findall(REGEX_PURE_URL, link_17_9_1_input or "")
+                    if links_17_9_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_9_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.9.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.9.1", key=f"btn_salvar_17_9_1_to_{ano_sel}", type="primary"):
+                    val_str_17_9_1 = string_estruturada_leitos
+                    val_lk_17_9_1 = link_17_9_1_input.strip()
+                    comentarios_17_9_1 = d17_9_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.9.1",
+                        valor=val_str_17_9_1,
+                        pontos=pts_17_9_1,
+                        link=val_lk_17_9_1,
+                        comentarios=comentarios_17_9_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_9_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_9_1_input or "")]
+                    links_antigos_17_9_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_9_1 or "")]
+
+                    if (val_str_17_9_1 != v_salvo_17_9_1 or val_lk_17_9_1 != l_salvo_17_9_1) and links_atuais_17_9_1 and links_atuais_17_9_1 != links_antigos_17_9_1:
+                        st.session_state[f"links_pendentes_17_9_1_{ano_sel}"] = links_atuais_17_9_1
+                        st.session_state[f"gatilho_modal_17_9_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.9.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_9_1 = d17_9_1.get("pontos", 0.0)
+                cor_txt_17_9_1 = "#28a745" if pts_atuais_17_9_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_9_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.9.1: {pts_atuais_17_9_1:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.9.1
+        if st.session_state.get(f"gatilho_modal_17_9_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.9.1", st.session_state.get(f"links_pendentes_17_9_1_{ano_sel}", []), ano_sel)
