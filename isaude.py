@@ -1776,3 +1776,111 @@ def mostrar_formulario_saude():
         # GATILHO DO MODAL 1.0
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
             modal_aviso_link_isaude("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+        # QUESITO 2.0 • CONSELHO MUNICIPAL DE SAÚDE (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_2_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 2.0 - Conselho Municipal de Saúde ({ano_sel})", expanded=True):
+                st.subheader("2.0 • Conselho Municipal de Saúde")
+                st.write(
+                    f"**O Conselho Municipal de Saúde está institucionalizado e em regular funcionamento no ano de {ano_sel}?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 2.0' para registrar.*")
+
+                # Dicionário com Mapeamento de Opções e Pontuações do iSaúde
+                opcoes_20 = {
+                    "Selecione...": 0.0,
+                    "Sim": 2.0,
+                    "Não": 0.0,
+                }
+
+                # Estado inicial / persistente
+                d20 = res_data.get("2.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_20 = d20.get("valor", "Selecione...")
+                evidencia_20_salva = d20.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_20 = f"r_20_{ano_sel}"
+                chave_link_20 = f"l_20_txt_{ano_sel}"
+
+                c20_1, c20_2 = st.columns([1, 1])
+                with c20_1:
+                    lista_opcoes_20 = list(opcoes_20.keys())
+                    idx_20 = lista_opcoes_20.index(v_salvo_20) if v_salvo_20 in lista_opcoes_20 else 0
+
+                    val_radio_20 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_20,
+                        index=idx_20,
+                        key=chave_radio_20,
+                    )
+
+                with c20_2:
+                    link_20 = st.text_area(
+                        "Link/Evidência (Atas das reuniões, lei de criação do conselho ou ato de nomeação dos conselheiros vigentes):",
+                        value=evidencia_20_salva,
+                        key=chave_link_20,
+                        placeholder="Insira o link oficial da ata, lei ou resolução referente ao quesito 2.0...",
+                        height=100,
+                    )
+                    placeholder_links_20 = st.empty()
+                    links_20_visuais = re.findall(REGEX_PURE_URL, link_20 or "")
+                    if links_20_visuais:
+                        placeholder_links_20.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_20_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("2.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 2.0", key=f"btn_salvar_2_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_20, v_salvo_20)
+                    pts_20 = float(opcoes_20.get(val_salvar, 0.0))
+                    lnk_val = link_20.strip()
+
+                    comentarios_historico = d20.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="2.0",
+                        valor=val_salvar,
+                        pontos=pts_20,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+
+                    # Ativa a flag do modal se houver links válidos
+                    if links_atuais:
+                        st.session_state[f"links_pendentes_2_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 2.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_20 = d20.get("pontos", 0.0)
+                cor_txt_20 = "#28a745" if pts_atuais_20 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_20}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 2.0: +{pts_atuais_20:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 2.0
+        if st.session_state.get(f"gatilho_modal_2_0_{ano_sel}", False):
+            if "modal_aviso_link_isaude" in globals():
+                modal_aviso_link_isaude("2.0", st.session_state.get(f"links_pendentes_2_0_{ano_sel}", []), ano_sel)
