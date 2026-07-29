@@ -2111,3 +2111,237 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 3.2 • CUMPRIMENTO DE METAS DE INDICADORES NA PAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_3_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 3.2 - Cumprimento de Metas de Indicadores na PAS {ano_sel}", expanded=True):
+                st.subheader(f"3.2 • Cumprimento de Metas de Indicadores na PAS {ano_sel}")
+                st.write(
+                    f"**As metas previstas para os indicadores foram atingidas na Programação Anual de Saúde de {ano_sel}?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.2' para registrar.*")
+
+                # Mapeamento de Opções e Pontuações do Quesito 3.2
+                opcoes_32 = {
+                    "Selecione...": 0.0,
+                    "Sim, todas as metas foram atingidas – 04": 4.0,
+                    "Sim, a maior parte das metas foram atingidas – 02": 2.0,
+                    "Sim, a menor parte das metas foram atingidas – 01": 1.0,
+                    "Não – 00": 0.0,
+                }
+
+                # Estado inicial / persistente
+                d32 = res_data.get("3.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_32 = d32.get("valor", "Selecione...")
+                evidencia_32_salva = d32.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_32 = f"r_32_{ano_sel}"
+                chave_link_32 = f"l_32_txt_{ano_sel}"
+
+                c32_1, c32_2 = st.columns([1, 1])
+                with c32_1:
+                    lista_opcoes_32 = list(opcoes_32.keys())
+                    idx_32 = lista_opcoes_32.index(v_salvo_32) if v_salvo_32 in lista_opcoes_32 else 0
+
+                    val_radio_32 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_32,
+                        index=idx_32,
+                        key=chave_radio_32,
+                    )
+
+                with c32_2:
+                    link_32 = st.text_area(
+                        "Link/Evidência (Painel de indicadores do SIOPS, DigiSUS ou atas de monitoramento):",
+                        value=evidencia_32_salva,
+                        key=chave_link_32,
+                        placeholder="Insira o link oficial referente ao quesito 3.2...",
+                        height=100,
+                    )
+                    placeholder_links_32 = st.empty()
+                    links_32_visuais = re.findall(REGEX_PURE_URL, link_32 or "")
+                    if links_32_visuais:
+                        placeholder_links_32.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_32_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("3.2", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 3.2", key=f"btn_salvar_3_2_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_32, v_salvo_32)
+                    pts_32 = float(opcoes_32.get(val_salvar, 0.0))
+                    lnk_val = link_32.strip()
+
+                    comentarios_historico = d32.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="3.2",
+                        valor=val_salvar,
+                        pontos=pts_32,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_32_salva or "")]
+
+                    if lnk_val != evidencia_32_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_3_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_3_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 3.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_32 = d32.get("pontos", 0.0)
+                cor_txt_32 = "#28a745" if pts_atuais_32 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_32}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 3.2: +{pts_atuais_32:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 3.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_3_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("3.2", st.session_state.get(f"links_pendentes_3_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 4.0 • CURSOS E TREINAMENTOS OFERECIDOS (MÚLTIPLA ESCOLHA)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_4_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 4.0 - Cursos/Treinamento sobre Saúde em {ano_sel}", expanded=True):
+                st.subheader(f"4.0 • Cursos/Treinamento sobre Saúde em {ano_sel}")
+                st.write(
+                    f"**A Secretaria Municipal de Saúde ou similar ofereceu cursos/treinamento sobre saúde para qual público no ano de {ano_sel}?**"
+                )
+                st.caption("ℹ *Este quesito permite marcação múltipla. Os pontos são somados até o limite máximo de 6,0 pontos. Clique em 'Salvar Quesito 4.0' para registrar.*")
+
+                # Estado inicial / persistente
+                d40 = res_data.get("4.0") or {
+                    "valor": "[]",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                
+                # Deserialização segura do estado das opções marcadas
+                val_raw_40 = d40.get("valor", "[]")
+                try:
+                    opcoes_salvas_40 = json.loads(val_raw_40) if isinstance(val_raw_40, str) and val_raw_40.startswith("[") else []
+                except Exception:
+                    opcoes_salvas_40 = []
+
+                evidencia_40_salva = d40.get("link", "")
+                chave_link_40 = f"l_40_txt_{ano_sel}"
+
+                c40_1, c40_2 = st.columns([1, 1])
+                with c40_1:
+                    st.markdown("**Marque todas as opções que se aplicam:**")
+
+                    chk_escola = st.checkbox("Para escolas (+2.5 pts)", value="escola" in opcoes_salvas_40, key=f"chk_4_0_esc_{ano_sel}")
+                    chk_sec = st.checkbox("Para outras secretarias / entidades municipais (+1.0 pt)", value="secretarias" in opcoes_salvas_40, key=f"chk_4_0_sec_{ano_sel}")
+                    chk_cons = st.checkbox("Para membros do Conselho Municipal de Saúde (+1.0 pt)", value="conselho" in opcoes_salvas_40, key=f"chk_4_0_con_{ano_sel}")
+                    chk_mun = st.checkbox("Para munícipes ou empresas (+1.5 pts)", value="municipes" in opcoes_salvas_40, key=f"chk_4_0_mun_{ano_sel}")
+                    chk_nao = st.checkbox("Não ofereceu nenhum curso/treinamento no ano (0.0 pts)", value="nenhum" in opcoes_salvas_40, key=f"chk_4_0_nao_{ano_sel}")
+
+                with c40_2:
+                    link_40 = st.text_area(
+                        "Link/Evidência (Listas de presença, certificados, portarias ou relatórios de capacitação):",
+                        value=evidencia_40_salva,
+                        key=chave_link_40,
+                        placeholder="Insira o link oficial referente ao quesito 4.0...",
+                        height=160,
+                    )
+                    placeholder_links_40 = st.empty()
+                    links_40_visuais = re.findall(REGEX_PURE_URL, link_40 or "")
+                    if links_40_visuais:
+                        placeholder_links_40.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_40_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("4.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 4.0", key=f"btn_salvar_4_0_{ano_sel}", type="primary"):
+                    # Processamento lógico da escolha múltipla
+                    opcoes_finais_40 = []
+                    pts_calculados_40 = 0.0
+
+                    if chk_nao and not any([chk_escola, chk_sec, chk_cons, chk_mun]):
+                        opcoes_finais_40 = ["nenhum"]
+                        pts_calculados_40 = 0.0
+                    else:
+                        if chk_escola:
+                            opcoes_finais_40.append("escola")
+                            pts_calculados_40 += 2.5
+                        if chk_sec:
+                            opcoes_finais_40.append("secretarias")
+                            pts_calculados_40 += 1.0
+                        if chk_cons:
+                            opcoes_finais_40.append("conselho")
+                            pts_calculados_40 += 1.0
+                        if chk_mun:
+                            opcoes_finais_40.append("municipes")
+                            pts_calculados_40 += 1.5
+
+                    pts_calculados_40 = min(pts_calculados_40, 6.0)
+                    str_opcoes_40 = json.dumps(opcoes_finais_40)
+                    lnk_val = link_40.strip()
+
+                    comentarios_historico = d40.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="4.0",
+                        valor=str_opcoes_40,
+                        pontos=pts_calculados_40,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_40_salva or "")]
+
+                    if lnk_val != evidencia_40_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_4_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 4.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_40 = d40.get("pontos", 0.0)
+                cor_txt_40 = "#28a745" if pts_atuais_40 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_40}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 4.0: +{pts_atuais_40:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 4.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_4_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []), ano_sel)
