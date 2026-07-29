@@ -3156,3 +3156,238 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_9_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 10.0 • INDICADORES DE INFRAESTRUTURA DOS ESTABELECIMENTOS DE SAÚDE
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_10_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 10.0 - Indicadores de Infraestrutura e Funcionamento (RAG {ano_sel})", expanded=True):
+                st.subheader(f"10.0 • Infraestrutura sob Gestão Municipal ({ano_sel})")
+                st.write(
+                    f"**Sobre os estabelecimentos de saúde sob gestão municipal, em dezembro de {ano_sel}, informe os dados de infraestrutura e funcionamento:**"
+                )
+                st.caption("ℹ️ *Preencha os campos numéricos, insira as evidências se houver e clique no botão 'Salvar Quesito 10.0' para registrar.*")
+
+                # 1. Recuperação dos dados do estado local
+                d10_total_est = res_data.get("10.0_total_est") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d10_com_avcb  = res_data.get("10.0_com_avcb")  or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d10_com_visa  = res_data.get("10.0_com_visa")  or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d10_reparos   = res_data.get("10.0_reparos")   or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d10_interromp = res_data.get("10.0_interromp") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d10_mestre    = res_data.get("10.0")           or {"valor": "",  "pontos": 0.0, "link": "", "comentarios": []}
+
+                val_total_salvo = int(d10_total_est.get("valor", "0") if str(d10_total_est.get("valor", "0")).isdigit() else "0")
+                max_limite = max(val_total_salvo, 1) if val_total_salvo > 0 else None
+
+                c23, c24 = st.columns([1, 1])
+
+                with c23:
+                    st.markdown("**Dados do Cadastro Geral:**")
+                    val_total_est = st.number_input(
+                        "Estabelecimentos de saúde sob gestão municipal:",
+                        min_value=0,
+                        step=1,
+                        value=val_total_salvo,
+                        key=f"num_10_tot_{ano_sel}"
+                    )
+
+                    st.markdown("---")
+                    st.markdown("**Dados de Certificações e Condições:**")
+
+                    v_avcb = int(d10_com_avcb.get("valor", "0") if str(d10_com_avcb.get("valor", "0")).isdigit() else "0")
+                    v_visa = int(d10_com_visa.get("valor", "0") if str(d10_com_visa.get("valor", "0")).isdigit() else "0")
+                    v_rep  = int(d10_reparos.get("valor", "0") if str(d10_reparos.get("valor", "0")).isdigit() else "0")
+                    v_int  = int(d10_interromp.get("valor", "0") if str(d10_interromp.get("valor", "0")).isdigit() else "0")
+
+                    val_com_avcb  = st.number_input("Quantidade com AVCB:", min_value=0, max_value=max_limite, step=1, value=v_avcb, key=f"num_10_avcb_{ano_sel}")
+                    val_com_visa  = st.number_input("Quantidade com licença da vigilância sanitária:", min_value=0, max_value=max_limite, step=1, value=v_visa, key=f"num_10_visa_{ano_sel}")
+                    val_reparos   = st.number_input("Quantidade que necessitavam de reparos:", min_value=0, max_value=max_limite, step=1, value=v_rep, key=f"num_10_rep_{ano_sel}")
+                    val_interromp = st.number_input("Quantidade com funcionamento interrompido no ano:", min_value=0, max_value=max_limite, step=1, value=v_int, key=f"num_10_int_{ano_sel}")
+
+                # Cálculo dinâmico para exibição visual
+                pts_avcb = (val_com_avcb / val_total_est) * 50.0 if val_total_est > 0 else 0.0
+                pts_visa = (val_com_visa / val_total_est) * 25.0 if val_total_est > 0 else 0.0
+                pts_reparos = (1.0 - (val_reparos / val_total_est)) * 25.0 if val_total_est > 0 else 0.0
+                pts_interromp = (val_interromp / val_total_est) * -50.0 if val_total_est > 0 else 0.0
+                pts_final_10 = pts_avcb + pts_visa + pts_reparos + pts_interromp
+
+                with c24:
+                    val_input_10_link = st.text_area(
+                        "Link/Evidência (Relação CNES, laudos do Corpo de Bombeiros, certidões da VISA e relatórios de engenharia):",
+                        value=d10_mestre.get("link", ""),
+                        key=f"txt_saude_10_0_{ano_sel}",
+                        height=220
+                    )
+
+                    placeholder_links_10 = st.empty()
+                    links_10_visuais = re.findall(REGEX_PURE_URL, val_input_10_link or "")
+                    if links_10_visuais:
+                        placeholder_links_10.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10_visuais]
+                            )
+                        )
+
+                    st.markdown('<div style="background-color: #f7f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e1e4e6;">', unsafe_allow_html=True)
+                    st.markdown("**🧮 Extrato Estatístico Estimado:**")
+                    st.markdown(f"• Nota Parcial AVCB: `{pts_avcb:.2f} / 50.0 pts`")
+                    st.markdown(f"• Nota Parcial Vig. Sanitária: `{pts_visa:.2f} / 25.0 pts`")
+                    st.markdown(f"• Nota Parcial Reparos: `{pts_reparos:.2f} / 25.0 pts`")
+                    st.markdown(f"• Penalidade Interrupções: `{pts_interromp:.2f} pts`")
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # Renderização do chat de comentários no quesito mestre
+                bloco_comentarios_isaude("10.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 10.0", key=f"btn_salvar_10_0_{ano_sel}", type="primary"):
+                    t_est = val_total_est
+                    c_avcb = val_com_avcb
+                    c_visa = val_com_visa
+                    c_rep = val_reparos
+                    c_int = val_interromp
+                    lk_10 = val_input_10_link.strip()
+
+                    p_avcb_s = (c_avcb / t_est) * 50.0 if t_est > 0 else 0.0
+                    p_visa_s = (c_visa / t_est) * 25.0 if t_est > 0 else 0.0
+                    p_rep_s = (1.0 - (c_rep / t_est)) * 25.0 if t_est > 0 else 0.0
+                    p_int_s = (c_int / t_est) * -50.0 if t_est > 0 else 0.0
+                    p_tot_s = p_avcb_s + p_visa_s + p_rep_s + p_int_s
+
+                    # Persistência de sub-quesitos e mestre
+                    save_resp_isaude("10.0_total_est", str(t_est), p_avcb_s, "", d10_total_est.get("comentarios", []))
+                    save_resp_isaude("10.0_com_avcb", str(c_avcb), 0.0, "", d10_com_avcb.get("comentarios", []))
+                    save_resp_isaude("10.0_com_visa", str(c_visa), 0.0, "", d10_com_visa.get("comentarios", []))
+                    save_resp_isaude("10.0_reparos", str(c_rep), p_rep_s, "", d10_reparos.get("comentarios", []))
+                    save_resp_isaude("10.0_interromp", str(c_int), p_int_s, "", d10_interromp.get("comentarios", []))
+                    save_resp_isaude("10.0", f"Cadastro {t_est} unidades", p_tot_s, lk_10, d10_mestre.get("comentarios", []))
+
+                    v_link_salvo_10 = d10_mestre.get("link", "")
+                    links_atuais_10 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lk_10 or "")]
+                    links_antigos_10 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_link_salvo_10 or "")]
+
+                    if lk_10 != v_link_salvo_10 and links_atuais_10 and links_atuais_10 != links_antigos_10:
+                        st.session_state[f"links_pendentes_10_0_{ano_sel}"] = links_atuais_10
+                        st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Dados do Quesito 10.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_10 = d10_mestre.get("pontos", 0.0)
+                cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                    f"📊 Pontuação Consolidada no Quesito 10.0: {pts_atuais_10:.2f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 10.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_10_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("10.0", st.session_state.get(f"links_pendentes_10_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 11.0 • EXISTÊNCIA DO PCCS
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_11_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 11.0 - Existência de PCCS específico da Saúde (RAG {ano_sel})", expanded=True):
+                st.subheader(f"11.0 • PCCS dos Profissionais de Saúde ({ano_sel})")
+                st.write(
+                    f"**O município possui Plano de Carreira, Cargos e Salários (PCCS) específico elaborado e implantado para seus profissionais de saúde em {ano_sel}?**"
+                )
+                st.caption("⚠️ *Nota: PCCS geral dos servidores públicos do município não é considerado PCCS específico para profissionais de saúde.*")
+
+                opts_11_0 = {
+                    "Selecione...": 0.0,
+                    "Sim – 10": 10.0,
+                    "Não – 00": 0.0
+                }
+
+                # Recupera do banco
+                d11_0 = res_data.get("11.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_11_0 = d11_0.get("valor", "Selecione...")
+                l_salvo_11_0 = d11_0.get("link", "")
+
+                c110_1, c110_2 = st.columns([1, 1])
+
+                with c110_1:
+                    idx_11_0 = list(opts_11_0.keys()).index(v_salvo_11_0) if v_salvo_11_0 in opts_11_0 else 0
+                    sel_11_0 = st.radio(
+                        "Alternativas para o quesito 11.0:",
+                        options=list(opts_11_0.keys()),
+                        index=idx_11_0,
+                        key=f"rb_saude_11_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c110_2:
+                    val_input_11_0_link = st.text_area(
+                        "Link/Evidência Geral (11.0):",
+                        value=l_salvo_11_0,
+                        key=f"txt_saude_11_0_{ano_sel}",
+                        height=90
+                    )
+
+                    placeholder_links_11_0 = st.empty()
+                    links_11_0_visuais = re.findall(REGEX_PURE_URL, val_input_11_0_link or "")
+                    if links_11_0_visuais:
+                        placeholder_links_11_0.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_11_0_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("11.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 11.0", key=f"btn_salvar_11_0_{ano_sel}", type="primary"):
+                    val_opcao_11_0 = sel_11_0
+                    val_link_11_0 = val_input_11_0_link.strip()
+                    pts_11_0 = opts_11_0.get(val_opcao_11_0, 0.0)
+                    comentarios_historico = d11_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="11.0",
+                        valor=val_opcao_11_0,
+                        pontos=pts_11_0,
+                        link=val_link_11_0,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais_11 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, val_link_11_0 or "")]
+                    links_antigos_11 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_11_0 or "")]
+
+                    if val_link_11_0 != l_salvo_11_0 and links_atuais_11 and links_atuais_11 != links_antigos_11:
+                        st.session_state[f"links_pendentes_11_0_{ano_sel}"] = links_atuais_11
+                        st.session_state[f"gatilho_modal_11_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 11.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_11_0 = d11_0.get("pontos", 0.0)
+                cor_txt_11_0 = "#28a745" if pts_atuais_11_0 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_11_0}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 11.0: +{pts_atuais_11_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 11.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []), ano_sel)
