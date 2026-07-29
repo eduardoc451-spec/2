@@ -14590,3 +14590,207 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_31_3_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("31.3", st.session_state.get(f"links_pendentes_31_3_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+        # SEÇÃO 32 - GERENCIAMENTO DE ESTOQUE
+        # =============================================================================
+        st.markdown("### 📦 Seção 32 - Gerenciamento de Estoque")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 32.0 - SISTEMA INFORMATIZADO DE ESTOQUE
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_gerenciamento_estoque_32_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 32.0 • Sistema Informatizado para Estoque de Materiais e Insumos ({ano_sel})", expanded=True):
+                st.subheader(f"32.0 • Sistema Informatizado para Estoque de Materiais e Insumos ({ano_sel})")
+                st.write("**32.0 O município utiliza sistema informatizado para gerenciar o estoque de materiais e insumos médicos?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 32.0' para registrar as alterações.*")
+
+                opts_32_0 = ["Selecione...", "Sim", "Não"]
+
+                d32_0 = res_data.get("32.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_320 = d32_0.get("valor", "Selecione...")
+                idx_32_0 = opts_32_0.index(v_salvo_320) if v_salvo_320 in opts_32_0 else 0
+                l_salvo_320 = d32_0.get("link", "")
+
+                c320_1, c320_2 = st.columns([1, 1])
+                with c320_1:
+                    sel_32_0 = st.radio(
+                        "Sistema de estoque:",
+                        options=opts_32_0,
+                        index=idx_32_0,
+                        key=f"rad_32_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c320_2:
+                    link_32_0_input = st.text_area(
+                        "Link/Evidência do Sistema de Estoque (32.0):",
+                        value=l_salvo_320,
+                        key=f"txt_link_32_0_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_320 = st.empty()
+                links_320_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_32_0_input or "")]
+                if links_320_visuais:
+                    placeholder_links_320.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_320_visuais])
+                    )
+
+                # Feedback visual e Pontuação Informativa
+                pts_32_0 = 0.0
+                if sel_32_0 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_32_0}**")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("32.0", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 32.0: +{pts_32_0:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 32.0", key=f"btn_salvar_32_0_{ano_sel}", type="primary"):
+                    val_str_320 = sel_32_0
+                    val_lk_320 = link_32_0_input.strip()
+                    comentarios_320 = d32_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="32.0",
+                        valor=val_str_320,
+                        pontos=pts_32_0,
+                        link=val_lk_320,
+                        comentarios=comentarios_320
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_320 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_32_0_input or "")]
+                    links_antigos_320 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_320 or "")]
+
+                    if (val_str_320 != d32_0.get("valor", "") or val_lk_320 != l_salvo_320) and links_atuais_320 and links_atuais_320 != links_antigos_320:
+                        st.session_state[f"links_pendentes_32_0_{ano_sel}"] = links_atuais_320
+                        st.session_state[f"gatilho_modal_32_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 32.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 32.0
+        if st.session_state.get(f"gatilho_modal_32_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("32.0", st.session_state.get(f"links_pendentes_32_0_{ano_sel}", []), ano_sel)
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 32.1 - FUNÇÕES DO SISTEMA DE GESTÃO DE ESTOQUE
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_funcoes_estoque_32_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 32.1 • Funções do Sistema de Gestão de Estoque ({ano_sel})", expanded=True):
+                st.subheader(f"32.1 • Funções do Sistema de Gestão de Estoque ({ano_sel})")
+                st.write("**32.1 Assinale as funções do sistema de gestão de estoque de materiais e insumos médicos:**")
+                st.caption("ℹ️ *Marque as opções aplicáveis, informe o link de comprovação e clique no botão 'Salvar Quesito 32.1' para registrar as alterações.*")
+
+                d32_1 = res_data.get("32.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_321 = d32_1.get("valor", "").split("|")
+                l_salvo_321 = d32_1.get("link", "")
+
+                estoque_specs = {
+                    "posicao_lote": {"text": "Fornece a posição de estoque, movimentação de entrada e saída, lote e validade – 15", "pts": 15.0},
+                    "processo_compras": {"text": "Gerenciar o processo de compras dos insumos/materiais de saúde, desde o planejamento até a entrega e o recebimento da nota fiscal – 15", "pts": 15.0},
+                    "reposicao_estab": {"text": "Gerenciar a reposição dos insumos/materiais de saúde por estabelecimento de saúde – 15", "pts": 15.0},
+                    "outros": {"text": "Outros – 00", "pts": 0.0}
+                }
+
+                c321_1, c321_2 = st.columns([1, 1])
+                chks_selecionados_321 = []
+                pts_totais_32_1 = 0.0
+
+                keys_estoque = list(estoque_specs.keys())
+                metade_estoque = (len(keys_estoque) + 1) // 2
+
+                with c321_1:
+                    for k in keys_estoque[:metade_estoque]:
+                        marcado = st.checkbox(estoque_specs[k]["text"], value=k in v_salvo_321, key=f"chk_32_1_{k}_{ano_sel}")
+                        if marcado:
+                            chks_selecionados_321.append(k)
+                            pts_totais_32_1 += estoque_specs[k]["pts"]
+
+                with c321_2:
+                    for k in keys_estoque[metade_estoque:]:
+                        marcado = st.checkbox(estoque_specs[k]["text"], value=k in v_salvo_321, key=f"chk_32_1_{k}_{ano_sel}")
+                        if marcado:
+                            chks_selecionados_321.append(k)
+                            pts_totais_32_1 += estoque_specs[k]["pts"]
+
+                link_32_1_input = st.text_area(
+                    "Link/Evidência das Funções do Estoque (32.1):",
+                    value=l_salvo_321,
+                    key=f"txt_link_32_1_{ano_sel}",
+                    height=140
+                )
+
+                placeholder_links_321 = st.empty()
+                links_321_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_32_1_input or "")]
+                if links_321_visuais:
+                    placeholder_links_321.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_321_visuais])
+                    )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("32.1", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 32.1: +{pts_totais_32_1:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 32.1", key=f"btn_salvar_32_1_{ano_sel}", type="primary"):
+                    val_str_321 = "|".join(chks_selecionados_321)
+                    val_lk_321 = link_32_1_input.strip()
+                    comentarios_321 = d32_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="32.1",
+                        valor=val_str_321,
+                        pontos=pts_totais_32_1,
+                        link=val_lk_321,
+                        comentarios=comentarios_321
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_321 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_32_1_input or "")]
+                    links_antigos_321 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_321 or "")]
+
+                    if (val_str_321 != d32_1.get("valor", "") or val_lk_321 != l_salvo_321) and links_atuais_321 and links_atuais_321 != links_antigos_321:
+                        st.session_state[f"links_pendentes_32_1_{ano_sel}"] = links_atuais_321
+                        st.session_state[f"gatilho_modal_32_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 32.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 32.1
+        if st.session_state.get(f"gatilho_modal_32_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("32.1", st.session_state.get(f"links_pendentes_32_1_{ano_sel}", []), ano_sel)
