@@ -8507,3 +8507,106 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_9_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.9.2", st.session_state.get(f"links_pendentes_17_9_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.0 - DEMANDA POR ASSISTÊNCIA EM SAÚDE MENTAL (INFORMATIVO)
+        # =============================================================================
+        with st.container(key=f"container_bloco_demanda_saude_mental_18_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.0 - Demanda por Assistência em Saúde Mental e Substâncias Psicoativas ({ano_sel})", expanded=True):
+                st.subheader(f"18.0 • Demanda por Assistência em Saúde Mental ({ano_sel})")
+                st.write(f"**18.0 No município, há demanda de ações e de serviços voltados para a assistência aos portadores de transtornos mentais, bem como para usuários de substâncias psicoativas?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 18.0' para registrar.*")
+
+                d18_0 = res_data.get("18.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_18_0 = d18_0.get("valor", "Selecione...")
+                l_salvo_18_0 = d18_0.get("link", "")
+
+                opts_18_0 = [
+                    "Selecione...",
+                    "Sim",
+                    "Não"
+                ]
+                if v_salvo_18_0 not in opts_18_0:
+                    v_salvo_18_0 = "Selecione..."
+
+                idx_18_0 = opts_18_0.index(v_salvo_18_0)
+
+                c180_1, c180_2 = st.columns([1, 1])
+
+                with c180_1:
+                    st.write("🧠 **Selecione uma alternativa:**")
+                    sel_18_0 = st.radio(
+                        "Há demanda por ações/serviços:",
+                        options=opts_18_0,
+                        index=idx_18_0,
+                        key=f"rad_mental_18_0_sel_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    # Quesito meramente informativo (0.0 pontos)
+                    pts_18_0 = 0.0
+
+                with c180_2:
+                    link_18_0_input = st.text_area(
+                        "Link/Evidência, Plano Municipal de Saúde ou Relatório de Gestão (18.0):",
+                        value=l_salvo_18_0,
+                        key=f"txt_link_18_0_mental_{ano_sel}",
+                        height=180
+                    )
+
+                    links_18_0_visuais = re.findall(REGEX_PURE_URL, link_18_0_input or "")
+                    if links_18_0_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_18_0_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.0", key=f"btn_salvar_18_0_mental_{ano_sel}", type="primary"):
+                    val_str_18_0 = sel_18_0
+                    val_lk_18_0 = link_18_0_input.strip()
+                    comentarios_18_0 = d18_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.0",
+                        valor=val_str_18_0,
+                        pontos=pts_18_0,
+                        link=val_lk_18_0,
+                        comentarios=comentarios_18_0
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_18_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_0_input or "")]
+                    links_antigos_18_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_18_0 or "")]
+
+                    if (val_str_18_0 != v_salvo_18_0 or val_lk_18_0 != l_salvo_18_0) and links_atuais_18_0 and links_atuais_18_0 != links_antigos_18_0:
+                        st.session_state[f"links_pendentes_18_0_{ano_sel}"] = links_atuais_18_0
+                        st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_18_0 = d18_0.get("pontos", 0.0)
+                st.markdown(
+                    f"<span style='color:#28a745; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 18.0: {pts_atuais_18_0:+.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.0
+        if st.session_state.get(f"gatilho_modal_18_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.0", st.session_state.get(f"links_pendentes_18_0_{ano_sel}", []), ano_sel)
