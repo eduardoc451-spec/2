@@ -2550,3 +2550,241 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_5_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 6.0 • RESPONSABILIDADE E GESTÃO DO FUNDO MUNICIPAL DE SAÚDE
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_6_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 6.0 - Gestão do Fundo de Saúde em {ano_sel}", expanded=True):
+                st.subheader(f"6.0 • Gestão do Fundo de Saúde ({ano_sel})")
+                st.write(
+                    f"**As despesas consideradas, para fins de apuração do mínimo constitucional de aplicação de recursos próprios em saúde, foram de responsabilidade específica do setor de saúde e com recursos municipais movimentados somente pelo Fundo Municipal de Saúde em {ano_sel}?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 6.0' para registrar.*")
+
+                # Mapeamento de Opções e Pontuações do Quesito 6.0
+                opcoes_60 = {
+                    "Selecione...": 0.0,
+                    "Sim, com responsabilidade específica do setor de saúde e com recursos movimentados exclusivamente pelo Fundo – 05": 5.0,
+                    "Sim, com responsabilidade específica do setor de saúde, mas não houve movimentação de recursos exclusivamente pelo Fundo – 03": 3.0,
+                    "Sim, com recursos movimentados exclusivamente pelo Fundo, mas sem responsabilidade específica do setor de saúde – 01": 1.0,
+                    "Não – 00": 0.0,
+                }
+
+                # Estado inicial / persistente
+                d60 = res_data.get("6.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_60 = d60.get("valor", "Selecione...")
+                evidencia_60_salva = d60.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_60 = f"r_60_{ano_sel}"
+                chave_link_60 = f"l_60_txt_{ano_sel}"
+
+                c60_1, c60_2 = st.columns([1, 1])
+                with c60_1:
+                    lista_opcoes_60 = list(opcoes_60.keys())
+                    idx_60 = lista_opcoes_60.index(v_salvo_60) if v_salvo_60 in lista_opcoes_60 else 0
+
+                    val_radio_60 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_60,
+                        index=idx_60,
+                        key=chave_radio_60,
+                    )
+
+                with c60_2:
+                    link_60 = st.text_area(
+                        "Link/Evidência (Relatório do SIOPS, leis orçamentárias ou decretos de delegação de competência da gestão do fundo):",
+                        value=evidencia_60_salva,
+                        key=chave_link_60,
+                        placeholder="Insira o link oficial referente ao quesito 6.0...",
+                        height=140,
+                    )
+                    placeholder_links_60 = st.empty()
+                    links_60_visuais = re.findall(REGEX_PURE_URL, link_60 or "")
+                    if links_60_visuais:
+                        placeholder_links_60.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_60_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("6.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 6.0", key=f"btn_salvar_6_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_60, v_salvo_60)
+                    pts_60 = float(opcoes_60.get(val_salvar, 0.0))
+                    lnk_val = link_60.strip()
+
+                    comentarios_historico = d60.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="6.0",
+                        valor=val_salvar,
+                        pontos=pts_60,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_60_salva or "")]
+
+                    if lnk_val != evidencia_60_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_6_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 6.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_60 = d60.get("pontos", 0.0)
+                cor_txt_60 = "#28a745" if pts_atuais_60 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_60}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 6.0: +{pts_atuais_60:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 6.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_6_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 7.0 • RELATÓRIOS QUADRIMESTRAIS (MÚLTIPLA ESCOLHA)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_7_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 7.0 - Relatórios Quadrimestrais de {ano_sel} (LC 141/2012)", expanded=True):
+                st.subheader(f"7.0 • Relatórios Quadrimestrais em {ano_sel}")
+                st.write(
+                    f"**O gestor municipal de saúde apresentou quais Relatórios Quadrimestrais de {ano_sel} previstos no art. 36 da Lei Complementar 141/2012 em audiência pública na Câmara Municipal?**"
+                )
+                st.caption("ℹ *Este quesito permite uma ou mais marcações. Seleções negativas impactam o somatório total. Clique em 'Salvar Quesito 7.0' para registrar.*")
+
+                # Estado inicial / persistente
+                d70 = res_data.get("7.0") or {
+                    "valor": "[]",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+
+                # Deserialização segura do estado das opções marcadas
+                val_raw_70 = d70.get("valor", "[]")
+                try:
+                    opcoes_salvas_70 = json.loads(val_raw_70) if isinstance(val_raw_70, str) and val_raw_70.startswith("[") else []
+                except Exception:
+                    opcoes_salvas_70 = []
+
+                evidencia_70_salva = d70.get("link", "")
+                chave_link_70 = f"l_70_txt_{ano_sel}"
+
+                c70_1, c70_2 = st.columns([1, 1])
+                with c70_1:
+                    st.markdown("**Marque todas as opções que se aplicam:**")
+
+                    chk_q1 = st.checkbox(f"Relatório do 1º Quadrimestre - até o final do mês de maio de {ano_sel} (+1.0 pt)", value="q1" in opcoes_salvas_70, key=f"chk_7_0_q1_{ano_sel}")
+                    chk_q2 = st.checkbox(f"Relatório do 2º Quadrimestre - até o final do mês de setembro de {ano_sel} (+1.0 pt)", value="q2" in opcoes_salvas_70, key=f"chk_7_0_q2_{ano_sel}")
+                    chk_q3 = st.checkbox(f"Relatório do 3º Quadrimestre - até o final do mês de fevereiro do ano seguinte (+1.0 pt)", value="q3" in opcoes_salvas_70, key=f"chk_7_0_q3_{ano_sel}")
+                    chk_nenhum_prazo = st.checkbox("Não apresentou nenhum relatório quadrimestral dentro do prazo (0.0 pts)", value="nenhum_prazo" in opcoes_salvas_70, key=f"chk_7_0_np_{ano_sel}")
+                    chk_nenhum_aud = st.checkbox("Não apresentou nenhum relatório quadrimestral em audiência pública na Câmara Municipal (-1.0 pt)", value="nenhum_aud" in opcoes_salvas_70, key=f"chk_7_0_na_{ano_sel}")
+
+                with c70_2:
+                    link_70 = st.text_area(
+                        "Link/Evidência (Atas das audiências públicas ou editais de convocação):",
+                        value=evidencia_70_salva,
+                        key=chave_link_70,
+                        placeholder="Insira o link oficial referente ao quesito 7.0...",
+                        height=180,
+                    )
+                    placeholder_links_70 = st.empty()
+                    links_70_visuais = re.findall(REGEX_PURE_URL, link_70 or "")
+                    if links_70_visuais:
+                        placeholder_links_70.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_70_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("7.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 7.0", key=f"btn_salvar_7_0_{ano_sel}", type="primary"):
+                    # Processamento lógico das regras de pontuação
+                    opcoes_finais_70 = []
+                    pts_calculados_70 = 0.0
+
+                    if chk_nenhum_aud:
+                        opcoes_finais_70 = ["nenhum_aud"]
+                        pts_calculados_70 = -1.0
+                    elif chk_nenhum_prazo:
+                        opcoes_finais_70 = ["nenhum_prazo"]
+                        pts_calculados_70 = 0.0
+                    else:
+                        if chk_q1:
+                            opcoes_finais_70.append("q1")
+                            pts_calculados_70 += 1.0
+                        if chk_q2:
+                            opcoes_finais_70.append("q2")
+                            pts_calculados_70 += 1.0
+                        if chk_q3:
+                            opcoes_finais_70.append("q3")
+                            pts_calculados_70 += 1.0
+
+                    str_opcoes_70 = json.dumps(opcoes_finais_70)
+                    lnk_val = link_70.strip()
+
+                    comentarios_historico = d70.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="7.0",
+                        valor=str_opcoes_70,
+                        pontos=pts_calculados_70,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_70_salva or "")]
+
+                    if lnk_val != evidencia_70_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_7_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 7.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_70 = d70.get("pontos", 0.0)
+                if pts_atuais_70 > 0.0:
+                    cor_txt_70 = "#28a745"
+                elif pts_atuais_70 < 0.0:
+                    cor_txt_70 = "#dc3545"
+                else:
+                    cor_txt_70 = "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_70}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 7.0: {pts_atuais_70:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 7.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_7_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []), ano_sel)
