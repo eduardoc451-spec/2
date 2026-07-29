@@ -5487,14 +5487,14 @@ def mostrar_formulario_saude():
                     val = st.session_state[f"r_17_0_{ano_sel}"]
                     pts = 0.0
                     lnk = st.session_state.get(f"t_17_0_{ano_sel}", d17_0.get("link", ""))
-                    save_resp("17.0", val, pts, lnk)
+                    save_resp_isaude("17.0", val, pts, lnk)
                     res_data["17.0"] = {"valor": val, "pontos": pts, "link": lnk}
 
                 def cb_text_17_0():
                     lnk = st.session_state[f"t_17_0_{ano_sel}"]
                     val = st.session_state.get(f"r_17_0_{ano_sel}", d17_0.get("valor", "Selecione..."))
                     pts = 0.0
-                    save_resp("17.0", val, pts, lnk)
+                    save_resp_isaude("17.0", val, pts, lnk)
                     res_data["17.0"] = {"valor": val, "pontos": pts, "link": lnk}
 
                 c170_1, c170_2 = st.columns([1, 1])
@@ -5521,9 +5521,9 @@ def mostrar_formulario_saude():
                     
                     # Suporte multi-links ativo em placeholder
                     placeholder_links_170 = st.empty()
-                    links_17_0_atuais = re.findall(r'(https?://[^\s]+)', link_17_0)
+                    links_17_0_atuais = re.findall(REGEX_PURE_URL, link_17_0 or "")
                     if links_17_0_atuais:
-                        botoes_17_0 = " | ".join([f"🔗 [{u}]({u})" for u in links_17_0_atuais])
+                        botoes_17_0 = " | ".join([f"🔗 [{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_0_atuais])
                         placeholder_links_170.markdown(f"**Links Ativos:** {botoes_17_0}")
                 
                 # Exibição reativa da pontuação
@@ -5531,11 +5531,13 @@ def mostrar_formulario_saude():
                 placeholder_score_170.markdown(f"📊 **Pontuação Obtida no Quesito 17.0:** `{pts_17_0:.1f} pontos`")
                 
                 # Disparo de modal para links novos
-                links_17_0_antigos = re.findall(r'(https?://[^\s]+)', d17_0.get("link", ""))
+                links_17_0_antigos = re.findall(REGEX_PURE_URL, d17_0.get("link", "") or "")
                 if links_17_0_atuais and links_17_0_atuais != links_17_0_antigos:
-                    modal_aviso_link("17.0", links_17_0_atuais)
+                    if "modal_aviso_link" in globals():
+                        modal_aviso_link("17.0", [u[0] if isinstance(u, tuple) else u for u in links_17_0_atuais], ano_sel)
 
-                bloco_comentarios("17.0", res_data)
+                # CORRIGIDO: chamada para bloco_comentarios_isaude
+                bloco_comentarios_isaude("17.0", res_data)
 
         # =============================================================================
         # QUESITO 17.1 - REGISTRO DE FREQUÊNCIA ELETRÔNICA
@@ -5567,14 +5569,14 @@ def mostrar_formulario_saude():
                     val = st.session_state[f"r_17_1_{ano_sel}"]
                     pts = opts_17_1[val]
                     lnk = st.session_state.get(f"t_17_1_{ano_sel}", d17_1.get("link", ""))
-                    save_resp("17.1", val, pts, lnk)
+                    save_resp_isaude("17.1", val, pts, lnk)
                     res_data["17.1"] = {"valor": val, "pontos": pts, "link": lnk}
 
                 def cb_text_17_1():
                     lnk = st.session_state[f"t_17_1_{ano_sel}"]
                     val = st.session_state.get(f"r_17_1_{ano_sel}", d17_1.get("valor", "Selecione..."))
                     pts = opts_17_1.get(val, 0.0)
-                    save_resp("17.1", val, pts, lnk)
+                    save_resp_isaude("17.1", val, pts, lnk)
                     res_data["17.1"] = {"valor": val, "pontos": pts, "link": lnk}
 
                 c171_1, c171_2 = st.columns([1, 1])
@@ -5602,9 +5604,9 @@ def mostrar_formulario_saude():
                     
                     # Suporte multi-links ativo em placeholder
                     placeholder_links_171 = st.empty()
-                    links_17_1_atuais = re.findall(r'(https?://[^\s]+)', link_17_1)
+                    links_17_1_atuais = re.findall(REGEX_PURE_URL, link_17_1 or "")
                     if links_17_1_atuais:
-                        botoes_17_1 = " | ".join([f"🔗 [{u}]({u})" for u in links_17_1_atuais])
+                        botoes_17_1 = " | ".join([f"🔗 [{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_1_atuais])
                         placeholder_links_171.markdown(f"**Links Ativos:** {botoes_17_1}")
                 
                 # Exibição reativa da pontuação (trata penalidade)
@@ -5615,11 +5617,13 @@ def mostrar_formulario_saude():
                     placeholder_score_171.markdown(f"📊 **Pontuação Aplicada no Quesito 17.1:** `{pts_17_1:.1f} pontos`")
                 
                 # Disparo de modal para links novos
-                links_17_1_antigos = re.findall(r'(https?://[^\s]+)', d17_1.get("link", ""))
+                links_17_1_antigos = re.findall(REGEX_PURE_URL, d17_1.get("link", "") or "")
                 if links_17_1_atuais and links_17_1_atuais != links_17_1_antigos:
-                    modal_aviso_link("17.1", links_17_1_atuais)
+                    if "modal_aviso_link" in globals():
+                        modal_aviso_link("17.1", [u[0] if isinstance(u, tuple) else u for u in links_17_1_atuais], ano_sel)
 
-                bloco_comentarios("17.1", res_data)
+                # CORRIGIDO: chamada para bloco_comentarios_isaude
+                bloco_comentarios_isaude("17.1", res_data)
 
         # =============================================================================
         # QUESITO 17.1.1 - JORNADA DE TRABALHO DOS MÉDICOS AMBULATORIAIS
@@ -5653,14 +5657,14 @@ def mostrar_formulario_saude():
                     val = st.session_state[f"r_17_1_1_{ano_sel}"]
                     pts = opts_17_1_1[val]
                     lnk = st.session_state.get(f"t_17_1_1_{ano_sel}", d17_1_1.get("link", ""))
-                    save_resp("17.1.1", val, pts, lnk)
+                    save_resp_isaude("17.1.1", val, pts, lnk)
                     res_data["17.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
 
                 def cb_text_17_1_1():
                     lnk = st.session_state[f"t_17_1_1_{ano_sel}"]
                     val = st.session_state.get(f"r_17_1_1_{ano_sel}", d17_1_1.get("valor", "Selecione..."))
                     pts = opts_17_1_1.get(val, 0.0)
-                    save_resp("17.1.1", val, pts, lnk)
+                    save_resp_isaude("17.1.1", val, pts, lnk)
                     res_data["17.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
 
                 c1, c2 = st.columns([1, 1])
@@ -5689,9 +5693,9 @@ def mostrar_formulario_saude():
                     
                     # Placeholder estático para links injetados dinamicamente no React
                     placeholder_links_1711 = st.empty()
-                    links_17_1_1_atuais = re.findall(r'(https?://[^\s]+)', link_17_1_1)
+                    links_17_1_1_atuais = re.findall(REGEX_PURE_URL, link_17_1_1 or "")
                     if links_17_1_1_atuais:
-                        botoes_17_1_1 = " | ".join([f"🔗 [{u}]({u})" for u in links_17_1_1_atuais])
+                        botoes_17_1_1 = " | ".join([f"🔗 [{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_1_1_atuais])
                         placeholder_links_1711.markdown(f"**Links Ativos:** {botoes_17_1_1}")
 
                 # Placeholder estático e seguro para o Score do formulário
@@ -5702,8 +5706,10 @@ def mostrar_formulario_saude():
                     placeholder_score_1711.markdown(f"📊 **Pontuação Obtida no Quesito 17.1.1:** `{pts_17_1_1:.1f} pontos`")
 
                 # Dispara o modal de aviso de link se houver alteração detectada via sessão
-                links_17_1_1_antigos = re.findall(r'(https?://[^\s]+)', d17_1_1.get("link", ""))
+                links_17_1_1_antigos = re.findall(REGEX_PURE_URL, d17_1_1.get("link", "") or "")
                 if links_17_1_1_atuais and links_17_1_1_atuais != links_17_1_1_antigos:
-                    modal_aviso_link("17.1.1", links_17_1_1_atuais)
+                    if "modal_aviso_link" in globals():
+                        modal_aviso_link("17.1.1", [u[0] if isinstance(u, tuple) else u for u in links_17_1_1_atuais], ano_sel)
 
-                bloco_comentarios("17.1.1", res_data)
+                # CORRIGIDO: chamada para bloco_comentarios_isaude com ID alinhado "17.1.1"
+                bloco_comentarios_isaude("17.1.1", res_data)
