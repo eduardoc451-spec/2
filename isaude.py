@@ -11235,3 +11235,284 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_20_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("20.1", st.session_state.get(f"links_pendentes_20_1_{ano_sel}", []), ano_sel)
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 20.2 - MATERIAIS PARA DIAGNÓSTICO LABORATORIAL
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_materiais_diag_20_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 20.2 • Materiais para Coleta de Diagnóstico Laboratorial ({ano_sel})", expanded=True):
+                st.subheader(f"20.2 • Materiais para Coleta de Diagnóstico Laboratorial ({ano_sel})")
+                st.write(
+                    "**A Prefeitura disponibilizou os materiais necessários para a coleta dos meios de diagnóstico laboratorial "
+                    "para as doenças sob monitoramento epidemiológico (coleta de sangue, fluidos orgânicos como: saliva, secreção, suor, urina, fezes)?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 20.2' para registrar os dados.*")
+
+                d20_2 = res_data.get("20.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_202 = d20_2.get("valor", "Selecione...")
+                l_salvo_202 = d20_2.get("link", "")
+
+                # Dicionário de opções com os pontos explicitados nos rótulos
+                opcoes_map_20_2 = {
+                    "Selecione...": {"label": "Selecione...", "pts": 0.0},
+                    "Sim, para todas as amostras": {
+                        "label": "Sim, para todas as amostras (0.0 pt)",
+                        "pts": 0.0
+                    },
+                    "Sim, para a maior parte das amostras": {
+                        "label": "Sim, para a maior parte das amostras (-1.0 pt)",
+                        "pts": -1.0
+                    },
+                    "Sim, para a menor parte das amostras": {
+                        "label": "Sim, para a menor parte das amostras (-3.0 pts)",
+                        "pts": -3.0
+                    },
+                    "Não": {
+                        "label": "Não (-5.0 pts)",
+                        "pts": -5.0
+                    }
+                }
+
+                opts_20_2_chaves = list(opcoes_map_20_2.keys())
+                opts_20_2_labels = [opcoes_map_20_2[k]["label"] for k in opts_20_2_chaves]
+
+                # Localização do índice salvo
+                idx_202 = 0
+                for i, k in enumerate(opts_20_2_chaves):
+                    if v_salvo_202 == k or v_salvo_202 == opcoes_map_20_2[k]["label"]:
+                        idx_202 = i
+                        break
+
+                c202_1, c202_2 = st.columns([1, 1])
+
+                with c202_1:
+                    st.write("📋 **Selecione a disponibilidade dos materiais:**")
+
+                    label_selecionada_202 = st.radio(
+                        "Materiais Diagnóstico:",
+                        options=opts_20_2_labels,
+                        index=idx_202,
+                        key=f"rad_20_2_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    chave_selecionada_202 = opts_20_2_chaves[opts_20_2_labels.index(label_selecionada_202)]
+                    pts_20_2 = opcoes_map_20_2[chave_selecionada_202]["pts"]
+
+                with c202_2:
+                    link_20_2_input = st.text_area(
+                        "Link/Evidência de ordens de compra, notas fiscais ou controle de estoque (20.2):",
+                        value=l_salvo_202,
+                        key=f"txt_link_20_2_diag_{ano_sel}",
+                        height=180
+                    )
+
+                    links_202_visuais = re.findall(REGEX_PURE_URL, link_20_2_input or "")
+                    if links_202_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_202_visuais]
+                            )
+                        )
+
+                # Feedback visual de regra
+                if chave_selecionada_202 != "Selecione..." and pts_20_2 < 0:
+                    st.error(f"⚠️ Penalidade aplicada: {pts_20_2:.1f} pontos devido à indisponibilidade total de materiais para diagnósticos.")
+                elif chave_selecionada_202 == "Sim, para todas as amostras":
+                    st.success("✅ Em conformidade: Fornecimento total garantido para coleta de amostras.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("20.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 20.2", key=f"btn_salvar_20_2_diag_{ano_sel}", type="primary"):
+                    val_str_202 = chave_selecionada_202
+                    val_lk_202 = link_20_2_input.strip()
+                    comentarios_202 = d20_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="20.2",
+                        valor=val_str_202,
+                        pontos=pts_20_2,
+                        link=val_lk_202,
+                        comentarios=comentarios_202
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_202 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_20_2_input or "")]
+                    links_antigos_202 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_202 or "")]
+
+                    if (val_str_202 != v_salvo_202 or val_lk_202 != l_salvo_202) and links_atuais_202 and links_atuais_202 != links_antigos_202:
+                        st.session_state[f"links_pendentes_20_2_{ano_sel}"] = links_atuais_202
+                        st.session_state[f"gatilho_modal_20_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 20.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_20_2 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 20.2: {pts_20_2:.1f} pontos (Penalidade)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 20.2: +{pts_20_2:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 20.2
+        if st.session_state.get(f"gatilho_modal_20_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("20.2", st.session_state.get(f"links_pendentes_20_2_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 20.3 - EPI PARA CONTROLE DE VETORES
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_epi_vetores_20_3_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 20.3 • Equipamentos de Proteção Individual (EPI) ({ano_sel})", expanded=True):
+                st.subheader(f"20.3 • Equipamentos de Proteção Individual (EPI) ({ano_sel})")
+                st.write(
+                    "**A Prefeitura disponibilizou todos os equipamentos de proteção individual (EPIs) "
+                    "para o manuseio dos insumos para controle de vetores (inseticidas e pesticidas)?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 20.3' para registrar os dados.*")
+
+                d20_3 = res_data.get("20.3") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_203 = d20_3.get("valor", "Selecione...")
+                l_salvo_203 = d20_3.get("link", "")
+
+                # Dicionário de opções com os pontos explicitados nos rótulos
+                opcoes_map_20_3 = {
+                    "Selecione...": {"label": "Selecione...", "pts": 0.0},
+                    "Sim, para todos os profissionais": {
+                        "label": "Sim, para todos os profissionais (0.0 pt)",
+                        "pts": 0.0
+                    },
+                    "Sim, para a maior parte dos profissionais": {
+                        "label": "Sim, para a maior parte dos profissionais (-1.0 pt)",
+                        "pts": -1.0
+                    },
+                    "Sim, para a menor parte dos profissionais": {
+                        "label": "Sim, para a menor parte dos profissionais (-3.0 pts)",
+                        "pts": -3.0
+                    },
+                    "Não": {
+                        "label": "Não (-5.0 pts)",
+                        "pts": -5.0
+                    }
+                }
+
+                opts_20_3_chaves = list(opcoes_map_20_3.keys())
+                opts_20_3_labels = [opcoes_map_20_3[k]["label"] for k in opts_20_3_chaves]
+
+                # Localização do índice salvo (suportando formatos antigos com texto extra)
+                idx_203 = 0
+                for i, k in enumerate(opts_20_3_chaves):
+                    if v_salvo_203 == k or v_salvo_203.startswith(k) or v_salvo_203 == opcoes_map_20_3[k]["label"]:
+                        idx_203 = i
+                        break
+
+                c203_1, c203_2 = st.columns([1, 1])
+
+                with c203_1:
+                    st.write("📋 **Selecione a disponibilização de EPIs:**")
+
+                    label_selecionada_203 = st.radio(
+                        "Disponibilização de EPIs:",
+                        options=opts_20_3_labels,
+                        index=idx_203,
+                        key=f"rad_20_3_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    chave_selecionada_203 = opts_20_3_chaves[opts_20_3_labels.index(label_selecionada_203)]
+                    pts_20_3 = opcoes_map_20_3[chave_selecionada_203]["pts"]
+
+                with c203_2:
+                    link_20_3_input = st.text_area(
+                        "Link/Evidência de relatórios de entrega de EPIs, cautelas ou processos de compra (20.3):",
+                        value=l_salvo_203,
+                        key=f"txt_link_20_3_epi_{ano_sel}",
+                        height=180
+                    )
+
+                    links_203_visuais = re.findall(REGEX_PURE_URL, link_20_3_input or "")
+                    if links_203_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_203_visuais]
+                            )
+                        )
+
+                # Feedback visual de regra
+                if chave_selecionada_203 != "Selecione..." and pts_20_3 < 0:
+                    st.error(f"⚠️ Penalidade aplicada: {pts_20_3:.1f} pontos devido à falta de EPIs para manuseio de insumos de vetores.")
+                elif chave_selecionada_203 == "Sim, para todos os profissionais":
+                    st.success("✅ Em conformidade: EPIs fornecidos integralmente a todos os profissionais.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("20.3", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 20.3", key=f"btn_salvar_20_3_epi_{ano_sel}", type="primary"):
+                    val_str_203 = chave_selecionada_203
+                    val_lk_203 = link_20_3_input.strip()
+                    comentarios_203 = d20_3.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="20.3",
+                        valor=val_str_203,
+                        pontos=pts_20_3,
+                        link=val_lk_203,
+                        comentarios=comentarios_203
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_203 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_20_3_input or "")]
+                    links_antigos_203 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_203 or "")]
+
+                    if (val_str_203 != v_salvo_203 or val_lk_203 != l_salvo_203) and links_atuais_203 and links_atuais_203 != links_antigos_203:
+                        st.session_state[f"links_pendentes_20_3_{ano_sel}"] = links_atuais_203
+                        st.session_state[f"gatilho_modal_20_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 20.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_20_3 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 20.3: {pts_20_3:.1f} pontos (Penalidade)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 20.3: +{pts_20_3:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 20.3
+        if st.session_state.get(f"gatilho_modal_20_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("20.3", st.session_state.get(f"links_pendentes_20_3_{ano_sel}", []), ano_sel)
