@@ -8611,18 +8611,18 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.0", st.session_state.get(f"links_pendentes_18_0_{ano_sel}", []), ano_sel)
 
+       # =============================================================================
+        # QUESITO 18.1 - PLANO DE AÇÃO MUNICIPAL DA RAPS
         # =============================================================================
-        # QUESITO 18.1 - EXISTÊNCIA DE CAPS NO MUNICÍPIO
-        # =============================================================================
-        with st.container(key=f"container_bloco_caps_18_1_{ano_sel}", border=True):
-            with st.expander(f"📌 Quesito 18.1 - Centro de Atenção Psicossocial - CAPS ({ano_sel})", expanded=True):
-                st.subheader(f"18.1 • Centro de Atenção Psicossocial - CAPS ({ano_sel})")
-                st.write(f"**18.1 O município dispõe de Centro de Atenção Psicossocial (CAPS) na sua rede própria ou consorciada?**")
-                st.caption("ℹ️ *Selecione uma alternativa, informe o link de evidência/SCNES e clique no botão 'Salvar Quesito 18.1' para registrar os pontos.*")
+        with st.container(key=f"container_bloco_plano_raps_18_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.1 - Plano de Ação para Inclusão na RAPS ({ano_sel})", expanded=True):
+                st.subheader(f"18.1 • Plano de Ação para Inclusão na RAPS ({ano_sel})")
+                st.write("**18.1 Realizou Plano de Ação municipal para inclusão do município à sua RAPS?**")
+                st.caption("ℹ️ *Selecione uma alternativa, informe o link de evidência e clique no botão 'Salvar Quesito 18.1' para registrar os pontos.*")
 
                 d18_1 = res_data.get("18.1") or {
                     "valor": "Selecione...",
-                    "pontos": -10.0,
+                    "pontos": 0.0,
                     "link": "",
                     "comentarios": [],
                     "comentario": ""
@@ -8631,10 +8631,9 @@ def mostrar_formulario_saude():
                 l_salvo_18_1 = d18_1.get("link", "")
 
                 opts_18_1 = {
-                    "Selecione...": -10.0,
-                    "Sim (Rede Própria)": 0.0,
-                    "Sim (Rede Consorciada/Regional)": 0.0,
-                    "Não": -10.0
+                    "Selecione...": 0.0,
+                    "Sim – 00": 0.0,
+                    "Não – -10 (perde 10 pontos)": -10.0
                 }
 
                 labels_18_1 = list(opts_18_1.keys())
@@ -8646,23 +8645,23 @@ def mostrar_formulario_saude():
                 c181_1, c181_2 = st.columns([1, 1])
 
                 with c181_1:
-                    st.write("🏥 **Selecione uma alternativa:**")
+                    st.write("📋 **Selecione uma alternativa:**")
                     sel_18_1 = st.radio(
-                        "Disponibilidade de CAPS:",
+                        "Plano de Ação RAPS:",
                         options=labels_18_1,
                         index=idx_18_1,
-                        key=f"rad_caps_18_1_sel_{ano_sel}",
+                        key=f"rad_plano_raps_18_1_sel_{ano_sel}",
                         label_visibility="collapsed"
                     )
 
-                    pts_18_1 = opts_18_1.get(sel_18_1, -10.0)
+                    pts_18_1 = opts_18_1.get(sel_18_1, 0.0)
 
                 with c181_2:
                     link_18_1_input = st.text_area(
-                        "Link/Evidência ou Cadastro no SCNES do CAPS (18.1):",
+                        "Evidência / Resolução do Plano RAPS (18.1):",
                         value=l_salvo_18_1,
-                        key=f"txt_link_18_1_caps_{ano_sel}",
-                        height=180
+                        key=f"txt_link_18_1_plano_raps_{ano_sel}",
+                        height=150
                     )
 
                     links_18_1_visuais = re.findall(REGEX_PURE_URL, link_18_1_input or "")
@@ -8678,7 +8677,7 @@ def mostrar_formulario_saude():
                 bloco_comentarios_isaude("18.1", res_data)
 
                 # Botão de salvamento dedicado
-                if st.button("💾 Salvar Quesito 18.1", key=f"btn_salvar_18_1_caps_{ano_sel}", type="primary"):
+                if st.button("💾 Salvar Quesito 18.1", key=f"btn_salvar_18_1_plano_raps_{ano_sel}", type="primary"):
                     val_str_18_1 = sel_18_1
                     val_lk_18_1 = link_18_1_input.strip()
                     comentarios_18_1 = d18_1.get("comentarios", [])
@@ -8704,7 +8703,7 @@ def mostrar_formulario_saude():
                     st.rerun()
 
                 # Impacto de pontuação
-                pts_atuais_18_1 = d18_1.get("pontos", -10.0)
+                pts_atuais_18_1 = d18_1.get("pontos", 0.0)
                 cor_txt_18_1 = "#28a745" if pts_atuais_18_1 >= 0.0 else "#dc3545"
 
                 st.markdown(
