@@ -2345,3 +2345,202 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_4_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 5.0 • MOVIMENTAÇÃO FINANCEIRA DO SUS EM CONTAS PRÓPRIAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_5_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 5.0 - Contas Bancárias Próprias do SUS em {ano_sel}", expanded=True):
+                st.subheader(f"5.0 • Movimentação Financeira do SUS ({ano_sel})")
+                st.write(
+                    "**Os recursos financeiros municipais (fonte 1) destinados ao Sistema Único de Saúde (SUS) são movimentados em contas bancárias próprias?**"
+                )
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 5.0' para registrar.*")
+
+                # Mapeamento de Opções e Pontuações do Quesito 5.0
+                opcoes_50 = {
+                    "Selecione...": 0.0,
+                    "Sim": 4.0,
+                    "Não": 0.0,
+                }
+
+                # Estado inicial / persistente
+                d50 = res_data.get("5.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_50 = d50.get("valor", "Selecione...")
+                evidencia_50_salva = d50.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_radio_50 = f"r_50_{ano_sel}"
+                chave_link_50 = f"l_50_txt_{ano_sel}"
+
+                c50_1, c50_2 = st.columns([1, 1])
+                with c50_1:
+                    lista_opcoes_50 = list(opcoes_50.keys())
+                    idx_50 = lista_opcoes_50.index(v_salvo_50) if v_salvo_50 in lista_opcoes_50 else 0
+
+                    val_radio_50 = st.radio(
+                        "Selecione a alternativa correspondente:",
+                        options=lista_opcoes_50,
+                        index=idx_50,
+                        key=chave_radio_50,
+                    )
+
+                with c50_2:
+                    link_50 = st.text_area(
+                        "Link/Evidência (Extratos bancários das contas específicas do Fundo Municipal de Saúde, relatório do SIOPS ou demonstrativo de movimentação financeira por fonte):",
+                        value=evidencia_50_salva,
+                        key=chave_link_50,
+                        placeholder="Insira o link oficial referente ao quesito 5.0...",
+                        height=100,
+                    )
+                    placeholder_links_50 = st.empty()
+                    links_50_visuais = re.findall(REGEX_PURE_URL, link_50 or "")
+                    if links_50_visuais:
+                        placeholder_links_50.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_50_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("5.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 5.0", key=f"btn_salvar_5_0_{ano_sel}", type="primary"):
+                    val_salvar = st.session_state.get(chave_radio_50, v_salvo_50)
+                    pts_50 = float(opcoes_50.get(val_salvar, 0.0))
+                    lnk_val = link_50.strip()
+
+                    comentarios_historico = d50.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="5.0",
+                        valor=val_salvar,
+                        pontos=pts_50,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_50_salva or "")]
+
+                    if lnk_val != evidencia_50_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 5.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_50 = d50.get("pontos", 0.0)
+                cor_txt_50 = "#28a745" if pts_atuais_50 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_50}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 5.0: +{pts_atuais_50:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 5.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 5.1 • INFORMAÇÕES DA CONTA BANCÁRIA PRÓPRIA (INFORMATIVO)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_5_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 5.1 - Informações da Conta Bancária Própria em {ano_sel}", expanded=True):
+                st.subheader(f"5.1 • Informações da Conta Bancária Própria ({ano_sel})")
+                st.write(f"**Informe o Banco, Agência e nº da conta em {ano_sel}:**")
+                st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 5.1' para registrar.*")
+
+                # Estado inicial / persistente
+                d51 = res_data.get("5.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_51 = d51.get("valor", "")
+                evidencia_51_salva = d51.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_input_51 = f"txt_saude_5_1_dados_{ano_sel}"
+                chave_link_51 = f"l_51_txt_{ano_sel}"
+
+                c51_1, c51_2 = st.columns([1, 1])
+                with c51_1:
+                    input_5_1 = st.text_input(
+                        "Dados Bancários:",
+                        value=v_salvo_51,
+                        placeholder="Ex: Banco do Brasil, Ag: 1234-5, C/C: 98765-4",
+                        key=chave_input_51,
+                    )
+
+                with c51_2:
+                    link_51 = st.text_area(
+                        "Link/Evidência (opcional):",
+                        value=evidencia_51_salva,
+                        key=chave_link_51,
+                        placeholder="Insira o link oficial referente ao quesito 5.1...",
+                        height=100,
+                    )
+                    placeholder_links_51 = st.empty()
+                    links_51_visuais = re.findall(REGEX_PURE_URL, link_51 or "")
+                    if links_51_visuais:
+                        placeholder_links_51.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_51_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("5.1", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 5.1", key=f"btn_salvar_5_1_{ano_sel}", type="primary"):
+                    val_salvar_51 = st.session_state.get(chave_input_51, input_5_1).strip()
+                    lnk_val = link_51.strip()
+                    comentarios_historico_51 = d51.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="5.1",
+                        valor=val_salvar_51,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentarios=comentarios_historico_51
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_51_salva or "")]
+
+                    if lnk_val != evidencia_51_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_5_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Informações do Quesito 5.1 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Exibição de pontuação fixa informativa
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 5.1: 0.0 pontos (Quesito Informativo)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 5.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []), ano_sel)
