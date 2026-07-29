@@ -3391,3 +3391,196 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_11_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("11.0", st.session_state.get(f"links_pendentes_11_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 11.1 • INSTRUMENTO NORMATIVO
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_11_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 11.1 - Instrumento Normativo de Regulamentação (RAG {ano_sel})", expanded=True):
+                st.subheader(f"11.1 • Regulamentação do PCCS ({ano_sel})")
+                st.write(
+                    f"**Informe o instrumento normativo de regulamentação do Plano de Carreira, Cargos e Salários (PCCS) específico para os profissionais da saúde em {ano_sel}, contendo Número e Data da publicação:**"
+                )
+                st.caption("ℹ️ *Preencha os campos textuais/links e clique no botão 'Salvar Quesito 11.1' para registrar.*")
+
+                # Recupera os dados atuais do banco
+                d11_1 = res_data.get("11.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_11_1 = d11_1.get("valor", "")
+                l_salvo_11_1 = d11_1.get("link", "")
+
+                c111_1, c111_2 = st.columns([1, 1])
+
+                with c111_1:
+                    val_input_11_1_txt = st.text_area(
+                        "Instrumento normativo, número e data de publicação:",
+                        value=v_salvo_11_1,
+                        height=120,
+                        placeholder="Ex: Lei Complementar nº 123, de 10 de Março de 2021",
+                        key=f"txt_area_saude_11_1_{ano_sel}"
+                    )
+
+                with c111_2:
+                    val_input_11_1_link = st.text_input(
+                        "Link do Documento / Evidência Digital:",
+                        value=l_salvo_11_1,
+                        key=f"txt_link_saude_11_1_{ano_sel}"
+                    )
+
+                    # Varre tanto o text_area quanto o text_input em busca de URLs ativas
+                    texto_completo_11_1 = f"{val_input_11_1_txt} {val_input_11_1_link}"
+                    links_11_1_visuais = re.findall(REGEX_PURE_URL, texto_completo_11_1 or "")
+                    if links_11_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_11_1_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("11.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 11.1", key=f"btn_salvar_11_1_{ano_sel}", type="primary"):
+                    val_txt_11_1 = val_input_11_1_txt.strip()
+                    val_lk_11_1 = val_input_11_1_link.strip()
+                    pts_11_1 = 0.0  # Quesito Informativo / Sem impacto de nota direta
+                    comentarios_historico = d11_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="11.1",
+                        valor=val_txt_11_1,
+                        pontos=pts_11_1,
+                        link=val_lk_11_1,
+                        comentarios=comentarios_historico
+                    )
+
+                    # Verificação de modal de aviso para novos links digitados
+                    texto_antigo_11_1 = f"{v_salvo_11_1} {l_salvo_11_1}"
+                    links_atuais_11_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, texto_completo_11_1 or "")]
+                    links_antigos_11_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, texto_antigo_11_1 or "")]
+
+                    if (val_txt_11_1 != v_salvo_11_1 or val_lk_11_1 != l_salvo_11_1) and links_atuais_11_1 and links_atuais_11_1 != links_antigos_11_1:
+                        st.session_state[f"links_pendentes_11_1_{ano_sel}"] = links_atuais_11_1
+                        st.session_state[f"gatilho_modal_11_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 11.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 11.1: 0.0 pontos (Quesito Informativo)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 11.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.1", st.session_state.get(f"links_pendentes_11_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 11.2 • PÁGINA ELETRÔNICA / DIVULGAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_11_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 11.2 - Página Eletrônica de Divulgação do PCCS (RAG {ano_sel})", expanded=True):
+                st.subheader(f"11.2 • Divulgação Eletrônica do PCCS ({ano_sel})")
+                st.write(
+                    f"**Informe a página eletrônica (link na internet) de divulgação do Plano de Carreira, Cargos e Salários (PCCS) específico para os profissionais de saúde:**"
+                )
+                st.caption("⚠️ *Se não estiver disponível na internet, insira exatamente o texto **XYZ**.*")
+
+                # Recupera os dados atuais do banco
+                d11_2 = res_data.get("11.2") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_11_2 = d11_2.get("valor", "")
+                if not v_salvo_11_2:
+                    v_salvo_11_2 = "XYZ"
+                l_salvo_11_2 = d11_2.get("link", "")
+
+                c112_1, c112_2 = st.columns([1, 1])
+
+                with c112_1:
+                    val_input_11_2_txt = st.text_input(
+                        "Página eletrônica (link na internet) ou insira 'XYZ':",
+                        value=v_salvo_11_2,
+                        key=f"txt_val_saude_11_2_{ano_sel}"
+                    )
+
+                with c112_2:
+                    val_input_11_2_link = st.text_input(
+                        "Link auxiliar de auditoria (opcional):",
+                        value=l_salvo_11_2,
+                        key=f"txt_link_saude_11_2_{ano_sel}"
+                    )
+
+                    # Varre ambos os campos buscando URLs ativas
+                    texto_completo_11_2 = f"{val_input_11_2_txt} {val_input_11_2_link}"
+                    links_11_2_visuais = re.findall(REGEX_PURE_URL, texto_completo_11_2 or "")
+                    if links_11_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_11_2_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("11.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 11.2", key=f"btn_salvar_11_2_{ano_sel}", type="primary"):
+                    val_txt_11_2 = val_input_11_2_txt.strip()
+                    val_lk_11_2 = val_input_11_2_link.strip()
+                    val_limpo_11_2 = val_txt_11_2.upper()
+
+                    # Regra automatizada de pontuação
+                    pts_11_2 = 0.0 if val_limpo_11_2 in ["XYZ", ""] else 2.0
+                    comentarios_historico = d11_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="11.2",
+                        valor=val_txt_11_2,
+                        pontos=pts_11_2,
+                        link=val_lk_11_2,
+                        comentarios=comentarios_historico
+                    )
+
+                    # Verificação do disparo do modal de links
+                    texto_antigo_11_2 = f"{v_salvo_11_2} {l_salvo_11_2}"
+                    links_atuais_11_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, texto_completo_11_2 or "")]
+                    links_antigos_11_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, texto_antigo_11_2 or "")]
+
+                    if (val_txt_11_2 != v_salvo_11_2 or val_lk_11_2 != l_salvo_11_2) and links_atuais_11_2 and links_atuais_11_2 != links_antigos_11_2:
+                        st.session_state[f"links_pendentes_11_2_{ano_sel}"] = links_atuais_11_2
+                        st.session_state[f"gatilho_modal_11_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 11.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_11_2 = d11_2.get("pontos", 0.0)
+                cor_txt_11_2 = "#28a745" if pts_atuais_11_2 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_11_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 11.2: +{pts_atuais_11_2:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 11.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_11_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("11.2", st.session_state.get(f"links_pendentes_11_2_{ano_sel}", []), ano_sel)
