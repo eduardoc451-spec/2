@@ -10677,3 +10677,303 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_19_3_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("19.3.1", st.session_state.get(f"links_pendentes_19_3_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 19.4 - ROTINAS DE ACOMPANHAMENTO E AVALIAÇÃO SRT
+        # =============================================================================
+        with st.container(key=f"container_bloco_rotinas_srt_19_4_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.4 • Rotinas de Acompanhamento e Avaliação das SRTs ({ano_sel})", expanded=True):
+                st.subheader(f"19.4 • Rotinas de Acompanhamento e Avaliação das SRTs ({ano_sel})")
+                st.write(
+                    "**A Secretaria Municipal de Saúde (ou equivalente), com apoio técnico do Ministério da Saúde, "
+                    "tem rotinas estabelecidas de acompanhamento, supervisão, controle e avaliação para a garantia do "
+                    "funcionamento com qualidade dos Serviços Residenciais Terapêuticos em Saúde Mental?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 19.4' para registrar os dados.*")
+
+                d19_4 = res_data.get("19.4") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_194 = d19_4.get("valor", "Selecione...")
+                l_salvo_194 = d19_4.get("link", "")
+
+                c194_1, c194_2 = st.columns([1, 1])
+
+                with c194_1:
+                    st.write("📋 **Selecione a opção correspondente:**")
+                    opts_19_4 = ["Selecione...", "Sim – 00", "Não – -05 (perde 05 pontos)"]
+                    idx_194 = opts_19_4.index(v_salvo_194) if v_salvo_194 in opts_19_4 else 0
+
+                    sel_19_4 = st.radio(
+                        "Rotinas estabelecidas:",
+                        options=opts_19_4,
+                        index=idx_194,
+                        key=f"q194_rad_{ano_sel}"
+                    )
+
+                    if "Não" in sel_19_4:
+                        pts_19_4 = -5.0
+                    else:
+                        pts_19_4 = 0.0
+
+                with c194_2:
+                    link_19_4_input = st.text_area(
+                        "Evidência de atas de supervisão, relatórios de monitoramento ou cronograma técnico (19.4):",
+                        value=l_salvo_194,
+                        key=f"txt_link_19_4_rotinas_{ano_sel}",
+                        height=200
+                    )
+
+                    links_194_visuais = re.findall(REGEX_PURE_URL, link_19_4_input or "")
+                    if links_194_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_194_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("19.4", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 19.4", key=f"btn_salvar_19_4_rotinas_{ano_sel}", type="primary"):
+                    val_str_194 = sel_19_4
+                    val_lk_194 = link_19_4_input.strip()
+                    comentarios_194 = d19_4.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="19.4",
+                        valor=val_str_194,
+                        pontos=pts_19_4,
+                        link=val_lk_194,
+                        comentarios=comentarios_194
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_194 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_19_4_input or "")]
+                    links_antigos_194 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_194 or "")]
+
+                    if (val_str_194 != v_salvo_194 or val_lk_194 != l_salvo_194) and links_atuais_194 and links_atuais_194 != links_antigos_194:
+                        st.session_state[f"links_pendentes_19_4_{ano_sel}"] = links_atuais_194
+                        st.session_state[f"gatilho_modal_19_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 19.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_19_4 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 19.4: {pts_19_4:.1f} pontos (Penalidade)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 19.4: +{pts_19_4:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 19.4
+        if st.session_state.get(f"gatilho_modal_19_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.4", st.session_state.get(f"links_pendentes_19_4_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 19.5 - CÁLCULO DE EVOLUÇÃO LEITOS VS VAGAS SRT (DINÂMICO)
+        # =============================================================================
+        ano_atual_int = int(ano_sel)
+        ano_anterior_int = ano_atual_int - 1
+
+        with st.container(key=f"container_bloco_evolucao_srt_leitos_19_5_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.5 • Indicador de Desinstitucionalização (Leitos vs. Vagas SRT) ({ano_sel})", expanded=True):
+                st.subheader(f"19.5 • Indicador de Desinstitucionalização (Leitos vs. Vagas SRT) ({ano_sel})")
+                st.write(f"**Avaliação da série histórica (Data Base Mês Dezembro): Redução de Leitos de Internação Psiquiátrica Prolongada vs. Expansão de SRTs**")
+                st.caption("ℹ️ *Preencha os valores numéricos, informe o link de evidência e clique no botão 'Salvar Quesito 19.5' para registrar os dados.*")
+
+                d19_5 = res_data.get("19.5") or {
+                    "valor": "0|0|0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_195 = d19_5.get("valor", "0|0|0|0")
+                l_salvo_195 = d19_5.get("link", "")
+
+                vals_195 = v_salvo_195.split("|") if v_salvo_195 else []
+
+                try:
+                    la_minus_1 = int(vals_195[0])
+                except (IndexError, ValueError):
+                    la_minus_1 = 0
+
+                try:
+                    la_atual = int(vals_195[1])
+                except (IndexError, ValueError):
+                    la_atual = 0
+
+                try:
+                    va_minus_1 = int(vals_195[2])
+                except (IndexError, ValueError):
+                    va_minus_1 = 0
+
+                try:
+                    va_atual = int(vals_195[3])
+                except (IndexError, ValueError):
+                    va_atual = 0
+
+                c195_1, c195_2 = st.columns([1, 1])
+
+                with c195_1:
+                    st.markdown("**Leitos de Internação Psiquiátrica Prolongada:**")
+                    la_minus_1_input = st.number_input(
+                        f"Nº de leitos sob gestão municipal - {ano_anterior_int} (LA-1):",
+                        min_value=0,
+                        step=1,
+                        value=la_minus_1,
+                        key=f"num_195_la_minus_1_{ano_sel}"
+                    )
+                    la_atual_input = st.number_input(
+                        f"Nº de leitos sob gestão municipal - {ano_atual_int} (LA):",
+                        min_value=0,
+                        step=1,
+                        value=la_atual,
+                        key=f"num_195_la_atual_{ano_sel}"
+                    )
+
+                    st.markdown("**Vagas Disponibilizadas em SRT:**")
+                    va_minus_1_input = st.number_input(
+                        f"Nº de vagas em SRT sob gestão municipal - {ano_anterior_int} (VA-1):",
+                        min_value=0,
+                        step=1,
+                        value=va_minus_1,
+                        key=f"num_195_va_minus_1_{ano_sel}"
+                    )
+                    va_atual_input = st.number_input(
+                        f"Nº de vagas em SRT sob gestão municipal - {ano_atual_int} (VA):",
+                        min_value=0,
+                        step=1,
+                        value=va_atual,
+                        key=f"num_195_va_atual_{ano_sel}"
+                    )
+
+                with c195_2:
+                    link_19_5_input = st.text_area(
+                        f"Relatório do CNES ou ato formal de desospitalização/extinção de leitos ({ano_anterior_int}-{ano_atual_int}) (19.5):",
+                        value=l_salvo_195,
+                        key=f"txt_link_19_5_evolucao_{ano_sel}",
+                        height=250
+                    )
+
+                    links_195_visuais = re.findall(REGEX_PURE_URL, link_19_5_input or "")
+                    if links_195_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_195_visuais]
+                            )
+                        )
+
+                # CÁLCULO DA REGRA DE PENALIZAÇÃO
+                pts_19_5 = 0.0
+                motivo_penalidade = []
+
+                # Recuperação das unidades de 19.2 para validação cruzada
+                d19_2 = res_data.get("19.2") or {"valor": ""}
+                vals_192 = d19_2.get("valor", "").split("|") if d19_2.get("valor") else []
+                soma_unidades_192 = 0
+                for v in vals_192:
+                    if ":" in v:
+                        try:
+                            soma_unidades_192 += int(v.split(":")[1])
+                        except ValueError:
+                            pass
+
+                # Condição 1: Sem SRTs
+                if soma_unidades_192 == 0 or va_atual_input == 0:
+                    pts_19_5 = -15.0
+                    motivo_penalidade.append(f"Município não possui unidades registradas no quesito 19.2 ou o número de vagas em {ano_atual_int} (VA) é zero.")
+
+                # Condição 2: Aumento de Leitos
+                if la_atual_input > la_minus_1_input:
+                    pts_19_5 = -15.0
+                    motivo_penalidade.append(f"Houve aumento de leitos psiquiátricos (LA de {ano_atual_int} [{la_atual_input}] > LA-1 de {ano_anterior_int} [{la_minus_1_input}]).")
+
+                # Condição 3: Diminuição de SRTs ou redução de leitos superior à expansão de SRTs
+                if va_atual_input < va_minus_1_input:
+                    pts_19_5 = -15.0
+                    motivo_penalidade.append(f"Houve diminuição no número absoluto de vagas de SRT (VA de {ano_atual_int} [{va_atual_input}] < VA-1 de {ano_anterior_int} [{va_minus_1_input}]).")
+
+                reducao_leitos = la_minus_1_input - la_atual_input
+                aumento_srt = va_atual_input - va_minus_1_input
+                if reducao_leitos > aumento_srt:
+                    pts_19_5 = -15.0
+                    motivo_penalidade.append(f"A redução de leitos foi maior do que a capacidade de absorção em novas vagas de SRT (Redução de leitos: {reducao_leitos} > Aumento de SRT: {aumento_srt}).")
+
+                # Exibição do feedback das regras
+                if pts_19_5 < 0:
+                    texto_erros = "⚠️ **Critério de Penalidade Atingido conforme regras do quesito:**\n\n"
+                    for motivo in motivo_penalidade:
+                        texto_erros += f"❌ *{motivo}*\n\n"
+                    st.error(texto_erros)
+                else:
+                    st.success("✅ Critério de conformidade atingido (Diminuição de leitos menor ou igual ao aumento de SRTs) ou (Manutenção/Aumento de SRTs).")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("19.5", res_data)
+
+                # String estruturada dos dados numéricos
+                string_estruturada_195 = f"{la_minus_1_input}|{la_atual_input}|{va_minus_1_input}|{va_atual_input}"
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 19.5", key=f"btn_salvar_19_5_evolucao_{ano_sel}", type="primary"):
+                    val_str_195 = string_estruturada_195
+                    val_lk_195 = link_19_5_input.strip()
+                    comentarios_195 = d19_5.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="19.5",
+                        valor=val_str_195,
+                        pontos=pts_19_5,
+                        link=val_lk_195,
+                        comentarios=comentarios_195
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_195 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_19_5_input or "")]
+                    links_antigos_195 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_195 or "")]
+
+                    if (val_str_195 != v_salvo_195 or val_lk_195 != l_salvo_195) and links_atuais_195 and links_atuais_195 != links_antigos_195:
+                        st.session_state[f"links_pendentes_19_5_{ano_sel}"] = links_atuais_195
+                        st.session_state[f"gatilho_modal_19_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 19.5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_19_5 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 19.5: {pts_19_5:.1f} pontos (Fórmula Aplica Perda Máxima de 15 pts)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 19.5: +{pts_19_5:.1f} pontos (Sem penalidades aplicadas)</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 19.5
+        if st.session_state.get(f"gatilho_modal_19_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.5", st.session_state.get(f"links_pendentes_19_5_{ano_sel}", []), ano_sel)
