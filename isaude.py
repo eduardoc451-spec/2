@@ -1680,13 +1680,7 @@ def mostrar_formulario_saude():
                 }
 
                 # Estado inicial / persistente
-                d10 = res_data.get("1.0") or {
-                    "valor": "Selecione...",
-                    "pontos": 0.0,
-                    "link": "",
-                    "comentarios": [],
-                    "comentario": ""
-                }
+                d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
                 v_salvo_10 = d10.get("valor", "Selecione...")
 
                 # Trata migração de legado caso no banco esteja salvo o formato simplificado/antigo
@@ -1697,11 +1691,10 @@ def mostrar_formulario_saude():
                 elif v_salvo_10 == "Não":
                     v_salvo_10 = "Não – 00"
 
-                evidencia_10_salva = d10.get("link", "")
-
                 # Chaves fixas por componente e ano
                 chave_radio_10 = f"r_10_{ano_sel}"
                 chave_link_10 = f"l_10_txt_{ano_sel}"
+                chave_coment_10 = f"coment_1.0_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
                 c10_1, c10_2 = st.columns([1, 1])
                 with c10_1:
@@ -1718,59 +1711,64 @@ def mostrar_formulario_saude():
                 with c10_2:
                     link_10 = st.text_area(
                         "Link de Evidência (Ata da reunião, Resolução do Conselho, etc.):",
-                        value=evidencia_10_salva,
+                        value=d10.get("link", ""),
                         key=chave_link_10,
                         placeholder="Insira o link oficial da ata, resolução ou publicação referente ao quesito 1.0...",
                         height=100,
                     )
                     placeholder_links_10 = st.empty()
-                    links_10_visuais = re.findall(REGEX_PURE_URL, link_10 or "")
+                    regex_url = r'https?://[^\s<>"]+'
+                    links_10_visuais = re.findall(regex_url, link_10 or "")
                     if links_10_visuais:
-                        placeholder_links_10.markdown(
-                            "**🔗 Link ativo:** "
-                            + " | ".join(
-                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10_visuais]
-                            )
-                        )
+                        placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-                # Renderização do chat de comentários
-                bloco_comentarios_isaude("1.0", res_data)
+                # Renderiza o bloco de comentários dentro do expander
+                bloco_comentarios("1.0", res_data, ano_sel)
 
-                # Botão de salvamento
+                # -----------------------------------------------------------------
+                # BOTÃO DE SALVAMENTO MANUAL
+                # -----------------------------------------------------------------
                 if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                     val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
                     pts_10 = float(opcoes_10.get(val_salvar, 0.0))
-                    lnk_val = link_10.strip()
+                    
+                    # 1. Captura o comentário atual do session_state antes do rerun
+                    comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+                    
+                    # 2. Salva no banco de dados isolado do iSaúde (respostas_isaude)
+                    save_resp_isaude("1.0", val_salvar, pts_10, link_10, comentario_para_salvar)
+                    
+                    # 3. Atualiza o dicionário local res_data
+                    res_data["1.0"] = {
+                        "valor": val_salvar,
+                        "pontos": pts_10,
+                        "link": link_10,
+                        "comentario": comentario_para_salvar
+                    }
 
-                    comentarios_historico = d10.get("comentarios", [])
+                    # 4. Validação de links para gatilho do modal
+                    links_atuais = re.findall(regex_url, link_10 or "")
+                    links_antigos = re.findall(regex_url, d10.get("link", "") or "")
 
-                    save_resp_isaude(
-                        qid="1.0",
-                        valor=val_salvar,
-                        pontos=pts_10,
-                        link=lnk_val,
-                        comentarios=comentarios_historico
-                    )
-
-                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
-                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
-
-                    if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
+                    if link_10 != d10.get("link", "") and links_atuais and links_atuais != links_antigos:
                         st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
+                    # Limpa o cache para garantir atualização no banco
                     st.cache_data.clear()
-                    st.toast("Resposta e histórico do Quesito 1.0 salvos com sucesso!", icon="✅")
+
+                    st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                    
+                    # 5. FORÇA O RECARREGAMENTO DA TELA (Resolve o duplo clique e atualiza painéis)
                     st.rerun()
 
-                # Impacto de pontuação
+                # Exibição da pontuação dentro do expander
                 pts_atuais_10 = d10.get("pontos", 0.0)
-                cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
-
+                cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
                 st.markdown(
                     f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
                     f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
-                    unsafe_allow_html=True,
+                    unsafe_allow_html=True
                 )
 
         # GATILHO DO MODAL 1.0 (Fora do container principal)
