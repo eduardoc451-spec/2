@@ -14794,3 +14794,207 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_32_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("32.1", st.session_state.get(f"links_pendentes_32_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+        # SEÇÃO 33 - OUVIDORIA DA SAÚDE
+        # =============================================================================
+        st.markdown("### 🗣️ Seção 33 - Ouvidoria da Saúde")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 33.0 - IMPLANTAÇÃO DA OUVIDORIA
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_ouvidoria_saude_33_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 33.0 • Ouvidoria da Saúde Implantada ({ano_sel})", expanded=True):
+                st.subheader(f"33.0 • Ouvidoria da Saúde Implantada ({ano_sel})")
+                st.write("**33.0 O município possui Ouvidoria da Saúde implantada?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 33.0' para registrar as alterações.*")
+
+                opts_33_0 = ["Selecione...", "Sim", "Não"]
+
+                d33_0 = res_data.get("33.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_330 = d33_0.get("valor", "Selecione...")
+                idx_33_0 = opts_33_0.index(v_salvo_330) if v_salvo_330 in opts_33_0 else 0
+                l_salvo_330 = d33_0.get("link", "")
+
+                c330_1, c330_2 = st.columns([1, 1])
+                with c330_1:
+                    sel_33_0 = st.radio(
+                        "Ouvidoria implantada:",
+                        options=opts_33_0,
+                        index=idx_33_0,
+                        key=f"rad_33_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c330_2:
+                    link_33_0_input = st.text_area(
+                        "Link/Evidência da Ouvidoria (33.0):",
+                        value=l_salvo_330,
+                        key=f"txt_link_33_0_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_330 = st.empty()
+                links_330_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_33_0_input or "")]
+                if links_330_visuais:
+                    placeholder_links_330.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_330_visuais])
+                    )
+
+                # Feedback visual e Pontuação Informativa
+                pts_33_0 = 0.0
+                if sel_33_0 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_33_0}**")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("33.0", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 33.0: +{pts_33_0:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 33.0", key=f"btn_salvar_33_0_{ano_sel}", type="primary"):
+                    val_str_330 = sel_33_0
+                    val_lk_330 = link_33_0_input.strip()
+                    comentarios_330 = d33_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="33.0",
+                        valor=val_str_330,
+                        pontos=pts_33_0,
+                        link=val_lk_330,
+                        comentarios=comentarios_330
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_330 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_33_0_input or "")]
+                    links_antigos_330 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_330 or "")]
+
+                    if (val_str_330 != d33_0.get("valor", "") or val_lk_330 != l_salvo_330) and links_atuais_330 and links_atuais_330 != links_antigos_330:
+                        st.session_state[f"links_pendentes_33_0_{ano_sel}"] = links_atuais_330
+                        st.session_state[f"gatilho_modal_33_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 33.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 33.0
+        if st.session_state.get(f"gatilho_modal_33_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("33.0", st.session_state.get(f"links_pendentes_33_0_{ano_sel}", []), ano_sel)
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 33.1 - CARACTERÍSTICAS DA OUVIDORIA
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_caracteristicas_ouvidoria_33_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 33.1 • Características da Ouvidoria da Saúde ({ano_sel})", expanded=True):
+                st.subheader(f"33.1 • Características da Ouvidoria da Saúde ({ano_sel})")
+                st.write("**33.1 Assinale as características da Ouvidoria da Saúde:**")
+                st.caption("ℹ️ *Marque as opções aplicáveis, informe o link de comprovação e clique no botão 'Salvar Quesito 33.1' para registrar as alterações.*")
+
+                d33_1 = res_data.get("33.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_331 = d33_1.get("valor", "").split("|")
+                l_salvo_331 = d33_1.get("link", "")
+
+                ouvidoria_specs = {
+                    "ato_formal": {"text": "Instituída por ato formal no organograma da secretaria de saúde ou equivalente – 03", "pts": 3.0},
+                    "estrutura_fisica": {"text": "Possui estrutura física – 02", "pts": 2.0},
+                    "equipe_designada": {"text": "Possui equipe ou profissional designado – 05", "pts": 5.0},
+                    "outros": {"text": "Outros – 00", "pts": 0.0}
+                }
+
+                c331_1, c331_2 = st.columns([1, 1])
+                chks_selecionados_331 = []
+                pts_totais_33_1 = 0.0
+
+                keys_ouvidoria = list(ouvidoria_specs.keys())
+                metade_ouvidoria = (len(keys_ouvidoria) + 1) // 2
+
+                with c331_1:
+                    for k in keys_ouvidoria[:metade_ouvidoria]:
+                        marcado = st.checkbox(ouvidoria_specs[k]["text"], value=k in v_salvo_331, key=f"chk_33_1_{k}_{ano_sel}")
+                        if marcado:
+                            chks_selecionados_331.append(k)
+                            pts_totais_33_1 += ouvidoria_specs[k]["pts"]
+
+                with c331_2:
+                    for k in keys_ouvidoria[metade_ouvidoria:]:
+                        marcado = st.checkbox(ouvidoria_specs[k]["text"], value=k in v_salvo_331, key=f"chk_33_1_{k}_{ano_sel}")
+                        if marcado:
+                            chks_selecionados_331.append(k)
+                            pts_totais_33_1 += ouvidoria_specs[k]["pts"]
+
+                link_33_1_input = st.text_area(
+                    "Link/Evidência das Características da Ouvidoria (33.1):",
+                    value=l_salvo_331,
+                    key=f"txt_link_33_1_{ano_sel}",
+                    height=140
+                )
+
+                placeholder_links_331 = st.empty()
+                links_331_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_33_1_input or "")]
+                if links_331_visuais:
+                    placeholder_links_331.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_331_visuais])
+                    )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("33.1", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 33.1: +{pts_totais_33_1:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 33.1", key=f"btn_salvar_33_1_{ano_sel}", type="primary"):
+                    val_str_331 = "|".join(chks_selecionados_331)
+                    val_lk_331 = link_33_1_input.strip()
+                    comentarios_331 = d33_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="33.1",
+                        valor=val_str_331,
+                        pontos=pts_totais_33_1,
+                        link=val_lk_331,
+                        comentarios=comentarios_331
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_331 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_33_1_input or "")]
+                    links_antigos_331 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_331 or "")]
+
+                    if (val_str_331 != d33_1.get("valor", "") or val_lk_331 != l_salvo_331) and links_atuais_331 and links_atuais_331 != links_antigos_331:
+                        st.session_state[f"links_pendentes_33_1_{ano_sel}"] = links_atuais_331
+                        st.session_state[f"gatilho_modal_33_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 33.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 33.1
+        if st.session_state.get(f"gatilho_modal_33_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("33.1", st.session_state.get(f"links_pendentes_33_1_{ano_sel}", []), ano_sel)
