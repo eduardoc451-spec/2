@@ -9855,56 +9855,49 @@ def mostrar_formulario_saude():
 
 
         # =============================================================================
-        # QUESITO 18.5.4 - SUFICIÊNCIA DA REDE CAPS E UNIDADES DE ACOLHIMENTO
+        # QUESITO 18.5.4 - SUFICIÊNCIA DE VAGAS DOS CAPS
         # =============================================================================
-        with st.container(key=f"container_bloco_suficiencia_18_5_4_{ano_sel}", border=True):
-            with st.expander(f"📌 Quesito 18.5.4 • Suficiência da Rede CAPS e UA ({ano_sel})", expanded=True):
-                st.subheader(f"18.5.4 • Suficiência da Estrutura de Atendimento ({ano_sel})")
-                st.write("**A rede de CAPS e Unidades de Acolhimento atende à demanda populacional e territorial do município conforme os parâmetros do Ministério da Saúde?**")
+        with st.container(key=f"container_bloco_suficiencia_caps_18_5_4_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.5.4 • Suficiência de Vagas dos CAPS ({ano_sel})", expanded=True):
+                st.subheader(f"18.5.4 • Suficiência de Vagas dos CAPS ({ano_sel})")
+                st.write("**A quantidade de vagas dos CAPS é suficiente para demanda da população que apresenta prioritariamente, intenso sofrimento psíquico decorrente de transtornos mentais graves e persistentes, incluindo aqueles relacionados ao uso de substâncias psicoativas, e outras situações clínicas?**")
                 st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 18.5.4' para registrar os dados.*")
 
                 d18_5_4 = res_data.get("18.5.4") or {
-                    "valor": "",
+                    "valor": "Selecione...",
                     "pontos": 0.0,
                     "link": "",
                     "comentarios": [],
                     "comentario": ""
                 }
-                v_salvo_1854 = d18_5_4.get("valor", "")
+                v_salvo_1854 = d18_5_4.get("valor", "Selecione...")
                 l_salvo_1854 = d18_5_4.get("link", "")
 
                 c1854_1, c1854_2 = st.columns([1, 1])
 
                 with c1854_1:
                     st.write("📋 **Selecione a opção correspondente:**")
-                    opts_1854 = [
-                        "Sim, atende integralmente a demanda com cobertura adequada",
-                        "Parcialmente, necessita de expansão de cobertura/serviços",
-                        "Não, a estrutura atual é insuficiente para a demanda municipal"
-                    ]
+                    opts_18_5_4 = ["Selecione...", "Sim – 00", "Não – -10 (perde 10 pontos)"]
+                    idx_1854 = opts_18_5_4.index(v_salvo_1854) if v_salvo_1854 in opts_18_5_4 else 0
                     
-                    idx_1854 = opts_1854.index(v_salvo_1854) if v_salvo_1854 in opts_1854 else 0
-                    op_1854 = st.radio(
-                        "Avaliação de Suficiência:",
-                        options=opts_1854,
+                    sel_18_5_4 = st.radio(
+                        "Vagas suficientes:",
+                        options=opts_18_5_4,
                         index=idx_1854,
-                        key=f"q1854_op_{ano_sel}"
+                        key=f"q1854_rad_{ano_sel}"
                     )
-
-                    # Atribuição de pontos (ajuste conforme a regra do seu manual)
-                    if op_1854 == "Sim, atende integralmente a demanda com cobertura adequada":
-                        pts_18_5_4 = 1.0
-                    elif op_1854 == "Parcialmente, necessita de expansão de cobertura/serviços":
-                        pts_18_5_4 = 0.5
+                    
+                    if "Não" in sel_18_5_4:
+                        pts_18_5_4 = -10.0
                     else:
                         pts_18_5_4 = 0.0
 
                 with c1854_2:
                     link_18_5_4_input = st.text_area(
-                        "Link/Evidência ou Estudo de Cobertura da Rede (18.5.4):",
+                        "Justificativa técnica ou relatório de demanda reprimida/fila (18.5.4):",
                         value=l_salvo_1854,
                         key=f"txt_link_18_5_4_suficiencia_{ano_sel}",
-                        height=250
+                        height=200
                     )
 
                     links_1854_visuais = re.findall(REGEX_PURE_URL, link_18_5_4_input or "")
@@ -9921,7 +9914,7 @@ def mostrar_formulario_saude():
 
                 # Botão de salvamento dedicado
                 if st.button("💾 Salvar Quesito 18.5.4", key=f"btn_salvar_18_5_4_suficiencia_{ano_sel}", type="primary"):
-                    val_str_1854 = op_1854
+                    val_str_1854 = sel_18_5_4
                     val_lk_1854 = link_18_5_4_input.strip()
                     comentarios_1854 = d18_5_4.get("comentarios", [])
 
@@ -9946,11 +9939,18 @@ def mostrar_formulario_saude():
                     st.rerun()
 
                 # Impacto de pontuação
-                st.markdown(
-                    f"<span style='color:#198754; font-weight:bold;'>"
-                    f"📊 Pontuação Aplicada no Quesito 18.5.4: +{pts_18_5_4:.1f} pontos</span>",
-                    unsafe_allow_html=True,
-                )
+                if pts_18_5_4 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 18.5.4: {pts_18_5_4:.1f} pontos (Penalidade)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 18.5.4: +{pts_18_5_4:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
 
         # GATILHO DO MODAL 18.5.4
         if st.session_state.get(f"gatilho_modal_18_5_4_{ano_sel}", False):
