@@ -1659,7 +1659,7 @@ def mostrar_formulario_saude():
         )
 
        
-        # =============================================================================
+# =============================================================================
         # QUESITO 1.0 • PLANO MUNICIPAL DE SAÚDE (MODELO PADRONIZADO iGov / iSaúde)
         # =============================================================================
         with st.container(key=f"container_bloco_isaude_1_0_{ano_sel}", border=True):
@@ -1683,6 +1683,7 @@ def mostrar_formulario_saude():
                     "valor": "Selecione...",
                     "pontos": 0.0,
                     "link": "",
+                    "comentarios": [],
                     "comentario": ""
                 }
                 v_salvo_10 = d10.get("valor", "Selecione...")
@@ -1700,7 +1701,6 @@ def mostrar_formulario_saude():
                 # Chaves fixas por componente e ano
                 chave_radio_10 = f"r_10_{ano_sel}"
                 chave_link_10 = f"l_10_txt_{ano_sel}"
-                chave_coment_10 = f"coment_1.0_{ano_sel}"
 
                 c10_1, c10_2 = st.columns([1, 1])
                 with c10_1:
@@ -1732,38 +1732,25 @@ def mostrar_formulario_saude():
                             )
                         )
 
-                # Renderiza o bloco de comentários dentro do expander
-                bloco_comentarios("1.0", res_data, ano_sel)
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("1.0", res_data)
 
-                # -----------------------------------------------------------------
-                # BOTÃO DE SALVAMENTO MANUAL
-                # -----------------------------------------------------------------
+                # Botão de salvamento
                 if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                     val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
                     pts_10 = float(opcoes_10.get(val_salvar, 0.0))
                     lnk_val = link_10.strip()
 
-                    # Captura o comentário do session_state
-                    comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+                    comentarios_historico = d10.get("comentarios", [])
 
-                    # Salva no banco de dados Neon
                     save_resp_isaude(
                         qid="1.0",
                         valor=val_salvar,
                         pontos=pts_10,
                         link=lnk_val,
-                        comentario=comentario_para_salvar
+                        comentarios=comentarios_historico
                     )
 
-                    # Atualiza o dicionário local res_data
-                    res_data["1.0"] = {
-                        "valor": val_salvar,
-                        "pontos": pts_10,
-                        "link": lnk_val,
-                        "comentario": comentario_para_salvar
-                    }
-
-                    # Validação de novos links para acionar o modal
                     links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
                     links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
 
@@ -1772,10 +1759,10 @@ def mostrar_formulario_saude():
                         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
                     st.cache_data.clear()
-                    st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                    st.toast("Resposta e histórico do Quesito 1.0 salvos com sucesso!", icon="✅")
                     st.rerun()
 
-                # Resumo dinâmico e impacto de pontuação
+                # Impacto de pontuação
                 pts_atuais_10 = d10.get("pontos", 0.0)
                 cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
 
@@ -1787,8 +1774,6 @@ def mostrar_formulario_saude():
 
         # GATILHO DO MODAL 1.0 (Fora do container principal)
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-            if "modal_aviso_link_isaude" in globals():
-                modal_aviso_link_isaude("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
-            elif "modal_aviso_link" in globals():
+            if "modal_aviso_link" in globals():
                 modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
             st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
