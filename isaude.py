@@ -11009,17 +11009,17 @@ def mostrar_formulario_saude():
                 with c200_1:
                     st.write("📋 **Selecione os tipos de insumos sob gestão:**")
                     insumo_imuno = st.checkbox(
-                        "Imunobiológicos (soros, vacinas e imunoglobulinas)",
+                        "Imunobiológicos (soros, vacinas e imunoglobulinas) [Informativo / 0.0 pt]",
                         value="Imunobiológicos" in v20_0_list,
                         key=f"chk_20_0_imuno_{ano_sel}"
                     )
                     insumo_diag = st.checkbox(
-                        "Meios de diagnóstico laboratorial para as doenças sob monitoramento epidemiológico",
+                        "Meios de diagnóstico laboratorial para as doenças sob monitoramento epidemiológico [Informativo / 0.0 pt]",
                         value="Diagnóstico" in v20_0_list,
                         key=f"chk_20_0_diag_{ano_sel}"
                     )
                     insumo_vetor = st.checkbox(
-                        "Controle de vetores (inseticidas, larvicidas)",
+                        "Controle de vetores (inseticidas, larvicidas) [Informativo / 0.0 pt]",
                         value="Vetores" in v20_0_list,
                         key=f"chk_20_0_vetor_{ano_sel}"
                     )
@@ -11117,36 +11117,53 @@ def mostrar_formulario_saude():
                 v_salvo_201 = d20_1.get("valor", "Selecione...")
                 l_salvo_201 = d20_1.get("link", "")
 
-                opts_20_1 = [
-                    "Selecione...",
-                    "Sim, em todos os estabelecimentos de saúde sob gestão municipal",
-                    "Sim, na maior parte dos estabelecimentos de saúde sob gestão municipal",
-                    "Sim, na menor parte dos estabelecimentos de saúde sob gestão municipal",
-                    "Não"
-                ]
+                # Dicionário de opções com os pontos explicitados nos rótulos
+                opcoes_map_20_1 = {
+                    "Selecione...": {"label": "Selecione...", "pts": 0.0},
+                    "Sim, em todos os estabelecimentos de saúde sob gestão municipal": {
+                        "label": "Sim, em todos os estabelecimentos de saúde sob gestão municipal (-5.0 pts)",
+                        "pts": -5.0
+                    },
+                    "Sim, na maior parte dos estabelecimentos de saúde sob gestão municipal": {
+                        "label": "Sim, na maior parte dos estabelecimentos de saúde sob gestão municipal (-3.0 pts)",
+                        "pts": -3.0
+                    },
+                    "Sim, na menor parte dos estabelecimentos de saúde sob gestão municipal": {
+                        "label": "Sim, na menor parte dos estabelecimentos de saúde sob gestão municipal (-1.0 pt)",
+                        "pts": -1.0
+                    },
+                    "Não": {
+                        "label": "Não (0.0 pt)",
+                        "pts": 0.0
+                    }
+                }
+
+                opts_20_1_chaves = list(opcoes_map_20_1.keys())
+                opts_20_1_labels = [opcoes_map_20_1[k]["label"] for k in opts_20_1_chaves]
+
+                # Localização do índice salvo (tratando formato com ou sem label de pontos)
+                idx_201 = 0
+                for i, k in enumerate(opts_20_1_chaves):
+                    if v_salvo_201 == k or v_salvo_201 == opcoes_map_20_1[k]["label"]:
+                        idx_201 = i
+                        break
 
                 c201_1, c201_2 = st.columns([1, 1])
 
                 with c201_1:
                     st.write("📋 **Selecione a extensão de uso de frigobar:**")
-                    idx_201 = opts_20_1.index(v_salvo_201) if v_salvo_201 in opts_20_1 else 0
 
-                    sel_20_1 = st.radio(
+                    label_selecionada = st.radio(
                         "Uso de Frigobar:",
-                        options=opts_20_1,
+                        options=opts_20_1_labels,
                         index=idx_201,
                         key=f"rad_20_1_{ano_sel}",
                         label_visibility="collapsed"
                     )
 
-                    opcoes_pts_201 = {
-                        "Sim, em todos os estabelecimentos de saúde sob gestão municipal": -5.0,
-                        "Sim, na maior parte dos estabelecimentos de saúde sob gestão municipal": -3.0,
-                        "Sim, na menor parte dos estabelecimentos de saúde sob gestão municipal": -1.0,
-                        "Não": 0.0,
-                        "Selecione...": 0.0
-                    }
-                    pts_20_1 = opcoes_pts_201.get(sel_20_1, 0.0)
+                    # Mapeamento da chave e pontos correspondentes à seleção
+                    chave_selecionada = opts_20_1_chaves[opts_20_1_labels.index(label_selecionada)]
+                    pts_20_1 = opcoes_map_20_1[chave_selecionada]["pts"]
 
                 with c201_2:
                     link_20_1_input = st.text_area(
@@ -11166,9 +11183,9 @@ def mostrar_formulario_saude():
                         )
 
                 # Feedback visual de regra
-                if sel_20_1 != "Selecione..." and pts_20_1 < 0:
+                if chave_selecionada != "Selecione..." and pts_20_1 < 0:
                     st.error(f"⚠️ Penalidade aplicada: {pts_20_1:.1f} pontos devido ao uso inadequado de frigobar para imunobiológicos.")
-                elif sel_20_1 == "Não":
+                elif chave_selecionada == "Não":
                     st.success("✅ Regular: O município não utiliza frigobares para armazenamento de imunobiológicos.")
 
                 # Chat de comentários
@@ -11176,7 +11193,7 @@ def mostrar_formulario_saude():
 
                 # Botão de salvamento dedicado
                 if st.button("💾 Salvar Quesito 20.1", key=f"btn_salvar_20_1_frigobar_{ano_sel}", type="primary"):
-                    val_str_201 = sel_20_1
+                    val_str_201 = chave_selecionada
                     val_lk_201 = link_20_1_input.strip()
                     comentarios_201 = d20_1.get("comentarios", [])
 
