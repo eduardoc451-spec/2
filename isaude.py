@@ -13594,3 +13594,318 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_28_2_6_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("28.2.6", st.session_state.get(f"links_pendentes_28_2_6_{ano_sel}", []), ano_sel)
+
+# -----------------------------------------------------------------------------
+        # QUESITO 28.2.7 - MAIORES TEMPOS DE ESPERA: OUTROS SERVIÇOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_maiores_esperas_outros_28_2_7_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 28.2.7 • Top 3 Outros Serviços com Maior Tempo de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"28.2.7 • Top 3 Outros Serviços com Maior Tempo de Espera ({ano_sel})")
+                st.write("**Informe os 3 Outros serviços da Atenção Especializada com maior tempo de espera:**")
+                st.caption("ℹ️ *Preencha os serviços e os respectivos dias de espera, informe o link e clique no botão 'Salvar Quesito 28.2.7' para registrar os dados.*")
+
+                d28_2_7 = res_data.get("28.2.7") or {
+                    "valor": "|||||",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_2827 = d28_2_7.get("valor", "|||||").split("|")
+                while len(v_salvo_2827) < 6:
+                    v_salvo_2827.append("")
+
+                l_salvo_2827 = d28_2_7.get("link", "")
+
+                c2827_1, c2827_2 = st.columns([1, 1])
+                with c2827_1:
+                    out_1 = st.text_input("1º Outro serviço:", value=v_salvo_2827[0], key=f"txt_2827_out1_{ano_sel}")
+                    tempo_out1 = st.number_input("Tempo médio de espera out 1 (em dias):", min_value=0, value=int(v_salvo_2827[1]) if v_salvo_2827[1].isdigit() else 0, key=f"num_2827_t1_{ano_sel}")
+
+                    out_2 = st.text_input("2º Outro serviço:", value=v_salvo_2827[2], key=f"txt_2827_out2_{ano_sel}")
+                    tempo_out2 = st.number_input("Tempo médio de espera out 2 (em dias):", min_value=0, value=int(v_salvo_2827[3]) if v_salvo_2827[3].isdigit() else 0, key=f"num_2827_t2_{ano_sel}")
+
+                    out_3 = st.text_input("3º Outro serviço:", value=v_salvo_2827[4], key=f"txt_2827_out3_{ano_sel}")
+                    tempo_out3 = st.number_input("Tempo médio de espera out 3 (em dias):", min_value=0, value=int(v_salvo_2827[5]) if v_salvo_2827[5].isdigit() else 0, key=f"num_2827_t3_{ano_sel}")
+
+                with c2827_2:
+                    link_28_2_7_input = st.text_area(
+                        "Link/Evidência do tempo de espera de outros serviços (28.2.7):",
+                        value=l_salvo_2827,
+                        key=f"txt_link_28_2_7_maiores_esperas_{ano_sel}",
+                        height=210
+                    )
+
+                placeholder_links_2827 = st.empty()
+                links_2827_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_2_7_input or "")]
+                if links_2827_visuais:
+                    placeholder_links_2827.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_2827_visuais])
+                    )
+
+                # Feedback visual
+                preenchidos_2827 = [out for out in [out_1, out_2, out_3] if out.strip()]
+                if preenchidos_2827:
+                    st.success(f"✅ Outros serviços informados: **{', '.join(preenchidos_2827)}**")
+                else:
+                    st.warning("⚠️ Nenhum outro serviço informado.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("28.2.7", res_data)
+
+                # Impacto de pontuação
+                pts_28_2_7 = 0.0
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 28.2.7: +{pts_28_2_7:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 28.2.7", key=f"btn_salvar_28_2_7_maiores_esperas_{ano_sel}", type="primary"):
+                    val_str_2827 = f"{out_1.strip()}|{tempo_out1}|{out_2.strip()}|{tempo_out2}|{out_3.strip()}|{tempo_out3}"
+                    val_lk_2827 = link_28_2_7_input.strip()
+                    comentarios_2827 = d28_2_7.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="28.2.7",
+                        valor=val_str_2827,
+                        pontos=pts_28_2_7,
+                        link=val_lk_2827,
+                        comentarios=comentarios_2827
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_2827 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_28_2_7_input or "")]
+                    links_antigos_2827 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_2827 or "")]
+
+                    if (val_str_2827 != d28_2_7.get("valor", "") or val_lk_2827 != l_salvo_2827) and links_atuais_2827 and links_atuais_2827 != links_antigos_2827:
+                        st.session_state[f"links_pendentes_28_2_7_{ano_sel}"] = links_atuais_2827
+                        st.session_state[f"gatilho_modal_28_2_7_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 28.2.7 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 28.2.7
+        if st.session_state.get(f"gatilho_modal_28_2_7_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("28.2.7", st.session_state.get(f"links_pendentes_28_2_7_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # SEÇÃO 29 - CADASTRO NACIONAL DE ESTABELECIMENTOS DE SAÚDE (CNES)
+        # =============================================================================
+        st.markdown("### 📊 Seção 29 - Atualização do CNES")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 29.0 - ATUALIZAÇÃO DO CNES
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_cnes_atualizacao_29_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 29.0 • Atualização do Cadastro de Estabelecimentos e Profissionais ({ano_sel})", expanded=True):
+                st.subheader(f"29.0 • Atualização do Cadastro de Estabelecimentos e Profissionais ({ano_sel})")
+                st.write("**O município mantém atualizado o Cadastro de Estabelecimentos e Profissionais de Saúde (CNES)?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 29.0' para registrar as alterações.*")
+
+                opts_29_0 = [
+                    "Selecione...",
+                    "SIM, os cadastros de estabelecimentos e de profissionais estão atualizados – 15",
+                    "Sim, somente o cadastro de estabelecimentos está atualizado – 05",
+                    "Sim, somente o cadastro de profissionais está atualizado – 05",
+                    "Não – 00"
+                ]
+
+                d29_0 = res_data.get("29.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_290 = d29_0.get("valor", "Selecione...")
+                idx_29_0 = opts_29_0.index(v_salvo_290) if v_salvo_290 in opts_29_0 else 0
+                l_salvo_290 = d29_0.get("link", "")
+
+                c290_1, c290_2 = st.columns([1, 1])
+                with c290_1:
+                    sel_29_0 = st.radio(
+                        "Atualização do CNES:",
+                        options=opts_29_0,
+                        index=idx_29_0,
+                        key=f"rad_29_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c290_2:
+                    link_29_0_input = st.text_area(
+                        "Link/Evidência da atualização do CNES (29.0):",
+                        value=l_salvo_290,
+                        key=f"txt_link_29_0_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_290 = st.empty()
+                links_290_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_29_0_input or "")]
+                if links_290_visuais:
+                    placeholder_links_290.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_290_visuais])
+                    )
+
+                # Regras de Pontuação
+                opcoes_pts_290 = {
+                    "SIM, os cadastros de estabelecimentos e de profissionais estão atualizados – 15": 15.0,
+                    "Sim, somente o cadastro de estabelecimentos está atualizado – 05": 5.0,
+                    "Sim, somente o cadastro de profissionais está atualizado – 05": 5.0,
+                    "Não – 00": 0.0,
+                    "Selecione...": 0.0
+                }
+                pts_29_0 = opcoes_pts_290.get(sel_29_0, 0.0)
+
+                # Feedback visual de seleção e pontuação
+                if sel_29_0 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção válida foi selecionada. Selecione uma opção para pontuar.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_29_0}**")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("29.0", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#198754; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 29.0: +{pts_29_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 29.0", key=f"btn_salvar_29_0_{ano_sel}", type="primary"):
+                    val_str_290 = sel_29_0
+                    val_lk_290 = link_29_0_input.strip()
+                    comentarios_290 = d29_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="29.0",
+                        valor=val_str_290,
+                        pontos=pts_29_0,
+                        link=val_lk_290,
+                        comentarios=comentarios_290
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_290 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_29_0_input or "")]
+                    links_antigos_290 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_290 or "")]
+
+                    if (val_str_290 != d29_0.get("valor", "") or val_lk_290 != l_salvo_290) and links_atuais_290 and links_atuais_290 != links_antigos_290:
+                        st.session_state[f"links_pendentes_29_0_{ano_sel}"] = links_atuais_290
+                        st.session_state[f"gatilho_modal_29_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 29.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 29.0
+        if st.session_state.get(f"gatilho_modal_29_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("29.0", st.session_state.get(f"links_pendentes_29_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # SEÇÃO 30 - COMPLEXO REGULADOR MUNICIPAL
+        # =============================================================================
+        st.markdown("### 🏢 Seção 30 - Complexo Regulador Municipal")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 30.0 - POSSUI COMPLEXO REGULADOR
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_complexo_regulador_30_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 30.0 • Existência de Complexo Regulador Municipal ({ano_sel})", expanded=True):
+                st.subheader(f"30.0 • Existência de Complexo Regulador Municipal ({ano_sel})")
+                st.write("**O município possui Complexo Regulador Municipal?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 30.0' para registrar as alterações.*")
+
+                opts_30_0 = ["Selecione...", "Sim", "Não"]
+
+                d30_0 = res_data.get("30.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_300 = d30_0.get("valor", "Selecione...")
+                idx_30_0 = opts_30_0.index(v_salvo_300) if v_salvo_300 in opts_30_0 else 0
+                l_salvo_300 = d30_0.get("link", "")
+
+                c300_1, c300_2 = st.columns([1, 1])
+                with c300_1:
+                    sel_30_0 = st.radio(
+                        "Possui complexo:",
+                        options=opts_30_0,
+                        index=idx_30_0,
+                        key=f"rad_30_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c300_2:
+                    link_30_0_input = st.text_area(
+                        "Link/Evidência da existência do Complexo Regulador (30.0):",
+                        value=l_salvo_300,
+                        key=f"txt_link_30_0_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_300 = st.empty()
+                links_300_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_30_0_input or "")]
+                if links_300_visuais:
+                    placeholder_links_300.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_300_visuais])
+                    )
+
+                # Feedback visual e Pontuação Informativa
+                pts_30_0 = 0.0
+                if sel_30_0 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_30_0}**")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("30.0", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 30.0: +{pts_30_0:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 30.0", key=f"btn_salvar_30_0_{ano_sel}", type="primary"):
+                    val_str_300 = sel_30_0
+                    val_lk_300 = link_30_0_input.strip()
+                    comentarios_300 = d30_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="30.0",
+                        valor=val_str_300,
+                        pontos=pts_30_0,
+                        link=val_lk_300,
+                        comentarios=comentarios_300
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_300 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_30_0_input or "")]
+                    links_antigos_300 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_300 or "")]
+
+                    if (val_str_300 != d30_0.get("valor", "") or val_lk_300 != l_salvo_300) and links_atuais_300 and links_atuais_300 != links_antigos_300:
+                        st.session_state[f"links_pendentes_30_0_{ano_sel}"] = links_atuais_300
+                        st.session_state[f"gatilho_modal_30_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 30.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 30.0
+        if st.session_state.get(f"gatilho_modal_30_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("30.0", st.session_state.get(f"links_pendentes_30_0_{ano_sel}", []), ano_sel)
