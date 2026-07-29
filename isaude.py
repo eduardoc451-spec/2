@@ -1772,8 +1772,7 @@ def mostrar_formulario_saude():
                     unsafe_allow_html=True,
                 )
 
-        # GATILHO DO MODAL 1.0 (Fora do container principal)
+        # GATILHO DO MODAL 1.0 (Renderiza o modal ao recarregar a página com o gatilho ativo)
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
-            st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
