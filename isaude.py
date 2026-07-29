@@ -8384,3 +8384,126 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_9_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.9.1", st.session_state.get(f"links_pendentes_17_9_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.9.2 - HOSPITAIS COM TAXA DE OCUPAÇÃO SUPERIOR A 100%
+        # =============================================================================
+        with st.container(key=f"container_bloco_hospitais_superlotados_17_9_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.9.2 - Hospitais com Ocupação Superior a 100% (Série Histórica - {ano_sel})", expanded=True):
+                st.subheader(f"17.9.2 • Hospitais com Ocupação Superior a 100% ({ano_sel})")
+                st.write(f"**17.9.2 Informe o número de hospitais da rede própria que apresentaram taxa de ocupação superior a 100%:**")
+                st.caption("ℹ️ *Informe os valores da série histórica e clique no botão 'Salvar Quesito 17.9.2' para registrar os pontos.*")
+
+                # Definição dinâmica da janela temporal
+                try:
+                    aa = int(ano_sel)
+                except Exception:
+                    aa = 2025
+
+                aa_minus_1 = aa - 1
+                aa_minus_2 = aa - 2
+
+                d17_9_2 = res_data.get("17.9.2") or {
+                    "valor": "0|0|0",
+                    "pontos": -5.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_9_2 = d17_9_2.get("valor", "0|0|0")
+                l_salvo_17_9_2 = d17_9_2.get("link", "")
+
+                partes_to = v_salvo_17_9_2.split("|") if v_salvo_17_9_2 else ["0", "0", "0"]
+                while len(partes_to) < 3:
+                    partes_to.append("0")
+
+                c1792_1, c1792_2 = st.columns([1, 1])
+
+                with c1792_1:
+                    st.write("📊 **Número de Estabelecimentos com Ocupação > 100%:**")
+                    to_aa2 = st.text_input(f"Nº de hospitais em {aa_minus_2} (TO_{aa_minus_2}):", value=partes_to[0], key=f"txt_to_aa2_{ano_sel}")
+                    to_aa1 = st.text_input(f"Nº de hospitais em {aa_minus_1} (TO_{aa_minus_1}):", value=partes_to[1], key=f"txt_to_aa1_{ano_sel}")
+                    to_aa  = st.text_input(f"Nº de hospitais em {aa} (TO_{aa}):", value=partes_to[2], key=f"txt_to_aa_{ano_sel}")
+
+                    def converter_to(val):
+                        try:
+                            return float(str(val).replace(".", "").replace(",", ".").strip()) if val else 0.0
+                        except Exception:
+                            return 0.0
+
+                    f_to_aa2 = converter_to(to_aa2)
+                    f_to_aa1 = converter_to(to_aa1)
+                    f_to_aa  = converter_to(to_aa)
+
+                    media_anterior = (f_to_aa2 + f_to_aa1) / 2.0
+                    st.markdown(f"⏳ **Média Histórica Anterior ({aa_minus_2} e {aa_minus_1}):** `{media_anterior:.2f}` hospitais")
+                    st.markdown(f"📈 **Valor Registrado no Ano Atual ({aa}):** `{f_to_aa:.2f}` hospitais")
+
+                    # Regra de negócio: Se o ano atual for menor ou igual à média ganha 0; se maior, perde 5.
+                    if f_to_aa <= media_anterior:
+                        pts_17_9_2 = 0.0
+                    else:
+                        pts_17_9_2 = -5.0
+
+                    string_estruturada_to = f"{to_aa2}|{to_aa1}|{to_aa}"
+
+                with c1792_2:
+                    link_17_9_2_input = st.text_area(
+                        f"Link/Evidência ou Relatório de Movimentação de Leitos / AIH da série histórica ({aa_minus_2} a {aa}):",
+                        value=l_salvo_17_9_2,
+                        key=f"txt_link_17_9_2_superlotacao_{ano_sel}",
+                        height=235
+                    )
+
+                    links_17_9_2_visuais = re.findall(REGEX_PURE_URL, link_17_9_2_input or "")
+                    if links_17_9_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_9_2_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.9.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.9.2", key=f"btn_salvar_17_9_2_superlotacao_{ano_sel}", type="primary"):
+                    val_str_17_9_2 = string_estruturada_to
+                    val_lk_17_9_2 = link_17_9_2_input.strip()
+                    comentarios_17_9_2 = d17_9_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.9.2",
+                        valor=val_str_17_9_2,
+                        pontos=pts_17_9_2,
+                        link=val_lk_17_9_2,
+                        comentarios=comentarios_17_9_2
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_17_9_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_9_2_input or "")]
+                    links_antigos_17_9_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_9_2 or "")]
+
+                    if (val_str_17_9_2 != v_salvo_17_9_2 or val_lk_17_9_2 != l_salvo_17_9_2) and links_atuais_17_9_2 and links_atuais_17_9_2 != links_antigos_17_9_2:
+                        st.session_state[f"links_pendentes_17_9_2_{ano_sel}"] = links_atuais_17_9_2
+                        st.session_state[f"gatilho_modal_17_9_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.9.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_9_2 = d17_9_2.get("pontos", -5.0)
+                cor_txt_17_9_2 = "#28a745" if pts_atuais_17_9_2 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_9_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.9.2: {pts_atuais_17_9_2:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.9.2
+        if st.session_state.get(f"gatilho_modal_17_9_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.9.2", st.session_state.get(f"links_pendentes_17_9_2_{ano_sel}", []), ano_sel)
