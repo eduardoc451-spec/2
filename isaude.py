@@ -6300,3 +6300,211 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_3_2_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.3.2.1", st.session_state.get(f"links_pendentes_17_3_2_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.4 • CONTROLE DE ABSENTEÍSMO DE EXAMES MÉDICOS
+        # =============================================================================
+        with st.container(key=f"container_bloco_absenteismo_exames_17_4_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.4 - Controle de Absenteísmo de Exames na Atenção Especializada ({ano_sel})", expanded=True):
+                st.subheader(f"17.4 • Controle de Absenteísmo (Exames) ({ano_sel})")
+                st.write(f"**17.4 A Prefeitura Municipal possui controle de absenteísmo para os exames médicos da Atenção Especializada sob sua gestão?**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.4' para registrar.*")
+
+                opts_17_4 = {
+                    "Selecione...": 0.0,
+                    "Sim, para todos os exames – 00": 0.0,
+                    "Sim, para a maior parte dos exames – -01 (perde 01 ponto)": -1.0,
+                    "Sim, para a menor parte dos exames – -02 (perde 02 pontos)": -2.0,
+                    "Não – -03 (perde 03 pontos)": -3.0
+                }
+
+                d17_4 = res_data.get("17.4") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_4 = d17_4.get("valor", "Selecione...")
+                l_salvo_17_4 = d17_4.get("link", "")
+
+                c174_1, c174_2 = st.columns([1, 1])
+                with c174_1:
+                    lista_opcoes_17_4 = list(opts_17_4.keys())
+                    idx_salvo_17_4 = lista_opcoes_17_4.index(v_salvo_17_4) if v_salvo_17_4 in opts_17_4 else 0
+
+                    sel_17_4 = st.radio(
+                        "Controle de absenteísmo (Exames):",
+                        options=lista_opcoes_17_4,
+                        index=idx_salvo_17_4,
+                        key=f"reg_17_4_rad_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c174_2:
+                    link_17_4_input = st.text_area(
+                        "Link/Evidência do Controle de Absenteísmo de Exames (17.4):",
+                        value=l_salvo_17_4,
+                        key=f"reg_17_4_txt_{ano_sel}",
+                        height=130
+                    )
+
+                    links_17_4_visuais = re.findall(REGEX_PURE_URL, link_17_4_input or "")
+                    if links_17_4_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_4_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.4", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.4", key=f"btn_salvar_17_4_{ano_sel}", type="primary"):
+                    val_sel_17_4 = sel_17_4 if sel_17_4 is not None else "Selecione..."
+                    val_lk_17_4 = link_17_4_input.strip()
+                    pts_17_4 = opts_17_4.get(val_sel_17_4, 0.0)
+                    comentarios_17_4 = d17_4.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.4",
+                        valor=val_sel_17_4,
+                        pontos=pts_17_4,
+                        link=val_lk_17_4,
+                        comentarios=comentarios_17_4
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_4 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_4_input or "")]
+                    links_antigos_17_4 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_4 or "")]
+
+                    if (val_sel_17_4 != v_salvo_17_4 or val_lk_17_4 != l_salvo_17_4) and links_atuais_17_4 and links_atuais_17_4 != links_antigos_17_4:
+                        st.session_state[f"links_pendentes_17_4_{ano_sel}"] = links_atuais_17_4
+                        st.session_state[f"gatilho_modal_17_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_4 = d17_4.get("pontos", 0.0)
+                cor_txt_17_4 = "#28a745" if pts_atuais_17_4 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_4}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.4: {pts_atuais_17_4:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.4
+        if st.session_state.get(f"gatilho_modal_17_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.4", st.session_state.get(f"links_pendentes_17_4_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 17.4.1 • TAXA DE ABSENTEÍSMO DE EXAMES MÉDICOS (DINÂMICO)
+        # =============================================================================
+        with st.container(key=f"container_bloco_taxa_absenteismo_exames_17_4_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.4.1 - Evolução da Taxa de Absenteísmo de Exames ({ano_sel})", expanded=True):
+                ano_atual = int(ano_sel)
+                ano_menos_1 = ano_atual - 1
+                ano_menos_2 = ano_atual - 2
+
+                st.subheader(f"17.4.1 • Taxa de Absenteísmo (Exames) ({ano_sel})")
+                st.write(f"**Informe a taxa de absenteísmo de exame médico da Atenção Especializada sob gestão municipal:**")
+                st.caption(f"ℹ️ *Fórmula: Se TA({ano_atual}) > média de TA({ano_menos_2}) e TA({ano_menos_1}) -> Perde 2 pontos.*")
+
+                d17_4_1 = res_data.get("17.4.1") or {
+                    "valor": "0.0|0.0|0.0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_4_1 = d17_4_1.get("valor", "0.0|0.0|0.0")
+                l_salvo_17_4_1 = d17_4_1.get("link", "")
+
+                partes_ta = v_salvo_17_4_1.split("|") if "|" in v_salvo_17_4_1 else ["0.0", "0.0", "0.0"]
+                partes_ta += ["0.0"] * (3 - len(partes_ta))
+
+                try:
+                    v_a2, v_a1, v_atual = float(partes_ta[0]), float(partes_ta[1]), float(partes_ta[2])
+                except ValueError:
+                    v_a2 = v_a1 = v_atual = 0.0
+
+                c1741_1, c1741_2 = st.columns([1, 1])
+
+                with c1741_1:
+                    st.write("📊 **Taxas de Absenteísmo para Exames (%)**")
+                    ta_2 = st.number_input(f"Taxa em {ano_menos_2} (TA-2):", min_value=0.0, max_value=100.0, value=v_a2, step=0.1, format="%.1f", key=f"ta_2_ex_{ano_sel}")
+                    ta_1 = st.number_input(f"Taxa em {ano_menos_1} (TA-1):", min_value=0.0, max_value=100.0, value=v_a1, step=0.1, format="%.1f", key=f"ta_1_ex_{ano_sel}")
+                    ta_atual = st.number_input(f"Taxa em {ano_atual} (TA):", min_value=0.0, max_value=100.0, value=v_atual, step=0.1, format="%.1f", key=f"ta_atual_ex_{ano_sel}")
+
+                    string_valor_calculado = f"{ta_2:.1f}|{ta_1:.1f}|{ta_atual:.1f}"
+                    media_anteriores = (ta_2 + ta_1) / 2.0
+                    st.info(f"💡 Média de {ano_menos_2} e {ano_menos_1}: **{media_anteriores:.1f}%**")
+
+                with c1741_2:
+                    link_17_4_1_input = st.text_area(
+                        "Link/Evidência dos Relatórios de Absenteísmo de Exames (17.4.1):",
+                        value=l_salvo_17_4_1,
+                        key=f"reg_17_4_1_txt_{ano_sel}",
+                        height=210
+                    )
+
+                    links_17_4_1_visuais = re.findall(REGEX_PURE_URL, link_17_4_1_input or "")
+                    if links_17_4_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_4_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.4.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.4.1", key=f"btn_salvar_17_4_1_{ano_sel}", type="primary"):
+                    val_str_17_4_1 = string_valor_calculado
+                    val_lk_17_4_1 = link_17_4_1_input.strip()
+                    pts_17_4_1 = -2.0 if ta_atual > media_anteriores else 0.0
+                    comentarios_17_4_1 = d17_4_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.4.1",
+                        valor=val_str_17_4_1,
+                        pontos=pts_17_4_1,
+                        link=val_lk_17_4_1,
+                        comentarios=comentarios_17_4_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_4_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_4_1_input or "")]
+                    links_antigos_17_4_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_4_1 or "")]
+
+                    if (val_str_17_4_1 != v_salvo_17_4_1 or val_lk_17_4_1 != l_salvo_17_4_1) and links_atuais_17_4_1 and links_atuais_17_4_1 != links_antigos_17_4_1:
+                        st.session_state[f"links_pendentes_17_4_1_{ano_sel}"] = links_atuais_17_4_1
+                        st.session_state[f"gatilho_modal_17_4_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.4.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_4_1 = d17_4_1.get("pontos", 0.0)
+                cor_txt_17_4_1 = "#28a745" if pts_atuais_17_4_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_4_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.4.1: {pts_atuais_17_4_1:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.4.1
+        if st.session_state.get(f"gatilho_modal_17_4_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.4.1", st.session_state.get(f"links_pendentes_17_4_1_{ano_sel}", []), ano_sel)
