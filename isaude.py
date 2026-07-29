@@ -228,7 +228,7 @@ CATEGORIAS_MAP_ISAUDE = {
 # MODAL DE AVISO AUTOMÁTICO
 # =============================================================================
 @st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados):
+def modal_aviso_link(qid, links_encontrados, ano_sel=None):
     st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
     
     for lk in links_encontrados:
@@ -239,7 +239,15 @@ def modal_aviso_link(qid, links_encontrados):
     
     Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
     """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
+    
+    # Prepara a chave correta para o botão e para resetar o gatilho
+    qid_clean = qid.replace('.', '_')
+    chave_btn = f"btn_conf_{qid_clean}_{ano_sel}" if ano_sel else f"btn_conf_{qid_clean}"
+    chave_gatilho = f"gatilho_modal_{qid_clean}_{ano_sel}" if ano_sel else f"gatilho_modal_{qid_clean}"
+
+    if st.button("Confirmo que o link está liberado para o público", key=chave_btn, type="primary"):
+        # Desliga o gatilho para o modal não reabrir em loop
+        st.session_state[chave_gatilho] = False
         st.rerun()
 
 import json
