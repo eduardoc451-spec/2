@@ -8060,3 +8060,234 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.7.1", st.session_state.get(f"links_pendentes_17_7_1_{ano_sel}", []), ano_sel)
 
+        # =============================================================================
+        # QUESITO 17.7 • MAMÓGRAFOS NA REDE PRÓPRIA
+        # =============================================================================
+        with st.container(key=f"container_bloco_mamog_17_7_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.7 - Mamógrafos na Rede Própria ({ano_sel})", expanded=True):
+                st.subheader(f"17.7 • Mamógrafos na Rede Própria ({ano_sel})")
+                st.write(f"**O município possui estabelecimentos de saúde da rede própria com mamógrafos?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 17.7' para registrar.*")
+
+                d17_7 = res_data.get("17.7") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_7 = d17_7.get("valor", "Selecione...")
+                l_salvo_17_7 = d17_7.get("link", "")
+
+                opts_17_7 = ["Selecione...", "Sim", "Não"]
+                if v_salvo_17_7 not in opts_17_7:
+                    v_salvo_17_7 = "Selecione..."
+
+                idx_17_7 = opts_17_7.index(v_salvo_17_7)
+
+                c177_1, c177_2 = st.columns([1, 1])
+
+                with c177_1:
+                    st.write("🏥 **Selecione uma alternativa:**")
+                    sel_17_7 = st.radio(
+                        "Possui estabelecimentos com mamógrafos:",
+                        options=opts_17_7,
+                        index=idx_17_7,
+                        key=f"rad_mamog_17_7_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                    pts_17_7 = 0.0  # Quesito apenas informativo/qualificador para o 17.7.1
+
+                with c177_2:
+                    link_17_7_input = st.text_area(
+                        "Link/Evidência (Cadastro no CNES ou relatório de equipamentos):",
+                        value=l_salvo_17_7,
+                        key=f"reg_17_7_txt_{ano_sel}",
+                        height=150
+                    )
+
+                    links_17_7_visuais = re.findall(REGEX_PURE_URL, link_17_7_input or "")
+                    if links_17_7_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_7_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.7", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.7", key=f"btn_salvar_17_7_{ano_sel}", type="primary"):
+                    val_str_17_7 = sel_17_7
+                    val_lk_17_7 = link_17_7_input.strip()
+                    comentarios_17_7 = d17_7.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.7",
+                        valor=val_str_17_7,
+                        pontos=pts_17_7,
+                        link=val_lk_17_7,
+                        comentarios=comentarios_17_7
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_7 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_7_input or "")]
+                    links_antigos_17_7 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_7 or "")]
+
+                    if (val_str_17_7 != v_salvo_17_7 or val_lk_17_7 != l_salvo_17_7) and links_atuais_17_7 and links_atuais_17_7 != links_antigos_17_7:
+                        st.session_state[f"links_pendentes_17_7_{ano_sel}"] = links_atuais_17_7
+                        st.session_state[f"gatilho_modal_17_7_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.7 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_7 = d17_7.get("pontos", 0.0)
+                cor_txt_17_7 = "#28a745" if pts_atuais_17_7 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_7}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.7: {pts_atuais_17_7:+.1f} pontos (Dados Qualitativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.7
+        if st.session_state.get(f"gatilho_modal_17_7_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.7", st.session_state.get(f"links_pendentes_17_7_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.7.1 • PRODUTIVIDADE DE MAMÓGRAFOS
+        # =============================================================================
+        if sel_17_7 == "Sim":
+            with st.container(key=f"container_bloco_prod_mamog_17_7_1_{ano_sel}", border=True):
+                with st.expander(f"📌 Quesito 17.7.1 - Produtividade de Mamógrafos ({ano_sel})", expanded=True):
+                    st.subheader(f"17.7.1 • Produtividade de Mamógrafos da Rede Própria ({ano_sel})")
+                    st.write(f"**Informe a quantidade de exames realizados e de mamógrafos na rede própria para fins de cálculo de produtividade:**")
+                    st.caption("ℹ️ *Preencha os campos abaixo, informe o link de evidência e clique no botão 'Salvar Quesito 17.7.1' para registrar.*")
+
+                    d17_7_1 = res_data.get("17.7.1") or {
+                        "valor": "0|0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": ""
+                    }
+                    v_salvo_17_7_1 = d17_7_1.get("valor", "0|0")
+                    l_salvo_17_7_1 = d17_7_1.get("link", "")
+
+                    partes_mamog = v_salvo_17_7_1.split("|") if v_salvo_17_7_1 else ["0", "0"]
+                    val_ex_salvo = partes_mamog[0] if len(partes_mamog) > 0 else "0"
+                    val_mm_salvo = partes_mamog[1] if len(partes_mamog) > 1 else "0"
+
+                    c1771_1, c1771_2 = st.columns([1, 1])
+
+                    with c1771_1:
+                        st.write(f"📊 **Dados de Produção ({ano_sel}):**")
+
+                        inp_ex = st.text_input(
+                            f"Quantidade de exames realizados (EX):",
+                            value=val_ex_salvo,
+                            key=f"txt_1771_ex_{ano_sel}"
+                        )
+
+                        inp_mm = st.text_input(
+                            f"Quantidade de mamógrafos (MM):",
+                            value=val_mm_salvo,
+                            key=f"txt_1771_mm_{ano_sel}"
+                        )
+
+                        # Conversão e tratamento numérico seguro
+                        try:
+                            ex_float = float(inp_ex.replace(".", "").replace(",", ".")) if inp_ex else 0.0
+                        except ValueError:
+                            ex_float = 0.0
+
+                        try:
+                            mm_float = float(inp_mm.replace(".", "").replace(",", ".")) if inp_mm else 0.0
+                        except ValueError:
+                            mm_float = 0.0
+
+                        # Regra IEGM: Meta de 6.758 exames/ano por mamógrafo
+                        if mm_float > 0:
+                            prod_p = ex_float / mm_float
+                            st.info(f"📈 **Produtividade Calculada (P):** `{prod_p:,.2f}` exames/ano")
+                            if prod_p >= 6758.0:
+                                pts_17_7_1 = 0.0
+                            else:
+                                pts_17_7_1 = -5.0
+                        else:
+                            if ex_float == 0.0 and mm_float == 0.0:
+                                st.warning("⚠️ **Produtividade (P):** Aguardando preenchimento dos dados.")
+                                pts_17_7_1 = 0.0
+                            else:
+                                st.error("⚠️ **Produtividade (P):** Divisão por zero! Informe a quantidade de mamógrafos.")
+                                pts_17_7_1 = -5.0
+
+                        string_estruturada_1771 = f"{inp_ex}|{inp_mm}"
+
+                    with c1771_2:
+                        link_17_7_1_input = st.text_area(
+                            f"Link/Evidência ou Relatório do SIA/SUS ({ano_sel}):",
+                            value=l_salvo_17_7_1,
+                            key=f"reg_17_7_1_txt_{ano_sel}",
+                            height=220
+                        )
+
+                        links_17_7_1_visuais = re.findall(REGEX_PURE_URL, link_17_7_1_input or "")
+                        if links_17_7_1_visuais:
+                            st.markdown(
+                                "**🔗 Links ativos:** "
+                                + " | ".join(
+                                    [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_7_1_visuais]
+                                )
+                            )
+
+                    # Chat de comentários
+                    bloco_comentarios_isaude("17.7.1", res_data)
+
+                    # Botão de salvamento dedicado
+                    if st.button("💾 Salvar Quesito 17.7.1", key=f"btn_salvar_17_7_1_{ano_sel}", type="primary"):
+                        val_str_17_7_1 = string_estruturada_1771
+                        val_lk_17_7_1 = link_17_7_1_input.strip()
+                        comentarios_17_7_1 = d17_7_1.get("comentarios", [])
+
+                        save_resp_isaude(
+                            qid="17.7.1",
+                            valor=val_str_17_7_1,
+                            pontos=pts_17_7_1,
+                            link=val_lk_17_7_1,
+                            comentarios=comentarios_17_7_1
+                        )
+
+                        # Modal de aviso para links pendentes
+                        links_atuais_17_7_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_7_1_input or "")]
+                        links_antigos_17_7_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_7_1 or "")]
+
+                        if (val_str_17_7_1 != v_salvo_17_7_1 or val_lk_17_7_1 != l_salvo_17_7_1) and links_atuais_17_7_1 and links_atuais_17_7_1 != links_antigos_17_7_1:
+                            st.session_state[f"links_pendentes_17_7_1_{ano_sel}"] = links_atuais_17_7_1
+                            st.session_state[f"gatilho_modal_17_7_1_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta e histórico do Quesito 17.7.1 salvos com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_17_7_1 = d17_7_1.get("pontos", 0.0)
+                    cor_txt_17_7_1 = "#28a745" if pts_atuais_17_7_1 >= 0.0 else "#dc3545"
+
+                    st.markdown(
+                        f"<span style='color:{cor_txt_17_7_1}; font-weight:bold;'>"
+                        f"📊 Pontuação Obtida no Quesito 17.7.1: {pts_atuais_17_7_1:+.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL 17.7.1
+            if st.session_state.get(f"gatilho_modal_17_7_1_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link("17.7.1", st.session_state.get(f"links_pendentes_17_7_1_{ano_sel}", []), ano_sel)
+
