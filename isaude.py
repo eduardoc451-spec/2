@@ -5458,97 +5458,117 @@ def mostrar_formulario_saude():
                 modal_aviso_link("16.1", st.session_state.get(f"links_pendentes_16_1_{ano_sel}", []), ano_sel)
 
         # =============================================================================
-        # QUESITO 17.0 - ATENÇÃO ESPECIALIZADA
+        # QUESITO 17.0 • ATENÇÃO ESPECIALIZADA
         # =============================================================================
-        with st.container(key=f"container_bloco_especializada_17_0_{ano_sel}", border=True):
-            
-            with st.expander(f"📌 Quesito 17.0 - Atendimento de Atenção Especializada", expanded=True):
-                st.subheader("17.0 • Atenção Especializada")
-                st.write("**O município possui atendimento de Atenção Especializada (média e/ou alta complexidade)?**")
-                st.caption("ℹ️ *O salvamento é automático via callbacks de estado. Alterações no rádio ou link são gravadas instantaneamente.*")
+        with st.container(key=f"container_bloco_especializada_17_0_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.0 - Atendimento de Atenção Especializada ({ano_sel})", expanded=True):
+                st.subheader(f"17.0 • Atenção Especializada ({ano_sel})")
+                st.write(f"**O município possui atendimento de Atenção Especializada (média e/ou alta complexidade) em {ano_sel}?**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.0' para registrar.*")
 
-                # Recupera os dados salvos com segurança
-                d17_0 = res_data.get("17.0", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-                
-                opcoes_17_0 = [
-                    "Selecione...",
-                    "Sim, sob gestão municipal",
-                    "Sim, sob gestão estadual",
-                    "Sim, sob gestão municipal e sob gestão estadual",
-                    "Não, somente encaminhamento para outro município"
-                ]
+                opts_17_0 = {
+                    "Selecione...": 0.0,
+                    "Sim, sob gestão municipal": 0.0,
+                    "Sim, sob gestão estadual": 0.0,
+                    "Sim, sob gestão municipal e sob gestão estadual": 0.0,
+                    "Não, somente encaminhamento para outro município": 0.0
+                }
 
-                valor_salvo_17_0 = d17_0.get("valor", "Selecione...")
-                if valor_salvo_17_0 not in opcoes_17_0:
-                    valor_salvo_17_0 = "Selecione..."
-
-                # Callbacks para persistência síncrona
-                def cb_radio_17_0():
-                    val = st.session_state[f"r_17_0_{ano_sel}"]
-                    pts = 0.0
-                    lnk = st.session_state.get(f"t_17_0_{ano_sel}", d17_0.get("link", ""))
-                    save_resp_isaude("17.0", val, pts, lnk)
-                    res_data["17.0"] = {"valor": val, "pontos": pts, "link": lnk}
-
-                def cb_text_17_0():
-                    lnk = st.session_state[f"t_17_0_{ano_sel}"]
-                    val = st.session_state.get(f"r_17_0_{ano_sel}", d17_0.get("valor", "Selecione..."))
-                    pts = 0.0
-                    save_resp_isaude("17.0", val, pts, lnk)
-                    res_data["17.0"] = {"valor": val, "pontos": pts, "link": lnk}
+                d17_0 = res_data.get("17.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_0 = d17_0.get("valor", "Selecione...")
+                l_salvo_17_0 = d17_0.get("link", "")
 
                 c170_1, c170_2 = st.columns([1, 1])
                 with c170_1:
-                    st.markdown("**Selecione uma alternativa:**")
+                    lista_opcoes_17_0 = list(opts_17_0.keys())
+                    idx_salvo_17_0 = lista_opcoes_17_0.index(v_salvo_17_0) if v_salvo_17_0 in opts_17_0 else 0
+
                     sel_17_0 = st.radio(
-                        "Gestão da Atenção Especializada:", 
-                        options=opcoes_17_0, 
-                        index=opcoes_17_0.index(valor_salvo_17_0),
-                        key=f"r_17_0_{ano_sel}", 
-                        on_change=cb_radio_17_0,
+                        "Gestão da Atenção Especializada:",
+                        options=lista_opcoes_17_0,
+                        index=idx_salvo_17_0,
+                        key=f"r_17_0_{ano_sel}",
                         label_visibility="collapsed"
                     )
-                    pts_17_0 = 0.0
-                    
-                with c170_2:
-                    link_17_0 = st.text_area(
-                        "Link/Evidência Geral (17.0):", 
-                        value=d17_0.get("link", ""), 
-                        key=f"t_17_0_{ano_sel}",
-                        on_change=cb_text_17_0,
-                        height=110
-                    )
-                    
-                    # Suporte multi-links ativo em placeholder
-                    placeholder_links_170 = st.empty()
-                    links_17_0_atuais = re.findall(REGEX_PURE_URL, link_17_0 or "")
-                    if links_17_0_atuais:
-                        botoes_17_0 = " | ".join([f"🔗 [{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_0_atuais])
-                        placeholder_links_170.markdown(f"**Links Ativos:** {botoes_17_0}")
-                
-                # Exibição reativa da pontuação
-                placeholder_score_170 = st.empty()
-                placeholder_score_170.markdown(f"📊 **Pontuação Obtida no Quesito 17.0:** `{pts_17_0:.1f} pontos`")
-                
-                # Disparo de modal para links novos
-                links_17_0_antigos = re.findall(REGEX_PURE_URL, d17_0.get("link", "") or "")
-                if links_17_0_atuais and links_17_0_atuais != links_17_0_antigos:
-                    if "modal_aviso_link" in globals():
-                        modal_aviso_link("17.0", [u[0] if isinstance(u, tuple) else u for u in links_17_0_atuais], ano_sel)
 
-                # CORRIGIDO: chamada para bloco_comentarios_isaude
+                with c170_2:
+                    link_17_0_input = st.text_area(
+                        "Link/Evidência Geral (17.0):",
+                        value=l_salvo_17_0,
+                        key=f"t_17_0_{ano_sel}",
+                        height=130
+                    )
+
+                    links_17_0_visuais = re.findall(REGEX_PURE_URL, link_17_0_input or "")
+                    if links_17_0_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_0_visuais]
+                            )
+                        )
+
+                # Chat de comentários
                 bloco_comentarios_isaude("17.0", res_data)
 
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.0", key=f"btn_salvar_17_0_{ano_sel}", type="primary"):
+                    val_sel_17_0 = sel_17_0 if sel_17_0 is not None else "Selecione..."
+                    val_lk_17_0 = link_17_0_input.strip()
+                    pts_17_0 = opts_17_0.get(val_sel_17_0, 0.0)
+                    comentarios_17_0 = d17_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.0",
+                        valor=val_sel_17_0,
+                        pontos=pts_17_0,
+                        link=val_lk_17_0,
+                        comentarios=comentarios_17_0
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_0_input or "")]
+                    links_antigos_17_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_0 or "")]
+
+                    if (val_sel_17_0 != v_salvo_17_0 or val_lk_17_0 != l_salvo_17_0) and links_atuais_17_0 and links_atuais_17_0 != links_antigos_17_0:
+                        st.session_state[f"links_pendentes_17_0_{ano_sel}"] = links_atuais_17_0
+                        st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_0 = d17_0.get("pontos", 0.0)
+                cor_txt_17_0 = "#28a745" if pts_atuais_17_0 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_0}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.0: {pts_atuais_17_0:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.0
+        if st.session_state.get(f"gatilho_modal_17_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.0", st.session_state.get(f"links_pendentes_17_0_{ano_sel}", []), ano_sel)
+
+
         # =============================================================================
-        # QUESITO 17.1 - REGISTRO DE FREQUÊNCIA ELETRÔNICA
+        # QUESITO 17.1 • FREQUÊNCIA ELETRÔNICA NA ATENÇÃO ESPECIALIZADA
         # =============================================================================
-        with st.container(key=f"container_bloco_frequencia_17_1_{ano_sel}", border=True):
-            
-            with st.expander(f"📌 Quesito 17.1 - Frequência Eletrônica na Atenção Especializada", expanded=True):
-                st.subheader("17.1 • Controle de Frequência Eletrônica")
-                st.write("**Os profissionais de saúde da Atenção Especializada sob gestão municipal registram sua frequência de forma eletrônica?**")
+        with st.container(key=f"container_bloco_frequencia_17_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.1 - Frequência Eletrônica na Atenção Especializada ({ano_sel})", expanded=True):
+                st.subheader(f"17.1 • Controle de Frequência Eletrônica ({ano_sel})")
+                st.write(f"**Os profissionais de saúde da Atenção Especializada sob gestão municipal registram sua frequência de forma eletrônica em {ano_sel}?**")
                 st.caption("⚠️ *Obs. O encaminhamento de planilhas de ponto não será considerado como modalidade de registro eletrônico.*")
-                st.caption("ℹ️ *O salvamento é automático via callbacks de estado. Alterações no rádio ou link são gravadas instantaneamente.*")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.1' para registrar.*")
 
                 opts_17_1 = {
                     "Selecione...": 0.0,
@@ -5557,85 +5577,102 @@ def mostrar_formulario_saude():
                     "Sim, para a menor parte dos profissionais da saúde – -02 (perde 02 pontos)": -2.0,
                     "Não houve registro eletrônico de nenhum profissional de saúde – -03 (perde 03 pontos)": -3.0
                 }
-                
-                d17_1 = res_data.get("17.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-                
-                valor_salvo_17_1 = d17_1.get("valor", "Selecione...")
-                if valor_salvo_17_1 not in opts_17_1:
-                    valor_salvo_17_1 = "Selecione..."
 
-                # Callbacks para persistência síncrona
-                def cb_radio_17_1():
-                    val = st.session_state[f"r_17_1_{ano_sel}"]
-                    pts = opts_17_1[val]
-                    lnk = st.session_state.get(f"t_17_1_{ano_sel}", d17_1.get("link", ""))
-                    save_resp_isaude("17.1", val, pts, lnk)
-                    res_data["17.1"] = {"valor": val, "pontos": pts, "link": lnk}
-
-                def cb_text_17_1():
-                    lnk = st.session_state[f"t_17_1_{ano_sel}"]
-                    val = st.session_state.get(f"r_17_1_{ano_sel}", d17_1.get("valor", "Selecione..."))
-                    pts = opts_17_1.get(val, 0.0)
-                    save_resp_isaude("17.1", val, pts, lnk)
-                    res_data["17.1"] = {"valor": val, "pontos": pts, "link": lnk}
+                d17_1 = res_data.get("17.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_1 = d17_1.get("valor", "Selecione...")
+                l_salvo_17_1 = d17_1.get("link", "")
 
                 c171_1, c171_2 = st.columns([1, 1])
                 with c171_1:
-                    st.markdown("**Selecione uma alternativa:**")
-                    lista_opcoes_171 = list(opts_17_1.keys())
+                    lista_opcoes_17_1 = list(opts_17_1.keys())
+                    idx_salvo_17_1 = lista_opcoes_17_1.index(v_salvo_17_1) if v_salvo_17_1 in opts_17_1 else 0
+
                     sel_17_1 = st.radio(
-                        "Frequência eletrônica:", 
-                        options=lista_opcoes_171, 
-                        index=lista_opcoes_171.index(valor_salvo_17_1),
-                        key=f"r_17_1_{ano_sel}", 
-                        on_change=cb_radio_17_1,
+                        "Frequência eletrônica:",
+                        options=lista_opcoes_17_1,
+                        index=idx_salvo_17_1,
+                        key=f"r_17_1_{ano_sel}",
                         label_visibility="collapsed"
                     )
-                    pts_17_1 = opts_17_1.get(sel_17_1, 0.0)
-                    
-                with c171_2:
-                    link_17_1 = st.text_area(
-                        "Link/Evidência do Sistema de Ponto (17.1):", 
-                        value=d17_1.get("link", ""), 
-                        key=f"t_17_1_{ano_sel}",
-                        on_change=cb_text_17_1,
-                        height=110
-                    )
-                    
-                    # Suporte multi-links ativo em placeholder
-                    placeholder_links_171 = st.empty()
-                    links_17_1_atuais = re.findall(REGEX_PURE_URL, link_17_1 or "")
-                    if links_17_1_atuais:
-                        botoes_17_1 = " | ".join([f"🔗 [{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_1_atuais])
-                        placeholder_links_171.markdown(f"**Links Ativos:** {botoes_17_1}")
-                
-                # Exibição reativa da pontuação (trata penalidade)
-                placeholder_score_171 = st.empty()
-                if pts_17_1 < 0:
-                    placeholder_score_171.markdown(f"📊 **Pontuação Aplicada no Quesito 17.1:** :red[{pts_17_1:.1f} pontos (Penalidade)]")
-                else:
-                    placeholder_score_171.markdown(f"📊 **Pontuação Aplicada no Quesito 17.1:** `{pts_17_1:.1f} pontos`")
-                
-                # Disparo de modal para links novos
-                links_17_1_antigos = re.findall(REGEX_PURE_URL, d17_1.get("link", "") or "")
-                if links_17_1_atuais and links_17_1_atuais != links_17_1_antigos:
-                    if "modal_aviso_link" in globals():
-                        modal_aviso_link("17.1", [u[0] if isinstance(u, tuple) else u for u in links_17_1_atuais], ano_sel)
 
-                # CORRIGIDO: chamada para bloco_comentarios_isaude
+                with c171_2:
+                    link_17_1_input = st.text_area(
+                        "Link/Evidência do Sistema de Ponto (17.1):",
+                        value=l_salvo_17_1,
+                        key=f"t_17_1_{ano_sel}",
+                        height=130
+                    )
+
+                    links_17_1_visuais = re.findall(REGEX_PURE_URL, link_17_1_input or "")
+                    if links_17_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
                 bloco_comentarios_isaude("17.1", res_data)
 
-        # =============================================================================
-        # QUESITO 17.1.1 - JORNADA DE TRABALHO DOS MÉDICOS AMBULATORIAIS
-        # =============================================================================
-        with st.container(key=f"container_bloco_jornada_medica_17_1_1_{ano_sel}", border=True):
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.1", key=f"btn_salvar_17_1_{ano_sel}", type="primary"):
+                    val_sel_17_1 = sel_17_1 if sel_17_1 is not None else "Selecione..."
+                    val_lk_17_1 = link_17_1_input.strip()
+                    pts_17_1 = opts_17_1.get(val_sel_17_1, 0.0)
+                    comentarios_17_1 = d17_1.get("comentarios", [])
 
-            with st.expander(f"📌 Quesito 17.1.1 - Jornada de Trabalho dos Médicos Ambulatoriais em {ano_sel}", expanded=True):
-                st.subheader("17.1.1 • Jornada de Trabalho dos Médicos Ambulatoriais")
-                st.write("**Os médicos ambulatoriais da Atenção Especializada sob gestão municipal cumprem integralmente sua jornada de trabalho?**")
-                st.caption("ℹ️ *O salvamento é automático por callbacks nativos de estado. Sem riscos de travamento visual.*")
-                
-                # Mapeamento de Opções e Pontuações do Quesito 17.1.1
+                    save_resp_isaude(
+                        qid="17.1",
+                        valor=val_sel_17_1,
+                        pontos=pts_17_1,
+                        link=val_lk_17_1,
+                        comentarios=comentarios_17_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_1_input or "")]
+                    links_antigos_17_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_1 or "")]
+
+                    if (val_sel_17_1 != v_salvo_17_1 or val_lk_17_1 != l_salvo_17_1) and links_atuais_17_1 and links_atuais_17_1 != links_antigos_17_1:
+                        st.session_state[f"links_pendentes_17_1_{ano_sel}"] = links_atuais_17_1
+                        st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_1 = d17_1.get("pontos", 0.0)
+                cor_txt_17_1 = "#28a745" if pts_atuais_17_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 17.1: {pts_atuais_17_1:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.1
+        if st.session_state.get(f"gatilho_modal_17_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.1", st.session_state.get(f"links_pendentes_17_1_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 17.1.1 • JORNADA DE TRABALHO DOS MÉDICOS AMBULATORIAIS
+        # =============================================================================
+        with st.container(key=f"container_bloco_jornada_medica_17_1_1_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.1.1 - Jornada de Trabalho dos Médicos Ambulatoriais ({ano_sel})", expanded=True):
+                st.subheader(f"17.1.1 • Jornada de Trabalho dos Médicos Ambulatoriais ({ano_sel})")
+                st.write(f"**Os médicos ambulatoriais da Atenção Especializada sob gestão municipal cumprem integralmente sua jornada de trabalho em {ano_sel}?**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.1.1' para registrar.*")
+
                 opts_17_1_1 = {
                     "Selecione...": 0.0,
                     "Sim, todos cumprem integralmente a jornada de trabalho – 00": 0.0,
@@ -5644,72 +5681,88 @@ def mostrar_formulario_saude():
                     "Sim, a maior parte permanece apenas nas consultas agendadas – -03 (perde 03 pontos)": -3.0,
                     "Não – -05 (perde 05 pontos)": -5.0
                 }
-                
-                # Recupera o valor do banco de dados de forma segura
-                d17_1_1 = res_data.get("17.1.1", {"valor": "Selecione...", "pontos": 0.0, "link": ""})
-                
-                valor_salvo_17_1_1 = d17_1_1.get("valor", "Selecione...")
-                if valor_salvo_17_1_1 not in opts_17_1_1:
-                    valor_salvo_17_1_1 = "Selecione..."
 
-                # Callbacks para processamento assíncrono em background
-                def cb_radio_17_1_1():
-                    val = st.session_state[f"r_17_1_1_{ano_sel}"]
-                    pts = opts_17_1_1[val]
-                    lnk = st.session_state.get(f"t_17_1_1_{ano_sel}", d17_1_1.get("link", ""))
-                    save_resp_isaude("17.1.1", val, pts, lnk)
-                    res_data["17.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
+                d17_1_1 = res_data.get("17.1.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_1_1 = d17_1_1.get("valor", "Selecione...")
+                l_salvo_17_1_1 = d17_1_1.get("link", "")
 
-                def cb_text_17_1_1():
-                    lnk = st.session_state[f"t_17_1_1_{ano_sel}"]
-                    val = st.session_state.get(f"r_17_1_1_{ano_sel}", d17_1_1.get("valor", "Selecione..."))
-                    pts = opts_17_1_1.get(val, 0.0)
-                    save_resp_isaude("17.1.1", val, pts, lnk)
-                    res_data["17.1.1"] = {"valor": val, "pontos": pts, "link": lnk}
+                c1711_1, c1711_2 = st.columns([1, 1])
+                with c1711_1:
+                    lista_opcoes_17_1_1 = list(opts_17_1_1.keys())
+                    idx_salvo_17_1_1 = lista_opcoes_17_1_1.index(v_salvo_17_1_1) if v_salvo_17_1_1 in opts_17_1_1 else 0
 
-                c1, c2 = st.columns([1, 1])
-                with c1:
-                    st.markdown("**Selecione uma alternativa:**")
-                    lista_opcoes_1711 = list(opts_17_1_1.keys())
-                    
                     sel_17_1_1 = st.radio(
-                        "Alternativas para o quesito 17.1.1:",
-                        options=lista_opcoes_1711,
-                        index=lista_opcoes_1711.index(valor_salvo_17_1_1),
+                        "Jornada de trabalho médica:",
+                        options=lista_opcoes_17_1_1,
+                        index=idx_salvo_17_1_1,
                         key=f"r_17_1_1_{ano_sel}",
-                        on_change=cb_radio_17_1_1,
                         label_visibility="collapsed"
                     )
-                    pts_17_1_1 = opts_17_1_1.get(sel_17_1_1, 0.0)
-                        
-                with c2:
-                    link_17_1_1 = st.text_area(
+
+                with c1711_2:
+                    link_17_1_1_input = st.text_area(
                         "Link/Evidência (Relatórios, espelho de ponto, etc.):",
-                        value=d17_1_1.get("link", ""),
+                        value=l_salvo_17_1_1,
                         key=f"t_17_1_1_{ano_sel}",
-                        on_change=cb_text_17_1_1,
-                        height=110
+                        height=130
                     )
-                    
-                    # Placeholder estático para links injetados dinamicamente no React
-                    placeholder_links_1711 = st.empty()
-                    links_17_1_1_atuais = re.findall(REGEX_PURE_URL, link_17_1_1 or "")
-                    if links_17_1_1_atuais:
-                        botoes_17_1_1 = " | ".join([f"🔗 [{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_1_1_atuais])
-                        placeholder_links_1711.markdown(f"**Links Ativos:** {botoes_17_1_1}")
 
-                # Placeholder estático e seguro para o Score do formulário
-                placeholder_score_1711 = st.empty()
-                if pts_17_1_1 < 0:
-                    placeholder_score_1711.markdown(f"📊 **Pontuação Obtida no Quesito 17.1.1:** :red[{pts_17_1_1:.1f} pontos (Penalidade)]")
-                else:
-                    placeholder_score_1711.markdown(f"📊 **Pontuação Obtida no Quesito 17.1.1:** `{pts_17_1_1:.1f} pontos`")
+                    links_17_1_1_visuais = re.findall(REGEX_PURE_URL, link_17_1_1_input or "")
+                    if links_17_1_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_1_1_visuais]
+                            )
+                        )
 
-                # Dispara o modal de aviso de link se houver alteração detectada via sessão
-                links_17_1_1_antigos = re.findall(REGEX_PURE_URL, d17_1_1.get("link", "") or "")
-                if links_17_1_1_atuais and links_17_1_1_atuais != links_17_1_1_antigos:
-                    if "modal_aviso_link" in globals():
-                        modal_aviso_link("17.1.1", [u[0] if isinstance(u, tuple) else u for u in links_17_1_1_atuais], ano_sel)
-
-                # CORRIGIDO: chamada para bloco_comentarios_isaude com ID alinhado "17.1.1"
+                # Chat de comentários
                 bloco_comentarios_isaude("17.1.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.1.1", key=f"btn_salvar_17_1_1_{ano_sel}", type="primary"):
+                    val_sel_17_1_1 = sel_17_1_1 if sel_17_1_1 is not None else "Selecione..."
+                    val_lk_17_1_1 = link_17_1_1_input.strip()
+                    pts_17_1_1 = opts_17_1_1.get(val_sel_17_1_1, 0.0)
+                    comentarios_17_1_1 = d17_1_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.1.1",
+                        valor=val_sel_17_1_1,
+                        pontos=pts_17_1_1,
+                        link=val_lk_17_1_1,
+                        comentarios=comentarios_17_1_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_1_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_1_1_input or "")]
+                    links_antigos_17_1_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_1_1 or "")]
+
+                    if (val_sel_17_1_1 != v_salvo_17_1_1 or val_lk_17_1_1 != l_salvo_17_1_1) and links_atuais_17_1_1 and links_atuais_17_1_1 != links_antigos_17_1_1:
+                        st.session_state[f"links_pendentes_17_1_1_{ano_sel}"] = links_atuais_17_1_1
+                        st.session_state[f"gatilho_modal_17_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_1_1 = d17_1_1.get("pontos", 0.0)
+                cor_txt_17_1_1 = "#28a745" if pts_atuais_17_1_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_1_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.1.1: {pts_atuais_17_1_1:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.1.1
+        if st.session_state.get(f"gatilho_modal_17_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.1.1", st.session_state.get(f"links_pendentes_17_1_1_{ano_sel}", []), ano_sel)
