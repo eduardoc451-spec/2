@@ -3950,3 +3950,216 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_12_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("12.2", st.session_state.get(f"links_pendentes_12_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 13.0 • REGISTRO DE FREQUÊNCIA ELETRÔNICA
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_13_0_{ano_sel}", border=True):
+            with st.expander(f"📌 QUESITO 13.0 • Registro de Frequência Eletrônica em {ano_sel}", expanded=True):
+                st.subheader(f"13.0 • Frequência Eletrônica na Atenção Básica ({ano_sel})")
+                st.write(
+                    f"**A Prefeitura registra a frequência dos profissionais de saúde da Atenção Básica de forma eletrônica em {ano_sel}?**"
+                )
+                st.caption("⚠️ *Obs: O encaminhamento de planilhas de ponto não será considerado como modalidade de registro eletrônico.*")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 13.0' para registrar.*")
+
+                opts_13_0 = {
+                    "Selecione...": 0.0,
+                    "Sim, para todos os profissionais da saúde – 05": 5.0,
+                    "Sim, para a maior parte dos profissionais da saúde – 03": 3.0,
+                    "Sim, para a menor parte dos profissionais da saúde – 01": 1.0,
+                    "Não houve registro eletrônico de nenhum profissional de saúde – 00": 0.0
+                }
+
+                # Recupera os dados atuais do banco
+                d13_0 = res_data.get("13.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_13_0 = d13_0.get("valor", "Selecione...")
+                l_salvo_13_0 = d13_0.get("link", "")
+
+                c31, c32 = st.columns([1, 1])
+
+                with c31:
+                    idx_13_0 = list(opts_13_0.keys()).index(v_salvo_13_0) if v_salvo_13_0 in opts_13_0 else 0
+                    sel_13_0 = st.radio(
+                        "Alternativas para o quesito 13.0:",
+                        options=list(opts_13_0.keys()),
+                        index=idx_13_0,
+                        key=f"rb_saude_13_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c32:
+                    link_13_0_input = st.text_area(
+                        "Link/Evidência (Relatório ou telas do sistema de ponto eletrônico biométrico/digital):",
+                        value=l_salvo_13_0,
+                        key=f"txt_saude_13_0_{ano_sel}",
+                        height=110
+                    )
+
+                    # Varre a área de texto em busca de URLs ativas
+                    links_13_0_visuais = re.findall(REGEX_PURE_URL, link_13_0_input or "")
+                    if links_13_0_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_13_0_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("13.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 13.0", key=f"btn_salvar_13_0_{ano_sel}", type="primary"):
+                    val_sel_13_0 = sel_13_0 if sel_13_0 is not None else "Selecione..."
+                    val_lk_13_0 = link_13_0_input.strip()
+                    pts_13_0 = opts_13_0.get(val_sel_13_0, 0.0)
+                    comentarios_historico = d13_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="13.0",
+                        valor=val_sel_13_0,
+                        pontos=pts_13_0,
+                        link=val_lk_13_0,
+                        comentarios=comentarios_historico
+                    )
+
+                    # Verificação de disparo do modal de aviso para novos links digitados
+                    links_atuais_13_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_13_0_input or "")]
+                    links_antigos_13_0 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_13_0 or "")]
+
+                    if (val_sel_13_0 != v_salvo_13_0 or val_lk_13_0 != l_salvo_13_0) and links_atuais_13_0 and links_atuais_13_0 != links_antigos_13_0:
+                        st.session_state[f"links_pendentes_13_0_{ano_sel}"] = links_atuais_13_0
+                        st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 13.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_13_0 = d13_0.get("pontos", 0.0)
+                cor_txt_13_0 = "#28a745" if pts_atuais_13_0 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_13_0}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 13.0: +{pts_atuais_13_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 13.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_13_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.0", st.session_state.get(f"links_pendentes_13_0_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 13.1 • CUMPRIMENTO DA JORNADA DE TRABALHO DOS MÉDICOS
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_13_1_{ano_sel}", border=True):
+            with st.expander(f"📋 QUESITO 13.1 • Cumprimento da Jornada de Trabalho dos Médicos em {ano_sel}", expanded=True):
+                st.subheader(f"13.1 • Jornada de Trabalho Médica ({ano_sel})")
+                st.write(
+                    f"**Os médicos da Atenção Básica cumprem integralmente sua jornada de trabalho em {ano_sel}?**"
+                )
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 13.1' para registrar.*")
+
+                opts_13_1 = {
+                    "Selecione...": 0.0,
+                    "Sim, todos cumprem integralmente a jornada de trabalho – 15": 15.0,
+                    "Sim, a maior parte cumpre integralmente a jornada de trabalho – 08": 8.0,
+                    "Sim, todos permanecem apenas nas consultas agendadas – 05": 5.0,
+                    "Sim, a maior parte permanece apenas nas consultas agendadas – 02": 2.0,
+                    "Não – 00": 0.0
+                }
+
+                # Recupera os dados atuais do banco
+                d13_1 = res_data.get("13.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_13_1 = d13_1.get("valor", "Selecione...")
+                l_salvo_13_1 = d13_1.get("link", "")
+
+                c33, c34 = st.columns([1, 1])
+
+                with c33:
+                    idx_13_1 = list(opts_13_1.keys()).index(v_salvo_13_1) if v_salvo_13_1 in opts_13_1 else 0
+                    sel_13_1 = st.radio(
+                        "Alternativas para o quesito 13.1:",
+                        options=list(opts_13_1.keys()),
+                        index=idx_13_1,
+                        key=f"rb_saude_13_1_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c34:
+                    link_13_1_input = st.text_area(
+                        "Link/Evidência (Espelhos de ponto homologados, agendas do e-SUS ou relatórios de produtividade/atendimento):",
+                        value=l_salvo_13_1,
+                        key=f"txt_saude_13_1_{ano_sel}",
+                        height=130
+                    )
+
+                    # Varre a área de texto em busca de URLs ativas
+                    links_13_1_visuais = re.findall(REGEX_PURE_URL, link_13_1_input or "")
+                    if links_13_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_13_1_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("13.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 13.1", key=f"btn_salvar_13_1_{ano_sel}", type="primary"):
+                    val_sel_13_1 = sel_13_1 if sel_13_1 is not None else "Selecione..."
+                    val_lk_13_1 = link_13_1_input.strip()
+                    pts_13_1 = opts_13_1.get(val_sel_13_1, 0.0)
+                    comentarios_historico = d13_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="13.1",
+                        valor=val_sel_13_1,
+                        pontos=pts_13_1,
+                        link=val_lk_13_1,
+                        comentarios=comentarios_historico
+                    )
+
+                    # Verificação de disparo do modal de aviso para novos links digitados
+                    links_atuais_13_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_13_1_input or "")]
+                    links_antigos_13_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_13_1 or "")]
+
+                    if (val_sel_13_1 != v_salvo_13_1 or val_lk_13_1 != l_salvo_13_1) and links_atuais_13_1 and links_atuais_13_1 != links_antigos_13_1:
+                        st.session_state[f"links_pendentes_13_1_{ano_sel}"] = links_atuais_13_1
+                        st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 13.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_13_1 = d13_1.get("pontos", 0.0)
+                cor_txt_13_1 = "#28a745" if pts_atuais_13_1 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_13_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 13.1: +{pts_atuais_13_1:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 13.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_13_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []), ano_sel)
