@@ -3012,3 +3012,147 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 9.1 • FORMA E DATA DA PUBLICAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_9_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 9.1 - Forma e Data da Publicação (RAG {ano_sel})", expanded=True):
+                st.subheader(f"9.1 • Dados da Publicação ({ano_sel})")
+                st.write(
+                    f"**Informe a forma e Data da publicação do Parecer Conclusivo sobre o Relatório Anual de Gestão de {ano_sel}:**"
+                )
+                st.caption("ℹ *Preencha a informação abaixo e clique no botão 'Salvar Quesito 9.1' para registrar.*")
+
+                # Estado inicial / persistente
+                d91 = res_data.get("9.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_91 = d91.get("valor", "")
+
+                # Chave fixa por componente e ano
+                chave_txt_91 = f"t_91_txt_{ano_sel}"
+
+                val_input_91 = st.text_input(
+                    "Forma e Data da Publicação:",
+                    value=v_salvo_91,
+                    key=chave_txt_91,
+                    placeholder=f"Ex: Diário Oficial do Município, em 15/04/{ano_sel + 1}",
+                )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("9.1", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 9.1", key=f"btn_salvar_9_1_{ano_sel}", type="primary"):
+                    texto_salvar_91 = val_input_91.strip()
+                    comentarios_historico = d91.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="9.1",
+                        valor=texto_salvar_91,
+                        pontos=0.0,
+                        link="",
+                        comentarios=comentarios_historico
+                    )
+
+                    st.cache_data.clear()
+                    st.toast("Informações do Quesito 9.1 salvas com sucesso!", icon="✅")
+                    st.rerun()
+
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Impacto de Pontuação no Quesito 9.1: 0.0 pontos (Quesito Informativo)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # =============================================================================
+        # QUESITO 9.2 • LINK PARA O PARECER CONCLUSIVO
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_9_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 9.2 - Link de Divulgação do Parecer Conclusivo (RAG {ano_sel})", expanded=True):
+                st.subheader(f"9.2 • Divulgação Eletrônica ({ano_sel})")
+                st.write(
+                    f"**Informe a página eletrônica (link na internet) de divulgação do Parecer Conclusivo sobre o Relatório Anual de Gestão de {ano_sel}:**"
+                )
+                st.caption("⚠️ *Se não estiver disponível na internet, insira exatamente o texto **XYZ**.*")
+
+                # Estado inicial / persistente
+                d92 = res_data.get("9.2") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_92 = d92.get("valor", "")
+
+                # Chave fixa por componente e ano
+                chave_txt_92 = f"t_92_txt_{ano_sel}"
+
+                val_input_92 = st.text_input(
+                    "Link Eletrônico de Divulgação:",
+                    value=v_salvo_92,
+                    key=chave_txt_92,
+                    placeholder="Insira o link completo ou XYZ...",
+                )
+
+                placeholder_links_92 = st.empty()
+                links_92_visuais = re.findall(REGEX_PURE_URL, val_input_92 or "")
+                if links_92_visuais:
+                    placeholder_links_92.markdown(
+                        "**🔗 Link ativo:** "
+                        + " | ".join(
+                            [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_92_visuais]
+                        )
+                    )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("9.2", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 9.2", key=f"btn_salvar_9_2_{ano_sel}", type="primary"):
+                    texto_salvar_92 = val_input_92.strip()
+                    val_limpo = texto_salvar_92.upper()
+
+                    # Regra de cálculo automatizada
+                    pts_92 = 0.0 if val_limpo in ["XYZ", ""] else 5.0
+                    comentarios_historico = d92.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="9.2",
+                        valor=texto_salvar_92,
+                        pontos=pts_92,
+                        link="",
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, texto_salvar_92 or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, v_salvo_92 or "")]
+
+                    if texto_salvar_92 != v_salvo_92 and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_9_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_9_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 9.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_92 = d92.get("pontos", 0.0)
+                cor_txt_92 = "#28a745" if pts_atuais_92 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_92}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 9.2: +{pts_atuais_92:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 9.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_9_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("9.2", st.session_state.get(f"links_pendentes_9_2_{ano_sel}", []), ano_sel)
