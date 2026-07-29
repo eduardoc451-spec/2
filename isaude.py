@@ -14210,7 +14210,7 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("31.0", st.session_state.get(f"links_pendentes_31_0_{ano_sel}", []), ano_sel)
 
-# -----------------------------------------------------------------------------
+        # -----------------------------------------------------------------------------
         # QUESITO 31.1 - TEMPO DE RESPOSTA DO SAMU (TMR)
         # -----------------------------------------------------------------------------
         with st.container(key=f"container_bloco_tempo_resposta_samu_31_1_{ano_sel}", border=True):
@@ -14245,6 +14245,12 @@ def mostrar_formulario_saude():
                 while len(v_salvo_311) < 9:
                     v_salvo_311.append("0")
 
+                def safe_int(val):
+                    try:
+                        return int(float(val))
+                    except (ValueError, TypeError):
+                        return 0
+
                 l_salvo_311 = d31_1.get("link", "")
 
                 c311_1, c311_2 = st.columns([1.2, 1])
@@ -14252,9 +14258,9 @@ def mostrar_formulario_saude():
                 with c311_1:
                     df_tmr_inicial = pd.DataFrame(
                         {
-                            "Mínimo (min)": [int(v_salvo_311[0]) if v_salvo_311[0].isdigit() else 0, int(v_salvo_311[3]) if v_salvo_311[3].isdigit() else 0, int(v_salvo_311[6]) if v_salvo_311[6].isdigit() else 0],
-                            "Médio (min)": [int(v_salvo_311[1]) if v_salvo_311[1].isdigit() else 0, int(v_salvo_311[4]) if v_salvo_311[4].isdigit() else 0, int(v_salvo_311[7]) if v_salvo_311[7].isdigit() else 0],
-                            "Máximo (min)": [int(v_salvo_311[2]) if v_salvo_311[2].isdigit() else 0, int(v_salvo_311[5]) if v_salvo_311[5].isdigit() else 0, int(v_salvo_311[8]) if v_salvo_311[8].isdigit() else 0]
+                            "Mínimo (min)": [safe_int(v_salvo_311[0]), safe_int(v_salvo_311[3]), safe_int(v_salvo_311[6])],
+                            "Médio (min)": [safe_int(v_salvo_311[1]), safe_int(v_salvo_311[4]), safe_int(v_salvo_311[7])],
+                            "Máximo (min)": [safe_int(v_salvo_311[2]), safe_int(v_salvo_311[5]), safe_int(v_salvo_311[8])]
                         },
                         index=[f"Ano {ano_tmr2} (TMR-2)", f"Ano {ano_tmr1} (TMR-1)", f"Ano {ano_tmr} (Atual)"]
                     )
@@ -14270,17 +14276,17 @@ def mostrar_formulario_saude():
                         }
                     )
 
-                    tmr2_min = int(df_tmr_editado.iloc[0]["Mínimo (min)"])
-                    tmr2_med = int(df_tmr_editado.iloc[0]["Médio (min)"])
-                    tmr2_max = int(df_tmr_editado.iloc[0]["Máximo (min)"])
+                    tmr2_min = safe_int(df_tmr_editado.iloc[0]["Mínimo (min)"])
+                    tmr2_med = safe_int(df_tmr_editado.iloc[0]["Médio (min)"])
+                    tmr2_max = safe_int(df_tmr_editado.iloc[0]["Máximo (min)"])
 
-                    tmr1_min = int(df_tmr_editado.iloc[1]["Mínimo (min)"])
-                    tmr1_med = int(df_tmr_editado.iloc[1]["Médio (min)"])
-                    tmr1_max = int(df_tmr_editado.iloc[1]["Máximo (min)"])
+                    tmr1_min = safe_int(df_tmr_editado.iloc[1]["Mínimo (min)"])
+                    tmr1_med = safe_int(df_tmr_editado.iloc[1]["Médio (min)"])
+                    tmr1_max = safe_int(df_tmr_editado.iloc[1]["Máximo (min)"])
 
-                    tmr_min = int(df_tmr_editado.iloc[2]["Mínimo (min)"])
-                    tmr_med = int(df_tmr_editado.iloc[2]["Médio (min)"])
-                    tmr_max = int(df_tmr_editado.iloc[2]["Máximo (min)"])
+                    tmr_min = safe_int(df_tmr_editado.iloc[2]["Mínimo (min)"])
+                    tmr_med = safe_int(df_tmr_editado.iloc[2]["Médio (min)"])
+                    tmr_max = safe_int(df_tmr_editado.iloc[2]["Máximo (min)"])
 
                 with c311_2:
                     link_31_1_input = st.text_area(
