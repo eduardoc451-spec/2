@@ -9654,3 +9654,305 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_5_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.5.2", st.session_state.get(f"links_pendentes_18_5_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.5.3 - REGULAÇÃO DO ACESSO / FILA DE ESPERA
+        # =============================================================================
+        with st.container(key=f"container_bloco_regulacao_18_5_3_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.5.3 • Regulação do Acesso / Fila de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"18.5.3 • Regulação do Acesso aos CAPS e UA ({ano_sel})")
+                st.write("**O município possui sistema ou mecanismo de regulação do acesso e gerenciamento de fila de espera para os CAPS e Unidades de Acolhimento?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 18.5.3' para registrar os dados.*")
+
+                d18_5_3 = res_data.get("18.5.3") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_1853 = d18_5_3.get("valor", "")
+                l_salvo_1853 = d18_5_3.get("link", "")
+
+                c1853_1, c1853_2 = st.columns([1, 1])
+
+                with c1853_1:
+                    st.write("📋 **Selecione a opção correspondente:**")
+                    opts_1853 = [
+                        "Sim, com sistema informatizado e fila centralizada",
+                        "Sim, com controle manual/planilhas centralizadas",
+                        "Parcialmente, apenas para alguns serviços/unidades",
+                        "Não possui sistema de regulação nem gerenciamento de fila"
+                    ]
+                    
+                    idx_1853 = opts_1853.index(v_salvo_1853) if v_salvo_1853 in opts_1853 else 0
+                    op_1853 = st.radio(
+                        "Situação da Regulação:",
+                        options=opts_1853,
+                        index=idx_1853,
+                        key=f"q1853_op_{ano_sel}"
+                    )
+
+                    # Atribuição de pontos (ajuste conforme a regra do seu manual)
+                    if op_1853 == "Sim, com sistema informatizado e fila centralizada":
+                        pts_18_5_3 = 1.0
+                    elif op_1853 in ["Sim, com controle manual/planilhas centralizadas", "Parcialmente, apenas para alguns serviços/unidades"]:
+                        pts_18_5_3 = 0.5
+                    else:
+                        pts_18_5_3 = 0.0
+
+                with c1853_2:
+                    link_18_5_3_input = st.text_area(
+                        "Link/Evidência ou Protocolo de Regulação (18.5.3):",
+                        value=l_salvo_1853,
+                        key=f"txt_link_18_5_3_regulacao_{ano_sel}",
+                        height=250
+                    )
+
+                    links_1853_visuais = re.findall(REGEX_PURE_URL, link_18_5_3_input or "")
+                    if links_1853_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1853_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.5.3", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.5.3", key=f"btn_salvar_18_5_3_regulacao_{ano_sel}", type="primary"):
+                    val_str_1853 = op_1853
+                    val_lk_1853 = link_18_5_3_input.strip()
+                    comentarios_1853 = d18_5_3.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.5.3",
+                        valor=val_str_1853,
+                        pontos=pts_18_5_3,
+                        link=val_lk_1853,
+                        comentarios=comentarios_1853
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_1853 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_5_3_input or "")]
+                    links_antigos_1853 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_1853 or "")]
+
+                    if (val_str_1853 != v_salvo_1853 or val_lk_1853 != l_salvo_1853) and links_atuais_1853 and links_atuais_1853 != links_antigos_1853:
+                        st.session_state[f"links_pendentes_18_5_3_{ano_sel}"] = links_atuais_1853
+                        st.session_state[f"gatilho_modal_18_5_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.5.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#198754; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 18.5.3: +{pts_18_5_3:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.5.3
+        if st.session_state.get(f"gatilho_modal_18_5_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.5.3", st.session_state.get(f"links_pendentes_18_5_3_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 18.5.3.1 - CAPACIDADE E VAGAS NAS UNIDADES DE ACOLHIMENTO
+        # =============================================================================
+        with st.container(key=f"container_bloco_vagas_ua_18_5_3_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.5.3.1 • Vagas em Unidades de Acolhimento ({ano_sel})", expanded=True):
+                st.subheader(f"18.5.3.1 • Quantidade de Vagas em Unidades de Acolhimento ({ano_sel})")
+                st.write("**Informe a capacidade total e vagas ocupadas nas Unidades de Acolhimento (Adulto e Infantil):**")
+                st.caption("ℹ️ *Preencha a quantidade de vagas, informe o link de evidência e clique no botão 'Salvar Quesito 18.5.3.1' para registrar os dados.*")
+
+                d18_5_3_1 = res_data.get("18.5.3.1") or {
+                    "valor": "0|0|0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_18531 = d18_5_3_1.get("valor", "0|0|0|0")
+                l_salvo_18531 = d18_5_3_1.get("link", "")
+
+                p_18531 = v_salvo_18531.split("|")
+                while len(p_18531) < 4:
+                    p_18531.append("0")
+
+                c18531_1, c18531_2 = st.columns([1, 1])
+
+                with c18531_1:
+                    st.write("📋 **Informe os quantitativos de vagas:**")
+                    v1_ua = st.text_input("I - Vagas Totais (UA Adulto):", value=p_18531[0], key=f"q18531_v1_{ano_sel}")
+                    v2_ua = st.text_input("II - Vagas Ocupadas (UA Adulto):", value=p_18531[1], key=f"q18531_v2_{ano_sel}")
+                    v3_ua = st.text_input("III - Vagas Totais (UA Infantil):", value=p_18531[2], key=f"q18531_v3_{ano_sel}")
+                    v4_ua = st.text_input("IV - Vagas Ocupadas (UA Infantil):", value=p_18531[3], key=f"q18531_v4_{ano_sel}")
+
+                    string_estruturada_18_5_3_1 = f"{v1_ua}|{v2_ua}|{v3_ua}|{v4_ua}"
+                    pts_18_5_3_1 = 0.0
+
+                with c18531_2:
+                    link_18_5_3_1_input = st.text_area(
+                        "Link/Evidência ou Relatório de Ocupação de Vagas (18.5.3.1):",
+                        value=l_salvo_18531,
+                        key=f"txt_link_18_5_3_1_vagas_{ano_sel}",
+                        height=250
+                    )
+
+                    links_18531_visuais = re.findall(REGEX_PURE_URL, link_18_5_3_1_input or "")
+                    if links_18531_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_18531_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.5.3.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.5.3.1", key=f"btn_salvar_18_5_3_1_vagas_{ano_sel}", type="primary"):
+                    val_str_18531 = string_estruturada_18_5_3_1
+                    val_lk_18531 = link_18_5_3_1_input.strip()
+                    comentarios_18531 = d18_5_3_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.5.3.1",
+                        valor=val_str_18531,
+                        pontos=pts_18_5_3_1,
+                        link=val_lk_18531,
+                        comentarios=comentarios_18531
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_18531 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_5_3_1_input or "")]
+                    links_antigos_18531 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_18531 or "")]
+
+                    if (val_str_18531 != v_salvo_18531 or val_lk_18531 != l_salvo_18531) and links_atuais_18531 and links_atuais_18531 != links_antigos_18531:
+                        st.session_state[f"links_pendentes_18_5_3_1_{ano_sel}"] = links_atuais_18531
+                        st.session_state[f"gatilho_modal_18_5_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.5.3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 18.5.3.1: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.5.3.1
+        if st.session_state.get(f"gatilho_modal_18_5_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.5.3.1", st.session_state.get(f"links_pendentes_18_5_3_1_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 18.5.4 - SUFICIÊNCIA DA REDE CAPS E UNIDADES DE ACOLHIMENTO
+        # =============================================================================
+        with st.container(key=f"container_bloco_suficiencia_18_5_4_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.5.4 • Suficiência da Rede CAPS e UA ({ano_sel})", expanded=True):
+                st.subheader(f"18.5.4 • Suficiência da Estrutura de Atendimento ({ano_sel})")
+                st.write("**A rede de CAPS e Unidades de Acolhimento atende à demanda populacional e territorial do município conforme os parâmetros do Ministério da Saúde?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 18.5.4' para registrar os dados.*")
+
+                d18_5_4 = res_data.get("18.5.4") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_1854 = d18_5_4.get("valor", "")
+                l_salvo_1854 = d18_5_4.get("link", "")
+
+                c1854_1, c1854_2 = st.columns([1, 1])
+
+                with c1854_1:
+                    st.write("📋 **Selecione a opção correspondente:**")
+                    opts_1854 = [
+                        "Sim, atende integralmente a demanda com cobertura adequada",
+                        "Parcialmente, necessita de expansão de cobertura/serviços",
+                        "Não, a estrutura atual é insuficiente para a demanda municipal"
+                    ]
+                    
+                    idx_1854 = opts_1854.index(v_salvo_1854) if v_salvo_1854 in opts_1854 else 0
+                    op_1854 = st.radio(
+                        "Avaliação de Suficiência:",
+                        options=opts_1854,
+                        index=idx_1854,
+                        key=f"q1854_op_{ano_sel}"
+                    )
+
+                    # Atribuição de pontos (ajuste conforme a regra do seu manual)
+                    if op_1854 == "Sim, atende integralmente a demanda com cobertura adequada":
+                        pts_18_5_4 = 1.0
+                    elif op_1854 == "Parcialmente, necessita de expansão de cobertura/serviços":
+                        pts_18_5_4 = 0.5
+                    else:
+                        pts_18_5_4 = 0.0
+
+                with c1854_2:
+                    link_18_5_4_input = st.text_area(
+                        "Link/Evidência ou Estudo de Cobertura da Rede (18.5.4):",
+                        value=l_salvo_1854,
+                        key=f"txt_link_18_5_4_suficiencia_{ano_sel}",
+                        height=250
+                    )
+
+                    links_1854_visuais = re.findall(REGEX_PURE_URL, link_18_5_4_input or "")
+                    if links_1854_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1854_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.5.4", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.5.4", key=f"btn_salvar_18_5_4_suficiencia_{ano_sel}", type="primary"):
+                    val_str_1854 = op_1854
+                    val_lk_1854 = link_18_5_4_input.strip()
+                    comentarios_1854 = d18_5_4.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.5.4",
+                        valor=val_str_1854,
+                        pontos=pts_18_5_4,
+                        link=val_lk_1854,
+                        comentarios=comentarios_1854
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_1854 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_5_4_input or "")]
+                    links_antigos_1854 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_1854 or "")]
+
+                    if (val_str_1854 != v_salvo_1854 or val_lk_1854 != l_salvo_1854) and links_atuais_1854 and links_atuais_1854 != links_antigos_1854:
+                        st.session_state[f"links_pendentes_18_5_4_{ano_sel}"] = links_atuais_1854
+                        st.session_state[f"gatilho_modal_18_5_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.5.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#198754; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 18.5.4: +{pts_18_5_4:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.5.4
+        if st.session_state.get(f"gatilho_modal_18_5_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.5.4", st.session_state.get(f"links_pendentes_18_5_4_{ano_sel}", []), ano_sel)
