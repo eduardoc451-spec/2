@@ -6717,3 +6717,211 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_4_2_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.4.2.1", st.session_state.get(f"links_pendentes_17_4_2_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.5 • SISTEMA INFORMATIZADO DE REGULAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_sistema_regulacao_17_5_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.5 - Sistema Informatizado de Regulação na Atenção Especializada ({ano_sel})", expanded=True):
+                st.subheader(f"17.5 • Sistema Informatizado de Regulação ({ano_sel})")
+                st.write(f"**17.5 O município utiliza sistema informatizado de regulação com oferta dos serviços da Atenção Especializada sob gestão municipal?**")
+                st.caption("Nota: Refere-se ao Município como Unidade Demandada - Central de Regulação")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.5' para registrar.*")
+
+                opts_17_5 = {
+                    "Selecione...": 0.0,
+                    "Sim, todos os serviços – 00": 0.0,
+                    "Sim, a maior parte dos serviços – -01 (perde 01 ponto)": -1.0,
+                    "Sim, a menor parte dos serviços – -03 (perde 03 pontos)": -3.0,
+                    "Não – -05 (perde 05 pontos)": -5.0
+                }
+
+                d17_5 = res_data.get("17.5") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5 = d17_5.get("valor", "Selecione...")
+                l_salvo_17_5 = d17_5.get("link", "")
+
+                c175_1, c175_2 = st.columns([1, 1])
+                with c175_1:
+                    lista_opcoes_17_5 = list(opts_17_5.keys())
+                    idx_salvo_17_5 = lista_opcoes_17_5.index(v_salvo_17_5) if v_salvo_17_5 in opts_17_5 else 0
+
+                    sel_17_5 = st.radio(
+                        "Utilização do sistema informatizado:",
+                        options=lista_opcoes_17_5,
+                        index=idx_salvo_17_5,
+                        key=f"reg_17_5_rad_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c175_2:
+                    link_17_5_input = st.text_area(
+                        "Link/Evidência do Sistema de Regulação (17.5):",
+                        value=l_salvo_17_5,
+                        key=f"reg_17_5_txt_{ano_sel}",
+                        height=130
+                    )
+
+                    links_17_5_visuais = re.findall(REGEX_PURE_URL, link_17_5_input or "")
+                    if links_17_5_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5", key=f"btn_salvar_17_5_{ano_sel}", type="primary"):
+                    val_sel_17_5 = sel_17_5 if sel_17_5 is not None else "Selecione..."
+                    val_lk_17_5 = link_17_5_input.strip()
+                    pts_17_5 = opts_17_5.get(val_sel_17_5, 0.0)
+                    comentarios_17_5 = d17_5.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5",
+                        valor=val_sel_17_5,
+                        pontos=pts_17_5,
+                        link=val_lk_17_5,
+                        comentarios=comentarios_17_5
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_input or "")]
+                    links_antigos_17_5 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5 or "")]
+
+                    if (val_sel_17_5 != v_salvo_17_5 or val_lk_17_5 != l_salvo_17_5) and links_atuais_17_5 and links_atuais_17_5 != links_antigos_17_5:
+                        st.session_state[f"links_pendentes_17_5_{ano_sel}"] = links_atuais_17_5
+                        st.session_state[f"gatilho_modal_17_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5 = d17_5.get("pontos", 0.0)
+                cor_txt_17_5 = "#28a745" if pts_atuais_17_5 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5: {pts_atuais_17_5:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5
+        if st.session_state.get(f"gatilho_modal_17_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5", st.session_state.get(f"links_pendentes_17_5_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 17.5.1 • SISTEMAS UTILIZADOS PELA REGULAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_sistemas_regulacao_17_5_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.5.1 - Sistemas Utilizados pela Regulação ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.1 • Sistemas Utilizados pela Regulação ({ano_sel})")
+                st.write(f"**17.5.1 Assinale os sistemas utilizados pela regulação:**")
+                st.caption("ℹ️ *Marque as opções aplicadas, informe o link de evidência e clique no botão 'Salvar Quesito 17.5.1' para registrar.*")
+
+                d17_5_1 = res_data.get("17.5.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_1 = d17_5_1.get("valor", "")
+                l_salvo_17_5_1 = d17_5_1.get("link", "")
+                lista_salva_17_5_1 = [item.strip() for item in v_salvo_17_5_1.split(";")] if v_salvo_17_5_1 else []
+
+                opc_1 = "Portal Cross/SIRESP"
+                opc_2 = "SIGA"
+                opc_3 = "SISREG"
+                opc_4 = "Outros"
+
+                c1751_1, c1751_2 = st.columns([1, 1])
+
+                with c1751_1:
+                    st.write("📋 **Selecione os sistemas em uso:**")
+                    chk_1 = st.checkbox(opc_1, value=(opc_1 in lista_salva_17_5_1), key=f"chk_1751_1_{ano_sel}")
+                    chk_2 = st.checkbox(opc_2, value=(opc_2 in lista_salva_17_5_1), key=f"chk_1751_2_{ano_sel}")
+                    chk_3 = st.checkbox(opc_3, value=(opc_3 in lista_salva_17_5_1), key=f"chk_1751_3_{ano_sel}")
+                    chk_4 = st.checkbox(opc_4, value=(opc_4 in lista_salva_17_5_1), key=f"chk_1751_4_{ano_sel}")
+
+                    selecionados_17_5_1 = [
+                        opc for chk, opc in zip(
+                            [chk_1, chk_2, chk_3, chk_4],
+                            [opc_1, opc_2, opc_3, opc_4]
+                        ) if chk
+                    ]
+                    string_selecionados_17_5_1 = "; ".join(selecionados_17_5_1) if selecionados_17_5_1 else "Nenhum sistema selecionado"
+
+                with c1751_2:
+                    link_17_5_1_input = st.text_area(
+                        "Link/Evidência ou especificação dos sistemas (17.5.1):",
+                        value=l_salvo_17_5_1,
+                        key=f"reg_17_5_1_txt_{ano_sel}",
+                        height=180
+                    )
+
+                    links_17_5_1_visuais = re.findall(REGEX_PURE_URL, link_17_5_1_input or "")
+                    if links_17_5_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.1", key=f"btn_salvar_17_5_1_{ano_sel}", type="primary"):
+                    val_str_17_5_1 = string_selecionados_17_5_1
+                    val_lk_17_5_1 = link_17_5_1_input.strip()
+                    pts_17_5_1 = 0.0
+                    comentarios_17_5_1 = d17_5_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.1",
+                        valor=val_str_17_5_1,
+                        pontos=pts_17_5_1,
+                        link=val_lk_17_5_1,
+                        comentarios=comentarios_17_5_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_1_input or "")]
+                    links_antigos_17_5_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_1 or "")]
+
+                    if (val_str_17_5_1 != v_salvo_17_5_1 or val_lk_17_5_1 != l_salvo_17_5_1) and links_atuais_17_5_1 and links_atuais_17_5_1 != links_antigos_17_5_1:
+                        st.session_state[f"links_pendentes_17_5_1_{ano_sel}"] = links_atuais_17_5_1
+                        st.session_state[f"gatilho_modal_17_5_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_1 = d17_5_1.get("pontos", 0.0)
+                cor_txt_17_5_1 = "#28a745" if pts_atuais_17_5_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.1: {pts_atuais_17_5_1:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.1
+        if st.session_state.get(f"gatilho_modal_17_5_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.1", st.session_state.get(f"links_pendentes_17_5_1_{ano_sel}", []), ano_sel)
