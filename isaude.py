@@ -8822,3 +8822,97 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.2", st.session_state.get(f"links_pendentes_18_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.2.1 - FORMA DE INTEGRAÇÃO DOS ÓRGÃOS
+        # =============================================================================
+        with st.container(key=f"container_bloco_forma_integracao_18_2_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.2.1 • Forma de Integração dos Órgãos ({ano_sel})", expanded=True):
+                st.subheader(f"18.2.1 • Forma de Integração dos Órgãos ({ano_sel})")
+                st.write("**Assinale a forma de integração dos órgãos:**")
+                st.caption("ℹ️ *Selecione as opções aplicáveis, informe o link de evidência e clique no botão 'Salvar Quesito 18.2.1' para registrar os dados.*")
+
+                d18_2_1 = res_data.get("18.2.1") or {
+                    "valor": "0|0|0|0|0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_18_2_1 = d18_2_1.get("valor", "0|0|0|0|0|0")
+                l_salvo_18_2_1 = d18_2_1.get("link", "")
+
+                p_1821 = v_salvo_18_2_1.split("|")
+                while len(p_1821) < 6:
+                    p_1821.append("0")
+
+                c1821_1, c1821_2 = st.columns([1, 1])
+
+                with c1821_1:
+                    st.write("☑️ **Formas de Integração:**")
+                    ch1_1821 = st.checkbox("Ações estabelecidas", value=(p_1821[0] == "1"), key=f"ch_1821_1_{ano_sel}")
+                    ch2_1821 = st.checkbox("Papéis definidos", value=(p_1821[1] == "1"), key=f"ch_1821_2_{ano_sel}")
+                    ch3_1821 = st.checkbox("Metas estabelecidas", value=(p_1821[2] == "1"), key=f"ch_1821_3_{ano_sel}")
+                    ch4_1821 = st.checkbox("Prazos", value=(p_1821[3] == "1"), key=f"ch_1821_4_{ano_sel}")
+                    ch5_1821 = st.checkbox("Normas complementares firmadas entre órgãos", value=(p_1821[4] == "1"), key=f"ch_1821_5_{ano_sel}")
+                    ch6_1821 = st.checkbox("Outros", value=(p_1821[5] == "1"), key=f"ch_1821_6_{ano_sel}")
+
+                    string_estruturada_18_2_1 = f"{1 if ch1_1821 else 0}|{1 if ch2_1821 else 0}|{1 if ch3_1821 else 0}|{1 if ch4_1821 else 0}|{1 if ch5_1821 else 0}|{1 if ch6_1821 else 0}"
+
+                with c1821_2:
+                    link_18_2_1_input = st.text_area(
+                        "Link/Evidência de Integração (18.2.1):",
+                        value=l_salvo_18_2_1,
+                        key=f"txt_link_18_2_1_forma_integracao_{ano_sel}",
+                        height=180
+                    )
+
+                    links_18_2_1_visuais = re.findall(REGEX_PURE_URL, link_18_2_1_input or "")
+                    if links_18_2_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_18_2_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.2.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.2.1", key=f"btn_salvar_18_2_1_forma_integracao_{ano_sel}", type="primary"):
+                    val_str_18_2_1 = string_estruturada_18_2_1
+                    val_lk_18_2_1 = link_18_2_1_input.strip()
+                    comentarios_18_2_1 = d18_2_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.2.1",
+                        valor=val_str_18_2_1,
+                        pontos=0.0,
+                        link=val_lk_18_2_1,
+                        comentarios=comentarios_18_2_1
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_18_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_2_1_input or "")]
+                    links_antigos_18_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_18_2_1 or "")]
+
+                    if (val_str_18_2_1 != v_salvo_18_2_1 or val_lk_18_2_1 != l_salvo_18_2_1) and links_atuais_18_2_1 and links_atuais_18_2_1 != links_antigos_18_2_1:
+                        st.session_state[f"links_pendentes_18_2_1_{ano_sel}"] = links_atuais_18_2_1
+                        st.session_state[f"gatilho_modal_18_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 18.2.1: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.2.1
+        if st.session_state.get(f"gatilho_modal_18_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.2.1", st.session_state.get(f"links_pendentes_18_2_1_{ano_sel}", []), ano_sel)
