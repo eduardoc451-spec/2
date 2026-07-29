@@ -12298,4 +12298,235 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("24.1", st.session_state.get(f"links_pendentes_24_1_{ano_sel}", []), ano_sel)
 
+        # =============================================================================
+        # SEÇÃO 25 - AÇÕES REGULADORAS E COMPLEXOS REGULADORES
+        # =============================================================================
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.subheader("⚙️ Seção 25 - Regulação do Acesso e Complexos Reguladores")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 25.0 - AÇÕES REGULADORAS NO TERRITÓRIO
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_regulacao_acesso_25_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 25.0 • Ações Reguladoras no Território ({ano_sel})", expanded=True):
+                st.subheader(f"25.0 • Ações Reguladoras no Território ({ano_sel})")
+                st.write("**O município desenvolve ações reguladoras em seu território, operacionalizando por meio de complexo regulador municipal e/ou participando em co-gestão da operacionalização dos Complexos Reguladores Regionais?**")
+                st.caption("ℹ️ *Selecione a opção correspondente, informe o link de evidência e clique no botão 'Salvar Quesito 25.0' para registrar os dados.*")
+
+                d25_0 = res_data.get("25.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_250 = d25_0.get("valor", "Selecione...")
+                l_salvo_250 = d25_0.get("link", "")
+
+                opts_25_0 = ["Selecione...", "Sim – 05", "Não – 00"]
+                idx_25_0 = opts_25_0.index(v_salvo_250) if v_salvo_250 in opts_25_0 else 0
+
+                c250_1, c250_2 = st.columns([1, 1])
+                with c250_1:
+                    sel_25_0 = st.radio(
+                        "Ações reguladoras:",
+                        options=opts_25_0,
+                        index=idx_25_0,
+                        key=f"rad_25_0_{ano_sel}"
+                    )
+                    
+                    opcoes_pts_250 = {
+                        "Sim – 05": 5.0,
+                        "Não – 00": 0.0,
+                        "Selecione...": 0.0
+                    }
+                    pts_25_0 = opcoes_pts_250.get(sel_25_0, 0.0)
+
+                with c250_2:
+                    link_25_0_input = st.text_area(
+                        "Link/Evidência de atos normativos, atas ou fluxos regulatórios (25.0):",
+                        value=l_salvo_250,
+                        key=f"txt_link_25_0_regulacao_{ano_sel}",
+                        height=120
+                    )
+
+                placeholder_links_250 = st.empty()
+                links_250_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_25_0_input or "")]
+                if links_250_visuais:
+                    placeholder_links_250.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_250_visuais])
+                    )
+
+                # Feedback visual
+                if sel_25_0 != "Selecione...":
+                    st.success(f"✅ Opção selecionada: **{sel_25_0}**")
+                else:
+                    st.warning("⚠️ Nenhuma opção selecionada.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("25.0", res_data)
+
+                # Impacto de pontuação
+                if pts_25_0 > 0:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 25.0: +{pts_25_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 25.0: +{pts_25_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 25.0", key=f"btn_salvar_25_0_regulacao_{ano_sel}", type="primary"):
+                    val_str_250 = sel_25_0
+                    val_lk_250 = link_25_0_input.strip()
+                    comentarios_250 = d25_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="25.0",
+                        valor=val_str_250,
+                        pontos=pts_25_0,
+                        link=val_lk_250,
+                        comentarios=comentarios_250
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_250 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_25_0_input or "")]
+                    links_antigos_250 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_250 or "")]
+
+                    if (val_str_250 != v_salvo_250 or val_lk_250 != l_salvo_250) and links_atuais_250 and links_atuais_250 != links_antigos_250:
+                        st.session_state[f"links_pendentes_25_0_{ano_sel}"] = links_atuais_250
+                        st.session_state[f"gatilho_modal_25_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 25.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 25.0
+        if st.session_state.get(f"gatilho_modal_25_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("25.0", st.session_state.get(f"links_pendentes_25_0_{ano_sel}", []), ano_sel)
+
+        st.markdown('</div>', unsafe_allow_html=True)  # Fecha o card geral da Seção 25
+
+        # =============================================================================
+        # SEÇÃO 26 - PROTOCOLOS DE REGULAÇÃO
+        # =============================================================================
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.subheader("📋 Seção 26 - Protocolos de Regulação")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 26.0 - PROTOCOLOS DE REGULAÇÃO DE ACESSO FORMALIZADOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_protocolos_regulacao_26_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 26.0 • Protocolos de Regulação de Acesso Formalizados ({ano_sel})", expanded=True):
+                st.subheader(f"26.0 • Protocolos de Regulação de Acesso Formalizados ({ano_sel})")
+                st.write("**O município elaborou os protocolos de regulação de acesso formalizados?**")
+                st.caption("ℹ️ *Selecione a opção correspondente, informe o link de evidência e clique no botão 'Salvar Quesito 26.0' para registrar os dados.*")
+
+                d26_0 = res_data.get("26.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_260 = d26_0.get("valor", "Selecione...")
+                l_salvo_260 = d26_0.get("link", "")
+
+                opts_26_0 = ["Selecione...", "Sim – 10", "Não – 00"]
+                idx_26_0 = opts_26_0.index(v_salvo_260) if v_salvo_260 in opts_26_0 else 0
+
+                c260_1, c260_2 = st.columns([1, 1])
+                with c260_1:
+                    sel_26_0 = st.radio(
+                        "Protocolos de regulação:",
+                        options=opts_26_0,
+                        index=idx_26_0,
+                        key=f"rad_26_0_{ano_sel}"
+                    )
+                    
+                    opcoes_pts_260 = {
+                        "Sim – 10": 10.0,
+                        "Não – 00": 0.0,
+                        "Selecione...": 0.0
+                    }
+                    pts_26_0 = opcoes_pts_260.get(sel_26_0, 0.0)
+
+                with c260_2:
+                    link_26_0_input = st.text_area(
+                        "Link/Evidência dos protocolos de regulação formalizados (26.0):",
+                        value=l_salvo_260,
+                        key=f"txt_link_26_0_protocolos_{ano_sel}",
+                        height=120
+                    )
+
+                placeholder_links_260 = st.empty()
+                links_260_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_26_0_input or "")]
+                if links_260_visuais:
+                    placeholder_links_260.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_260_visuais])
+                    )
+
+                # Feedback visual
+                if sel_26_0 != "Selecione...":
+                    st.success(f"✅ Opção selecionada: **{sel_26_0}**")
+                else:
+                    st.warning("⚠️ Nenhuma opção selecionada.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("26.0", res_data)
+
+                # Impacto de pontuação
+                if pts_26_0 > 0:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 26.0: +{pts_26_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 26.0: +{pts_26_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 26.0", key=f"btn_salvar_26_0_protocolos_{ano_sel}", type="primary"):
+                    val_str_260 = sel_26_0
+                    val_lk_260 = link_26_0_input.strip()
+                    comentarios_260 = d26_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="26.0",
+                        valor=val_str_260,
+                        pontos=pts_26_0,
+                        link=val_lk_260,
+                        comentarios=comentarios_260
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_260 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_26_0_input or "")]
+                    links_antigos_260 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_260 or "")]
+
+                    if (val_str_260 != v_salvo_260 or val_lk_260 != l_salvo_260) and links_atuais_260 and links_atuais_260 != links_antigos_260:
+                        st.session_state[f"links_pendentes_26_0_{ano_sel}"] = links_atuais_260
+                        st.session_state[f"gatilho_modal_26_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 26.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 26.0
+        if st.session_state.get(f"gatilho_modal_26_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("26.0", st.session_state.get(f"links_pendentes_26_0_{ano_sel}", []), ano_sel)
+
+       
         
