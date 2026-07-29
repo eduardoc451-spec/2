@@ -2357,11 +2357,11 @@ def mostrar_formulario_saude():
                 )
                 st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 5.0' para registrar.*")
 
-                # Mapeamento de Opções e Pontuações do Quesito 5.0
+                # Mapeamento de Opções com pontuação ao lado e valores numéricos
                 opcoes_50 = {
                     "Selecione...": 0.0,
-                    "Sim": 4.0,
-                    "Não": 0.0,
+                    "Sim – 04": 4.0,
+                    "Não – 00": 0.0,
                 }
 
                 # Estado inicial / persistente
@@ -2374,6 +2374,12 @@ def mostrar_formulario_saude():
                 }
                 v_salvo_50 = d50.get("valor", "Selecione...")
                 evidencia_50_salva = d50.get("link", "")
+
+                # Compatibilidade com gravações antigas que usavam apenas "Sim" ou "Não"
+                if v_salvo_50 == "Sim":
+                    v_salvo_50 = "Sim – 04"
+                elif v_salvo_50 == "Não":
+                    v_salvo_50 = "Não – 00"
 
                 # Chaves fixas por componente e ano
                 chave_radio_50 = f"r_50_{ano_sel}"
