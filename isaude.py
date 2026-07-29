@@ -6508,3 +6508,212 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_4_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.4.1", st.session_state.get(f"links_pendentes_17_4_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.4.2 • MEDIDAS PARA REDUÇÃO DO ABSENTEÍSMO EM EXAMES
+        # =============================================================================
+        with st.container(key=f"container_bloco_medidas_exames_17_4_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.4.2 - Medidas para Redução de Absenteísmo de Exames ({ano_sel})", expanded=True):
+                st.subheader(f"17.4.2 • Medidas para Redução do Absenteísmo em Exames ({ano_sel})")
+                st.write(f"**17.4.2 O município realiza medidas para a redução desta taxa de absenteísmo?**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.4.2' para registrar.*")
+
+                opts_17_4_2 = {
+                    "Selecione...": 0.0,
+                    "Sim – 00": 0.0,
+                    "Não – -02 (perde 02 pontos)": -2.0
+                }
+
+                d17_4_2 = res_data.get("17.4.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_4_2 = d17_4_2.get("valor", "Selecione...")
+                l_salvo_17_4_2 = d17_4_2.get("link", "")
+
+                c1742_1, c1742_2 = st.columns([1, 1])
+                with c1742_1:
+                    lista_opcoes_17_4_2 = list(opts_17_4_2.keys())
+                    idx_salvo_17_4_2 = lista_opcoes_17_4_2.index(v_salvo_17_4_2) if v_salvo_17_4_2 in opts_17_4_2 else 0
+
+                    sel_17_4_2 = st.radio(
+                        "Realiza medidas de redução (Exames):",
+                        options=lista_opcoes_17_4_2,
+                        index=idx_salvo_17_4_2,
+                        key=f"reg_17_4_2_rad_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c1742_2:
+                    link_17_4_2_input = st.text_area(
+                        "Link/Evidência das Ações de Redução em Exames (17.4.2):",
+                        value=l_salvo_17_4_2,
+                        key=f"reg_17_4_2_txt_{ano_sel}",
+                        height=130
+                    )
+
+                    links_17_4_2_visuais = re.findall(REGEX_PURE_URL, link_17_4_2_input or "")
+                    if links_17_4_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_4_2_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.4.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.4.2", key=f"btn_salvar_17_4_2_{ano_sel}", type="primary"):
+                    val_sel_17_4_2 = sel_17_4_2 if sel_17_4_2 is not None else "Selecione..."
+                    val_lk_17_4_2 = link_17_4_2_input.strip()
+                    pts_17_4_2 = opts_17_4_2.get(val_sel_17_4_2, 0.0)
+                    comentarios_17_4_2 = d17_4_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.4.2",
+                        valor=val_sel_17_4_2,
+                        pontos=pts_17_4_2,
+                        link=val_lk_17_4_2,
+                        comentarios=comentarios_17_4_2
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_4_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_4_2_input or "")]
+                    links_antigos_17_4_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_4_2 or "")]
+
+                    if (val_sel_17_4_2 != v_salvo_17_4_2 or val_lk_17_4_2 != l_salvo_17_4_2) and links_atuais_17_4_2 and links_atuais_17_4_2 != links_antigos_17_4_2:
+                        st.session_state[f"links_pendentes_17_4_2_{ano_sel}"] = links_atuais_17_4_2
+                        st.session_state[f"gatilho_modal_17_4_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.4.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_4_2 = d17_4_2.get("pontos", 0.0)
+                cor_txt_17_4_2 = "#28a745" if pts_atuais_17_4_2 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_4_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.4.2: {pts_atuais_17_4_2:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.4.2
+        if st.session_state.get(f"gatilho_modal_17_4_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.4.2", st.session_state.get(f"links_pendentes_17_4_2_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 17.4.2.1 • ROL DE MEDIDAS DE REDUÇÃO EM EXAMES
+        # =============================================================================
+        with st.container(key=f"container_bloco_rol_medidas_exames_17_4_2_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.4.2.1 - Rol de Medidas de Redução em Exames ({ano_sel})", expanded=True):
+                st.subheader(f"17.4.2.1 • Rol de Medidas de Redução em Exames ({ano_sel})")
+                st.write(f"**17.4.2.1 Assinale as medidas utilizadas para a redução da taxa de absenteísmo:**")
+                st.caption("ℹ️ *Marque as opções aplicadas, informe o link de evidência e clique no botão 'Salvar Quesito 17.4.2.1' para registrar.*")
+
+                d17_4_2_1 = res_data.get("17.4.2.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_4_2_1 = d17_4_2_1.get("valor", "")
+                l_salvo_17_4_2_1 = d17_4_2_1.get("link", "")
+                lista_salva_17_4_2_1 = [item.strip() for item in v_salvo_17_4_2_1.split(";")] if v_salvo_17_4_2_1 else []
+
+                opc_1 = "Informar e sensibilizar as equipes/profissionais a respeito do absenteísmo e promover capacitações"
+                opc_2 = "Criação de Central de relacionamento para usuário SUS, com disponibilização de canal direto de comunicação"
+                opc_3 = "Ligação telefônica ou outro meio de comunicação para confirmation do exame e presença do paciente"
+                opc_4 = "Orientação das famílias e busca ativa dos faltosos"
+                opc_5 = "Promoção de campanhas de conscientização"
+                opc_6 = "Outros"
+
+                c17421_1, c17421_2 = st.columns([1, 1])
+
+                with c17421_1:
+                    st.write("📋 **Selecione todas as medidas aplicadas:**")
+                    chk_1 = st.checkbox(opc_1, value=(opc_1 in lista_salva_17_4_2_1), key=f"chk_17421_1_{ano_sel}")
+                    chk_2 = st.checkbox(opc_2, value=(opc_2 in lista_salva_17_4_2_1), key=f"chk_17421_2_{ano_sel}")
+                    chk_3 = st.checkbox(opc_3, value=(opc_3 in lista_salva_17_4_2_1), key=f"chk_17421_3_{ano_sel}")
+                    chk_4 = st.checkbox(opc_4, value=(opc_4 in lista_salva_17_4_2_1), key=f"chk_17421_4_{ano_sel}")
+                    chk_5 = st.checkbox(opc_5, value=(opc_5 in lista_salva_17_4_2_1), key=f"chk_17421_5_{ano_sel}")
+                    chk_6 = st.checkbox(opc_6, value=(opc_6 in lista_salva_17_4_2_1), key=f"chk_17421_6_{ano_sel}")
+
+                    selecionados_17_4_2_1 = [
+                        opc for chk, opc in zip(
+                            [chk_1, chk_2, chk_3, chk_4, chk_5, chk_6],
+                            [opc_1, opc_2, opc_3, opc_4, opc_5, opc_6]
+                        ) if chk
+                    ]
+                    string_selecionados_17_4_2_1 = "; ".join(selecionados_17_4_2_1) if selecionados_17_4_2_1 else "Nenhuma medida selecionada"
+
+                with c17421_2:
+                    link_17_4_2_1_input = st.text_area(
+                        "Link/Evidência das Medidas Assinaladas em Exames (17.4.2.1):",
+                        value=l_salvo_17_4_2_1,
+                        key=f"reg_17_4_2_1_txt_{ano_sel}",
+                        height=250
+                    )
+
+                    links_17_4_2_1_visuais = re.findall(REGEX_PURE_URL, link_17_4_2_1_input or "")
+                    if links_17_4_2_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_4_2_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.4.2.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.4.2.1", key=f"btn_salvar_17_4_2_1_{ano_sel}", type="primary"):
+                    val_str_17_4_2_1 = string_selecionados_17_4_2_1
+                    val_lk_17_4_2_1 = link_17_4_2_1_input.strip()
+                    pts_17_4_2_1 = 0.0
+                    comentarios_17_4_2_1 = d17_4_2_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.4.2.1",
+                        valor=val_str_17_4_2_1,
+                        pontos=pts_17_4_2_1,
+                        link=val_lk_17_4_2_1,
+                        comentarios=comentarios_17_4_2_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_4_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_4_2_1_input or "")]
+                    links_antigos_17_4_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_4_2_1 or "")]
+
+                    if (val_str_17_4_2_1 != v_salvo_17_4_2_1 or val_lk_17_4_2_1 != l_salvo_17_4_2_1) and links_atuais_17_4_2_1 and links_atuais_17_4_2_1 != links_antigos_17_4_2_1:
+                        st.session_state[f"links_pendentes_17_4_2_1_{ano_sel}"] = links_atuais_17_4_2_1
+                        st.session_state[f"gatilho_modal_17_4_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.4.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_4_2_1 = d17_4_2_1.get("pontos", 0.0)
+                cor_txt_17_4_2_1 = "#28a745" if pts_atuais_17_4_2_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_4_2_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.4.2.1: {pts_atuais_17_4_2_1:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.4.2.1
+        if st.session_state.get(f"gatilho_modal_17_4_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.4.2.1", st.session_state.get(f"links_pendentes_17_4_2_1_{ano_sel}", []), ano_sel)
