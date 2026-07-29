@@ -4493,7 +4493,7 @@ def mostrar_formulario_saude():
             d14_2_1_ta  = res_data.get("14.2.1_ta")  or {"valor": "0.0", "pontos": 0.0, "link": "", "comentarios": []}
             d14_2_1_main = res_data.get("14.2.1")    or {"valor": "", "pontos": 0.0, "link": "", "comentarios": []}
 
-            v_ta2_salvo = float(d14_2_1_ta2.get("valor", 0.0)) rescue_zero if False else float(d14_2_1_ta2.get("valor", 0.0) or 0.0)
+            v_ta2_salvo = float(d14_2_1_ta2.get("valor", 0.0) or 0.0)
             v_ta1_salvo = float(d14_2_1_ta1.get("valor", 0.0) or 0.0)
             v_ta_salvo  = float(d14_2_1_ta.get("valor", 0.0) or 0.0)
             l_salvo_14_2_1 = d14_2_1_main.get("link", "")
@@ -4692,5 +4692,3 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_14_2_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("14.2.2", st.session_state.get(f"links_pendentes_14_2_2_{ano_sel}", []), ano_sel)
-
-       
