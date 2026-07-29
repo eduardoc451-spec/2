@@ -7165,280 +7165,328 @@ def mostrar_formulario_saude():
                 modal_aviso_link("17.5.2.1", st.session_state.get(f"links_pendentes_17_5_2_1_{ano_sel}", []), ano_sel)
 
         # =============================================================================
-        # QUESITO 17.5.2.1.1 - 3 CONSULTAS COM MAIOR TEMPO DE ESPERA
+        # QUESITO 17.5.2.1.1 • 3 CONSULTAS COM MAIOR TEMPO DE ESPERA
         # =============================================================================
-        # Substituída a div HTML manual por contêiner nativo estável com chave fixa
         with st.container(key=f"container_bloco_maior_espera_consultas_17_5_2_1_1_{ano_sel}", border=True):
-            
-            with st.expander(f"📌 Quesito 17.5.2.1.1 - Consultas com Maior Tempo de Espera", expanded=True):
-                st.subheader("17.5.2.1.1 • Consultas com Maior Tempo de Espera")
+            with st.expander(f"📌 Quesito 17.5.2.1.1 - Consultas com Maior Tempo de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.2.1.1 • Consultas com Maior Tempo de Espera ({ano_sel})")
                 st.write(f"**17.5.2.1.1 Informe as 3 consultas médicas com maior tempo de espera na Atenção Especializada:**")
-                st.caption("ℹ️ *O salvamento é automático. Qualquer alteração nos campos ou no link grava os dados na hora.*")
-                
-                # Recupera os dados salvos ou inicia um dicionário padrão
-                d17_5_2_1_1 = res_data.get("17.5.2.1.1", {"valor": "", "pontos": 0.0, "link": ""})
-                valores_salvos_1_1 = d17_5_2_1_1.get("valor", "")
-                
-                # Trata a string salva para preencher os campos (Especialidade 1|Dias 1||Especialidade 2|Dias 2||Especialidade 3|Dias 3)
-                partes = valores_salvos_1_1.split("||") if valores_salvos_1_1 else []
-                
-                p1 = partes[0].split("|") if len(partes) > 0 else ["", ""]
-                p2 = partes[1].split("|") if len(partes) > 1 else ["", ""]
-                p3 = partes[2].split("|") if len(partes) > 2 else ["", ""]
-                
+                st.caption("ℹ️ *Preencha os campos abaixo, informe o link de evidência e clique no botão 'Salvar Quesito 17.5.2.1.1' para registrar.*")
+
+                d17_5_2_1_1 = res_data.get("17.5.2.1.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_2_1_1 = d17_5_2_1_1.get("valor", "")
+                l_salvo_17_5_2_1_1 = d17_5_2_1_1.get("link", "")
+
+                partes_1_1 = v_salvo_17_5_2_1_1.split("||") if v_salvo_17_5_2_1_1 else []
+                p1 = partes_1_1[0].split("|") if len(partes_1_1) > 0 else ["", ""]
+                p2 = partes_1_1[1].split("|") if len(partes_1_1) > 1 else ["", ""]
+                p3 = partes_1_1[2].split("|") if len(partes_1_1) > 2 else ["", ""]
+
                 c175211_1, c175211_2 = st.columns([1, 1])
-                
+
                 with c175211_1:
                     st.write("🩺 **Especialidades Médicas e Prazos:**")
                     
-                    # Primeira Consulta
                     esp_1 = st.text_input("1ª - Descrição da especialidade médica:", value=p1[0] if len(p1) > 0 else "", key=f"esp1_175211_{ano_sel}")
                     dias_1 = st.text_input("1ª - Tempo médio de espera (em dias):", value=p1[1] if len(p1) > 1 else "", key=f"dias1_175211_{ano_sel}")
                     
                     st.markdown("---")
                     
-                    # Segunda Consulta
                     esp_2 = st.text_input("2ª - Descrição da especialidade médica:", value=p2[0] if len(p2) > 0 else "", key=f"esp2_175211_{ano_sel}")
                     dias_2 = st.text_input("2ª - Tempo médio de espera (em dias):", value=p2[1] if len(p2) > 1 else "", key=f"dias2_175211_{ano_sel}")
                     
                     st.markdown("---")
                     
-                    # Terceira Consulta
                     esp_3 = st.text_input("3ª - Descrição da especialidade médica:", value=p3[0] if len(p3) > 0 else "", key=f"esp3_175211_{ano_sel}")
                     dias_3 = st.text_input("3ª - Tempo médio de espera (em dias):", value=p3[1] if len(p3) > 1 else "", key=f"dias3_175211_{ano_sel}")
 
-                with c175211_2:
-                    link_17_5_2_1_1 = st.text_area(
-                        "Link/Evidência ou Relatório estatístico dos tempos de espera (17.5.2.1.1):", 
-                        value=d17_5_2_1_1.get("link", ""), 
-                        key=f"reg_17_5_2_1_1_txt_{ano_sel}",
-                        height=320
-                    )
-                    
-                    # SUPORTE MULTI-LINKS ATIVOS (Isolado e protegido de forma síncrona)
-                    with st.container(key=f"links_holder_maior_espera_consultas_17_5_2_1_1_{ano_sel}"):
-                        links_17_5_2_1_1_atuais = re.findall(r'(https?://[^\s]+)', link_17_5_2_1_1)
-                        if links_17_5_2_1_1_atuais:
-                            botoes_17_5_2_1_1 = " | ".join([f"🔗 [{u}]({u})" for u in links_17_5_2_1_1_atuais])
-                            st.markdown(f"**Links Ativos:** {botoes_17_5_2_1_1}")
-                
-                # Monta a string estruturada para salvar tudo em um único campo de texto de forma limpa
-                string_estruturada = f"{esp_1}|{dias_1}||{esp_2}|{dias_2}||{esp_3}|{dias_3}"
-                # Caso esteja tudo em branco, salva vazio
-                if string_estruturada == "||||":
-                    string_estruturada = ""
-                    
-                pts_17_5_2_1_1 = 0.0
-                
-                # ISOLAMENTO DO SCORE: Protegido por container para manter a integridade da árvore do React
-                with st.container(key=f"score_holder_maior_espera_consultas_17_5_2_1_1_{ano_sel}"):
-                    st.markdown(f"📊 **Pontuação Aplicada no Quesito 17.5.2.1.1:** `{pts_17_5_2_1_1:.1f} pontos` (Dados Informativos)")
-                
-                # SALVAMENTO TOTALMENTE SINCRONIZADO NA MEMÓRIA LOCAL
-                mudou_valores_17_5_2_1_1 = string_estruturada != valores_salvos_1_1
-                mudou_link_17_5_2_1_1 = link_17_5_2_1_1 != d17_5_2_1_1.get("link", "")
+                    string_estruturada_1_1 = f"{esp_1.strip()}|{dias_1.strip()}||{esp_2.strip()}|{dias_2.strip()}||{esp_3.strip()}|{dias_3.strip()}"
+                    if string_estruturada_1_1 == "||||":
+                        string_estruturada_1_1 = ""
 
-                if mudou_valores_17_5_2_1_1 or mudou_link_17_5_2_1_1:
-                    save_resp("17.5.2.1.1", string_estruturada, pts_17_5_2_1_1, link_17_5_2_1_1)
-                    
-                    if "17.5.2.1.1" not in res_data:
-                        res_data["17.5.2.1.1"] = {}
-                    res_data["17.5.2.1.1"]["valor"] = string_estruturada
-                    res_data["17.5.2.1.1"]["pontos"] = pts_17_5_2_1_1
-                    res_data["17.5.2.1.1"]["link"] = link_17_5_2_1_1
-                    
-                    if mudou_link_17_5_2_1_1 and links_17_5_2_1_1_atuais:
-                        links_17_5_2_1_1_antigos = re.findall(r'(https?://[^\s]+)', d17_5_2_1_1.get("link", ""))
-                        if links_17_5_2_1_1_atuais != links_17_5_2_1_1_antigos:
-                            modal_aviso_link("17.5.2.1.1", links_17_5_2_1_1_atuais)
-                        else:
-                            st.rerun()
-                    else:
-                        st.rerun()
-                    
-                bloco_comentarios("17.5.2.1.1", res_data)
+                    pts_17_5_2_1_1 = 0.0
+
+                with c175211_2:
+                    link_17_5_2_1_1_input = st.text_area(
+                        "Link/Evidência ou Relatório estatístico dos tempos de espera (17.5.2.1.1):",
+                        value=l_salvo_17_5_2_1_1,
+                        key=f"reg_17_5_2_1_1_txt_{ano_sel}",
+                        height=280
+                    )
+
+                    links_17_5_2_1_1_visuais = re.findall(REGEX_PURE_URL, link_17_5_2_1_1_input or "")
+                    if links_17_5_2_1_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_2_1_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.2.1.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.2.1.1", key=f"btn_salvar_17_5_2_1_1_{ano_sel}", type="primary"):
+                    val_str_17_5_2_1_1 = string_estruturada_1_1
+                    val_lk_17_5_2_1_1 = link_17_5_2_1_1_input.strip()
+                    comentarios_17_5_2_1_1 = d17_5_2_1_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.2.1.1",
+                        valor=val_str_17_5_2_1_1,
+                        pontos=pts_17_5_2_1_1,
+                        link=val_lk_17_5_2_1_1,
+                        comentarios=comentarios_17_5_2_1_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_2_1_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_2_1_1_input or "")]
+                    links_antigos_17_5_2_1_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_2_1_1 or "")]
+
+                    if (val_str_17_5_2_1_1 != v_salvo_17_5_2_1_1 or val_lk_17_5_2_1_1 != l_salvo_17_5_2_1_1) and links_atuais_17_5_2_1_1 and links_atuais_17_5_2_1_1 != links_antigos_17_5_2_1_1:
+                        st.session_state[f"links_pendentes_17_5_2_1_1_{ano_sel}"] = links_atuais_17_5_2_1_1
+                        st.session_state[f"gatilho_modal_17_5_2_1_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.2.1.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_2_1_1 = d17_5_2_1_1.get("pontos", 0.0)
+                cor_txt_17_5_2_1_1 = "#28a745" if pts_atuais_17_5_2_1_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_2_1_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.2.1.1: {pts_atuais_17_5_2_1_1:+.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.2.1.1
+        if st.session_state.get(f"gatilho_modal_17_5_2_1_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.2.1.1", st.session_state.get(f"links_pendentes_17_5_2_1_1_{ano_sel}", []), ano_sel)
 
         # =============================================================================
-        # QUESITO 17.5.2.1.2 - 3 EXAMES COM MAIOR TEMPO DE ESPERA
+        # QUESITO 17.5.2.1.2 • 3 EXAMES COM MAIOR TEMPO DE ESPERA
         # =============================================================================
         with st.container(key=f"container_bloco_maior_espera_exames_17_5_2_1_2_{ano_sel}", border=True):
-            
-            with st.expander(f"📌 Quesito 17.5.2.1.2 - Exames com Maior Tempo de Espera", expanded=True):
-                st.subheader("17.5.2.1.2 • Exames com Maior Tempo de Espera")
+            with st.expander(f"📌 Quesito 17.5.2.1.2 - Exames com Maior Tempo de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.2.1.2 • Exames com Maior Tempo de Espera ({ano_sel})")
                 st.write(f"**17.5.2.1.2 Informe os 3 exames médicos com maior tempo de espera na Atenção Especializada:**")
-                st.caption("ℹ️ *O salvamento é automático. Qualquer alteração nos campos ou no link grava os dados na hora.*")
-                
-                # Recupera os dados salvos ou inicia um dicionário padrão
-                d17_5_2_1_2 = res_data.get("17.5.2.1.2", {"valor": "", "pontos": 0.0, "link": ""})
-                valores_salvos_1_2 = d17_5_2_1_2.get("valor", "")
-                
-                # Trata a string salva para preencher os campos (Exame 1|Dias 1||Exame 2|Dias 2||Exame 3|Dias 3)
-                partes_ex = valores_salvos_1_2.split("||") if valores_salvos_1_2 else []
-                
-                e1 = partes_ex[0].split("|") if len(partes_ex) > 0 else ["", ""]
-                e2 = partes_ex[1].split("|") if len(partes_ex) > 1 else ["", ""]
-                e3 = partes_ex[2].split("|") if len(partes_ex) > 2 else ["", ""]
-                
+                st.caption("ℹ️ *Preencha os campos abaixo, informe o link de evidência e clique no botão 'Salvar Quesito 17.5.2.1.2' para registrar.*")
+
+                d17_5_2_1_2 = res_data.get("17.5.2.1.2") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_2_1_2 = d17_5_2_1_2.get("valor", "")
+                l_salvo_17_5_2_1_2 = d17_5_2_1_2.get("link", "")
+
+                partes_1_2 = v_salvo_17_5_2_1_2.split("||") if v_salvo_17_5_2_1_2 else []
+                e1 = partes_1_2[0].split("|") if len(partes_1_2) > 0 else ["", ""]
+                e2 = partes_1_2[1].split("|") if len(partes_1_2) > 1 else ["", ""]
+                e3 = partes_1_2[2].split("|") if len(partes_1_2) > 2 else ["", ""]
+
                 c175212_1, c175212_2 = st.columns([1, 1])
-                
+
                 with c175212_1:
                     st.write("🔬 **Exames e Prazos:**")
                     
-                    # Primeiro Exame
                     ex_1 = st.text_input("1º - Descrição do exame médico:", value=e1[0] if len(e1) > 0 else "", key=f"ex1_175212_{ano_sel}")
                     ex_dias_1 = st.text_input("1º - Tempo médio de espera (em dias):", value=e1[1] if len(e1) > 1 else "", key=f"ex_dias1_175212_{ano_sel}")
                     
                     st.markdown("---")
                     
-                    # Segundo Exame
                     ex_2 = st.text_input("2º - Descrição do exame médico:", value=e2[0] if len(e2) > 0 else "", key=f"ex2_175212_{ano_sel}")
                     ex_dias_2 = st.text_input("2º - Tempo médio de espera (em dias):", value=e2[1] if len(e2) > 1 else "", key=f"ex_dias2_175212_{ano_sel}")
                     
                     st.markdown("---")
                     
-                    # Terceiro Exame
                     ex_3 = st.text_input("3º - Descrição do exame médico:", value=e3[0] if len(e3) > 0 else "", key=f"ex3_175212_{ano_sel}")
                     ex_dias_3 = st.text_input("3º - Tempo médio de espera (em dias):", value=e3[1] if len(e3) > 1 else "", key=f"ex_dias3_175212_{ano_sel}")
 
+                    string_estruturada_1_2 = f"{ex_1.strip()}|{ex_dias_1.strip()}||{ex_2.strip()}|{ex_dias_2.strip()}||{ex_3.strip()}|{ex_dias_3.strip()}"
+                    if string_estruturada_1_2 == "||||":
+                        string_estruturada_1_2 = ""
+
+                    pts_17_5_2_1_2 = 0.0
+
                 with c175212_2:
-                    link_17_5_2_1_2 = st.text_area(
-                        "Link/Evidência ou Relatório estatístico dos tempos de espera de exames (17.5.2.1.2):", 
-                        value=d17_5_2_1_2.get("link", ""), 
+                    link_17_5_2_1_2_input = st.text_area(
+                        "Link/Evidência ou Relatório estatístico dos tempos de espera de exames (17.5.2.1.2):",
+                        value=l_salvo_17_5_2_1_2,
                         key=f"reg_17_5_2_1_2_txt_{ano_sel}",
-                        height=320
+                        height=280
                     )
-                    
-                    # SUPORTE MULTI-LINKS ATIVOS (Isolado e protegido de forma síncrona)
-                    with st.container(key=f"links_holder_maior_espera_exames_17_5_2_1_2_{ano_sel}"):
-                        links_17_5_2_1_2_atuais = re.findall(r'(https?://[^\s]+)', link_17_5_2_1_2)
-                        if links_17_5_2_1_2_atuais:
-                            botoes_17_5_2_1_2 = " | ".join([f"🔗 [{u}]({u})" for u in links_17_5_2_1_2_atuais])
-                            st.markdown(f"**Links Ativos:** {botoes_17_5_2_1_2}")
-                
-                # Monta a string estruturada para salvar tudo em um único campo de texto
-                string_estruturada_ex = f"{ex_1}|{ex_dias_1}||{ex_2}|{ex_dias_2}||{ex_3}|{ex_dias_3}"
-                if string_estruturada_ex == "||||":
-                    string_estruturada_ex = ""
-                    
-                pts_17_5_2_1_2 = 0.0
-                
-                # ISOLAMENTO DO SCORE: Protegido por container para manter a integridade da árvore do React
-                with st.container(key=f"score_holder_maior_espera_exames_17_5_2_1_2_{ano_sel}"):
-                    st.markdown(f"📊 **Pontuação Aplicada no Quesito 17.5.2.1.2:** `{pts_17_5_2_1_2:.1f} pontos` (Dados Informativos)")
-                
-                # SALVAMENTO TOTALMENTE SINCRONIZADO NA MEMÓRIA LOCAL
-                mudou_valores_17_5_2_1_2 = string_estruturada_ex != valores_salvos_1_2
-                mudou_link_17_5_2_1_2 = link_17_5_2_1_2 != d17_5_2_1_2.get("link", "")
 
-                if mudou_valores_17_5_2_1_2 or mudou_link_17_5_2_1_2:
-                    save_resp("17.5.2.1.2", string_estruturada_ex, pts_17_5_2_1_2, link_17_5_2_1_2)
-                    
-                    if "17.5.2.1.2" not in res_data:
-                        res_data["17.5.2.1.2"] = {}
-                    res_data["17.5.2.1.2"]["valor"] = string_estruturada_ex
-                    res_data["17.5.2.1.2"]["pontos"] = pts_17_5_2_1_2
-                    res_data["17.5.2.1.2"]["link"] = link_17_5_2_1_2
-                    
-                    if mudou_link_17_5_2_1_2 and links_17_5_2_1_2_atuais:
-                        links_17_5_2_1_2_antigos = re.findall(r'(https?://[^\s]+)', d17_5_2_1_2.get("link", ""))
-                        if links_17_5_2_1_2_atuais != links_17_5_2_1_2_antigos:
-                            modal_aviso_link("17.5.2.1.2", links_17_5_2_1_2_atuais)
-                        else:
-                            st.rerun()
-                    else:
-                        st.rerun()
-                    
-                bloco_comentarios("17.5.2.1.2", res_data)
+                    links_17_5_2_1_2_visuais = re.findall(REGEX_PURE_URL, link_17_5_2_1_2_input or "")
+                    if links_17_5_2_1_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_2_1_2_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.2.1.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.2.1.2", key=f"btn_salvar_17_5_2_1_2_{ano_sel}", type="primary"):
+                    val_str_17_5_2_1_2 = string_estruturada_1_2
+                    val_lk_17_5_2_1_2 = link_17_5_2_1_2_input.strip()
+                    comentarios_17_5_2_1_2 = d17_5_2_1_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.2.1.2",
+                        valor=val_str_17_5_2_1_2,
+                        pontos=pts_17_5_2_1_2,
+                        link=val_lk_17_5_2_1_2,
+                        comentarios=comentarios_17_5_2_1_2
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_2_1_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_2_1_2_input or "")]
+                    links_antigos_17_5_2_1_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_2_1_2 or "")]
+
+                    if (val_str_17_5_2_1_2 != v_salvo_17_5_2_1_2 or val_lk_17_5_2_1_2 != l_salvo_17_5_2_1_2) and links_atuais_17_5_2_1_2 and links_atuais_17_5_2_1_2 != links_antigos_17_5_2_1_2:
+                        st.session_state[f"links_pendentes_17_5_2_1_2_{ano_sel}"] = links_atuais_17_5_2_1_2
+                        st.session_state[f"gatilho_modal_17_5_2_1_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.2.1.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_2_1_2 = d17_5_2_1_2.get("pontos", 0.0)
+                cor_txt_17_5_2_1_2 = "#28a745" if pts_atuais_17_5_2_1_2 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_2_1_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.2.1.2: {pts_atuais_17_5_2_1_2:+.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.2.1.2
+        if st.session_state.get(f"gatilho_modal_17_5_2_1_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.2.1.2", st.session_state.get(f"links_pendentes_17_5_2_1_2_{ano_sel}", []), ano_sel)
 
         # =============================================================================
-        # QUESITO 17.5.2.1.3 - 3 TERAPIAS/TRATAMENTOS COM MAIOR TEMPO DE ESPERA
+        # QUESITO 17.5.2.1.3 • 3 TERAPIAS/TRATAMENTOS COM MAIOR TEMPO DE ESPERA
         # =============================================================================
-        # Substituída a div HTML manual por contêiner nativo estável com chave fixa
         with st.container(key=f"container_bloco_maior_espera_terapias_17_5_2_1_3_{ano_sel}", border=True):
-            
-            with st.expander(f"📌 Quesito 17.5.2.1.3 - Terapias/Tratamentos com Maior Tempo de Espera", expanded=True):
-                st.subheader("17.5.2.1.3 • Terapias/Tratamentos com Maior Tempo de Espera")
+            with st.expander(f"📌 Quesito 17.5.2.1.3 - Terapias/Tratamentos com Maior Tempo de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.2.1.3 • Terapias/Tratamentos com Maior Tempo de Espera ({ano_sel})")
                 st.write(f"**17.5.2.1.3 Informe as 3 terapias/tratamentos médicos com maior tempo de espera na Atenção Especializada:**")
-                st.caption("ℹ️ *O salvamento é automático. Qualquer alteração nos campos ou no link grava os dados na hora.*")
-                
-                # Recupera os dados salvos ou inicia um dicionário padrão
-                d17_5_2_1_3 = res_data.get("17.5.2.1.3", {"valor": "", "pontos": 0.0, "link": ""})
-                valores_salvos_1_3 = d17_5_2_1_3.get("valor", "")
-                
-                # Trata a string salva para preencher os campos (Terapia 1|Dias 1||Terapia 2|Dias 2||Terapia 3|Dias 3)
-                partes_ter = valores_salvos_1_3.split("||") if valores_salvos_1_3 else []
-                
-                t1 = partes_ter[0].split("|") if len(partes_ter) > 0 else ["", ""]
-                t2 = partes_ter[1].split("|") if len(partes_ter) > 1 else ["", ""]
-                t3 = partes_ter[2].split("|") if len(partes_ter) > 2 else ["", ""]
-                
+                st.caption("ℹ️ *Preencha os campos abaixo, informe o link de evidência e clique no botão 'Salvar Quesito 17.5.2.1.3' para registrar.*")
+
+                d17_5_2_1_3 = res_data.get("17.5.2.1.3") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_2_1_3 = d17_5_2_1_3.get("valor", "")
+                l_salvo_17_5_2_1_3 = d17_5_2_1_3.get("link", "")
+
+                partes_1_3 = v_salvo_17_5_2_1_3.split("||") if v_salvo_17_5_2_1_3 else []
+                t1 = partes_1_3[0].split("|") if len(partes_1_3) > 0 else ["", ""]
+                t2 = partes_1_3[1].split("|") if len(partes_1_3) > 1 else ["", ""]
+                t3 = partes_1_3[2].split("|") if len(partes_1_3) > 2 else ["", ""]
+
                 c175213_1, c175213_2 = st.columns([1, 1])
-                
+
                 with c175213_1:
                     st.write("💆‍♂️ **Terapias / Tratamentos e Prazos:**")
                     
-                    # Primeira Terapia
                     ter_1 = st.text_input("1ª - Descrição da terapia/ tratamento médico:", value=t1[0] if len(t1) > 0 else "", key=f"ter1_175213_{ano_sel}")
                     ter_dias_1 = st.text_input("1ª - Tempo médio de espera (em dias):", value=t1[1] if len(t1) > 1 else "", key=f"ter_dias1_175213_{ano_sel}")
                     
                     st.markdown("---")
                     
-                    # Segunda Terapia
                     ter_2 = st.text_input("2ª - Descrição da terapia/ tratamento médico:", value=t2[0] if len(t2) > 0 else "", key=f"ter2_175213_{ano_sel}")
                     ter_dias_2 = st.text_input("2ª - Tempo médio de espera (em dias):", value=t2[1] if len(t2) > 1 else "", key=f"ter_dias2_175213_{ano_sel}")
                     
                     st.markdown("---")
                     
-                    # Terceira Terapia
                     ter_3 = st.text_input("3ª - Descrição da terapia/ tratamento médico:", value=t3[0] if len(t3) > 0 else "", key=f"ter3_175213_{ano_sel}")
                     ter_dias_3 = st.text_input("3ª - Tempo médio de espera (em dias):", value=t3[1] if len(t3) > 1 else "", key=f"ter_dias3_175213_{ano_sel}")
 
-                with c175213_2:
-                    link_17_5_2_1_3 = st.text_area(
-                        "Link/Evidência ou Relatório estatístico dos tempos de espera de terapias (17.5.2.1.3):", 
-                        value=d17_5_2_1_3.get("link", ""), 
-                        key=f"reg_17_5_2_1_3_txt_{ano_sel}",
-                        height=320
-                    )
-                    
-                    # SUPORTE MULTI-LINKS ATIVOS (Isolado e protegido de forma síncrona)
-                    with st.container(key=f"links_holder_maior_espera_terapias_17_5_2_1_3_{ano_sel}"):
-                        links_17_5_2_1_3_atuais = re.findall(r'(https?://[^\s]+)', link_17_5_2_1_3)
-                        if links_17_5_2_1_3_atuais:
-                            botoes_17_5_2_1_3 = " | ".join([f"🔗 [{u}]({u})" for u in links_17_5_2_1_3_atuais])
-                            st.markdown(f"**Links Ativos:** {botoes_17_5_2_1_3}")
-                
-                # Monta a string estruturada para salvar tudo em um único campo de texto
-                string_estruturada_ter = f"{ter_1}|{ter_dias_1}||{ter_2}|{ter_dias_2}||{ter_3}|{ter_dias_3}"
-                if string_estruturada_ter == "||||":
-                    string_estruturada_ter = ""
-                    
-                pts_17_5_2_1_3 = 0.0
-                
-                # ISOLAMENTO DO SCORE: Protegido por container para manter a integridade da árvore do React
-                with st.container(key=f"score_holder_maior_espera_terapias_17_5_2_1_3_{ano_sel}"):
-                    st.markdown(f"📊 **Pontuação Aplicada no Quesito 17.5.2.1.3:** `{pts_17_5_2_1_3:.1f} pontos` (Dados Informativos)")
-                
-                # SALVAMENTO TOTALMENTE SINCRONIZADO NA MEMÓRIA LOCAL
-                mudou_valores_17_5_2_1_3 = string_estruturada_ter != valores_salvos_1_3
-                mudou_link_17_5_2_1_3 = link_17_5_2_1_3 != d17_5_2_1_3.get("link", "")
+                    string_estruturada_1_3 = f"{ter_1.strip()}|{ter_dias_1.strip()}||{ter_2.strip()}|{ter_dias_2.strip()}||{ter_3.strip()}|{ter_dias_3.strip()}"
+                    if string_estruturada_1_3 == "||||":
+                        string_estruturada_1_3 = ""
 
-                if mudou_valores_17_5_2_1_3 or mudou_link_17_5_2_1_3:
-                    save_resp("17.5.2.1.3", string_estruturada_ter, pts_17_5_2_1_3, link_17_5_2_1_3)
-                    
-                    if "17.5.2.1.3" not in res_data:
-                        res_data["17.5.2.1.3"] = {}
-                    res_data["17.5.2.1.3"]["valor"] = string_estruturada_ter
-                    res_data["17.5.2.1.3"]["pontos"] = pts_17_5_2_1_3
-                    res_data["17.5.2.1.3"]["link"] = link_17_5_2_1_3
-                    
-                    if mudou_link_17_5_2_1_3 and links_17_5_2_1_3_atuais:
-                        links_17_5_2_1_3_antigos = re.findall(r'(https?://[^\s]+)', d17_5_2_1_3.get("link", ""))
-                        if links_17_5_2_1_3_atuais != links_17_5_2_1_3_antigos:
-                            modal_aviso_link("17.5.2.1.3", links_17_5_2_1_3_atuais)
-                        else:
-                            st.rerun()
-                    else:
-                        st.rerun()
-                    
-                bloco_comentarios("17.5.2.1.3", res_data)
+                    pts_17_5_2_1_3 = 0.0
+
+                with c175213_2:
+                    link_17_5_2_1_3_input = st.text_area(
+                        "Link/Evidência ou Relatório estatístico dos tempos de espera de terapias (17.5.2.1.3):",
+                        value=l_salvo_17_5_2_1_3,
+                        key=f"reg_17_5_2_1_3_txt_{ano_sel}",
+                        height=280
+                    )
+
+                    links_17_5_2_1_3_visuais = re.findall(REGEX_PURE_URL, link_17_5_2_1_3_input or "")
+                    if links_17_5_2_1_3_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_2_1_3_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.2.1.3", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.2.1.3", key=f"btn_salvar_17_5_2_1_3_{ano_sel}", type="primary"):
+                    val_str_17_5_2_1_3 = string_estruturada_1_3
+                    val_lk_17_5_2_1_3 = link_17_5_2_1_3_input.strip()
+                    comentarios_17_5_2_1_3 = d17_5_2_1_3.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.2.1.3",
+                        valor=val_str_17_5_2_1_3,
+                        pontos=pts_17_5_2_1_3,
+                        link=val_lk_17_5_2_1_3,
+                        comentarios=comentarios_17_5_2_1_3
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_2_1_3 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_2_1_3_input or "")]
+                    links_antigos_17_5_2_1_3 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_2_1_3 or "")]
+
+                    if (val_str_17_5_2_1_3 != v_salvo_17_5_2_1_3 or val_lk_17_5_2_1_3 != l_salvo_17_5_2_1_3) and links_atuais_17_5_2_1_3 and links_atuais_17_5_2_1_3 != links_antigos_17_5_2_1_3:
+                        st.session_state[f"links_pendentes_17_5_2_1_3_{ano_sel}"] = links_atuais_17_5_2_1_3
+                        st.session_state[f"gatilho_modal_17_5_2_1_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.2.1.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_2_1_3 = d17_5_2_1_3.get("pontos", 0.0)
+                cor_txt_17_5_2_1_3 = "#28a745" if pts_atuais_17_5_2_1_3 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_2_1_3}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.2.1.3: {pts_atuais_17_5_2_1_3:+.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.2.1.3
+        if st.session_state.get(f"gatilho_modal_17_5_2_1_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.2.1.3", st.session_state.get(f"links_pendentes_17_5_2_1_3_{ano_sel}", []), ano_sel)
