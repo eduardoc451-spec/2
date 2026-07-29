@@ -10461,3 +10461,219 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_19_2_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("19.2", st.session_state.get(f"links_pendentes_19_2_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 19.3 - CADASTRO DE VAGAS SRT NA REGULAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_vagas_srt_regulacao_19_3_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.3 • Cadastro de Vagas SRT no Sistema de Regulação ({ano_sel})", expanded=True):
+                st.subheader(f"19.3 • Cadastro de Vagas SRT no Sistema de Regulação ({ano_sel})")
+                st.write(
+                    "**As vagas dos Serviços Residenciais Terapêuticos ou equivalente para os "
+                    "residentes do município estão cadastradas no sistema de informação de regulação?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 19.3' para registrar os dados.*")
+
+                d19_3 = res_data.get("19.3") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_193 = d19_3.get("valor", "Selecione...")
+                l_salvo_193 = d19_3.get("link", "")
+
+                c193_1, c193_2 = st.columns([1, 1])
+
+                with c193_1:
+                    st.write("📋 **Selecione a opção correspondente:**")
+                    opts_19_3 = ["Selecione...", "Sim – 00", "Não – -10 (perde 10 pontos)"]
+                    idx_193 = opts_19_3.index(v_salvo_193) if v_salvo_193 in opts_19_3 else 0
+
+                    sel_19_3 = st.radio(
+                        "Vagas SRT na regulação:",
+                        options=opts_19_3,
+                        index=idx_193,
+                        key=f"q193_rad_{ano_sel}"
+                    )
+
+                    if "Não" in sel_19_3:
+                        pts_19_3 = -10.0
+                    else:
+                        pts_19_3 = 0.0
+
+                with c193_2:
+                    link_19_3_input = st.text_area(
+                        "Evidência de cadastro ou espelho do sistema de regulação (19.3):",
+                        value=l_salvo_193,
+                        key=f"txt_link_19_3_vagas_{ano_sel}",
+                        height=200
+                    )
+
+                    links_193_visuais = re.findall(REGEX_PURE_URL, link_19_3_input or "")
+                    if links_193_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_193_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("19.3", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 19.3", key=f"btn_salvar_19_3_vagas_{ano_sel}", type="primary"):
+                    val_str_193 = sel_19_3
+                    val_lk_193 = link_19_3_input.strip()
+                    comentarios_193 = d19_3.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="19.3",
+                        valor=val_str_193,
+                        pontos=pts_19_3,
+                        link=val_lk_193,
+                        comentarios=comentarios_193
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_193 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_19_3_input or "")]
+                    links_antigos_193 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_193 or "")]
+
+                    if (val_str_193 != v_salvo_193 or val_lk_193 != l_salvo_193) and links_atuais_193 and links_atuais_193 != links_antigos_193:
+                        st.session_state[f"links_pendentes_19_3_{ano_sel}"] = links_atuais_193
+                        st.session_state[f"gatilho_modal_19_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 19.3 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                if pts_19_3 < 0:
+                    st.markdown(
+                        f"<span style='color:#dc3545; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 19.3: {pts_19_3:.1f} pontos (Penalidade)</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 19.3: +{pts_19_3:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+        # GATILHO DO MODAL 19.3
+        if st.session_state.get(f"gatilho_modal_19_3_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.3", st.session_state.get(f"links_pendentes_19_3_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 19.3.1 - QUANTIDADE DE VAGAS CADASTRADAS NA REGULAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_quant_vagas_srt_19_3_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.3.1 • Quantidade de Vagas SRT Cadastradas na Regulação ({ano_sel})", expanded=True):
+                st.subheader(f"19.3.1 • Quantidade de Vagas SRT Cadastradas na Regulação ({ano_sel})")
+                st.write("**Informe a quantidade de vagas cadastradas no sistema de regulação:**")
+                st.caption("ℹ️ *Preencha a quantidade de vagas, informe o link de evidência e clique no botão 'Salvar Quesito 19.3.1' para registrar os dados.*")
+
+                d19_3_1 = res_data.get("19.3.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_1931 = d19_3_1.get("valor", "")
+                l_salvo_1931 = d19_3_1.get("link", "")
+
+                # Desserialização dos valores salvos
+                vals_1931 = v_salvo_1931.split("|") if v_salvo_1931 else []
+                tipos_vagas_srt = ["Para SRT tipo I", "Para SRT tipo II", "Equivalente"]
+                dict_vals_1931 = {t: 0 for t in tipos_vagas_srt}
+
+                for v in vals_1931:
+                    if ":" in v:
+                        chave, *resto = v.split(":")
+                        if chave in dict_vals_1931 and resto:
+                            try:
+                                dict_vals_1931[chave] = int(resto[0])
+                            except ValueError:
+                                dict_vals_1931[chave] = 0
+
+                c1931_1, c1931_2 = st.columns([1, 1])
+
+                with c1931_1:
+                    st.write("📋 **Informe a quantidade por categoria:**")
+                    novos_vals_1931 = []
+                    for t in tipos_vagas_srt:
+                        qtd_vagas_reg = st.number_input(
+                            f"Vagas Reguladas {t}:",
+                            min_value=0,
+                            step=1,
+                            value=dict_vals_1931[t],
+                            key=f"num_1931_{t}_{ano_sel}"
+                        )
+                        novos_vals_1931.append(f"{t}:{qtd_vagas_reg}")
+                    
+                    string_estruturada_1931 = "|".join(novos_vals_1931)
+                    pts_19_3_1 = 0.0
+
+                with c1931_2:
+                    link_19_3_1_input = st.text_area(
+                        "Relatório extraído do sistema informático (CROSS/SISREG ou similar) (19.3.1):",
+                        value=l_salvo_1931,
+                        key=f"txt_link_19_3_1_quant_{ano_sel}",
+                        height=200
+                    )
+
+                    links_1931_visuais = re.findall(REGEX_PURE_URL, link_19_3_1_input or "")
+                    if links_1931_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1931_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("19.3.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 19.3.1", key=f"btn_salvar_19_3_1_quant_{ano_sel}", type="primary"):
+                    val_str_1931 = string_estruturada_1931
+                    val_lk_1931 = link_19_3_1_input.strip()
+                    comentarios_1931 = d19_3_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="19.3.1",
+                        valor=val_str_1931,
+                        pontos=pts_19_3_1,
+                        link=val_lk_1931,
+                        comentarios=comentarios_1931
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_1931 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_19_3_1_input or "")]
+                    links_antigos_1931 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_1931 or "")]
+
+                    if (val_str_1931 != v_salvo_1931 or val_lk_1931 != l_salvo_1931) and links_atuais_1931 and links_atuais_1931 != links_antigos_1931:
+                        st.session_state[f"links_pendentes_19_3_1_{ano_sel}"] = links_atuais_1931
+                        st.session_state[f"gatilho_modal_19_3_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 19.3.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 19.3.1: +{pts_19_3_1:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 19.3.1
+        if st.session_state.get(f"gatilho_modal_19_3_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.3.1", st.session_state.get(f"links_pendentes_19_3_1_{ano_sel}", []), ano_sel)
