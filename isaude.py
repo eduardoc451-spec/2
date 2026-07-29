@@ -6925,3 +6925,241 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_5_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.5.1", st.session_state.get(f"links_pendentes_17_5_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.5.2 • LISTA DE ESPERA NO SISTEMA DE REGULAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_lista_espera_17_5_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.5.2 - Conhecimento da Lista de Espera na Atenção Especializada ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.2 • Lista de Espera na Regulação ({ano_sel})")
+                st.write("**17.5.2 O sistema informatizado de regulação utilizado pelo município permite conhecer a lista de espera (relação nominal de pacientes com tempo de espera) dos serviços da Atenção Especializada sob gestão municipal?**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.5.2' para registrar.*")
+
+                opts_17_5_2 = {
+                    "Selecione...": 0.0,
+                    "Sim, todos os serviços – 00": 0.0,
+                    "Sim, a maior parte dos serviços – -01 (perde 01 ponto)": -1.0,
+                    "Sim, a menor parte dos serviços – -03 (perde 03 pontos)": -3.0,
+                    "Não – -05 (perde 05 pontos)": -5.0
+                }
+
+                d17_5_2 = res_data.get("17.5.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_2 = d17_5_2.get("valor", "Selecione...")
+                l_salvo_17_5_2 = d17_5_2.get("link", "")
+
+                c1752_1, c1752_2 = st.columns([1, 1])
+                with c1752_1:
+                    lista_opcoes_17_5_2 = list(opts_17_5_2.keys())
+                    idx_salvo_17_5_2 = lista_opcoes_17_5_2.index(v_salvo_17_5_2) if v_salvo_17_5_2 in opts_17_5_2 else 0
+
+                    sel_17_5_2 = st.radio(
+                        "Permite conhecer a lista de espera:",
+                        options=lista_opcoes_17_5_2,
+                        index=idx_salvo_17_5_2,
+                        key=f"reg_17_5_2_rad_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c1752_2:
+                    link_17_5_2_input = st.text_area(
+                        "Link/Evidência ou Relatório da Lista de Espera (17.5.2):",
+                        value=l_salvo_17_5_2,
+                        key=f"reg_17_5_2_txt_{ano_sel}",
+                        height=130
+                    )
+
+                    links_17_5_2_visuais = re.findall(REGEX_PURE_URL, link_17_5_2_input or "")
+                    if links_17_5_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_2_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.2", key=f"btn_salvar_17_5_2_{ano_sel}", type="primary"):
+                    val_sel_17_5_2 = sel_17_5_2 if sel_17_5_2 is not None else "Selecione..."
+                    val_lk_17_5_2 = link_17_5_2_input.strip()
+                    pts_17_5_2 = opts_17_5_2.get(val_sel_17_5_2, 0.0)
+                    comentarios_17_5_2 = d17_5_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.2",
+                        valor=val_sel_17_5_2,
+                        pontos=pts_17_5_2,
+                        link=val_lk_17_5_2,
+                        comentarios=comentarios_17_5_2
+                    )
+
+                    # Limpeza automática do filho (17.5.2.1) caso a condição mude
+                    if val_sel_17_5_2 != "Sim, todos os serviços – 00":
+                        d17_5_2_1_atual = res_data.get("17.5.2.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": []}
+                        save_resp_isaude(
+                            qid="17.5.2.1",
+                            valor="",
+                            pontos=0.0,
+                            link=d17_5_2_1_atual.get("link", ""),
+                            comentarios=d17_5_2_1_atual.get("comentarios", [])
+                        )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_2_input or "")]
+                    links_antigos_17_5_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_2 or "")]
+
+                    if (val_sel_17_5_2 != v_salvo_17_5_2 or val_lk_17_5_2 != l_salvo_17_5_2) and links_atuais_17_5_2 and links_atuais_17_5_2 != links_antigos_17_5_2:
+                        st.session_state[f"links_pendentes_17_5_2_{ano_sel}"] = links_atuais_17_5_2
+                        st.session_state[f"gatilho_modal_17_5_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_2 = d17_5_2.get("pontos", 0.0)
+                cor_txt_17_5_2 = "#28a745" if pts_atuais_17_5_2 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.2: {pts_atuais_17_5_2:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.2
+        if st.session_state.get(f"gatilho_modal_17_5_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.2", st.session_state.get(f"links_pendentes_17_5_2_{ano_sel}", []), ano_sel)
+
+
+        # =============================================================================
+        # QUESITO 17.5.2.1 • ROL DE SERVIÇOS NO SISTEMA DE REGULAÇÃO
+        # =============================================================================
+        with st.container(key=f"container_bloco_rol_servicos_17_5_2_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.5.2.1 - Rol de Serviços no Sistema de Regulação ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.2.1 • Rol de Serviços no Sistema de Regulação ({ano_sel})")
+                st.write(f"**17.5.2.1 Assinale os serviços da Atenção Especializada inseridos no sistema de regulação:**")
+                st.caption("ℹ️ *Marque os serviços disponíveis, preencha as evidências e clique no botão 'Salvar Quesito 17.5.2.1' para registrar.*")
+
+                d17_5_2_1 = res_data.get("17.5.2.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_2_1 = d17_5_2_1.get("valor", "")
+                l_salvo_17_5_2_1 = d17_5_2_1.get("link", "")
+                lista_salva_17_5_2_1 = [item.strip() for item in v_salvo_17_5_2_1.split(";")] if v_salvo_17_5_2_1 else []
+
+                opc_1 = "Consultas por especialidade"
+                opc_2 = "Exames"
+                opc_3 = "Terapias / tratamentos"
+                opc_4 = "OPM"
+                opc_5 = "Cirurgias eletivas"
+                opc_6 = "Outros"
+
+                c17521_1, c17521_2 = st.columns([1, 1])
+
+                with c17521_1:
+                    st.write("📋 **Selecione os serviços inseridos:**")
+                    chk_1 = st.checkbox(opc_1, value=(opc_1 in lista_salva_17_5_2_1), key=f"chk_17521_1_{ano_sel}")
+                    chk_2 = st.checkbox(opc_2, value=(opc_2 in lista_salva_17_5_2_1), key=f"chk_17521_2_{ano_sel}")
+                    chk_3 = st.checkbox(opc_3, value=(opc_3 in lista_salva_17_5_2_1), key=f"chk_17521_3_{ano_sel}")
+                    chk_4 = st.checkbox(opc_4, value=(opc_4 in lista_salva_17_5_2_1), key=f"chk_17521_4_{ano_sel}")
+                    chk_5 = st.checkbox(opc_5, value=(opc_5 in lista_salva_17_5_2_1), key=f"chk_17521_5_{ano_sel}")
+                    chk_6 = st.checkbox(opc_6, value=(opc_6 in lista_salva_17_5_2_1), key=f"chk_17521_6_{ano_sel}")
+
+                    selecionados_17_5_2_1 = []
+                    if chk_1: selecionados_17_5_2_1.append(opc_1)
+                    if chk_2: selecionados_17_5_2_1.append(opc_2)
+                    if chk_3: selecionados_17_5_2_1.append(opc_3)
+                    if chk_4: selecionados_17_5_2_1.append(opc_4)
+                    if chk_5: selecionados_17_5_2_1.append(opc_5)
+                    if chk_6: selecionados_17_5_2_1.append(opc_6)
+
+                    # Lógica de Pontuação baseada na resposta pai (17.5.2)
+                    resposta_pai = res_data.get("17.5.2", {}).get("valor", "")
+                    resposta_pai_todos_servicos = (resposta_pai == "Sim, todos os serviços – 00")
+
+                    if resposta_pai_todos_servicos:
+                        pontos_calc = -5.0
+                        if chk_1: pontos_calc += 1.0
+                        if chk_2: pontos_calc += 1.0
+                        if chk_3: pontos_calc += 1.0
+                        if chk_4: pontos_calc += 1.0
+                        if chk_5: pontos_calc += 1.0
+                        pts_17_5_2_1 = pontos_calc
+                    else:
+                        pts_17_5_2_1 = 0.0
+
+                    string_selecionados_17_5_2_1 = "; ".join(selecionados_17_5_2_1) if selecionados_17_5_2_1 else ""
+
+                with c17521_2:
+                    link_17_5_2_1_input = st.text_area(
+                        "Link/Evidência dos Serviços Regulados (17.5.2.1):",
+                        value=l_salvo_17_5_2_1,
+                        key=f"reg_17_5_2_1_txt_{ano_sel}",
+                        height=250
+                    )
+
+                    links_17_5_2_1_visuais = re.findall(REGEX_PURE_URL, link_17_5_2_1_input or "")
+                    if links_17_5_2_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_2_1_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.2.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.2.1", key=f"btn_salvar_17_5_2_1_{ano_sel}", type="primary"):
+                    val_str_17_5_2_1 = string_selecionados_17_5_2_1
+                    val_lk_17_5_2_1 = link_17_5_2_1_input.strip()
+                    comentarios_17_5_2_1 = d17_5_2_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.2.1",
+                        valor=val_str_17_5_2_1,
+                        pontos=pts_17_5_2_1,
+                        link=val_lk_17_5_2_1,
+                        comentarios=comentarios_17_5_2_1
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_2_1_input or "")]
+                    links_antigos_17_5_2_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_2_1 or "")]
+
+                    if (val_str_17_5_2_1 != v_salvo_17_5_2_1 or val_lk_17_5_2_1 != l_salvo_17_5_2_1) and links_atuais_17_5_2_1 and links_atuais_17_5_2_1 != links_antigos_17_5_2_1:
+                        st.session_state[f"links_pendentes_17_5_2_1_{ano_sel}"] = links_atuais_17_5_2_1
+                        st.session_state[f"gatilho_modal_17_5_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_2_1 = d17_5_2_1.get("pontos", 0.0)
+                cor_txt_17_5_2_1 = "#28a745" if pts_atuais_17_5_2_1 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_2_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.2.1: {pts_atuais_17_5_2_1:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.2.1
+        if st.session_state.get(f"gatilho_modal_17_5_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.2.1", st.session_state.get(f"links_pendentes_17_5_2_1_{ano_sel}", []), ano_sel)
