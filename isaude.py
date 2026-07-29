@@ -3687,3 +3687,266 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_12_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("12.0", st.session_state.get(f"links_pendentes_12_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 12.1 • EQUIPES COMPLETAS E INCOMPLETAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_12_1_{ano_sel}", border=True):
+            with st.expander(f"📋 QUESITO 12.1 • Composição das Equipes (eSF + eAP) em {ano_sel}", expanded=True):
+                st.subheader("12.1 • Equipes Completas e Incompletas")
+                st.write(f"**Informe o total de equipes de saúde da família e equipes de atenção primária (eSF+eAP) em {ano_sel}:**")
+                st.caption("ℹ️ *Equipe Completa: eSF (Médico, Enfermeiro, Aux/Téc Enfermagem e ACS) ou eAP (Médico e Enfermeiro). No descumprimento, classifique como Incompleta.*")
+
+                # Recupera os dados salvos das subchaves e da chave mestre
+                d12_1_ec = res_data.get("12.1_ec") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d12_1_ei = res_data.get("12.1_ei") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d12_1_mestre = res_data.get("12.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": []}
+
+                try:
+                    v_ec_salvo = int(d12_1_ec.get("valor", 0))
+                except (ValueError, TypeError):
+                    v_ec_salvo = 0
+
+                try:
+                    v_ei_salvo = int(d12_1_ei.get("valor", 0))
+                except (ValueError, TypeError):
+                    v_ei_salvo = 0
+
+                l_salvo_12_1 = d12_1_mestre.get("link", "")
+
+                c27, c28 = st.columns([1, 1])
+
+                with c27:
+                    val_ec = st.number_input(
+                        "Nº de equipes completas (EC):",
+                        min_value=0,
+                        step=1,
+                        value=v_ec_salvo,
+                        key=f"num_12_1_ec_{ano_sel}"
+                    )
+                    val_ei = st.number_input(
+                        "Nº de equipes incompletas (EI):",
+                        min_value=0,
+                        step=1,
+                        value=v_ei_salvo,
+                        key=f"num_12_1_ei_{ano_sel}"
+                    )
+
+                # Cálculo de Proporção Dinâmico: NF = [EC / (EC + EI)] * 50
+                total_equipes = val_ec + val_ei
+                pts_12_1_calc = (val_ec / total_equipes) * 50.0 if total_equipes > 0 else 0.0
+
+                with c28:
+                    link_12_1_input = st.text_area(
+                        "Link/Evidência (Relatório de equipes CNES ou validação do e-Gestor Atenção Básica):",
+                        value=l_salvo_12_1,
+                        key=f"txt_saude_12_1_{ano_sel}",
+                        height=115
+                    )
+
+                    # Varre a área de texto em busca de URLs ativas
+                    links_12_1_visuais = re.findall(REGEX_PURE_URL, link_12_1_input or "")
+                    if links_12_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_12_1_visuais]
+                            )
+                        )
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("12.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 12.1", key=f"btn_salvar_12_1_{ano_sel}", type="primary"):
+                    val_lk_12_1 = link_12_1_input.strip()
+                    hist_ec = d12_1_ec.get("comentarios", [])
+                    hist_ei = d12_1_ei.get("comentarios", [])
+                    hist_mestre = d12_1_mestre.get("comentarios", [])
+
+                    # Persiste subchaves e mestre no banco de dados
+                    save_resp_isaude(
+                        qid="12.1_ec",
+                        valor=str(val_ec),
+                        pontos=pts_12_1_calc,
+                        link="",
+                        comentarios=hist_ec
+                    )
+                    save_resp_isaude(
+                        qid="12.1_ei",
+                        valor=str(val_ei),
+                        pontos=0.0,
+                        link="",
+                        comentarios=hist_ei
+                    )
+                    save_resp_isaude(
+                        qid="12.1",
+                        valor=f"EC: {val_ec} | EI: {val_ei}",
+                        pontos=pts_12_1_calc,
+                        link=val_lk_12_1,
+                        comentarios=hist_mestre
+                    )
+
+                    # Verificação do disparo do modal de aviso para links novos
+                    links_atuais_12_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_12_1_input or "")]
+                    links_antigos_12_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_12_1 or "")]
+
+                    if (val_ec != v_ec_salvo or val_ei != v_ei_salvo or val_lk_12_1 != l_salvo_12_1) and links_atuais_12_1 and links_atuais_12_1 != links_antigos_12_1:
+                        st.session_state[f"links_pendentes_12_1_{ano_sel}"] = links_atuais_12_1
+                        st.session_state[f"gatilho_modal_12_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 12.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_12_1 = d12_1_mestre.get("pontos", 0.0)
+                cor_txt_12_1 = "#28a745" if pts_atuais_12_1 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_12_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 12.1: +{pts_atuais_12_1:.2f} / 50.0 pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 12.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_12_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.1", st.session_state.get(f"links_pendentes_12_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 12.2 • PESSOAS CADASTRADAS POR EQUIPE
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_12_2_{ano_sel}", border=True):
+            with st.expander(f"🌐 QUESITO 12.2 • Proporção de Pessoas Cadastradas por Equipe em {ano_sel}", expanded=True):
+                st.subheader("12.2 • Parâmetro Populacional por Equipe")
+                st.write(f"**Informe o número de pessoas cadastradas nas equipes em {ano_sel}:**")
+                st.caption("ℹ️ *A média por equipe e pontuação são recalculadas. Preencha e clique no botão 'Salvar Quesito 12.2' para registrar.*")
+
+                # Recupera os dados salvos das subchaves e da chave mestre
+                d12_2_esf = res_data.get("12.2_esf") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d12_2_eap = res_data.get("12.2_eap") or {"valor": "0", "pontos": 0.0, "link": "", "comentarios": []}
+                d12_2_mestre = res_data.get("12.2") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": []}
+
+                try:
+                    v_esf_salvo = int(d12_2_esf.get("valor", 0))
+                except (ValueError, TypeError):
+                    v_esf_salvo = 0
+
+                try:
+                    v_eap_salvo = int(d12_2_eap.get("valor", 0))
+                except (ValueError, TypeError):
+                    v_eap_salvo = 0
+
+                l_salvo_12_2 = d12_2_mestre.get("link", "")
+
+                c29, c30 = st.columns([1, 1])
+
+                with c29:
+                    val_cad_esf = st.number_input(
+                        "Nº de pessoas cadastradas nas Equipes de Saúde da Família (ESF):",
+                        min_value=0,
+                        step=1,
+                        value=v_esf_salvo,
+                        key=f"num_12_2_esf_{ano_sel}"
+                    )
+                    val_cad_eap = st.number_input(
+                        "Nº de pessoas cadastradas nas Equipes de Atenção Primária (EAP):",
+                        min_value=0,
+                        step=1,
+                        value=v_eap_salvo,
+                        key=f"num_12_2_eap_{ano_sel}"
+                    )
+
+                # Regra de cálculo de cobertura média por equipe: (ESF + EAP) / total_equipes (obtido no Quesito 12.1)
+                total_cadastrados = val_cad_esf + val_cad_eap
+                pts_12_2_calc = 0.0
+                media_por_equipe = 0.0
+
+                if total_equipes > 0:
+                    media_por_equipe = total_cadastrados / total_equipes
+                    if 2000 <= media_por_equipe <= 4000:
+                        pts_12_2_calc = 40.0
+
+                with c30:
+                    link_12_2_input = st.text_area(
+                        "Link/Evidência (Relatórios de cadastros do SISAB - Sistema de Informação em Saúde para a Atenção Básica):",
+                        value=l_salvo_12_2,
+                        key=f"txt_saude_12_2_{ano_sel}",
+                        height=115
+                    )
+
+                    # Varre a área de texto em busca de URLs ativas
+                    links_12_2_visuais = re.findall(REGEX_PURE_URL, link_12_2_input or "")
+                    if links_12_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_12_2_visuais]
+                            )
+                        )
+
+                    if total_equipes > 0:
+                        st.markdown(f"ℹ️ *Média Calculada: `{media_por_equipe:.0f}` pessoas por equipe.*")
+                    else:
+                        st.markdown("⚠️ *Preencha o total de equipes no Quesito 12.1 para calcular a média por equipe.*")
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("12.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 12.2", key=f"btn_salvar_12_2_{ano_sel}", type="primary"):
+                    val_lk_12_2 = link_12_2_input.strip()
+                    hist_esf = d12_2_esf.get("comentarios", [])
+                    hist_eap = d12_2_eap.get("comentarios", [])
+                    hist_mestre_12_2 = d12_2_mestre.get("comentarios", [])
+
+                    # Persiste subchaves e mestre no banco de dados
+                    save_resp_isaude(
+                        qid="12.2_esf",
+                        valor=str(val_cad_esf),
+                        pontos=pts_12_2_calc,
+                        link="",
+                        comentarios=hist_esf
+                    )
+                    save_resp_isaude(
+                        qid="12.2_eap",
+                        valor=str(val_cad_eap),
+                        pontos=0.0,
+                        link="",
+                        comentarios=hist_eap
+                    )
+                    save_resp_isaude(
+                        qid="12.2",
+                        valor=f"ESF: {val_cad_esf} | EAP: {val_cad_eap}",
+                        pontos=pts_12_2_calc,
+                        link=val_lk_12_2,
+                        comentarios=hist_mestre_12_2
+                    )
+
+                    # Verificação do disparo do modal de aviso para links novos
+                    links_atuais_12_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_12_2_input or "")]
+                    links_antigos_12_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_12_2 or "")]
+
+                    if (val_cad_esf != v_esf_salvo or val_cad_eap != v_eap_salvo or val_lk_12_2 != l_salvo_12_2) and links_atuais_12_2 and links_atuais_12_2 != links_antigos_12_2:
+                        st.session_state[f"links_pendentes_12_2_{ano_sel}"] = links_atuais_12_2
+                        st.session_state[f"gatilho_modal_12_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 12.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_12_2 = d12_2_mestre.get("pontos", 0.0)
+                cor_txt_12_2 = "#28a745" if pts_atuais_12_2 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_12_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 12.2: +{pts_atuais_12_2:.1f} / 40.0 pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 12.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_12_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("12.2", st.session_state.get(f"links_pendentes_12_2_{ano_sel}", []), ano_sel)
