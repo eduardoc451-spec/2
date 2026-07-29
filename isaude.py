@@ -5766,3 +5766,105 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_1_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.1.1", st.session_state.get(f"links_pendentes_17_1_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.2 • INTERVALO DE AGENDAMENTO DE CONSULTAS MÉDICAS
+        # =============================================================================
+        with st.container(key=f"container_bloco_agendamento_17_2_final_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.2 - Intervalo de Agendamento na Atenção Especializada ({ano_sel})", expanded=True):
+                st.subheader(f"17.2 • Intervalo de Agendamento de Consultas Médicas ({ano_sel})")
+                st.write(f"**Assinale o intervalo de agendamento das consultas médicas da Atenção Especializada sob gestão municipal:**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 17.2' para registrar.*")
+
+                opts_17_2 = {
+                    "Selecione...": 0.0,
+                    "Não há agendamento de consultas da Atenção Especializada, pois todas são de pronto atendimento – 00": 0.0,
+                    "Agendamento de cada paciente em horário único com, no mínimo, 15 minutes de atendimento – 00": 0.0,
+                    "Agendamento de cada paciente em horário único com menos de 15 minutes de atendimento – -0,5 (perde 0,5 ponto)": -0.5,
+                    "Agendamento de 2 ou mais pacientes no mesmo horário – -0,5 (perde 0,5 ponto)": -0.5
+                }
+
+                d17_2 = res_data.get("17.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_2 = d17_2.get("valor", "Selecione...")
+                l_salvo_17_2 = d17_2.get("link", "")
+
+                c172_1, c172_2 = st.columns([1, 1])
+                with c172_1:
+                    lista_opcoes_17_2 = list(opts_17_2.keys())
+                    idx_salvo_17_2 = lista_opcoes_17_2.index(v_salvo_17_2) if v_salvo_17_2 in opts_17_2 else 0
+
+                    sel_17_2 = st.radio(
+                        "Intervalo de agendamento:",
+                        options=lista_opcoes_17_2,
+                        index=idx_salvo_17_2,
+                        key=f"r_17_2_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c172_2:
+                    link_17_2_input = st.text_area(
+                        "Link/Evidência do Sistema de Agendamento (17.2):",
+                        value=l_salvo_17_2,
+                        key=f"t_17_2_{ano_sel}",
+                        height=130
+                    )
+
+                    links_17_2_visuais = re.findall(REGEX_PURE_URL, link_17_2_input or "")
+                    if links_17_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_2_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.2", key=f"btn_salvar_17_2_{ano_sel}", type="primary"):
+                    val_sel_17_2 = sel_17_2 if sel_17_2 is not None else "Selecione..."
+                    val_lk_17_2 = link_17_2_input.strip()
+                    pts_17_2 = opts_17_2.get(val_sel_17_2, 0.0)
+                    comentarios_17_2 = d17_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.2",
+                        valor=val_sel_17_2,
+                        pontos=pts_17_2,
+                        link=val_lk_17_2,
+                        comentarios=comentarios_17_2
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_2_input or "")]
+                    links_antigos_17_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_2 or "")]
+
+                    if (val_sel_17_2 != v_salvo_17_2 or val_lk_17_2 != l_salvo_17_2) and links_atuais_17_2 and links_atuais_17_2 != links_antigos_17_2:
+                        st.session_state[f"links_pendentes_17_2_{ano_sel}"] = links_atuais_17_2
+                        st.session_state[f"gatilho_modal_17_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_2 = d17_2.get("pontos", 0.0)
+                cor_txt_17_2 = "#28a745" if pts_atuais_17_2 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.2: {pts_atuais_17_2:+.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.2
+        if st.session_state.get(f"gatilho_modal_17_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.2", st.session_state.get(f"links_pendentes_17_2_{ano_sel}", []), ano_sel)
