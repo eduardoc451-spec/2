@@ -10161,3 +10161,303 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_6_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.6", st.session_state.get(f"links_pendentes_18_6_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 19.0 - DEMANDA DE MORADIA (LONGA PERMANÊNCIA)
+        # =============================================================================
+        with st.container(key=f"container_bloco_demanda_moradia_19_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.0 • Demanda de Moradia para Transtornos Mentais Crônicos ({ano_sel})", expanded=True):
+                st.subheader(f"19.0 • Demanda de Moradia para Transtornos Mentais Crônicos ({ano_sel})")
+                st.write(
+                    "**No município, há demanda de moradia para portadores de transtornos mentais crônicos com necessidade "
+                    "de cuidados de longa permanência, prioritariamente egressos de internações psiquiátricas e de hospitais de "
+                    "custódia, que não possuam suporte financeiro, social e/ou laços familiares que permitam outra forma de reinserção?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 19.0' para registrar os dados.*")
+
+                d19_0 = res_data.get("19.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_190 = d19_0.get("valor", "Selecione...")
+                l_salvo_190 = d19_0.get("link", "")
+
+                c190_1, c190_2 = st.columns([1, 1])
+
+                with c190_1:
+                    st.write("📋 **Selecione a opção correspondente:**")
+                    opts_19_0 = ["Selecione...", "Sim", "Não"]
+                    idx_190 = opts_19_0.index(v_salvo_190) if v_salvo_190 in opts_19_0 else 0
+                    
+                    sel_19_0 = st.radio(
+                        "Existência de demanda:",
+                        options=opts_19_0,
+                        index=idx_190,
+                        key=f"q190_rad_{ano_sel}"
+                    )
+                    pts_19_0 = 0.0
+
+                with c190_2:
+                    link_19_0_input = st.text_area(
+                        "Relatório descritivo da assistência social ou saúde mental sobre a demanda identificada (19.0):",
+                        value=l_salvo_190,
+                        key=f"txt_link_19_0_demanda_{ano_sel}",
+                        height=200
+                    )
+
+                    links_190_visuais = re.findall(REGEX_PURE_URL, link_19_0_input or "")
+                    if links_190_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_190_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("19.0", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 19.0", key=f"btn_salvar_19_0_demanda_{ano_sel}", type="primary"):
+                    val_str_190 = sel_19_0
+                    val_lk_190 = link_19_0_input.strip()
+                    comentarios_190 = d19_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="19.0",
+                        valor=val_str_190,
+                        pontos=pts_19_0,
+                        link=val_lk_190,
+                        comentarios=comentarios_190
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_190 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_19_0_input or "")]
+                    links_antigos_190 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_190 or "")]
+
+                    if (val_str_190 != v_salvo_190 or val_lk_190 != l_salvo_190) and links_atuais_190 and links_atuais_190 != links_antigos_190:
+                        st.session_state[f"links_pendentes_19_0_{ano_sel}"] = links_atuais_190
+                        st.session_state[f"gatilho_modal_19_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 19.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 19.0: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 19.0
+        if st.session_state.get(f"gatilho_modal_19_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.0", st.session_state.get(f"links_pendentes_19_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 19.1 - ADEQUAÇÃO DA QUANTIDADE DE SRTs
+        # =============================================================================
+        with st.container(key=f"container_bloco_adequacao_srt_19_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.1 • Adequação da Quantidade de SRTs Ofertadas ({ano_sel})", expanded=True):
+                st.subheader(f"19.1 • Adequação da Quantidade de SRTs Ofertadas ({ano_sel})")
+                st.write(
+                    "**A Quantidade de SRTs ofertadas é adequada, inclusive quanto a distribuição geográfica, para a demanda "
+                    "de moradia para portadores de transtornos mentais crônicos com necessidade de cuidados de longa permanência, "
+                    "prioritariamente egressos de internações psiquiátricas e de hospitais de custódia, que não possuam suporte "
+                    "financeiro, social e/ou laços familiares que permitam outra forma de reinserção?**"
+                )
+                st.caption("ℹ️ *Selecione uma opção, informe o link de evidência e clique no botão 'Salvar Quesito 19.1' para registrar os dados.*")
+
+                d19_1 = res_data.get("19.1") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_191 = d19_1.get("valor", "Selecione...")
+                l_salvo_191 = d19_1.get("link", "")
+
+                c191_1, c191_2 = st.columns([1, 1])
+
+                with c191_1:
+                    st.write("📋 **Selecione a opção correspondente:**")
+                    opts_19_1 = ["Selecione...", "Sim", "Não"]
+                    idx_191 = opts_19_1.index(v_salvo_191) if v_salvo_191 in opts_19_1 else 0
+                    
+                    sel_19_1 = st.radio(
+                        "Adequação das SRTs:",
+                        options=opts_19_1,
+                        index=idx_191,
+                        key=f"q191_rad_{ano_sel}"
+                    )
+                    pts_19_1 = 0.0
+
+                with c191_2:
+                    link_19_1_input = st.text_area(
+                        "Justificativa de cobertura ou mapeamento territorial da RAPS (19.1):",
+                        value=l_salvo_191,
+                        key=f"txt_link_19_1_adeq_{ano_sel}",
+                        height=200
+                    )
+
+                    links_191_visuais = re.findall(REGEX_PURE_URL, link_19_1_input or "")
+                    if links_191_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_191_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("19.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 19.1", key=f"btn_salvar_19_1_adeq_{ano_sel}", type="primary"):
+                    val_str_191 = sel_19_1
+                    val_lk_191 = link_19_1_input.strip()
+                    comentarios_191 = d19_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="19.1",
+                        valor=val_str_191,
+                        pontos=pts_19_1,
+                        link=val_lk_191,
+                        comentarios=comentarios_191
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_191 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_19_1_input or "")]
+                    links_antigos_191 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_191 or "")]
+
+                    if (val_str_191 != v_salvo_191 or val_lk_191 != l_salvo_191) and links_atuais_191 and links_atuais_191 != links_antigos_191:
+                        st.session_state[f"links_pendentes_19_1_{ano_sel}"] = links_atuais_191
+                        st.session_state[f"gatilho_modal_19_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 19.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 19.1: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 19.1
+        if st.session_state.get(f"gatilho_modal_19_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.1", st.session_state.get(f"links_pendentes_19_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 19.2 - QUANTIDADE DE UNIDADES DE SRT
+        # =============================================================================
+        with st.container(key=f"container_bloco_quant_srt_19_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 19.2 • Quantidade de Unidades de SRT ({ano_sel})", expanded=True):
+                st.subheader(f"19.2 • Quantidade de Unidades de SRT ({ano_sel})")
+                st.write("**Informe a quantidade de unidades de Serviços Residenciais Terapêuticos (SRT):**")
+                st.caption("ℹ️ *Preencha os campos numéricos, informe o link de evidência e clique no botão 'Salvar Quesito 19.2' para registrar os dados.*")
+
+                d19_2 = res_data.get("19.2") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_192 = d19_2.get("valor", "")
+                l_salvo_192 = d19_2.get("link", "")
+
+                # Parsing do valor concatenado salvo no banco de dados (ex: "Para SRT tipo I:2|Para SRT tipo II:1|Equivalente:0")
+                tipos_srt = ["Para SRT tipo I", "Para SRT tipo II", "Equivalente"]
+                dict_vals_192 = {t: 0 for t in tipos_srt}
+                
+                if v_salvo_192:
+                    for item in v_salvo_192.split("|"):
+                        if ":" in item:
+                            chave, *resto = item.split(":")
+                            if chave in dict_vals_192:
+                                try:
+                                    dict_vals_192[chave] = int(resto[0])
+                                except ValueError:
+                                    pass
+
+                c192_1, c192_2 = st.columns([1, 1])
+
+                dict_inputs_192 = {}
+                with c192_1:
+                    st.write("🔢 **Informe as quantidades:**")
+                    for t in tipos_srt:
+                        dict_inputs_192[t] = st.number_input(
+                            f"Quantidade ({t}):",
+                            min_value=0,
+                            step=1,
+                            value=dict_vals_192[t],
+                            key=f"q192_num_{t}_{ano_sel}"
+                        )
+                    pts_19_2 = 0.0
+
+                with c192_2:
+                    link_19_2_input = st.text_area(
+                        "Cadastro CNES ou ato normativo de criação/credenciamento das unidades SRT (19.2):",
+                        value=l_salvo_192,
+                        key=f"txt_link_19_2_quant_{ano_sel}",
+                        height=200
+                    )
+
+                    links_192_visuais = re.findall(REGEX_PURE_URL, link_19_2_input or "")
+                    if links_192_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_192_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("19.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 19.2", key=f"btn_salvar_19_2_quant_{ano_sel}", type="primary"):
+                    # Reconstrução da string serializada contendo as quantidades
+                    val_str_192 = "|".join([f"{t}:{dict_inputs_192[t]}" for t in tipos_srt])
+                    val_lk_192 = link_19_2_input.strip()
+                    comentarios_192 = d19_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="19.2",
+                        valor=val_str_192,
+                        pontos=pts_19_2,
+                        link=val_lk_192,
+                        comentarios=comentarios_192
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_192 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_19_2_input or "")]
+                    links_antigos_192 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_192 or "")]
+
+                    if (val_str_192 != v_salvo_192 or val_lk_192 != l_salvo_192) and links_atuais_192 and links_atuais_192 != links_antigos_192:
+                        st.session_state[f"links_pendentes_19_2_{ano_sel}"] = links_atuais_192
+                        st.session_state[f"gatilho_modal_19_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 19.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 19.2: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 19.2
+        if st.session_state.get(f"gatilho_modal_19_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("19.2", st.session_state.get(f"links_pendentes_19_2_{ano_sel}", []), ano_sel)
