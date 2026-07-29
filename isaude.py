@@ -1660,7 +1660,7 @@ def mostrar_formulario_saude():
             "ℹ *Atenção à consistência dos dados salvos no banco. Salvamento automático via callback.*"
         )
 
-        # =============================================================================
+      # =============================================================================
         # QUESITO 1.0 • PLANO MUNICIPAL DE SAÚDE (MODELO PADRONIZADO iGov / iSaúde)
         # =============================================================================
         with st.container(key=f"container_bloco_isaude_1_0_{ano_sel}", border=True):
@@ -1689,7 +1689,7 @@ def mostrar_formulario_saude():
                 }
                 v_salvo_10 = d10.get("valor", "Selecione...")
 
-                # Trata migração de legado
+                # Trata migração de legado caso no banco esteja salvo o formato simplificado/antigo
                 if v_salvo_10 == "Sim, com propostas para construção das diretrizes e metas da saúde municipal":
                     v_salvo_10 = "Sim, com propostas para construção das diretrizes e metas da saúde municipal – 05"
                 elif v_salvo_10 == "Sim, apenas aprovando as propostas da gestão (Secretaria Municipal)":
@@ -1753,9 +1753,10 @@ def mostrar_formulario_saude():
                     )
 
                     links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
 
-                    # Se foi digitado qualquer link válido no campo de texto, ativa o modal
-                    if links_atuais:
+                    # SÓ ativa o modal se houver links E se forem diferentes dos gravados anteriormente
+                    if links_atuais and links_atuais != links_antigos:
                         st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
@@ -1775,7 +1776,8 @@ def mostrar_formulario_saude():
 
         # GATILHO DO MODAL 1.0
         if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-            modal_aviso_link_isaude("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []), ano_sel)
+            if "modal_aviso_link_isaude" in globals():
+                modal_aviso_link_isaude("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []), ano_sel)
 
 # =============================================================================
         # QUESITO 2.0 • CONSELHO MUNICIPAL DE SAÚDE (MODELO PADRONIZADO iGov / iSaúde)
@@ -1860,9 +1862,10 @@ def mostrar_formulario_saude():
                     )
 
                     links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_20_salva or "")]
 
-                    # Ativa a flag do modal se houver links válidos
-                    if links_atuais:
+                    # SÓ ativa o modal se houver links E se eles forem DIFERENTES dos que já estavam salvos
+                    if links_atuais and links_atuais != links_antigos:
                         st.session_state[f"links_pendentes_2_0_{ano_sel}"] = links_atuais
                         st.session_state[f"gatilho_modal_2_0_{ano_sel}"] = True
 
