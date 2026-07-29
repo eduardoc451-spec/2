@@ -4913,3 +4913,213 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_15_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("15.0", st.session_state.get(f"links_pendentes_15_0_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 15.1 • TAXA HISTÓRICA DE ABSENTEÍSMO DE EXAMES
+        # =============================================================================
+        with st.container(key=f"card_absenteismo_exames_15_1_{ano_sel}", border=True):
+            with st.expander(f"📊 QUESITO 15.1 • Taxa Histórica de Absenteísmo de Exames ({ano_sel})", expanded=True):
+                st.subheader(f"15.1 • Indicadores de Faltas em Exames ({ano_sel})")
+                st.write(f"**Informe a taxa de absenteísmo de exames laboratoriais na Atenção Básica (em %):**")
+                st.caption("ℹ️ *Preencha os dados abaixo, adicione as evidências e clique no botão 'Salvar Quesito 15.1' para registrar.*")
+
+                d15_1_ta2 = res_data.get("15.1_ta2", {"valor": "0.0", "pontos": 0.0, "link": "", "comentarios": []})
+                d15_1_ta1 = res_data.get("15.1_ta1", {"valor": "0.0", "pontos": 0.0, "link": "", "comentarios": []})
+                d15_1_ta  = res_data.get("15.1_ta",  {"valor": "0.0", "pontos": 0.0, "link": "", "comentarios": []})
+                d15_1     = res_data.get("15.1",     {"valor": "", "pontos": 0.0, "link": "", "comentarios": []})
+
+                v_ta2_salvo = float(d15_1_ta2.get("valor", 0.0))
+                v_ta1_salvo = float(d15_1_ta1.get("valor", 0.0))
+                v_ta_salvo  = float(d15_1_ta.get("valor", 0.0))
+                l_salvo_15_1 = d15_1.get("link", "")
+
+                c49, c50 = st.columns([1, 1])
+                with c49:
+                    val_ex_ta2 = st.number_input(
+                        f"Taxa de absenteísmo em exames em {ano_sel - 2} (TA-2):",
+                        min_value=0.0, max_value=100.0, step=0.1,
+                        value=v_ta2_salvo,
+                        key=f"num_15_1_ta2_{ano_sel}"
+                    )
+                    val_ex_ta1 = st.number_input(
+                        f"Taxa de absenteísmo em exames em {ano_sel - 1} (TA-1):",
+                        min_value=0.0, max_value=100.0, step=0.1,
+                        value=v_ta1_salvo,
+                        key=f"num_15_1_ta1_{ano_sel}"
+                    )
+                    val_ex_ta = st.number_input(
+                        f"Taxa de absenteísmo em exames em {ano_sel} (TA):",
+                        min_value=0.0, max_value=100.0, step=0.1,
+                        value=v_ta_salvo,
+                        key=f"num_15_1_ta_{ano_sel}"
+                    )
+
+                media_ex_dois_anos = (val_ex_ta2 + val_ex_ta1) / 2.0
+
+                with c50:
+                    link_15_1_input = st.text_area(
+                        "Link/Evidência (Séries estatísticas históricas, consolidados de agendamentos solicitados x não comparecidos):",
+                        value=l_salvo_15_1,
+                        key=f"txt_saude_15_1_{ano_sel}",
+                        height=150
+                    )
+
+                    links_15_1_visuais = re.findall(REGEX_PURE_URL, link_15_1_input or "")
+                    if links_15_1_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_15_1_visuais]
+                            )
+                        )
+
+                    if val_ex_ta2 > 0 or val_ex_ta1 > 0:
+                        st.markdown(f"**Média dos 2 anos anteriores ({ano_sel-2}/{ano_sel-1}):** `{media_ex_dois_anos:.2f}%`")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("15.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 15.1", key=f"btn_salvar_15_1_{ano_sel}", type="primary"):
+                    if val_ex_ta <= media_ex_dois_anos and (val_ex_ta2 > 0 or val_ex_ta1 > 0):
+                        pts_15_1 = 7.0
+                    else:
+                        pts_15_1 = 0.0
+
+                    str_mestre = f"TA Exames {val_ex_ta}% (Média: {media_ex_dois_anos:.2f}%)"
+                    val_lk_15_1 = link_15_1_input.strip()
+                    comentarios_15_1 = d15_1.get("comentarios", [])
+
+                    # Grava sub-chaves e quesito principal
+                    save_resp_isaude("15.1_ta2", str(val_ex_ta2), pts_15_1, "")
+                    save_resp_isaude("15.1_ta1", str(val_ex_ta1), 0.0, "")
+                    save_resp_isaude("15.1_ta", str(val_ex_ta), 0.0, "")
+                    save_resp_isaude("15.1", str_mestre, pts_15_1, val_lk_15_1, comentarios=comentarios_15_1)
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_15_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_15_1_input or "")]
+                    links_antigos_15_1 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_15_1 or "")]
+
+                    mudou_valores = (val_ex_ta2 != v_ta2_salvo or val_ex_ta1 != v_ta1_salvo or val_ex_ta != v_ta_salvo)
+                    if (mudou_valores or val_lk_15_1 != l_salvo_15_1) and links_atuais_15_1 and links_atuais_15_1 != links_antigos_15_1:
+                        st.session_state[f"links_pendentes_15_1_{ano_sel}"] = links_atuais_15_1
+                        st.session_state[f"gatilho_modal_15_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 15.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_15_1 = d15_1.get("pontos", 0.0)
+                cor_txt_15_1 = "#28a745" if pts_atuais_15_1 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_15_1}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 15.1: {pts_atuais_15_1:.1f} / 7.0 pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 15.1 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_15_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.1", st.session_state.get(f"links_pendentes_15_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 15.2 • MEDIDAS PARA REDUÇÃO DO ABSENTEÍSMO DE EXAMES
+        # =============================================================================
+        with st.container(key=f"card_medidas_exames_15_2_{ano_sel}", border=True):
+            with st.expander(f"🛡️ QUESITO 15.2 • Medidas Institucionais para Exames ({ano_sel})", expanded=True):
+                st.subheader(f"15.2 • Enfrentamento do Absenteísmo em Exames ({ano_sel})")
+                st.write(f"**O município realiza medidas para a redução desta taxa de absenteísmo de exames laboratoriais em {ano_sel}?**")
+                st.caption("ℹ️ *Selecione a opção, preencha as evidências e clique no botão 'Salvar Quesito 15.2' para registrar.*")
+
+                opts_15_2 = {
+                    "Selecione...": 0.0,
+                    "Sim – 00": 0.0,
+                    "Não – -02": -2.0
+                }
+
+                # Recupera dados atuais salvos na base
+                d15_2 = res_data.get("15.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_15_2 = d15_2.get("valor", "Selecione...")
+                l_salvo_15_2 = d15_2.get("link", "")
+
+                c51, c52 = st.columns([1, 1])
+
+                with c51:
+                    idx_15_2 = list(opts_15_2.keys()).index(v_salvo_15_2) if v_salvo_15_2 in opts_15_2 else 0
+                    sel_15_2 = st.radio(
+                        "Alternativas para o quesito 15.2:",
+                        options=list(opts_15_2.keys()),
+                        index=idx_15_2,
+                        key=f"rb_saude_15_2_exames_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c52:
+                    link_15_2_input = st.text_area(
+                        "Link/Evidência (Planos de ação ou diretrizes para redução do absenteísmo de exames):",
+                        value=l_salvo_15_2,
+                        key=f"txt_saude_15_2_exames_{ano_sel}",
+                        height=90
+                    )
+
+                    links_15_2_visuais = re.findall(REGEX_PURE_URL, link_15_2_input or "")
+                    if links_15_2_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_15_2_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("15.2", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 15.2", key=f"btn_salvar_15_2_{ano_sel}", type="primary"):
+                    val_sel_15_2 = sel_15_2 if sel_15_2 is not None else "Selecione..."
+                    val_lk_15_2 = link_15_2_input.strip()
+                    pts_15_2 = opts_15_2.get(val_sel_15_2, 0.0)
+                    comentarios_15_2 = d15_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="15.2",
+                        valor=val_sel_15_2,
+                        pontos=pts_15_2,
+                        link=val_lk_15_2,
+                        comentarios=comentarios_15_2
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_15_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_15_2_input or "")]
+                    links_antigos_15_2 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_15_2 or "")]
+
+                    if (val_sel_15_2 != v_salvo_15_2 or val_lk_15_2 != l_salvo_15_2) and links_atuais_15_2 and links_atuais_15_2 != links_antigos_15_2:
+                        st.session_state[f"links_pendentes_15_2_{ano_sel}"] = links_atuais_15_2
+                        st.session_state[f"gatilho_modal_15_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 15.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_15_2 = d15_2.get("pontos", 0.0)
+                cor_txt_15_2 = "#dc3545" if pts_atuais_15_2 < 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_15_2}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 15.2 (Penalidade): {pts_atuais_15_2:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 15.2 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_15_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("15.2", st.session_state.get(f"links_pendentes_15_2_{ano_sel}", []), ano_sel)
