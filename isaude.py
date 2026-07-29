@@ -9228,3 +9228,117 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_18_4_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("18.4", st.session_state.get(f"links_pendentes_18_4_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 18.4.1 - TIPOS DE INDICADORES DA ATENÇÃO PSICOSSOCIAL
+        # =============================================================================
+        with st.container(key=f"container_bloco_tipos_indicadores_18_4_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 18.4.1 • Tipos de Indicadores da Atenção Psicossocial ({ano_sel})", expanded=True):
+                st.subheader(f"18.4.1 • Tipos de Indicadores da Atenção Psicossocial ({ano_sel})")
+                st.write("**Assinale os tipos de indicadores da Atenção Psicossocial:**")
+                st.caption("ℹ️ *Marque os itens aplicáveis, informe o link de evidência e clique no botão 'Salvar Quesito 18.4.1' para registrar os dados.*")
+
+                d18_4_1 = res_data.get("18.4.1") or {
+                    "valor": "0|0|0|0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_1841 = d18_4_1.get("valor", "0|0|0|0|0")
+                l_salvo_1841 = d18_4_1.get("link", "")
+
+                p_1841 = v_salvo_1841.split("|")
+                while len(p_1841) < 5:
+                    p_1841.append("0")
+
+                c1841_1, c1841_2 = st.columns([1, 1])
+
+                with c1841_1:
+                    st.write("📋 **Selecione os tipos aplicáveis:**")
+                    ch1_1841 = st.checkbox(
+                        "Para Drogas (transtornos mentais incluindo aqueles relacionados ao uso de substâncias)",
+                        value=(p_1841[0] == "1"),
+                        key=f"ch_1841_1_{ano_sel}"
+                    )
+                    ch2_1841 = st.checkbox(
+                        "Para Saúde Mental (transtornos mentais graves e persistentes)",
+                        value=(p_1841[1] == "1"),
+                        key=f"ch_1841_2_{ano_sel}"
+                    )
+                    ch3_1841 = st.checkbox(
+                        "Para outras situações clínicas que impossibilitem estabelecer laços sociais e realizar projetos",
+                        value=(p_1841[2] == "1"),
+                        key=f"ch_1841_3_{ano_sel}"
+                    )
+                    ch4_1841 = st.checkbox(
+                        "Para Drogas e/ou Saúde Mental para crianças em específico",
+                        value=(p_1841[3] == "1"),
+                        key=f"ch_1841_4_{ano_sel}"
+                    )
+                    ch5_1841 = st.checkbox(
+                        "Outros",
+                        value=(p_1841[4] == "1"),
+                        key=f"ch_1841_5_{ano_sel}"
+                    )
+
+                    string_estruturada_18_4_1 = f"{1 if ch1_1841 else 0}|{1 if ch2_1841 else 0}|{1 if ch3_1841 else 0}|{1 if ch4_1841 else 0}|{1 if ch5_1841 else 0}"
+                    pts_18_4_1 = 0.0
+
+                with c1841_2:
+                    link_18_4_1_input = st.text_area(
+                        "Link/Evidência ou Ficha Técnica dos Indicadores (18.4.1):",
+                        value=l_salvo_1841,
+                        key=f"txt_link_18_4_1_tipos_{ano_sel}",
+                        height=180
+                    )
+
+                    links_1841_visuais = re.findall(REGEX_PURE_URL, link_18_4_1_input or "")
+                    if links_1841_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_1841_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("18.4.1", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 18.4.1", key=f"btn_salvar_18_4_1_tipos_{ano_sel}", type="primary"):
+                    val_str_1841 = string_estruturada_18_4_1
+                    val_lk_1841 = link_18_4_1_input.strip()
+                    comentarios_1841 = d18_4_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="18.4.1",
+                        valor=val_str_1841,
+                        pontos=pts_18_4_1,
+                        link=val_lk_1841,
+                        comentarios=comentarios_1841
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_1841 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_18_4_1_input or "")]
+                    links_antigos_1841 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_1841 or "")]
+
+                    if (val_str_1841 != v_salvo_1841 or val_lk_1841 != l_salvo_1841) and links_atuais_1841 and links_atuais_1841 != links_antigos_1841:
+                        st.session_state[f"links_pendentes_18_4_1_{ano_sel}"] = links_atuais_1841
+                        st.session_state[f"gatilho_modal_18_4_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 18.4.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                st.markdown(
+                    "<span style='color:#6c757d; font-weight:bold;'>"
+                    "📊 Pontuação Aplicada no Quesito 18.4.1: +0.0 pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 18.4.1
+        if st.session_state.get(f"gatilho_modal_18_4_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("18.4.1", st.session_state.get(f"links_pendentes_18_4_1_{ano_sel}", []), ano_sel)
