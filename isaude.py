@@ -12528,5 +12528,119 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("26.0", st.session_state.get(f"links_pendentes_26_0_{ano_sel}", []), ano_sel)
 
+        # =============================================================================
+        # SEÇÃO 27 - REGULAÇÃO DA REFERÊNCIA INTERMUNICIPAL
+        # =============================================================================
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.subheader("🔗 Seção 27 - Regulação de Referência Intermunicipal")
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 27.0 - REGULAÇÃO DA REFERÊNCIA EM OUTROS MUNICÍPIOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_referencia_intermunicipal_27_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 27.0 • Regulação da Referência em Outros Municípios ({ano_sel})", expanded=True):
+                st.subheader(f"27.0 • Regulação da Referência em Outros Municípios ({ano_sel})")
+                st.write("**O município regula a referência a ser realizada em outros municípios, de acordo com a programação pactuada e integrada, integrando-se aos fluxos regionais estabelecidos?**")
+                st.caption("ℹ️ *Selecione a opção correspondente, informe o link de evidência e clique no botão 'Salvar Quesito 27.0' para registrar os dados.*")
+
+                d27_0 = res_data.get("27.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_270 = d27_0.get("valor", "Selecione...")
+                l_salvo_270 = d27_0.get("link", "")
+
+                opts_27_0 = ["Selecione...", "Sim – 05", "Não – 00"]
+                idx_27_0 = opts_27_0.index(v_salvo_270) if v_salvo_270 in opts_27_0 else 0
+
+                c270_1, c270_2 = st.columns([1, 1])
+                with c270_1:
+                    sel_27_0 = st.radio(
+                        "Regulação da referência:",
+                        options=opts_27_0,
+                        index=idx_27_0,
+                        key=f"rad_27_0_{ano_sel}"
+                    )
+                    
+                    opcoes_pts_270 = {
+                        "Sim – 05": 5.0,
+                        "Não – 00": 0.0,
+                        "Selecione...": 0.0
+                    }
+                    pts_27_0 = opcoes_pts_270.get(sel_27_0, 0.0)
+
+                with c270_2:
+                    link_27_0_input = st.text_area(
+                        "Link/Evidência dos fluxos regionais ou pactuação intermunicipal (27.0):",
+                        value=l_salvo_270,
+                        key=f"txt_link_27_0_referencia_{ano_sel}",
+                        height=120
+                    )
+
+                placeholder_links_270 = st.empty()
+                links_270_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_27_0_input or "")]
+                if links_270_visuais:
+                    placeholder_links_270.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_270_visuais])
+                    )
+
+                # Feedback visual
+                if sel_27_0 != "Selecione...":
+                    st.success(f"✅ Opção selecionada: **{sel_27_0}**")
+                else:
+                    st.warning("⚠️ Nenhuma opção selecionada.")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("27.0", res_data)
+
+                # Impacto de pontuação
+                if pts_27_0 > 0:
+                    st.markdown(
+                        f"<span style='color:#28a745; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 27.0: +{pts_27_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        f"<span style='color:#6c757d; font-weight:bold;'>"
+                        f"📊 Pontuação Aplicada no Quesito 27.0: +{pts_27_0:.1f} pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 27.0", key=f"btn_salvar_27_0_referencia_{ano_sel}", type="primary"):
+                    val_str_270 = sel_27_0
+                    val_lk_270 = link_27_0_input.strip()
+                    comentarios_270 = d27_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="27.0",
+                        valor=val_str_270,
+                        pontos=pts_27_0,
+                        link=val_lk_270,
+                        comentarios=comentarios_270
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_270 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_27_0_input or "")]
+                    links_antigos_270 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_270 or "")]
+
+                    if (val_str_270 != v_salvo_270 or val_lk_270 != l_salvo_270) and links_atuais_270 and links_atuais_270 != links_antigos_270:
+                        st.session_state[f"links_pendentes_27_0_{ano_sel}"] = links_atuais_270
+                        st.session_state[f"gatilho_modal_27_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 27.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 27.0
+        if st.session_state.get(f"gatilho_modal_27_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("27.0", st.session_state.get(f"links_pendentes_27_0_{ano_sel}", []), ano_sel)
+
        
         
