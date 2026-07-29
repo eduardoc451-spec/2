@@ -7490,3 +7490,221 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_17_5_2_1_3_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("17.5.2.1.3", st.session_state.get(f"links_pendentes_17_5_2_1_3_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.5.2.1.4 • 3 OPM COM MAIOR TEMPO DE ESPERA
+        # =============================================================================
+        with st.container(key=f"container_bloco_maior_espera_opm_17_5_2_1_4_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.5.2.1.4 - OPM com Maior Tempo de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.2.1.4 • OPM com Maior Tempo de Espera ({ano_sel})")
+                st.write(f"**17.5.2.1.4 Informe as 3 OPM (Órteses, Próteses e Materiais Especiais) com maior tempo de espera na Atenção Especializada:**")
+                st.caption("ℹ️ *Preencha os campos abaixo, informe o link de evidência e clique no botão 'Salvar Quesito 17.5.2.1.4' para registrar.*")
+
+                d17_5_2_1_4 = res_data.get("17.5.2.1.4") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_2_1_4 = d17_5_2_1_4.get("valor", "")
+                l_salvo_17_5_2_1_4 = d17_5_2_1_4.get("link", "")
+
+                partes_opm = v_salvo_17_5_2_1_4.split("||") if v_salvo_17_5_2_1_4 else []
+                o1 = partes_opm[0].split("|") if len(partes_opm) > 0 else ["", ""]
+                o2 = partes_opm[1].split("|") if len(partes_opm) > 1 else ["", ""]
+                o3 = partes_opm[2].split("|") if len(partes_opm) > 2 else ["", ""]
+
+                c175214_1, c175214_2 = st.columns([1, 1])
+
+                with c175214_1:
+                    st.write("🦿 **OPM e Prazos:**")
+                    
+                    opm_1 = st.text_input("1ª - Descrição da OPM:", value=o1[0] if len(o1) > 0 else "", key=f"opm1_175214_{ano_sel}")
+                    opm_dias_1 = st.text_input("1ª - Tempo médio de espera (em dias):", value=o1[1] if len(o1) > 1 else "", key=f"opm_dias1_175214_{ano_sel}")
+                    
+                    st.markdown("---")
+                    
+                    opm_2 = st.text_input("2ª - Descrição da OPM:", value=o2[0] if len(o2) > 0 else "", key=f"opm2_175214_{ano_sel}")
+                    opm_dias_2 = st.text_input("2ª - Tempo médio de espera (em dias):", value=o2[1] if len(o2) > 1 else "", key=f"opm_dias2_175214_{ano_sel}")
+                    
+                    st.markdown("---")
+                    
+                    opm_3 = st.text_input("3ª - Descrição da OPM:", value=o3[0] if len(o3) > 0 else "", key=f"opm3_175214_{ano_sel}")
+                    opm_dias_3 = st.text_input("3ª - Tempo médio de espera (em dias):", value=o3[1] if len(o3) > 1 else "", key=f"opm_dias3_175214_{ano_sel}")
+
+                    string_estruturada_opm = f"{opm_1.strip()}|{opm_dias_1.strip()}||{opm_2.strip()}|{opm_dias_2.strip()}||{opm_3.strip()}|{opm_dias_3.strip()}"
+                    if string_estruturada_opm == "||||":
+                        string_estruturada_opm = ""
+
+                    pts_17_5_2_1_4 = 0.0
+
+                with c175214_2:
+                    link_17_5_2_1_4_input = st.text_area(
+                        "Link/Evidência ou Relatório estatístico dos tempos de espera de OPM (17.5.2.1.4):",
+                        value=l_salvo_17_5_2_1_4,
+                        key=f"reg_17_5_2_1_4_txt_{ano_sel}",
+                        height=280
+                    )
+
+                    links_17_5_2_1_4_visuais = re.findall(REGEX_PURE_URL, link_17_5_2_1_4_input or "")
+                    if links_17_5_2_1_4_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_2_1_4_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.2.1.4", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.2.1.4", key=f"btn_salvar_17_5_2_1_4_{ano_sel}", type="primary"):
+                    val_str_17_5_2_1_4 = string_estruturada_opm
+                    val_lk_17_5_2_1_4 = link_17_5_2_1_4_input.strip()
+                    comentarios_17_5_2_1_4 = d17_5_2_1_4.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.2.1.4",
+                        valor=val_str_17_5_2_1_4,
+                        pontos=pts_17_5_2_1_4,
+                        link=val_lk_17_5_2_1_4,
+                        comentarios=comentarios_17_5_2_1_4
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_2_1_4 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_2_1_4_input or "")]
+                    links_antigos_17_5_2_1_4 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_2_1_4 or "")]
+
+                    if (val_str_17_5_2_1_4 != v_salvo_17_5_2_1_4 or val_lk_17_5_2_1_4 != l_salvo_17_5_2_1_4) and links_atuais_17_5_2_1_4 and links_atuais_17_5_2_1_4 != links_antigos_17_5_2_1_4:
+                        st.session_state[f"links_pendentes_17_5_2_1_4_{ano_sel}"] = links_atuais_17_5_2_1_4
+                        st.session_state[f"gatilho_modal_17_5_2_1_4_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.2.1.4 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_2_1_4 = d17_5_2_1_4.get("pontos", 0.0)
+                cor_txt_17_5_2_1_4 = "#28a745" if pts_atuais_17_5_2_1_4 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_2_1_4}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.2.1.4: {pts_atuais_17_5_2_1_4:+.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.2.1.4
+        if st.session_state.get(f"gatilho_modal_17_5_2_1_4_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.2.1.4", st.session_state.get(f"links_pendentes_17_5_2_1_4_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # QUESITO 17.5.2.1.5 • 3 CIRURGIAS ELETIVAS COM MAIOR TEMPO DE ESPERA
+        # =============================================================================
+        with st.container(key=f"container_bloco_maior_espera_cirurgias_17_5_2_1_5_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 17.5.2.1.5 - Cirurgias Eletivas com Maior Tempo de Espera ({ano_sel})", expanded=True):
+                st.subheader(f"17.5.2.1.5 • Cirurgias Eletivas com Maior Tempo de Espera ({ano_sel})")
+                st.write(f"**17.5.2.1.5 Informe as 3 cirurgias eletivas com maior tempo de espera na Atenção Especializada:**")
+                st.caption("ℹ️ *Preencha os campos abaixo, informe o link de evidência e clique no botão 'Salvar Quesito 17.5.2.1.5' para registrar.*")
+
+                d17_5_2_1_5 = res_data.get("17.5.2.1.5") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_17_5_2_1_5 = d17_5_2_1_5.get("valor", "")
+                l_salvo_17_5_2_1_5 = d17_5_2_1_5.get("link", "")
+
+                partes_cir = v_salvo_17_5_2_1_5.split("||") if v_salvo_17_5_2_1_5 else []
+                c1 = partes_cir[0].split("|") if len(partes_cir) > 0 else ["", ""]
+                c2 = partes_cir[1].split("|") if len(partes_cir) > 1 else ["", ""]
+                c3 = partes_cir[2].split("|") if len(partes_cir) > 2 else ["", ""]
+
+                c175215_1, c175215_2 = st.columns([1, 1])
+
+                with c175215_1:
+                    st.write("🏥 **Cirurgias Eletivas e Prazos:**")
+                    
+                    cir_1 = st.text_input("1ª - Descrição da cirurgia eletiva:", value=c1[0] if len(c1) > 0 else "", key=f"cir1_175215_{ano_sel}")
+                    cir_dias_1 = st.text_input("1ª - Tempo médio de espera (em dias):", value=c1[1] if len(c1) > 1 else "", key=f"cir_dias1_175215_{ano_sel}")
+                    
+                    st.markdown("---")
+                    
+                    cir_2 = st.text_input("2ª - Descrição da cirurgia eletiva:", value=c2[0] if len(c2) > 0 else "", key=f"cir2_175215_{ano_sel}")
+                    cir_dias_2 = st.text_input("2ª - Tempo médio de espera (em dias):", value=c2[1] if len(c2) > 1 else "", key=f"cir_dias2_175215_{ano_sel}")
+                    
+                    st.markdown("---")
+                    
+                    cir_3 = st.text_input("3ª - Descrição da cirurgia eletiva:", value=c3[0] if len(c3) > 0 else "", key=f"cir3_175215_{ano_sel}")
+                    cir_dias_3 = st.text_input("3ª - Tempo médio de espera (em dias):", value=c3[1] if len(c3) > 1 else "", key=f"cir_dias3_175215_{ano_sel}")
+
+                    string_estruturada_cir = f"{cir_1.strip()}|{cir_dias_1.strip()}||{cir_2.strip()}|{cir_dias_2.strip()}||{cir_3.strip()}|{cir_dias_3.strip()}"
+                    if string_estruturada_cir == "||||":
+                        string_estruturada_cir = ""
+
+                    pts_17_5_2_1_5 = 0.0
+
+                with c175215_2:
+                    link_17_5_2_1_5_input = st.text_area(
+                        "Link/Evidência ou Relatório estatístico dos tempos de espera de cirurgias (17.5.2.1.5):",
+                        value=l_salvo_17_5_2_1_5,
+                        key=f"reg_17_5_2_1_5_txt_{ano_sel}",
+                        height=280
+                    )
+
+                    links_17_5_2_1_5_visuais = re.findall(REGEX_PURE_URL, link_17_5_2_1_5_input or "")
+                    if links_17_5_2_1_5_visuais:
+                        st.markdown(
+                            "**🔗 Links ativos:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_17_5_2_1_5_visuais]
+                            )
+                        )
+
+                # Chat de comentários
+                bloco_comentarios_isaude("17.5.2.1.5", res_data)
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 17.5.2.1.5", key=f"btn_salvar_17_5_2_1_5_{ano_sel}", type="primary"):
+                    val_str_17_5_2_1_5 = string_estruturada_cir
+                    val_lk_17_5_2_1_5 = link_17_5_2_1_5_input.strip()
+                    comentarios_17_5_2_1_5 = d17_5_2_1_5.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="17.5.2.1.5",
+                        valor=val_str_17_5_2_1_5,
+                        pontos=pts_17_5_2_1_5,
+                        link=val_lk_17_5_2_1_5,
+                        comentarios=comentarios_17_5_2_1_5
+                    )
+
+                    # Modal de aviso para links pendentes
+                    links_atuais_17_5_2_1_5 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_17_5_2_1_5_input or "")]
+                    links_antigos_17_5_2_1_5 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_17_5_2_1_5 or "")]
+
+                    if (val_str_17_5_2_1_5 != v_salvo_17_5_2_1_5 or val_lk_17_5_2_1_5 != l_salvo_17_5_2_1_5) and links_atuais_17_5_2_1_5 and links_atuais_17_5_2_1_5 != links_antigos_17_5_2_1_5:
+                        st.session_state[f"links_pendentes_17_5_2_1_5_{ano_sel}"] = links_atuais_17_5_2_1_5
+                        st.session_state[f"gatilho_modal_17_5_2_1_5_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 17.5.2.1.5 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_17_5_2_1_5 = d17_5_2_1_5.get("pontos", 0.0)
+                cor_txt_17_5_2_1_5 = "#28a745" if pts_atuais_17_5_2_1_5 >= 0.0 else "#dc3545"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_17_5_2_1_5}; font-weight:bold;'>"
+                    f"📊 Pontuação Obtida no Quesito 17.5.2.1.5: {pts_atuais_17_5_2_1_5:+.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 17.5.2.1.5
+        if st.session_state.get(f"gatilho_modal_17_5_2_1_5_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("17.5.2.1.5", st.session_state.get(f"links_pendentes_17_5_2_1_5_{ano_sel}", []), ano_sel)
