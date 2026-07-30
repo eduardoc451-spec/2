@@ -19443,3 +19443,515 @@ def mostrar_formulario_saude():
                         ano_sel,
                     )
 
+# =============================================================================
+            # INDICADOR S11 • ESPECIALIDADE PEDIÁTRICA: PERMANÊNCIA E FREQUÊNCIA (SIH/SUS)
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação para números com decimais
+            def tratar_string_numerica_para_float(texto):
+                if not texto:
+                    return 0.0
+                texto_limpo = texto.replace(".", "").replace(",", ".").strip()
+                try:
+                    return float(texto_limpo) if texto_limpo else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_numero_br(valor_float):
+                return f"{valor_float:.2f}".replace(".", ",")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S11_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S11 - Eficiência na Especialidade Pediátrica ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S11 • Métrica de Permanência e Frequência Pediátrica (SIH/SUS)"
+                    )
+                    st.write(
+                        "**Sobre a especialidade Pediátrica em estabelecimentos de saúde"
+                        f" sob gestão municipal em {ano_sel}, informe:**"
+                    )
+
+                    # Cálculo dinâmico do ano selecionado
+                    try:
+                        ano_atual_s11 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s11 = 2025
+
+                    # Regras de Avaliação e Penalidades
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $Raz\tilde{a}o (P/F) \le 5,70$ dias | ✅ Parâmetro Otimizado / Em Conformidade | 0,00 pontos (Sem penalidade) |
+| Se $Raz\tilde{a}o (P/F) > 5,70$ dias | 🚨 Alerta de Permanência Excessiva | -2,00 pontos (Penalidade) |
+                    """)
+                    st.caption(
+                        "🏥 *Fórmula de cálculo: $\\text{Razão} = \\frac{\\text{Permanência (P)}}{\\text{Frequência (F)}}$. "
+                        "Insira os valores, o link e clique no botão 'Salvar Indicador S11' para registrar.*"
+                    )
+
+                    # Estado inicial / persistente
+                    # Formato interno: Permanencia/Frequencia
+                    dS11 = res_data.get("S11") or {
+                        "valor": "0.0/0.0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_perm_s11, v_freq_s11 = map(
+                            float, dS11.get("valor", "0.0/0.0").split("/")
+                        )
+                    except Exception:
+                        v_perm_s11, v_freq_s11 = 0.0, 0.0
+
+                    evidencia_S11_salva = dS11.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S11 = f"txt_s11_link_{ano_sel}"
+
+                    # Inicialização do session_state no padrão BR
+                    if f"s11_str_perm_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s11_str_perm_{ano_sel}"] = (
+                            formatar_para_numero_br(v_perm_s11)
+                        )
+                    if f"s11_str_freq_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s11_str_freq_{ano_sel}"] = (
+                            formatar_para_numero_br(v_freq_s11)
+                        )
+
+                    cS11_1, cS11_2 = st.columns([1, 1])
+
+                    with cS11_1:
+                        st.markdown(f"##### 🧸 Produção Hospitalar Pediátrica")
+
+                        input_perm_str = st.text_input(
+                            f"Permanência (P) em {ano_sel}:",
+                            value=st.session_state[f"s11_str_perm_{ano_sel}"],
+                            key=f"txt_s11_perm_{ano_sel}",
+                        )
+
+                        input_freq_str = st.text_input(
+                            f"Frequência (F) em {ano_sel}:",
+                            value=st.session_state[f"s11_str_freq_{ano_sel}"],
+                            key=f"txt_s11_freq_{ano_sel}",
+                        )
+
+                        # Conversão e higienização
+                        permanencia_s11 = tratar_string_numerica_para_float(input_perm_str)
+                        frequencia_s11 = tratar_string_numerica_para_float(input_freq_str)
+
+                        # Sincronização de máscaras no session_state
+                        st.session_state[f"s11_str_perm_{ano_sel}"] = (
+                            formatar_para_numero_br(permanencia_s11)
+                        )
+                        st.session_state[f"s11_str_freq_{ano_sel}"] = (
+                            formatar_para_numero_br(frequencia_s11)
+                        )
+
+                        limiar_s11 = 5.7
+
+                    with cS11_2:
+                        link_S11 = st.text_area(
+                            f"Link/Evidência (S11 - Módulo Pediátrico {ano_sel}):",
+                            value=evidencia_S11_salva,
+                            key=chave_link_S11,
+                            placeholder="Insira o link oficial referente ao indicador S11...",
+                            height=280,
+                        )
+                        placeholder_links_S11 = st.empty()
+                        links_S11_visuais = re.findall(REGEX_PURE_URL, link_S11 or "")
+                        if links_S11_visuais:
+                            placeholder_links_S11.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S11_visuais
+                                ])
+                            )
+
+                    # Cálculo e regras do indicador S11
+                    if permanencia_s11 == 0.0 or frequencia_s11 == 0.0:
+                        ptsS11_calc = 0.0
+                        razao_s11 = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos indicadores de Permanência e Frequência..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        razao_s11 = round(permanencia_s11 / frequencia_s11, 4)
+
+                        if razao_s11 <= limiar_s11:
+                            ptsS11_calc = 0.0
+                            texto_resultado = (
+                                f"✅ PARÂMETRO OTIMIZADO: Razão P/F ({formatar_para_numero_br(razao_s11)})"
+                                " em conformidade com o referencial regulatório pediátrico"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS11_calc = -2.0
+                            texto_resultado = (
+                                f"🚨 ALERTA DE PERMANÊNCIA: Razão P/F ({formatar_para_numero_br(razao_s11)})"
+                                f" superou o limite de {formatar_para_numero_br(limiar_s11)} dias"
+                            )
+                            texto_pontuacao = "-2,00 pontos (Penalidade Aplicada)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    # Painel consolidador de métricas
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S11:</b> Eficiência da Internação na Especialidade Pediátrica ({ano_sel})<br>
+                            📊 <b>Média do Período de Permanência por Paciente (P/F):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{formatar_para_numero_br(razao_s11)} dias</code><br>
+                            ⚖️ <b>Status da Coorte:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização resiliente do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S11", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S11", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S11")
+                            except TypeError:
+                                bloco_comentarios("S11", "isaude", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S11",
+                        key=f"btn_salvar_S11_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_salvar_s11 = f"{permanencia_s11:.2f}/{frequencia_s11:.2f}"
+                        ptsS11 = ptsS11_calc
+                        lnk_val = link_S11.strip()
+                        comentarios_historico = dS11.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S11",
+                                valor=str_salvar_s11,
+                                pontos=ptsS11,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S11", str_salvar_s11, ptsS11, lnk_val)
+
+                        res_data["S11"] = {
+                            "valor": str_salvar_s11,
+                            "pontos": ptsS11,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S11_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S11_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S11_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S11_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S11 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S11 = dS11.get("pontos", 0.0)
+                    cor_txt_S11 = (
+                        "#dc2626"
+                        if pts_atuais_S11 < 0.0
+                        else ("#28a745" if pts_atuais_S11 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S11}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S11: {pts_atuais_S11:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S11
+            if st.session_state.get(f"gatilho_modal_S11_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S11",
+                        st.session_state.get(f"links_pendentes_S11_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S12 • ESPECIALIDADE CLÍNICA MÉDICA: PERMANÊNCIA E FREQUÊNCIA (SIH/SUS)
+            # =============================================================================
+
+            with st.container(
+                key=f"container_bloco_isaude_S12_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S12 - Eficiência na Especialidade Clínica Médica ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S12 • Métrica de Permanência e Frequência em Clínica Médica (SIH/SUS)"
+                    )
+                    st.write(
+                        "**Sobre a especialidade Clínica Médica em estabelecimentos de saúde"
+                        f" sob gestão municipal em {ano_sel}, informe:**"
+                    )
+
+                    # Cálculo dinâmico do ano selecionado
+                    try:
+                        ano_atual_s12 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s12 = 2025
+
+                    # Regras de Avaliação e Penalidades
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $Raz\tilde{a}o (P/F) \le 9,70$ dias | ✅ Parâmetro Otimizado / Em Conformidade | 0,00 pontos (Sem penalidade) |
+| Se $Raz\tilde{a}o (P/F) > 9,70$ dias | 🚨 Alerta de Permanência Excessiva | -2,00 pontos (Penalidade) |
+                    """)
+                    st.caption(
+                        "🏥 *Fórmula de cálculo: $\\text{Razão} = \\frac{\\text{Permanência (P)}}{\\text{Frequência (F)}}$. "
+                        "Insira os valores, o link e clique no botão 'Salvar Indicador S12' para registrar.*"
+                    )
+
+                    # Estado inicial / persistente
+                    # Formato interno: Permanencia/Frequencia
+                    dS12 = res_data.get("S12") or {
+                        "valor": "0.0/0.0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_perm_s12, v_freq_s12 = map(
+                            float, dS12.get("valor", "0.0/0.0").split("/")
+                        )
+                    except Exception:
+                        v_perm_s12, v_freq_s12 = 0.0, 0.0
+
+                    evidencia_S12_salva = dS12.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S12 = f"txt_s12_link_{ano_sel}"
+
+                    # Inicialização do session_state no padrão BR
+                    if f"s12_str_perm_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s12_str_perm_{ano_sel}"] = (
+                            formatar_para_numero_br(v_perm_s12)
+                        )
+                    if f"s12_str_freq_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s12_str_freq_{ano_sel}"] = (
+                            formatar_para_numero_br(v_freq_s12)
+                        )
+
+                    cS12_1, cS12_2 = st.columns([1, 1])
+
+                    with cS12_1:
+                        st.markdown(f"##### 🩺 Produção Hospitalar em Clínica Médica")
+
+                        input_perm_str = st.text_input(
+                            f"Permanência (P) em {ano_sel}:",
+                            value=st.session_state[f"s12_str_perm_{ano_sel}"],
+                            key=f"txt_s12_perm_{ano_sel}",
+                        )
+
+                        input_freq_str = st.text_input(
+                            f"Frequência (F) em {ano_sel}:",
+                            value=st.session_state[f"s12_str_freq_{ano_sel}"],
+                            key=f"txt_s12_freq_{ano_sel}",
+                        )
+
+                        # Conversão e higienização
+                        permanencia_s12 = tratar_string_numerica_para_float(input_perm_str)
+                        frequencia_s12 = tratar_string_numerica_para_float(input_freq_str)
+
+                        # Sincronização de máscaras no session_state
+                        st.session_state[f"s12_str_perm_{ano_sel}"] = (
+                            formatar_para_numero_br(permanencia_s12)
+                        )
+                        st.session_state[f"s12_str_freq_{ano_sel}"] = (
+                            formatar_para_numero_br(frequencia_s12)
+                        )
+
+                        limiar_s12 = 9.7
+
+                    with cS12_2:
+                        link_S12 = st.text_area(
+                            f"Link/Evidência (S12 - Módulo Clínica Médica {ano_sel}):",
+                            value=evidencia_S12_salva,
+                            key=chave_link_S12,
+                            placeholder="Insira o link oficial referente ao indicador S12...",
+                            height=280,
+                        )
+                        placeholder_links_S12 = st.empty()
+                        links_S12_visuais = re.findall(REGEX_PURE_URL, link_S12 or "")
+                        if links_S12_visuais:
+                            placeholder_links_S12.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S12_visuais
+                                ])
+                            )
+
+                    # Cálculo e regras do indicador S12
+                    if permanencia_s12 == 0.0 or frequencia_s12 == 0.0:
+                        ptsS12_calc = 0.0
+                        razao_s12 = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos indicadores de Permanência e Frequência..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        razao_s12 = round(permanencia_s12 / frequencia_s12, 4)
+
+                        if razao_s12 <= limiar_s12:
+                            ptsS12_calc = 0.0
+                            texto_resultado = (
+                                f"✅ PARÂMETRO OTIMIZADO: Razão P/F ({formatar_para_numero_br(razao_s12)})"
+                                " em conformidade com o referencial regulatório de clínica médica"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS12_calc = -2.0
+                            texto_resultado = (
+                                f"🚨 ALERTA DE PERMANÊNCIA: Razão P/F ({formatar_para_numero_br(razao_s12)})"
+                                f" superou o limite de {formatar_para_numero_br(limiar_s12)} dias"
+                            )
+                            texto_pontuacao = "-2,00 pontos (Penalidade Aplicada)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    # Painel consolidador de métricas
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S12:</b> Eficiência da Internação na Especialidade Clínica Médica ({ano_sel})<br>
+                            📊 <b>Média do Período de Permanência por Paciente (P/F):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{formatar_para_numero_br(razao_s12)} dias</code><br>
+                            ⚖️ <b>Status da Coorte:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização resiliente do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S12", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S12", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S12")
+                            except TypeError:
+                                bloco_comentarios("S12", "isaude", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S12",
+                        key=f"btn_salvar_S12_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_salvar_s12 = f"{permanencia_s12:.2f}/{frequencia_s12:.2f}"
+                        ptsS12 = ptsS12_calc
+                        lnk_val = link_S12.strip()
+                        comentarios_historico = dS12.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S12",
+                                valor=str_salvar_s12,
+                                pontos=ptsS12,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S12", str_salvar_s12, ptsS12, lnk_val)
+
+                        res_data["S12"] = {
+                            "valor": str_salvar_s12,
+                            "pontos": ptsS12,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S12_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S12_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S12_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S12_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S12 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S12 = dS12.get("pontos", 0.0)
+                    cor_txt_S12 = (
+                        "#dc2626"
+                        if pts_atuais_S12 < 0.0
+                        else ("#28a745" if pts_atuais_S12 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S12}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S12: {pts_atuais_S12:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S12
+            if st.session_state.get(f"gatilho_modal_S12_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S12",
+                        st.session_state.get(f"links_pendentes_S12_{ano_sel}", []),
+                        ano_sel,
+                    )
+
