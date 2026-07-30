@@ -18658,3 +18658,475 @@ def mostrar_formulario_saude():
                         st.session_state.get(f"links_pendentes_S6_{ano_sel}", []),
                         ano_sel,
                     )
+
+# =============================================================================
+            # INDICADOR S7 • COBERTURA VACINAL CONTRA INFLUENZA EM IDOSOS
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação para porcentagem
+            def tratar_string_porcentagem_para_float(texto):
+                if not texto:
+                    return 0.0
+                texto_limpo = (
+                    texto.replace("%", "").replace(".", "").replace(",", ".").strip()
+                )
+                try:
+                    return float(texto_limpo) if texto_limpo else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_porcentagem_br(valor_float):
+                return f"{valor_float:.2f}".replace(".", ",") + "%"
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S7_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S7 - Cobertura Vacinal para Influenza nos Idosos ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader("S7 • Cobertura Vacinal contra Influenza em Idosos")
+                    st.write(
+                        "**Informe o percentual de cobertura vacinal para 'Influenza' nos"
+                        " idosos acima de 60 anos de idade:**"
+                    )
+
+                    # Cálculo dinâmico do ano selecionado
+                    try:
+                        ano_atual_s7 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s7 = 2025
+
+                    # Regras de Avaliação e Pontuação
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $C_{influenza} \ge 90,00\%$ | ✅ Meta Atingida (Imunização Protetiva) | 20,00 pontos |
+| Se $C_{influenza} < 90,00\%$ | ⚠️ Cobertura Parcial (Desconto Linear Proporcional) | Proporcional a 20,00 pts |
+                    """)
+                    st.caption(
+                        f"🌐 *Fonte oficial: Campanha Nacional de Vacinação contra a Influenza ({ano_sel})."
+                        " Insira o percentual, o link e clique no botão 'Salvar Indicador S7' para registrar.*"
+                    )
+
+                    # Estado inicial / persistente
+                    dS7 = res_data.get("S7") or {
+                        "valor": "0.0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_cobertura_s7 = float(dS7.get("valor", "0.0"))
+                    except Exception:
+                        v_cobertura_s7 = 0.0
+
+                    evidencia_S7_salva = dS7.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S7 = f"txt_s7_link_{ano_sel}"
+
+                    # Inicialização do session_state no padrão BR
+                    if f"s7_str_cobertura_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s7_str_cobertura_{ano_sel}"] = (
+                            formatar_para_porcentagem_br(v_cobertura_s7)
+                        )
+
+                    cS7_1, cS7_2 = st.columns([1, 1])
+
+                    with cS7_1:
+                        st.markdown(f"##### 💉 Imunização de Idosos (60+ anos) em {ano_sel}")
+                        input_s7_str = st.text_input(
+                            f"Cobertura vacinal para Influenza em {ano_sel}:",
+                            value=st.session_state[f"s7_str_cobertura_{ano_sel}"],
+                            key=f"txt_s7_cobertura_{ano_sel}",
+                        )
+
+                        # Conversão e higienização
+                        cobertura_s7 = tratar_string_porcentagem_para_float(input_s7_str)
+                        st.session_state[f"s7_str_cobertura_{ano_sel}"] = (
+                            formatar_para_porcentagem_br(cobertura_s7)
+                        )
+
+                        meta_s7 = 90.0
+                        p1_s7 = 20.0
+
+                        st.markdown(
+                            "<p style='margin-top: -12px; margin-bottom: 10px;"
+                            " font-size: 12px; color: #475569;'>Alcançado:"
+                            f" <b>{formatar_para_porcentagem_br(cobertura_s7)}</b>"
+                            f" / Meta: <b>90,00%</b></p>",
+                            unsafe_allow_html=True,
+                        )
+
+                    with cS7_2:
+                        link_S7 = st.text_area(
+                            f"Link/Evidência (S7 - Campanha {ano_sel}):",
+                            value=evidencia_S7_salva,
+                            key=chave_link_S7,
+                            placeholder="Insira o link oficial referente ao indicador S7...",
+                            height=280,
+                        )
+                        placeholder_links_S7 = st.empty()
+                        links_S7_visuais = re.findall(REGEX_PURE_URL, link_S7 or "")
+                        if links_S7_visuais:
+                            placeholder_links_S7.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S7_visuais
+                                ])
+                            )
+
+                    # Cálculo e regras do indicador S7
+                    if cobertura_s7 == 0.0:
+                        ptsS7_calc = 0.0
+                        texto_resultado = (
+                            f"Aguardando lançamento dos dados da campanha de {ano_atual_s7}..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        if cobertura_s7 >= meta_s7:
+                            ptsS7_calc = p1_s7
+                            texto_resultado = (
+                                f"✅ META ALCANÇADA: Cobertura vacinal protetiva atingida"
+                                f" para a população idosa em {ano_atual_s7}"
+                            )
+                            texto_pontuacao = "20,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            p_proporcional = (cobertura_s7 / meta_s7) * p1_s7
+                            ptsS7_calc = round(max(p_proporcional, 0.0), 2)
+                            texto_resultado = (
+                                f"⚠️ COBERTURA PARCIAL: Aplicação do desconto de perda linear"
+                                f" em relação à meta de {int(meta_s7)}%"
+                            )
+                            texto_pontuacao = (
+                                f"{f'{ptsS7_calc:.2f}'.replace('.', ',')} pontos"
+                            )
+                            estilo_status = "color: #ea580c; font-weight: bold;"
+
+                    # Painel consolidador de métricas
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S7:</b> Campanha de Imunização contra Influenza (Idosos {ano_sel})<br>
+                            ⚖️ <b>Status da Coorte:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Nota Final Calculada (NF):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S7", res_data)
+                    elif "bloco_comentarios" in globals():
+                        bloco_comentarios("S7", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S7",
+                        key=f"btn_salvar_S7_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_salvar_s7 = f"{cobertura_s7:.2f}"
+                        ptsS7 = ptsS7_calc
+                        lnk_val = link_S7.strip()
+                        comentarios_historico = dS7.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S7",
+                                valor=str_salvar_s7,
+                                pontos=ptsS7,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S7", str_salvar_s7, ptsS7, lnk_val)
+
+                        res_data["S7"] = {
+                            "valor": str_salvar_s7,
+                            "pontos": ptsS7,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S7_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S7_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S7_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S7_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S7 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S7 = dS7.get("pontos", 0.0)
+                    cor_txt_S7 = "#28a745" if pts_atuais_S7 > 0.0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S7}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S7: +{pts_atuais_S7:.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S7
+            if st.session_state.get(f"gatilho_modal_S7_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S7",
+                        st.session_state.get(f"links_pendentes_S7_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S8 • INTERNAÇÕES POR CAUSAS SENSÍVEIS À ATENÇÃO BÁSICA (SIH/SUS)
+            # =============================================================================
+
+            with st.container(
+                key=f"container_bloco_isaude_S8_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S8 - Percentual de Internações por Causas Sensíveis (SIH/SUS - {ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader("S8 • Internações por Causas Sensíveis à Atenção Básica (ICSAB)")
+                    st.write(
+                        "**Percentual de internações por causas sensíveis à atenção básica"
+                        " no total de internações (%) nos estabelecimentos de saúde sob gestão municipal:**"
+                    )
+
+                    # Cálculo dinâmico do ano selecionado
+                    try:
+                        ano_atual_s8 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s8 = 2025
+
+                    # Regras de Avaliação e Penalidades
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $PI < 100,00\%$ | ✅ Taxa Sob Controle / Regularizado | 0,00 pontos (Sem penalidade) |
+| Se $PI = 100,00\%$ | 🚨 Totalidade Sensível (Alerta Máximo) | -5,00 pontos (Penalidade) |
+| Se $PI > 100,00\%$ | 🚨 Inconsistência Crítica nos Dados | -5,00 pontos (Penalidade) |
+                    """)
+                    st.caption(
+                        "🏥 *Dados extraídos do Sistema de Informações Hospitalares do SUS (SIH/SUS)."
+                        " Insira o percentual, o link e clique no botão 'Salvar Indicador S8' para registrar.*"
+                    )
+
+                    # Estado inicial / persistente
+                    dS8 = res_data.get("S8") or {
+                        "valor": "0.0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_pi = float(dS8.get("valor", "0.0"))
+                    except Exception:
+                        v_pi = 0.0
+
+                    evidencia_S8_salva = dS8.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S8 = f"txt_s8_link_{ano_sel}"
+
+                    # Inicialização do session_state no padrão BR
+                    if f"s8_str_pi_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s8_str_pi_{ano_sel}"] = (
+                            formatar_para_porcentagem_br(v_pi)
+                        )
+
+                    cS8_1, cS8_2 = st.columns([1, 1])
+
+                    with cS8_1:
+                        st.markdown(f"##### 🏥 Indicador de Gestão Hospitalar (SIH/SUS)")
+                        input_pi_str = st.text_input(
+                            f"Percentual de Internações por Causas Sensíveis (PI) em {ano_sel}:",
+                            value=st.session_state[f"s8_str_pi_{ano_sel}"],
+                            key=f"txt_s8_pi_{ano_sel}",
+                        )
+
+                        # Conversão e higienização
+                        pi = tratar_string_porcentagem_para_float(input_pi_str)
+                        st.session_state[f"s8_str_pi_{ano_sel}"] = (
+                            formatar_para_porcentagem_br(pi)
+                        )
+
+                        st.markdown(
+                            "<p style='margin-top: -12px; margin-bottom: 10px;"
+                            " font-size: 12px; color: #475569;'>Alcançado em"
+                            f" {ano_sel}: <b>{formatar_para_porcentagem_br(pi)}</b></p>",
+                            unsafe_allow_html=True,
+                        )
+
+                    with cS8_2:
+                        link_S8 = st.text_area(
+                            f"Link/Evidência (S8 - Relatórios SIH/SUS {ano_sel}):",
+                            value=evidencia_S8_salva,
+                            key=chave_link_S8,
+                            placeholder="Insira o link oficial referente ao indicador S8...",
+                            height=280,
+                        )
+                        placeholder_links_S8 = st.empty()
+                        links_S8_visuais = re.findall(REGEX_PURE_URL, link_S8 or "")
+                        if links_S8_visuais:
+                            placeholder_links_S8.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S8_visuais
+                                ])
+                            )
+
+                    # Cálculo e regras do indicador S8
+                    if pi == 0.0:
+                        ptsS8_calc = 0.0
+                        texto_resultado = (
+                            f"Aguardando lançamento dos dados consolidados do SIH/SUS para {ano_atual_s8}..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        if pi > 100.0:
+                            ptsS8_calc = -5.0
+                            texto_resultado = (
+                                "🚨 CRÍTICO: Percentual informado excede o limite"
+                                " estatístico de 100% (Inconsistência de dados)"
+                            )
+                            texto_pontuacao = "-5,00 pontos (Penalidade Aplicada)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+                        elif pi == 100.0:
+                            ptsS8_calc = -5.0
+                            texto_resultado = (
+                                "🚨 ALERTA MÁXIMO: Totalidade das internações"
+                                " municipais classificadas como causas sensíveis (100%)"
+                            )
+                            texto_pontuacao = "-5,00 pontos (Penalidade Máxima)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+                        else:
+                            ptsS8_calc = 0.0
+                            texto_resultado = (
+                                "✅ Regularizado: Taxa de internações por causas"
+                                " sensíveis dentro do limite sob controle municipal"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+
+                    # Painel consolidador de métricas
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S8:</b> Internações por Causas Sensíveis à Atenção Básica (ICSAB)<br>
+                            ⚖️ <b>Status da Coorte:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S8", res_data)
+                    elif "bloco_comentarios" in globals():
+                        bloco_comentarios("S8", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S8",
+                        key=f"btn_salvar_S8_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_salvar_s8 = f"{pi:.2f}"
+                        ptsS8 = ptsS8_calc
+                        lnk_val = link_S8.strip()
+                        comentarios_historico = dS8.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S8",
+                                valor=str_salvar_s8,
+                                pontos=ptsS8,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S8", str_salvar_s8, ptsS8, lnk_val)
+
+                        res_data["S8"] = {
+                            "valor": str_salvar_s8,
+                            "pontos": ptsS8,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S8_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S8_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S8_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S8_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S8 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S8 = dS8.get("pontos", 0.0)
+                    cor_txt_S8 = (
+                        "#dc2626"
+                        if pts_atuais_S8 < 0.0
+                        else ("#28a745" if pts_atuais_S8 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S8}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S8: {pts_atuais_S8:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S8
+            if st.session_state.get(f"gatilho_modal_S8_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S8",
+                        st.session_state.get(f"links_pendentes_S8_{ano_sel}", []),
+                        ano_sel,
+                    )
