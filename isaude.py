@@ -14210,8 +14210,7 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_31_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("31.0", st.session_state.get(f"links_pendentes_31_0_{ano_sel}", []), ano_sel)
-
-       # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
         # QUESITO 31.1 - TEMPO DE RESPOSTA DO SAMU (TMR)
         # -----------------------------------------------------------------------------
         with st.container(key=f"container_bloco_tempo_resposta_samu_31_1_{ano_sel}", border=True):
@@ -14315,14 +14314,13 @@ def mostrar_formulario_saude():
                 m1.metric(label=f"Média dos Anos Anteriores ({ano_tmr2} e {ano_tmr1})", value=f"{meta_media:.1f} min")
                 m2.metric(label=f"Tempo Médio Atual ({ano_tmr})", value=f"{tmr_med} min", delta=f"{tmr_med - meta_media:.1f} min", delta_color="inverse")
 
+                pts_31_1 = 0.0
                 if tmr2_med == 0 and tmr1_med == 0 and tmr_med == 0:
-                    pts_31_1 = 0.0
                     st.info("ℹ️ **Status:** Preencha os tempos médios dos anos para calcular a regra de pontuação.")
                 elif tmr_med > meta_media:
                     pts_31_1 = -5.0
                     st.error(f"⚠️ O Tempo Médio de Resposta atual ({tmr_med} min) é maior que a média anterior ({meta_media:.1f} min). Penalidade Aplicada: `-5.0 pontos`.")
                 else:
-                    pts_31_1 = 0.0
                     st.success(f"✅ O Tempo Médio de Resposta atual ({tmr_med} min) manteve estabilidade ou melhoria em relação à média anterior ({meta_media:.1f} min). Sem penalidade: `0.0 pontos`.")
 
                 # Chat de comentários
