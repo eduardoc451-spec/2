@@ -14210,7 +14210,8 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_31_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("31.0", st.session_state.get(f"links_pendentes_31_0_{ano_sel}", []), ano_sel)
-# -----------------------------------------------------------------------------
+
+        # -----------------------------------------------------------------------------
         # QUESITO 31.1 - TEMPO DE RESPOSTA DO SAMU (TMR)
         # -----------------------------------------------------------------------------
         with st.container(key=f"container_bloco_tempo_resposta_samu_31_1_{ano_sel}", border=True):
@@ -14218,9 +14219,6 @@ def mostrar_formulario_saude():
                 st.subheader(f"31.1 • Tempo de Resposta em Minutos dos Atendimentos do SAMU ({ano_sel})")
                 st.write("**Informe o tempo de resposta em minutos dos atendimentos do SAMU (ou equivalente):**")
                 st.caption("ℹ️ *Preencha os tempos numéricos, informe o link de comprovação e clique no botão 'Salvar Quesito 31.1' para registrar as alterações.*")
-
-                # --- INICIALIZAÇÃO PREVENTIVA DA VARIÁVEL ---
-                df_tmr_inicial = pd.DataFrame()
 
                 # Cálculo dinâmico dos anos baseado no ano selecionado
                 try:
@@ -14259,17 +14257,15 @@ def mostrar_formulario_saude():
                 c311_1, c311_2 = st.columns([1.2, 1])
 
                 with c311_1:
-                    df_tmr_inicial = pd.DataFrame(
-                        {
-                            "Mínimo (min)": [safe_int(v_salvo_311[0]), safe_int(v_salvo_311[3]), safe_int(v_salvo_311[6])],
-                            "Médio (min)": [safe_int(v_salvo_311[1]), safe_int(v_salvo_311[4]), safe_int(v_salvo_311[7])],
-                            "Máximo (min)": [safe_int(v_salvo_311[2]), safe_int(v_salvo_311[5]), safe_int(v_salvo_311[8])]
-                        },
-                        index=[f"Ano {ano_tmr2} (TMR-2)", f"Ano {ano_tmr1} (TMR-1)", f"Ano {ano_tmr} (Atual)"]
-                    )
-
                     df_tmr_editado = st.data_editor(
-                        df_tmr_inicial,
+                        pd.DataFrame(
+                            {
+                                "Mínimo (min)": [safe_int(v_salvo_311[0]), safe_int(v_salvo_311[3]), safe_int(v_salvo_311[6])],
+                                "Médio (min)": [safe_int(v_salvo_311[1]), safe_int(v_salvo_311[4]), safe_int(v_salvo_311[7])],
+                                "Máximo (min)": [safe_int(v_salvo_311[2]), safe_int(v_salvo_311[5]), safe_int(v_salvo_311[8])]
+                            },
+                            index=[f"Ano {ano_tmr2} (TMR-2)", f"Ano {ano_tmr1} (TMR-1)", f"Ano {ano_tmr} (Atual)"]
+                        ),
                         key=f"editor_tmr_31_1_{ano_sel}",
                         use_container_width=True,
                         column_config={
@@ -14363,8 +14359,7 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_31_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("31.1", st.session_state.get(f"links_pendentes_31_1_{ano_sel}", []), ano_sel)
-
-
+                
         # -----------------------------------------------------------------------------
         # QUESITO 31.2 - COMPOSIÇÃO MÍNIMA DA CENTRAL DE REGULAÇÃO DE URGÊNCIAS
         # -----------------------------------------------------------------------------
