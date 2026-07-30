@@ -15741,6 +15741,15 @@ def mostrar_formulario_saude():
         # =============================================================================
         # QUESITO 37.0 • DESABASTECIMENTO DE MEDICAMENTOS (MODELO PADRONIZADO iGov / iSaúde)
         # =============================================================================
+        
+        # Garantia de inicialização preventiva para prevenir UnboundLocalError
+        if "ano_sel" not in locals():
+            ano_sel = st.session_state.get("ano_selecionado", "2024")
+        if "res_data" not in locals():
+            res_data = st.session_state.get("res_data", {})
+        if "REGEX_PURE_URL" not in globals():
+            REGEX_PURE_URL = r'(https?://[^\s]+)'
+
         with st.container(key=f"container_bloco_isaude_37_0_{ano_sel}", border=True):
             with st.expander(f"📌 Quesito 37.0 - Monitoramento de Desabastecimento em {ano_sel}", expanded=True):
                 st.subheader("37.0 • Monitoramento de Desabastecimento")
@@ -15760,6 +15769,7 @@ def mostrar_formulario_saude():
                     "comentarios": [],
                     "comentario": ""
                 }
+                
                 v_salvo_37_0 = d37_0.get("valor", "0|0").split("|")
                 while len(v_salvo_37_0) < 2:
                     v_salvo_37_0.append("0")
@@ -15831,7 +15841,8 @@ def mostrar_formulario_saude():
                     st.error("⚠️ O total de itens da REMUME (TM) deve ser maior que zero para possibilitar o cálculo.")
 
                 # Renderização do chat de comentários
-                bloco_comentarios_isaude("37.0", res_data)
+                if "bloco_comentarios_isaude" in globals():
+                    bloco_comentarios_isaude("37.0", res_data)
 
                 # Botão de salvamento
                 if st.button("💾 Salvar Quesito 37.0", key=f"btn_salvar_37_0_{ano_sel}", type="primary"):
@@ -15857,13 +15868,14 @@ def mostrar_formulario_saude():
                     lnk_val = link_37_0.strip()
                     comentarios_historico = d37_0.get("comentarios", [])
 
-                    save_resp_isaude(
-                        qid="37.0",
-                        valor=val_str_salvar,
-                        pontos=pts_37_0,
-                        link=lnk_val,
-                        comentarios=comentarios_historico
-                    )
+                    if "save_resp_isaude" in globals():
+                        save_resp_isaude(
+                            qid="37.0",
+                            valor=val_str_salvar,
+                            pontos=pts_37_0,
+                            link=lnk_val,
+                            comentarios=comentarios_historico
+                        )
 
                     links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
                     links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_37_0_salva or "")]
@@ -15890,3 +15902,5 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_37_0_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("37.0", st.session_state.get(f"links_pendentes_37_0_{ano_sel}", []), ano_sel)
+
+       
