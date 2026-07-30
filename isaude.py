@@ -17420,3 +17420,635 @@ def mostrar_formulario_saude():
                         st.session_state.get(f"links_pendentes_S2_{ano_sel}", []),
                         ano_sel,
                     )
+
+                    # =============================================================================
+            # INDICADOR S3 • PROPORÇÃO DE GESTANTES COM PRÉ-NATAL ADEQUADO (SISAB)
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação para números inteiros
+            def tratar_string_inteiro_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in texto if c.isdigit())
+                try:
+                    return float(apenas_numeros) if apenas_numeros else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_inteiro_br(valor_float):
+                return f"{int(valor_float):,}".replace(",", ".")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S3_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S3 - Proporção de Gestantes com Pré-Natal Adequado (SISAB - {ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader("S3 • Qualidade da Cobertura de Pré-Natal")
+                    st.write(
+                        "**Mede a proporção de gestantes com pelo menos 6 consultas"
+                        " pré-natal realizadas, iniciando até a 12ª semana de gestação"
+                        " (Dados consolidados dos 3 quadrimestres):**"
+                    )
+
+                    # Regras de Avaliação e Pontuação
+                    st.markdown(r"""
+| Resultado do Índice $P$ | Impacto / Pontuação do Indicador |
+| :--- | :--- |
+| Igual a 100% ($P = 100\%$) | ✅ 25,00 pontos (Excelência Máxima) |
+| Entre 45% e 99,99% ($45\% \le P < 100\%$) | 🟡 15,00 pontos |
+| Entre 31% e 44,99% ($31\% \le P < 45\%$) | 🔸 10,00 pontos |
+| Entre 18% e 30,99% ($18\% \le P < 31\%$) | ⚠️ 5,00 pontos |
+| Menor que 18% ($P < 18\%$) | 🚨 0,00 pontos (Desempenho Crítico) |
+                    """)
+                    st.caption(
+                        "ℹ️ *Variáveis extraídas diretamente dos relatórios quadrimestrais"
+                        " consolidados do SISAB (Sistema de Informação em Saúde para Atenção"
+                        " Básica). Insira os dados, o link e clique no botão 'Salvar"
+                        " Indicador S3' para registrar.*"
+                    )
+
+                    # Processamento dos anos de referência
+                    try:
+                        ano_atual_s3 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s3 = 2025
+
+                    # Estado inicial / persistente
+                    dS3 = res_data.get("S3") or {
+                        "valor": "0/0/0/1/1/1",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_g1q, v_g2q, v_g3q, v_tg1q, v_tg2q, v_tg3q = map(
+                            float, dS3.get("valor", "0/0/0/1/1/1").split("/")
+                        )
+                    except Exception:
+                        v_g1q, v_g2q, v_g3q, v_tg1q, v_tg2q, v_tg3q = (
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0,
+                            1.0,
+                            1.0,
+                        )
+
+                    evidencia_S3_salva = dS3.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S3 = f"txt_s3_link_{ano_sel}"
+
+                    # Inicialização do session_state no padrão BR
+                    if f"s3_str_g1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s3_str_g1q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_g1q)
+                        )
+                    if f"s3_str_g2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s3_str_g2q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_g2q)
+                        )
+                    if f"s3_str_g3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s3_str_g3q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_g3q)
+                        )
+                    if f"s3_str_tg1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s3_str_tg1q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_tg1q)
+                        )
+                    if f"s3_str_tg2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s3_str_tg2q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_tg2q)
+                        )
+                    if f"s3_str_tg3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s3_str_tg3q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_tg3q)
+                        )
+
+                    cS3_1, cS3_2 = st.columns([1, 1])
+
+                    with cS3_1:
+                        st.markdown(
+                            "##### 🤰 Gestantes com Pré-Natal Adequado (≥ 6 Consultas e"
+                            " Início ≤ 12ª Semana)"
+                        )
+                        input_g1q_str = st.text_input(
+                            f"Gestantes Adequadas - 1º Quad. {ano_atual_s3} (G1Q):",
+                            value=st.session_state[f"s3_str_g1q_{ano_sel}"],
+                            key=f"txt_s3_g1q_{ano_sel}",
+                        )
+                        input_g2q_str = st.text_input(
+                            f"Gestantes Adequadas - 2º Quad. {ano_atual_s3} (G2Q):",
+                            value=st.session_state[f"s3_str_g2q_{ano_sel}"],
+                            key=f"txt_s3_g2q_{ano_sel}",
+                        )
+                        input_g3q_str = st.text_input(
+                            f"Gestantes Adequadas - 3º Quad. {ano_atual_s3} (G3Q):",
+                            value=st.session_state[f"s3_str_g3q_{ano_sel}"],
+                            key=f"txt_s3_g3q_{ano_sel}",
+                        )
+
+                        st.markdown(
+                            "##### 📊 Denominador Geral (Total de Gestantes"
+                            " Cadastradas/Estimadas)"
+                        )
+                        input_tg1q_str = st.text_input(
+                            f"Total de Gestantes - 1º Quad. {ano_atual_s3} (TG1Q):",
+                            value=st.session_state[f"s3_str_tg1q_{ano_sel}"],
+                            key=f"txt_s3_tg1q_{ano_sel}",
+                        )
+                        input_tg2q_str = st.text_input(
+                            f"Total de Gestantes - 2º Quad. {ano_atual_s3} (TG2Q):",
+                            value=st.session_state[f"s3_str_tg2q_{ano_sel}"],
+                            key=f"txt_s3_tg2q_{ano_sel}",
+                        )
+                        input_tg3q_str = st.text_input(
+                            f"Total de Gestantes - 3º Quad. {ano_atual_s3} (TG3Q):",
+                            value=st.session_state[f"s3_str_tg3q_{ano_sel}"],
+                            key=f"txt_s3_tg3q_{ano_sel}",
+                        )
+
+                        # Conversão segura para valores numéricos
+                        g1q = tratar_string_inteiro_para_float(input_g1q_str)
+                        g2q = tratar_string_inteiro_para_float(input_g2q_str)
+                        g3q = tratar_string_inteiro_para_float(input_g3q_str)
+                        tg1q = tratar_string_inteiro_para_float(input_tg1q_str)
+                        tg2q = tratar_string_inteiro_para_float(input_tg2q_str)
+                        tg3q = tratar_string_inteiro_para_float(input_tg3q_str)
+
+                        # Sincronização do estado com formatação limpa
+                        st.session_state[f"s3_str_g1q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(g1q)
+                        )
+                        st.session_state[f"s3_str_g2q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(g2q)
+                        )
+                        st.session_state[f"s3_str_g3q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(g3q)
+                        )
+                        st.session_state[f"s3_str_tg1q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(tg1q)
+                        )
+                        st.session_state[f"s3_str_tg2q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(tg2q)
+                        )
+                        st.session_state[f"s3_str_tg3q_{ano_sel}"] = (
+                            formatar_para_inteiro_br(tg3q)
+                        )
+
+                    with cS3_2:
+                        link_S3 = st.text_area(
+                            "Link/Evidência (S3 - SISAB Pré-natal Coletivo):",
+                            value=evidencia_S3_salva,
+                            key=chave_link_S3,
+                            placeholder="Insira o link oficial referente ao indicador S3...",
+                            height=280,
+                        )
+                        placeholder_links_S3 = st.empty()
+                        links_S3_visuais = re.findall(REGEX_PURE_URL, link_S3 or "")
+                        if links_S3_visuais:
+                            placeholder_links_S3.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S3_visuais
+                                ])
+                            )
+
+                    # Somatórios para a fórmula
+                    total_adequadas = g1q + g2q + g3q
+                    total_universo = tg1q + tg2q + tg3q
+
+                    # Cálculo e motor de regras
+                    if total_adequadas == 0.0 and total_universo == 0.0:
+                        ptsS3_calc = 0.0
+                        P = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos dados quadrimestrais do SISAB..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        base_calculo_s3 = max(total_universo, 1.0)
+                        P = round((total_adequadas / base_calculo_s3) * 100.0, 2)
+
+                        if P >= 100.00:
+                            ptsS3_calc = 25.0
+                            texto_resultado = (
+                                "✅ META ATINGIDA (100%): Excelência na cobertura e no"
+                                " tempo de resposta do pré-natal"
+                            )
+                            texto_pontuacao = "25,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif P >= 45.00:
+                            ptsS3_calc = 15.0
+                            texto_resultado = (
+                                "🟡 FAIXA INTERMEDIÁRIA REGULAR: Boa cobertura de pré-natal"
+                                " dentro dos parâmetros pactuados"
+                            )
+                            texto_pontuacao = "15,00 pontos"
+                            estilo_status = "color: #ca8a04; font-weight: bold;"
+                        elif P >= 31.00:
+                            ptsS3_calc = 10.0
+                            texto_resultado = (
+                                "🔸 FAIXA INTERMEDIÁRIA BAIXA: Atenção necessária, índice"
+                                " de adequação abaixo do esperado"
+                            )
+                            texto_pontuacao = "10,00 pontos"
+                            estilo_status = "color: #ea580c; font-weight: bold;"
+                        elif P >= 18.00:
+                            ptsS3_calc = 5.0
+                            texto_resultado = (
+                                "⚠️ ALERTA: Cobertura de pré-natal muito baixa, necessita"
+                                " plano de contingência"
+                            )
+                            texto_pontuacao = "5,00 pontos"
+                            estilo_status = "color: #d97706; font-weight: bold;"
+                        else:
+                            ptsS3_calc = 0.0
+                            texto_resultado = (
+                                "🚨 DESEMPENHO CRÍTICO: Município abaixo da linha de corte"
+                                " mínima de 18%"
+                            )
+                            texto_pontuacao = "0,00 pontos"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    # Painel consolidador de métricas
+                    p_br = f"{P:.2f}".replace(".", ",")
+                    tot_adeq_br = formatar_para_inteiro_br(total_adequadas)
+                    tot_univ_br = formatar_para_inteiro_br(total_universo)
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Volume Consolidado:</b> {tot_adeq_br} de {tot_univ_br} gestantes monitoradas<br>
+                            📊 <b>Índice de Adequação do Pré-Natal (P):</b> <code style="font-size: 15px; font-weight: bold; color: #1e3a8a;">{p_br}%</code><br>
+                            ⚖️ <b>Situação do Indicador:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Pontuação do Indicador:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S3", res_data)
+                    elif "bloco_comentarios" in globals():
+                        bloco_comentarios("S3", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S3",
+                        key=f"btn_salvar_S3_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_concatenada_s3 = (
+                            f"{g1q:.0f}/{g2q:.0f}/{g3q:.0f}/{tg1q:.0f}/{tg2q:.0f}/{tg3q:.0f}"
+                        )
+                        ptsS3 = ptsS3_calc
+                        lnk_val = link_S3.strip()
+                        comentarios_historico = dS3.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S3",
+                                valor=str_concatenada_s3,
+                                pontos=ptsS3,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S3", str_concatenada_s3, ptsS3, lnk_val)
+
+                        res_data["S3"] = {
+                            "valor": str_concatenada_s3,
+                            "pontos": ptsS3,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S3_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S3_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S3_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S3_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S3 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S3 = dS3.get("pontos", 0.0)
+                    cor_txt_S3 = "#28a745" if pts_atuais_S3 > 0.0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S3}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S3: +{pts_atuais_S3:.1f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S3
+            if st.session_state.get(f"gatilho_modal_S3_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S3",
+                        st.session_state.get(f"links_pendentes_S3_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S4 • REALIZAÇÃO DE EXAMES PRÉ-NATAL (TABWIN)
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação para números inteiros
+            def tratar_string_inteiro_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in texto if c.isdigit())
+                try:
+                    return float(apenas_numeros) if apenas_numeros else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_inteiro_br(valor_float):
+                return f"{int(valor_float):,}".replace(",", ".")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S4_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S4 - Realização de Exames Pré-Natal (TABWIN - {ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader("S4 • Exames Pré-Natal sob Gestão Municipal")
+                    st.write(
+                        "**Mede o volume de exames de pré-natal (Sífilis e HIV) realizados"
+                        " em relação ao número de gestantes no primeiro atendimento:**"
+                    )
+
+                    # Regras de Avaliação e Pontuação
+                    st.markdown(r"""
+| Parâmetro | Critério | Pontuação do Indicador |
+| :--- | :--- | :--- |
+| Se Razão Sífilis ($TS / TG$) $\ge 2$ | ✅ Meta Atingida | 10,00 pontos |
+| Se Razão Sífilis ($TS / TG$) $< 2$ | ❌ Abaixo da Meta | 0,00 ponto |
+| Se Razão HIV ($TR / TG$) $\ge 2$ | ✅ Meta Atingida | 10,00 pontos |
+| Se Razão HIV ($TR / TG$) $< 2$ | ❌ Abaixo da Meta | 0,00 ponto |
+| **Pontuação Máxima** | **Ambos os critérios atingidos** | **20,00 pontos** |
+                    """)
+                    st.caption(
+                        "ℹ️ *Dados extraídos do TABWIN. Insira os dados, o link e clique no"
+                        " botão 'Salvar Indicador S4' para registrar.*"
+                    )
+
+                    # Processamento dos anos de referência
+                    try:
+                        ano_atual_s4 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s4 = 2025
+
+                    # Estado inicial / persistente
+                    dS4 = res_data.get("S4") or {
+                        "valor": "0/0/1",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_ts, v_tr, v_tg = map(
+                            float, dS4.get("valor", "0/0/1").split("/")
+                        )
+                    except Exception:
+                        v_ts, v_tr, v_tg = 0.0, 0.0, 1.0
+
+                    evidencia_S4_salva = dS4.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S4 = f"txt_s4_link_{ano_sel}"
+
+                    # Inicialização do session_state no padrão BR
+                    if f"s4_str_ts_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s4_str_ts_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_ts)
+                        )
+                    if f"s4_str_tr_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s4_str_tr_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_tr)
+                        )
+                    if f"s4_str_tg_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s4_str_tg_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_tg)
+                        )
+
+                    cS4_1, cS4_2 = st.columns([1, 1])
+
+                    with cS4_1:
+                        st.markdown("##### 🔬 Exames Realizados (TABWIN)")
+                        input_ts_str = st.text_input(
+                            "Nº exames - Teste não treponêmico p/ detecção de sífilis em"
+                            " gestantes (TS):",
+                            value=st.session_state[f"s4_str_ts_{ano_sel}"],
+                            key=f"txt_s4_ts_{ano_sel}",
+                        )
+                        input_tr_str = st.text_input(
+                            "Nº exames - Teste rápido para detecção de HIV na gestante"
+                            " (TR):",
+                            value=st.session_state[f"s4_str_tr_{ano_sel}"],
+                            key=f"txt_s4_tr_{ano_sel}",
+                        )
+
+                        st.markdown("##### 👥 Gestantes Atendidas")
+                        input_tg_str = st.text_input(
+                            "Nº de Gestantes com o primeiro atendimento de pré-natal (TG):",
+                            value=st.session_state[f"s4_str_tg_{ano_sel}"],
+                            key=f"txt_s4_tg_{ano_sel}",
+                        )
+
+                        # Conversão segura para valores numéricos
+                        ts = tratar_string_inteiro_para_float(input_ts_str)
+                        tr = tratar_string_inteiro_para_float(input_tr_str)
+                        tg = max(tratar_string_inteiro_para_float(input_tg_str), 1.0)
+
+                        # Sincronização do estado com formatação limpa
+                        st.session_state[f"s4_str_ts_{ano_sel}"] = (
+                            formatar_para_inteiro_br(ts)
+                        )
+                        st.session_state[f"s4_str_tr_{ano_sel}"] = (
+                            formatar_para_inteiro_br(tr)
+                        )
+                        st.session_state[f"s4_str_tg_{ano_sel}"] = (
+                            formatar_para_inteiro_br(tg)
+                        )
+
+                    with cS4_2:
+                        link_S4 = st.text_area(
+                            "Link/Evidência (S4 - TABWIN Exames):",
+                            value=evidencia_S4_salva,
+                            key=chave_link_S4,
+                            placeholder="Insira o link oficial referente ao indicador S4...",
+                            height=280,
+                        )
+                        placeholder_links_S4 = st.empty()
+                        links_S4_visuais = re.findall(REGEX_PURE_URL, link_S4 or "")
+                        if links_S4_visuais:
+                            placeholder_links_S4.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S4_visuais
+                                ])
+                            )
+
+                    # Cálculo das razões e motor de regras
+                    if ts == 0.0 and tr == 0.0 and tg == 1.0:
+                        ptsS4_calc = 0.0
+                        razao_sifilis = 0.0
+                        razao_hiv = 0.0
+                        texto_resultado = "Aguardando lançamento dos dados..."
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        base_calculo_s4 = max(tg, 1.0)
+                        razao_sifilis = round(ts / base_calculo_s4, 2)
+                        razao_hiv = round(tr / base_calculo_s4, 2)
+
+                        pts_acumulados = 0.0
+                        if razao_sifilis >= 2.00:
+                            pts_acumulados += 10.0
+                        if razao_hiv >= 2.00:
+                            pts_acumulados += 10.0
+
+                        ptsS4_calc = pts_acumulados
+
+                        if ptsS4_calc == 20.0:
+                            texto_resultado = (
+                                "✅ Meta de exames atingida para ambos os testes"
+                            )
+                            texto_pontuacao = "20,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif ptsS4_calc == 10.0:
+                            texto_resultado = "🟡 Meta de exames atingida parcialmente"
+                            texto_pontuacao = "10,00 pontos"
+                            estilo_status = "color: #ca8a04; font-weight: bold;"
+                        else:
+                            texto_resultado = "🚨 Meta de exames não atingida"
+                            texto_pontuacao = "0,00 pontos"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    # Painel consolidador de métricas
+                    r_sifilis_br = f"{razao_sifilis:.2f}".replace(".", ",")
+                    r_hiv_br = f"{razao_hiv:.2f}".replace(".", ",")
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📊 <b>Resultados Calculados:</b><br>
+                            🔹 <b>Razão Sífilis (TS / TG):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{r_sifilis_br}</code> (Meta: ≥ 2,00)<br>
+                            🔹 <b>Razão HIV (TR / TG):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{r_hiv_br}</code> (Meta: ≥ 2,00)<br>
+                            ⚖️ <b>Status do Indicador:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Pontuação do Indicador:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S4", res_data)
+                    elif "bloco_comentarios" in globals():
+                        bloco_comentarios("S4", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S4",
+                        key=f"btn_salvar_S4_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_concatenada_s4 = f"{ts:.0f}/{tr:.0f}/{tg:.0f}"
+                        ptsS4 = ptsS4_calc
+                        lnk_val = link_S4.strip()
+                        comentarios_historico = dS4.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S4",
+                                valor=str_concatenada_s4,
+                                pontos=ptsS4,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S4", str_concatenada_s4, ptsS4, lnk_val)
+
+                        res_data["S4"] = {
+                            "valor": str_concatenada_s4,
+                            "pontos": ptsS4,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S4_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S4_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S4_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S4_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S4 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S4 = dS4.get("pontos", 0.0)
+                    cor_txt_S4 = "#28a745" if pts_atuais_S4 > 0.0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S4}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S4: +{pts_atuais_S4:.1f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S4
+            if st.session_state.get(f"gatilho_modal_S4_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S4",
+                        st.session_state.get(f"links_pendentes_S4_{ano_sel}", []),
+                        ano_sel,
+                    )
