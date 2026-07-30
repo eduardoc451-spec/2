@@ -16863,4 +16863,247 @@ def mostrar_formulario_saude():
                     unsafe_allow_html=True,
                 )
 
+        # =============================================================================
+        # --- ABA DADOS EXTERNOS ---
+        # =============================================================================
+        with aba_dados_ext:
+            st.title("📊 Indicadores e Dados Externos")
+            st.write("Insira abaixo as informações e dados consolidados das fontes externas:")
+
+            # =============================================================================
+            # INDICADOR S1 • MÍNIMO CONSTITUCIONAL EM SAÚDE - AUDESP (MODELO PADRONIZADO)
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação monetária
+            def tratar_string_monetaria_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in texto if c.isdigit() or c == ",")
+                if "," in apenas_numeros:
+                    apenas_numeros = apenas_numeros.replace(",", ".")
+                try:
+                    return float(apenas_numeros)
+                except ValueError:
+                    return 0.0
+
+            def formatar_para_moeda_br(valor_float):
+                return f"R$ {valor_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            with st.container(
+                key=f"container_bloco_isaude_S1_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S1 - Mínimo Constitucional em Saúde (AUDESP - {ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader("S1 • Aplicação do Mínimo Constitucional em Saúde")
+                    st.write(
+                        "**Mede a aplicação do limite mínimo constitucional de 15% em saúde (Despesa"
+                        " aplicada em Saúde com recursos próprios sobre receita de impostos):**"
+                    )
+
+                    # Regras de Avaliação e Rebaixamento
+                    st.markdown(r"""
+| Resultado do Índice $PS$ | Impacto / Pontuação do Indicador |
+| :--- | :--- |
+| Maior ou igual a 15% ($PS \ge 15\%$) | ✅ 0,00 ponto (Cumpre o Mínimo Constitucional / Sem Penalidade) |
+| Menor que 15% ($PS < 15\%$) | 🚨 REBAIXAR 1 faixa do i-Saúde (Descumprimento Constitucional) |
+                    """)
+                    st.caption(
+                        "ℹ️ *Variáveis parametrizadas e calculadas extraídas diretamente do Sistema"
+                        " AUDESP. Insira os valores, o link e clique no botão 'Salvar Indicador S1' para"
+                        " registrar.*"
+                    )
+
+                    # Estado inicial / persistente
+                    dS1 = res_data.get("S1") or {
+                        "valor": "0.00/1.00",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        val_salvo_desp, val_salvo_rec = dS1.get("valor", "0.00/1.00").split("/")
+                        float_desp = float(val_salvo_desp)
+                        float_rec = float(val_salvo_rec)
+                    except Exception:
+                        float_desp, float_rec = 0.0, 1.0
+
+                    evidencia_S1_salva = dS1.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_input_desp = f"txt_s1_desp_{ano_sel}"
+                    chave_input_rec = f"txt_s1_rec_{ano_sel}"
+                    chave_link_S1 = f"l_S1_txt_{ano_sel}"
+
+                    # Inicialização do session_state
+                    if f"s1_str_desp_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s1_str_desp_{ano_sel}"] = formatar_para_moeda_br(float_desp)
+                    if f"s1_str_rec_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s1_str_rec_{ano_sel}"] = formatar_para_moeda_br(float_rec)
+
+                    cS1_1, cS1_2 = st.columns([1, 1])
+
+                    with cS1_1:
+                        input_desp_str = st.text_input(
+                            "Despesa aplicada em Saúde com recursos próprios - R$:",
+                            value=st.session_state[f"s1_str_desp_{ano_sel}"],
+                            placeholder="Ex: 150.000,00",
+                            key=chave_input_desp,
+                        )
+
+                        input_rec_str = st.text_input(
+                            "Receita de Impostos (Saúde) - R$:",
+                            value=st.session_state[f"s1_str_rec_{ano_sel}"],
+                            placeholder="Ex: 1.000.000,00",
+                            key=chave_input_rec,
+                        )
+
+                        # Conversão dos valores informados
+                        v_desp = tratar_string_monetaria_para_float(input_desp_str)
+                        v_rec = tratar_string_monetaria_para_float(input_rec_str)
+
+                        # Sincronização do estado formatado
+                        st.session_state[f"s1_str_desp_{ano_sel}"] = formatar_para_moeda_br(v_desp)
+                        st.session_state[f"s1_str_rec_{ano_sel}"] = formatar_para_moeda_br(v_rec)
+
+                    with cS1_2:
+                        link_S1 = st.text_area(
+                            "Link/Evidência ou Relatório AUDESP (S1):",
+                            value=evidencia_S1_salva,
+                            key=chave_link_S1,
+                            placeholder="Insira o link oficial do relatório AUDESP referente ao indicador S1...",
+                            height=130,
+                        )
+                        placeholder_links_S1 = st.empty()
+                        links_S1_visuais = re.findall(REGEX_PURE_URL, link_S1 or "")
+                        if links_S1_visuais:
+                            placeholder_links_S1.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S1_visuais
+                                ])
+                            )
+
+                    # Cálculo do Índice PS e definição do motor de regras
+                    if v_desp == 0.0 or v_rec == 0.0:
+                        PS = 0.0
+                        ptsS1_calc = 0.0
+                        texto_resultado = "Aguardando preenchimento correto dos valores orçamentários..."
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        PS = round((v_desp / v_rec) * 100.0, 2)
+                        if PS >= 15.00:
+                            ptsS1_calc = 0.0
+                            texto_resultado = (
+                                "✅ REGULAR: Município atende ao limite mínimo de 15% de aplicação"
+                                " constitucional em Saúde"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem Penalidade)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS1_calc = 0.0
+                            texto_resultado = (
+                                "🚨 DESCUMPRIMENTO: Aplicação abaixo do mínimo de 15% estabelecido para a"
+                                " Saúde"
+                            )
+                            texto_pontuacao = "REBAIXAR 1 FAIXA DO i-Saúde"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    # Painel consolidador de métricas fiscais
+                    v_desp_br = formatar_para_moeda_br(v_desp)
+                    v_rec_br = formatar_para_moeda_br(v_rec)
+                    ps_br = f"{PS:.2f}".replace(".", ",")
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Valores Processados (Despesa / Receita):</b> {v_desp_br} / {v_rec_br}<br>
+                            📊 <b>Percentual de Aplicação (PS):</b> <code style="font-size: 15px; font-weight: bold; color: #b45309;">{ps_br}%</code><br>
+                            ⚖️ <b>Situação da Saúde:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Glosa/Impacto na Pontuação:</b> <code style="font-size: 14px; font-weight: bold; color: #dc2626;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S1", res_data)
+                    elif "bloco_comentarios" in globals():
+                        bloco_comentarios("S1", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S1", key=f"btn_salvar_S1_{ano_sel}", type="primary"
+                    ):
+                        str_concatenada_s1 = f"{v_desp:.2f}/{v_rec:.2f}"
+                        ptsS1 = ptsS1_calc
+                        lnk_val = link_S1.strip()
+                        comentarios_historico = dS1.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S1",
+                                valor=str_concatenada_s1,
+                                pontos=ptsS1,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S1", str_concatenada_s1, ptsS1, lnk_val)
+
+                        res_data["S1"] = {
+                            "valor": str_concatenada_s1,
+                            "pontos": ptsS1,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S1_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S1_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S1_{ano_sel}"] = links_atuais
+                            st.session_state[f"gatilho_modal_S1_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S1 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S1 = dS1.get("pontos", 0.0)
+                    cor_txt_S1 = "#28a745" if pts_atuais_S1 > 0.0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S1}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S1: +{pts_atuais_S1:.1f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S1
+            if st.session_state.get(f"gatilho_modal_S1_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S1",
+                        st.session_state.get(f"links_pendentes_S1_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+
        
