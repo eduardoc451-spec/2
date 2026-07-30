@@ -15358,6 +15358,111 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("34.0", st.session_state.get(f"links_pendentes_34_0_{ano_sel}", []), ano_sel)
 
+# =============================================================================
+        # SEÇÃO 34 - UTILIZAÇÃO DO SISTEMA OUVIDORSUS
+        # =============================================================================
+        # -----------------------------------------------------------------------------
+        # QUESITO 34.0 - USO DO SISTEMA OUVIDORSUS OU EQUIVALENTE
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_ouvidorsus_34_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 34.0 • Uso do Sistema OuvidorSUS ou Equivalente ({ano_sel})", expanded=True):
+                st.subheader(f"34.0 • Uso do Sistema OuvidorSUS ou Equivalente ({ano_sel})")
+                st.write("**34.0 O município utiliza o Sistema OuvidorSUS ou sistema equivalente que, além de permitir a disseminação de informações, o registro e o encaminhamento das manifestações dos cidadãos, possibilita troca de informações entre os órgãos responsáveis pela gestão do SUS?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 34.0' para registrar as alterações.*")
+
+                opts_34_0 = ["Selecione...", "Sim – 05", "Não – 00"]
+
+                d34_0 = res_data.get("34.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_340 = d34_0.get("valor", "Selecione...")
+                idx_34_0 = opts_34_0.index(v_salvo_340) if v_salvo_340 in opts_34_0 else 0
+                l_salvo_340 = d34_0.get("link", "")
+
+                c340_1, c340_2 = st.columns([1, 1])
+                with c340_1:
+                    sel_34_0 = st.radio(
+                        "Utilização do OuvidorSUS:",
+                        options=opts_34_0,
+                        index=idx_34_0,
+                        key=f"rad_34_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c340_2:
+                    link_34_0_input = st.text_area(
+                        "Link/Evidência do OuvidorSUS (34.0):",
+                        value=l_salvo_340,
+                        key=f"txt_link_34_0_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_340 = st.empty()
+                links_340_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_34_0_input or "")]
+                if links_340_visuais:
+                    placeholder_links_340.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_340_visuais])
+                    )
+
+                # Feedback visual e Pontuação
+                opcoes_pts_340 = {
+                    "Sim – 05": 5.0,
+                    "Não – 00": 0.0,
+                    "Selecione...": 0.0
+                }
+                pts_34_0 = opcoes_pts_340.get(sel_34_0, 0.0)
+
+                if sel_34_0 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_34_0}**")
+
+                # Chat de comentários corrigido (bloco_comentarios_isaude)
+                bloco_comentarios_isaude("34.0", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 34.0: +{pts_34_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 34.0", key=f"btn_salvar_34_0_{ano_sel}", type="primary"):
+                    val_str_340 = sel_34_0
+                    val_lk_340 = link_34_0_input.strip()
+                    comentarios_340 = d34_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="34.0",
+                        valor=val_str_340,
+                        pontos=pts_34_0,
+                        link=val_lk_340,
+                        comentarios=comentarios_340
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_340 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_34_0_input or "")]
+                    links_antigos_340 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_340 or "")]
+
+                    if (val_str_340 != d34_0.get("valor", "") or val_lk_340 != l_salvo_340) and links_atuais_340 and links_atuais_340 != links_antigos_340:
+                        st.session_state[f"links_pendentes_34_0_{ano_sel}"] = links_atuais_340
+                        st.session_state[f"gatilho_modal_34_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 34.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 34.0
+        if st.session_state.get(f"gatilho_modal_34_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("34.0", st.session_state.get(f"links_pendentes_34_0_{ano_sel}", []), ano_sel)
+
 
         # =============================================================================
         # SEÇÃO 35 - SISTEMA NACIONAL DE AUDITORIA (SNA)
