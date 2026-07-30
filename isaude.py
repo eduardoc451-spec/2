@@ -15737,3 +15737,156 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_36_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("36.1", st.session_state.get(f"links_pendentes_36_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+        # QUESITO 37.0 • DESABASTECIMENTO DE MEDICAMENTOS (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+        with st.container(key=f"container_bloco_isaude_37_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 37.0 - Monitoramento de Desabastecimento em {ano_sel}", expanded=True):
+                st.subheader("37.0 • Monitoramento de Desabastecimento")
+                st.write(
+                    f"**Informe os dados de desabastecimento de medicamentos do Componente Básico da Assistência Farmacêutica presentes na REMUME no exercício de {ano_sel}:**"
+                )
+                
+                # Exibição formal da fórmula matemática do indicador
+                st.latex(r"Pd = \left( \frac{MD}{TM} \right) \times 100")
+                st.caption("ℹ *Preencha os números, insira o link e clique no botão 'Salvar Quesito 37.0' para registrar.*")
+
+                # Estado inicial / persistente
+                d37_0 = res_data.get("37.0") or {
+                    "valor": "0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_37_0 = d37_0.get("valor", "0|0").split("|")
+                while len(v_salvo_37_0) < 2:
+                    v_salvo_37_0.append("0")
+
+                val_md_salvo = int(v_salvo_37_0[0]) if v_salvo_37_0[0].isdigit() else 0
+                val_tm_salvo = int(v_salvo_37_0[1]) if v_salvo_37_0[1].isdigit() else 1
+                evidencia_37_0_salva = d37_0.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_md_37_0 = f"num_370_md_{ano_sel}"
+                chave_tm_37_0 = f"num_370_tm_{ano_sel}"
+                chave_link_37_0 = f"l_37_0_txt_{ano_sel}"
+
+                c370_1, c370_2 = st.columns([1, 1])
+                with c370_1:
+                    val_md = st.number_input(
+                        f"Nº de itens com desabastecimento superior a 1 mês em {ano_sel} (MD):",
+                        min_value=0,
+                        value=val_md_salvo,
+                        key=chave_md_37_0
+                    )
+                    val_tm = st.number_input(
+                        "Total de itens do Componente Básico presentes na REMUME (TM):",
+                        min_value=1,
+                        value=val_tm_salvo if val_tm_salvo > 0 else 1,
+                        key=chave_tm_37_0
+                    )
+
+                with c370_2:
+                    link_37_0 = st.text_area(
+                        "Link/Evidência (Ata, relatório ou documento oficial da REMUME/CBAF):",
+                        value=evidencia_37_0_salva,
+                        key=chave_link_37_0,
+                        placeholder="Insira o link oficial referente ao quesito 37.0...",
+                        height=110,
+                    )
+                    placeholder_links_37_0 = st.empty()
+                    links_37_0_visuais = re.findall(REGEX_PURE_URL, link_37_0 or "")
+                    if links_37_0_visuais:
+                        placeholder_links_37_0.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join(
+                                [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_37_0_visuais]
+                            )
+                        )
+
+                # Cálculo prévio reativo da regra de negócio para preview
+                pts_37_0_calc = 0.0
+                if val_tm > 0:
+                    pd = (val_md / val_tm) * 100.0
+                    st.markdown(f"📊 **Percentual de Desabastecimento Calculado (Pd):** `{pd:.2f}%` ({val_md} de {val_tm} itens)")
+                    
+                    if val_md == 0:
+                        pts_37_0_calc = 90.0
+                        st.success(f"🏅 **Excelente!** Pd = 0% | Pontuação esperada: `{pts_37_0_calc:.1f} pontos`")
+                    elif pd <= 5.0:
+                        pts_37_0_calc = 75.0
+                        st.info(f"✅ **Bom Controle:** 0% < Pd <= 5% | Pontuação esperada: `{pts_37_0_calc:.1f} pontos`")
+                    elif pd <= 10.0:
+                        pts_37_0_calc = 50.0
+                        st.warning(f"⚠️ **Atenção:** 5% < Pd <= 10% | Pontuação esperada: `{pts_37_0_calc:.1f} pontos`")
+                    elif pd <= 15.0:
+                        pts_37_0_calc = 25.0
+                        st.warning(f"🧡 **Alerta Laranja:** 10% < Pd <= 15% | Pontuação esperada: `{pts_37_0_calc:.1f} pontos`")
+                    else:
+                        pts_37_0_calc = 0.0
+                        st.error(f"🚨 **Crítico:** Pd > 15% | Pontuação esperada: `{pts_37_0_calc:.1f} pontos`")
+                else:
+                    st.error("⚠️ O total de itens da REMUME (TM) deve ser maior que zero para possibilitar o cálculo.")
+
+                # Renderização do chat de comentários
+                bloco_comentarios_isaude("37.0", res_data)
+
+                # Botão de salvamento
+                if st.button("💾 Salvar Quesito 37.0", key=f"btn_salvar_37_0_{ano_sel}", type="primary"):
+                    md_input = st.session_state.get(chave_md_37_0, val_md_salvo)
+                    tm_input = st.session_state.get(chave_tm_37_0, val_tm_salvo)
+                    
+                    # Recálculo oficial no clique de salvar
+                    pts_37_0 = 0.0
+                    if tm_input > 0:
+                        pd_salvar = (md_input / tm_input) * 100.0
+                        if md_input == 0:
+                            pts_37_0 = 90.0
+                        elif pd_salvar <= 5.0:
+                            pts_37_0 = 75.0
+                        elif pd_salvar <= 10.0:
+                            pts_37_0 = 50.0
+                        elif pd_salvar <= 15.0:
+                            pts_37_0 = 25.0
+                        else:
+                            pts_37_0 = 0.0
+
+                    val_str_salvar = f"{md_input}|{tm_input}"
+                    lnk_val = link_37_0.strip()
+                    comentarios_historico = d37_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="37.0",
+                        valor=val_str_salvar,
+                        pontos=pts_37_0,
+                        link=lnk_val,
+                        comentarios=comentarios_historico
+                    )
+
+                    links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                    links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_37_0_salva or "")]
+
+                    if lnk_val != evidencia_37_0_salva and links_atuais and links_atuais != links_antigos:
+                        st.session_state[f"links_pendentes_37_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_37_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 37.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_37_0 = d37_0.get("pontos", 0.0)
+                cor_txt_37_0 = "#28a745" if pts_atuais_37_0 > 0.0 else "#6c757d"
+
+                st.markdown(
+                    f"<span style='color:{cor_txt_37_0}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 37.0: +{pts_atuais_37_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 37.0 (Fora do container principal)
+        if st.session_state.get(f"gatilho_modal_37_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("37.0", st.session_state.get(f"links_pendentes_37_0_{ano_sel}", []), ano_sel)
