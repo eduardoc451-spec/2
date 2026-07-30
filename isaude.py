@@ -1650,23 +1650,38 @@ def render_graficos_isaude(res_data_atual, ano_sel):
 # 6. FORMULÁRIO PRINCIPAL - iSaúde
 # =============================================================================
 
-
 def mostrar_formulario_saude():
+    """Renderiza a interface principal do módulo iSaúde (Saúde Pública).
+
+    Gerencia a barra lateral, abas de navegação, carregamento de dados
+    e renderização dos quesitos de avaliação.
+    """
+    # Carregamento do estado e da barra lateral
     total_pts, res_data, ano_sel = render_sidebar_isaude()
 
+    # Título principal da página
     st.title(f"🏥 Saúde Pública (iSaúde) - Exercício {ano_sel}")
 
-    aba_quest, aba_graf = st.tabs(
-        ["📋 Questionário iSaúde", "📊 Gráficos e Evolução"]
+    # Estrutura de abas principal
+    aba_quest, aba_dados_ext, aba_graf = st.tabs(
+        ["📋 Questionário iSaúde", "🌐 Dados Externos", "📊 Gráficos e Evolução"]
     )
 
+    # -------------------------------------------------------------------------
+    # ABA 1: QUESTIONÁRIO PRINCIPAL
+    # -------------------------------------------------------------------------
     with aba_quest:
-        st.subheader("Formulário de Avaliação")
+        st.subheader("Formulário de Avaliação iSaúde")
         st.caption(
-            "ℹ *Atenção à consistência dos dados salvos no banco. Salvamento automático via callback.*"
+            "ℹ️ *Preencha os campos abaixo de acordo com as evidências do exercício"
+            f" {ano_sel}. O salvamento explícito garante a persistência dos dados e"
+            " auditoria de links.*"
         )
 
- # =============================================================================
+        # Divisor visual antes dos quesitos
+        st.divider()
+
+        # =============================================================================
         # QUESITO 1.0 • PLANO MUNICIPAL DE SAÚDE (MODELO PADRONIZADO iGov / iSaúde)
         # =============================================================================
         with st.container(key=f"container_bloco_isaude_1_0_{ano_sel}", border=True):
