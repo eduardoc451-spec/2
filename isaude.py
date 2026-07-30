@@ -18052,3 +18052,609 @@ def mostrar_formulario_saude():
                         st.session_state.get(f"links_pendentes_S4_{ano_sel}", []),
                         ano_sel,
                     )
+
+                    # =============================================================================
+            # INDICADOR S5 • Nº DE INSPEÇÕES SANITÁRIAS (SIA/SUS)
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação para números inteiros
+            def tratar_string_inteiro_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in texto if c.isdigit())
+                try:
+                    return float(apenas_numeros) if apenas_numeros else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_inteiro_br(valor_float):
+                return f"{int(valor_float):,}".replace(",", ".")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S5_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S5 - Nº de Inspeções Sanitárias (SIA/SUS - {ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader("S5 • Nº de Inspeções Sanitárias")
+                    st.write(
+                        "**Mede todo procedimento realizado pela autoridade de"
+                        " vigilância sanitária competente que busca levantar e avaliar"
+                        " 'in loco' os riscos à saúde da população presentes na produção"
+                        " e circulação de mercadorias, na prestação de serviços:**"
+                    )
+
+                    # Cálculo dinâmico dos anos com base no ano selecionado
+                    try:
+                        ano_atual_int = int(ano_sel)
+                    except Exception:
+                        ano_atual_int = 2025
+
+                    ano_aa1 = ano_atual_int - 1
+                    ano_aa2 = ano_atual_int - 2
+
+                    # Regras de Avaliação e Pontuação
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $NI \ge (NI_{-2} + NI_{-1}) / 2$ | ✅ Meta Atingida ou Evolução Positiva | 10,00 pontos |
+| Se $NI < (NI_{-2} + NI_{-1}) / 2$ | ❌ Redução no Número de Inspeções | 0,00 ponto |
+                    """)
+                    st.caption(
+                        "ℹ️ *Dados extraídos do Sistema de Informações Ambulatoriais do"
+                        " SUS (SIA/SUS). Insira os dados, o link e clique no botão 'Salvar"
+                        " Indicador S5' para registrar.*"
+                    )
+
+                    # Estado inicial / persistente
+                    dS5 = res_data.get("S5") or {
+                        "valor": "0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_ni2, v_ni1, v_ni = map(
+                            float, dS5.get("valor", "0/0/0").split("/")
+                        )
+                    except Exception:
+                        v_ni2, v_ni1, v_ni = 0.0, 0.0, 0.0
+
+                    evidencia_S5_salva = dS5.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S5 = f"txt_s5_link_{ano_sel}"
+
+                    # Inicialização do session_state no padrão BR
+                    if f"s5_str_ni2_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s5_str_ni2_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_ni2)
+                        )
+                    if f"s5_str_ni1_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s5_str_ni1_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_ni1)
+                        )
+                    if f"s5_str_ni_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s5_str_ni_{ano_sel}"] = (
+                            formatar_para_inteiro_br(v_ni)
+                        )
+
+                    cS5_1, cS5_2 = st.columns([1, 1])
+
+                    with cS5_1:
+                        st.markdown("##### 🕵️‍♂️ Procedimentos de Inspeção Sanitária")
+                        input_ni2_str = st.text_input(
+                            f"Nº de Inspeções Sanitárias {ano_aa2} (NI-2) • Em"
+                            f" {ano_aa2}:",
+                            value=st.session_state[f"s5_str_ni2_{ano_sel}"],
+                            key=f"txt_s5_ni2_{ano_sel}",
+                        )
+                        input_ni1_str = st.text_input(
+                            f"Nº de Inspeções Sanitárias {ano_aa1} (NI-1) • Em"
+                            f" {ano_aa1}:",
+                            value=st.session_state[f"s5_str_ni1_{ano_sel}"],
+                            key=f"txt_s5_ni1_{ano_sel}",
+                        )
+                        input_ni_str = st.text_input(
+                            f"Nº de Inspeções Sanitárias {ano_sel} (NI) • Em"
+                            f" {ano_sel}:",
+                            value=st.session_state[f"s5_str_ni_{ano_sel}"],
+                            key=f"txt_s5_ni_{ano_sel}",
+                        )
+
+                        # Conversão segura para valores numéricos
+                        ni2 = tratar_string_inteiro_para_float(input_ni2_str)
+                        ni1 = tratar_string_inteiro_para_float(input_ni1_str)
+                        ni = tratar_string_inteiro_para_float(input_ni_str)
+
+                        # Sincronização do estado com formatação limpa
+                        st.session_state[f"s5_str_ni2_{ano_sel}"] = (
+                            formatar_para_inteiro_br(ni2)
+                        )
+                        st.session_state[f"s5_str_ni1_{ano_sel}"] = (
+                            formatar_para_inteiro_br(ni1)
+                        )
+                        st.session_state[f"s5_str_ni_{ano_sel}"] = (
+                            formatar_para_inteiro_br(ni)
+                        )
+
+                    with cS5_2:
+                        link_S5 = st.text_area(
+                            "Link/Evidência (S5 - Relatórios VISA / SIA/SUS):",
+                            value=evidencia_S5_salva,
+                            key=chave_link_S5,
+                            placeholder="Insira o link oficial referente ao indicador S5...",
+                            height=280,
+                        )
+                        placeholder_links_S5 = st.empty()
+                        links_S5_visuais = re.findall(REGEX_PURE_URL, link_S5 or "")
+                        if links_S5_visuais:
+                            placeholder_links_S5.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S5_visuais
+                                ])
+                            )
+
+                    # Média matemática de referência dos dois anos anteriores
+                    media_anterior = (ni2 + ni1) / 2.0
+
+                    # Cálculo e motor de regras
+                    if ni2 == 0.0 and ni1 == 0.0 and ni == 0.0:
+                        ptsS5_calc = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos dados de inspeção"
+                            " sanitária..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        if ni >= media_anterior:
+                            ptsS5_calc = 10.0
+                            texto_resultado = (
+                                f"✅ EVOLUÇÃO POSITIVA: O número de inspeções em"
+                                f" {ano_sel} foi maior ou igual à média dos anos"
+                                " anteriores"
+                            )
+                            texto_pontuacao = "10,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS5_calc = 0.0
+                            texto_resultado = (
+                                f"🚨 REDUÇÃO: O número de inspeções em {ano_sel} ficou"
+                                f" abaixo da média de {ano_aa2} e {ano_aa1}"
+                            )
+                            texto_pontuacao = "0,00 ponto"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    # Painel consolidador de métricas
+                    media_br = f"{media_anterior:.2f}".replace(".", ",")
+                    ni_atual_br = formatar_para_inteiro_br(ni)
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Inspeções Realizadas em {ano_sel} (NI):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{ni_atual_br}</code> procedimentos<br>
+                            📊 <b>Média Alvo de Referência ({ano_aa2} e {ano_aa1}):</b> <code style="font-size: 14px; font-weight: bold; color: #475569;">{media_br}</code> procedimentos<br>
+                            ⚖️ <b>Situação do Indicador:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Pontuação do Indicador:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S5", res_data)
+                    elif "bloco_comentarios" in globals():
+                        bloco_comentarios("S5", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S5",
+                        key=f"btn_salvar_S5_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_concatenada_s5 = f"{ni2:.0f}/{ni1:.0f}/{ni:.0f}"
+                        ptsS5 = ptsS5_calc
+                        lnk_val = link_S5.strip()
+                        comentarios_historico = dS5.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S5",
+                                valor=str_concatenada_s5,
+                                pontos=ptsS5,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S5", str_concatenada_s5, ptsS5, lnk_val)
+
+                        res_data["S5"] = {
+                            "valor": str_concatenada_s5,
+                            "pontos": ptsS5,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S5_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S5_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S5_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S5_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S5 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S5 = dS5.get("pontos", 0.0)
+                    cor_txt_S5 = "#28a745" if pts_atuais_S5 > 0.0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S5}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S5: +{pts_atuais_S5:.1f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S5
+            if st.session_state.get(f"gatilho_modal_S5_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S5",
+                        st.session_state.get(f"links_pendentes_S5_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S6 • CALENDÁRIO NACIONAL DE VACINAÇÃO (TABNET/DATASUS)
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação para porcentagem
+            def tratar_string_porcentagem_para_float(texto):
+                if not texto:
+                    return 0.0
+                texto_limpo = (
+                    texto.replace("%", "").replace(".", "").replace(",", ".").strip()
+                )
+                try:
+                    return float(texto_limpo) if texto_limpo else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_porcentagem_br(valor_float):
+                return f"{valor_float:.2f}".replace(".", ",") + "%"
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S6_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S6 - Calendário Nacional de Vacinação (TABNET/DATASUS - {ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader("S6 • Cobertura Vacinal Multidose do PNI")
+                    st.write(
+                        "**Informe o percentual de cobertura alcançado para cada uma das"
+                        " vacinas do Calendário Nacional de Vacinação:**"
+                    )
+
+                    # Regras de Avaliação e Pontuação
+                    st.markdown(r"""
+| Imunobiológico / Coorte | Peso / Pontuação | Meta Estabelecida |
+| :--- | :--- | :--- |
+| BCG (Bacilo Calmette-Guérin) | 5,00 pontos | 90% de Cobertura |
+| Rotavírus Humano (2ª dose) | 5,00 pontos | 90% de Cobertura |
+| Hepatite B (3ª dose) | 10,00 pontos | 95% de Cobertura |
+| Meningocócica C (conjugada - 2ª dose) | 10,00 pontos | 95% de Cobertura |
+| Vacina Pentavalente (3ª dose) | 10,00 pontos | 95% de Cobertura |
+| Vacina Pneumocócica 10-valente (2ª dose) | 10,00 pontos | 95% de Cobertura |
+| Vacina Poliomielite (3ª dose) | 10,00 pontos | 95% de Cobertura |
+| Febre Amarela | 10,00 pontos | 95% de Cobertura |
+| Vacina Tríplice Viral (1ª dose) | 10,00 pontos | 95% de Cobertura |
+| Hepatite A | 10,00 pontos | 95% de Cobertura |
+| Tetra Viral | 10,00 pontos | 95% de Cobertura |
+| **Pontuação Máxima Acumulável** | **Soma Proporcional** | **100,00 pontos** |
+                    """)
+                    st.caption(
+                        "🌐 *Fonte oficial:"
+                        " http://tabnet.datasus.gov.br/cgi/dhdat.exe?bd_pni/cpnibr.def."
+                        " O cálculo aplica proporcionalidade linear para coberturas"
+                        " abaixo da meta. Insira os dados, o link e clique no botão"
+                        " 'Salvar Indicador S6' para registrar.*"
+                    )
+
+                    # Processamento dos anos de referência
+                    try:
+                        ano_atual_s6 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s6 = 2025
+
+                    # Configuração das 11 vacinas do PNI
+                    config_vacinas = {
+                        "bcg": {
+                            "label": "BCG (Bacilo Calmette-Guérin):",
+                            "peso": 5.0,
+                            "meta": 90.0,
+                        },
+                        "rotavirus": {
+                            "label": "Rotavírus humano (2ª dose):",
+                            "peso": 5.0,
+                            "meta": 90.0,
+                        },
+                        "hepatite_b": {
+                            "label": "Hepatite B (3ª dose):",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "meningo_c": {
+                            "label": "Meningocócica C (conjugada - 2ª dose):",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "pentavalente": {
+                            "label": "Vacina Pentavalente (3ª dose):",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "pneumo_10": {
+                            "label": "Vacina Pneumocócica 10-valente (2ª dose):",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "poliomielite": {
+                            "label": "Vacina Poliomielite (3ª dose):",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "febre_amarela": {
+                            "label": "Febre Amarela:",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "triplice_viral": {
+                            "label": "Vacina Tríplice Viral (1ª dose):",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "hepatite_a": {
+                            "label": "Hepatite A:",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                        "tetra_viral": {
+                            "label": "Tetra viral:",
+                            "peso": 10.0,
+                            "meta": 95.0,
+                        },
+                    }
+
+                    # Estado inicial / persistente
+                    dS6 = res_data.get("S6") or {
+                        "valor": "0/0/0/0/0/0/0/0/0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    valores_salvos_raw = dS6.get(
+                        "valor", "0/0/0/0/0/0/0/0/0/0/0"
+                    ).split("/")
+                    if len(valores_salvos_raw) != 11:
+                        valores_salvos = [0.0] * 11
+                    else:
+                        try:
+                            valores_salvos = [float(v) for v in valores_salvos_raw]
+                        except Exception:
+                            valores_salvos = [0.0] * 11
+
+                    evidencia_S6_salva = dS6.get("link", "")
+
+                    # Chaves fixas para componentes do Streamlit
+                    chave_link_S6 = f"txt_s6_link_{ano_sel}"
+                    chaves_vacinas = list(config_vacinas.keys())
+
+                    # Inicialização do session_state para cada vacina
+                    for idx_v, k_v in enumerate(chaves_vacinas):
+                        st_key_v = f"s6_str_{k_v}_{ano_sel}"
+                        if st_key_v not in st.session_state:
+                            st.session_state[st_key_v] = formatar_para_porcentagem_br(
+                                valores_salvos[idx_v]
+                            )
+
+                    cS6_1, cS6_2 = st.columns([1, 1])
+
+                    with cS6_1:
+                        st.markdown(f"##### 💉 Coberturas Registradas em {ano_atual_s6}")
+                        valores_coletados = {}
+
+                        for k_v, info_v in config_vacinas.items():
+                            st_key_v = f"s6_str_{k_v}_{ano_sel}"
+                            input_v_str = st.text_input(
+                                f"{info_v['label']}",
+                                value=st.session_state[st_key_v],
+                                key=f"txt_s6_{k_v}_{ano_sel}",
+                            )
+
+                            v_float_vac = tratar_string_porcentagem_para_float(
+                                input_v_str
+                            )
+                            st.session_state[st_key_v] = formatar_para_porcentagem_br(
+                                v_float_vac
+                            )
+                            valores_coletados[k_v] = v_float_vac
+
+                            meta_v_br = f"{int(info_v['meta'])}%"
+                            st.markdown(
+                                "<p style='margin-top: -12px; margin-bottom: 10px;"
+                                " font-size: 12px; color: #475569;'>Alcançado:"
+                                f" <b>{formatar_para_porcentagem_br(v_float_vac)}</b>"
+                                f" / Meta: <b>{meta_v_br}</b></p>",
+                                unsafe_allow_html=True,
+                            )
+
+                    with cS6_2:
+                        link_S6 = st.text_area(
+                            "Link/Evidência (S6 - Painel Imunizações TABNET):",
+                            value=evidencia_S6_salva,
+                            key=chave_link_S6,
+                            placeholder="Insira o link oficial referente ao indicador S6...",
+                            height=280,
+                        )
+                        placeholder_links_S6 = st.empty()
+                        links_S6_visuais = re.findall(REGEX_PURE_URL, link_S6 or "")
+                        if links_S6_visuais:
+                            placeholder_links_S6.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S6_visuais
+                                ])
+                            )
+
+                    # Cálculo da nota final (NF) com proporcionalidade linear
+                    nf_s6 = 0.0
+                    total_lancado = sum(valores_coletados.values())
+
+                    if total_lancado > 0.0:
+                        for k_v, val_cob in valores_coletados.items():
+                            meta_vacina = config_vacinas[k_v]["meta"]
+                            peso_vacina = config_vacinas[k_v]["peso"]
+
+                            if val_cob >= meta_vacina:
+                                nf_s6 += peso_vacina
+                            else:
+                                p_proporcional = (val_cob / meta_vacina) * peso_vacina
+                                nf_s6 += max(p_proporcional, 0.0)
+
+                        ptsS6_calc = round(nf_s6, 2)
+                        texto_resultado = (
+                            "Avaliação calculada de forma individualizada para o ano"
+                            f" de {ano_atual_s6}"
+                        )
+                        texto_pontuacao = (
+                            f"{f'{ptsS6_calc:.2f}'.replace('.', ',')} pontos"
+                        )
+                        estilo_status = "color: #1e3a8a; font-weight: bold;"
+                    else:
+                        ptsS6_calc = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos dados do painel do PNI..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+
+                    # Painel consolidador de métricas
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S6:</b> Monitoramento de Cobertura Vacinal Multidose<br>
+                            ⚖️ <b>Situação da Coorte:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Nota Final Calculada (NF):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Renderização do chat de comentários
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S6", res_data)
+                    elif "bloco_comentarios" in globals():
+                        bloco_comentarios("S6", res_data)
+
+                    # Botão de salvamento
+                    if st.button(
+                        "💾 Salvar Indicador S6",
+                        key=f"btn_salvar_S6_{ano_sel}",
+                        type="primary",
+                    ):
+                        lista_salvar = [
+                            f"{valores_coletados[c]:.2f}" for c in chaves_vacinas
+                        ]
+                        str_concatenada_s6 = "/".join(lista_salvar)
+                        ptsS6 = ptsS6_calc
+                        lnk_val = link_S6.strip()
+                        comentarios_historico = dS6.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S6",
+                                valor=str_concatenada_s6,
+                                pontos=ptsS6,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S6", str_concatenada_s6, ptsS6, lnk_val)
+
+                        res_data["S6"] = {
+                            "valor": str_concatenada_s6,
+                            "pontos": ptsS6,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S6_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S6_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S6_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S6_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S6 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    # Impacto de pontuação
+                    pts_atuais_S6 = dS6.get("pontos", 0.0)
+                    cor_txt_S6 = "#28a745" if pts_atuais_S6 > 0.0 else "#6c757d"
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S6}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S6: +{pts_atuais_S6:.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S6
+            if st.session_state.get(f"gatilho_modal_S6_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S6",
+                        st.session_state.get(f"links_pendentes_S6_{ano_sel}", []),
+                        ano_sel,
+                    )
