@@ -15313,3 +15313,202 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_35_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("35.1", st.session_state.get(f"links_pendentes_35_1_{ano_sel}", []), ano_sel)
+
+                # -----------------------------------------------------------------------------
+        # QUESITO 35.2 - AUDITORIAS CONCLUÍDAS SITE
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_auditorias_site_35_2_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 35.2 • Disponibilização das Auditorias em Site ({ano_sel})", expanded=True):
+                st.subheader(f"35.2 • Disponibilização das Auditorias em Site ({ano_sel})")
+                st.write(f"**35.2 As auditorias concluídas (encerradas) do exercício de {ano_sel} pelo componente municipal do Sistema Nacional de Auditoria do SUS - SNA estão disponibilizadas em site para consulta?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 35.2' para registrar as alterações.*")
+
+                opts_35_2 = ["Selecione...", "Sim – 10", "Não – 00"]
+
+                d35_2 = res_data.get("35.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_352 = d35_2.get("valor", "Selecione...")
+                idx_35_2 = opts_35_2.index(v_salvo_352) if v_salvo_352 in opts_35_2 else 0
+                l_salvo_352 = d35_2.get("link", "")
+
+                c352_1, c352_2 = st.columns([1, 1])
+                with c352_1:
+                    sel_35_2 = st.radio(
+                        "Disponibilização em site:",
+                        options=opts_35_2,
+                        index=idx_35_2,
+                        key=f"rad_35_2_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c352_2:
+                    link_35_2_input = st.text_area(
+                        "Link/Evidência (35.2):",
+                        value=l_salvo_352,
+                        key=f"txt_link_35_2_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_352 = st.empty()
+                links_352_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_35_2_input or "")]
+                if links_352_visuais:
+                    placeholder_links_352.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_352_visuais])
+                    )
+
+                # Feedback visual e Pontuação
+                opcoes_pts_352 = {
+                    "Sim – 10": 10.0,
+                    "Não – 00": 0.0,
+                    "Selecione...": 0.0
+                }
+                pts_35_2 = opcoes_pts_352.get(sel_35_2, 0.0)
+
+                if sel_35_2 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_35_2}**")
+
+                # Chat de comentários do iSaúde
+                bloco_comentarios_isaude("35.2", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 35.2: +{pts_35_2:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 35.2", key=f"btn_salvar_35_2_{ano_sel}", type="primary"):
+                    val_str_352 = sel_35_2
+                    val_lk_352 = link_35_2_input.strip()
+                    comentarios_352 = d35_2.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="35.2",
+                        valor=val_str_352,
+                        pontos=pts_35_2,
+                        link=val_lk_352,
+                        comentarios=comentarios_352
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_352 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_35_2_input or "")]
+                    links_antigos_352 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_352 or "")]
+
+                    if (val_str_352 != d35_2.get("valor", "") or val_lk_352 != l_salvo_352) and links_atuais_352 and links_atuais_352 != links_antigos_352:
+                        st.session_state[f"links_pendentes_35_2_{ano_sel}"] = links_atuais_352
+                        st.session_state[f"gatilho_modal_35_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 35.2 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 35.2
+        if st.session_state.get(f"gatilho_modal_35_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("35.2", st.session_state.get(f"links_pendentes_35_2_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 35.2.1 - LINK DO SITE
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_url_auditorias_35_2_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 35.2.1 • Página Eletrônica de Divulgação ({ano_sel})", expanded=True):
+                st.subheader(f"35.2.1 • Página Eletrônica de Divulgação ({ano_sel})")
+                st.write(f"**35.2.1 Informe a página eletrônica (site) de divulgação dos resultados das auditorias concluídas (encerradas) em {ano_sel}:**")
+                st.caption("ℹ️ *Preencha o campo com a URL informada, adicione os links/evidências e clique no botão 'Salvar Quesito 35.2.1' para gravar.*")
+
+                d35_2_1 = res_data.get("35.2.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_3521 = d35_2_1.get("valor", "")
+                l_salvo_3521 = d35_2_1.get("link", "")
+
+                c3521_1, c3521_2 = st.columns([1, 1])
+                with c3521_1:
+                    url_informada = st.text_input(
+                        "Informe a URL:",
+                        value=v_salvo_3521,
+                        placeholder="https://...",
+                        key=f"txt_val_3521_{ano_sel}"
+                    )
+
+                    placeholder_url_preview = st.empty()
+                    if url_informada.strip().startswith(("http://", "https://")):
+                        placeholder_url_preview.markdown(f"🌐 **Página Indicada:** [{url_informada.strip()}]({url_informada.strip()})")
+
+                with c3521_2:
+                    link_35_2_1_input = st.text_area(
+                        "Link/Evidência (35.2.1):",
+                        value=l_salvo_3521,
+                        key=f"txt_link_35_2_1_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_3521 = st.empty()
+                links_3521_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_35_2_1_input or "")]
+                if links_3521_visuais:
+                    placeholder_links_3521.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_3521_visuais])
+                    )
+
+                # Feedback visual e Pontuação Informativa
+                pts_35_2_1 = 0.0
+                if not url_informada.strip():
+                    st.warning("⚠️ **Atenção:** Aguardando preenchimento da URL.")
+                else:
+                    st.success("✅ Página eletrônica informada.")
+
+                # Chat de comentários do iSaúde
+                bloco_comentarios_isaude("35.2.1", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 35.2.1: +{pts_35_2_1:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 35.2.1", key=f"btn_salvar_35_2_1_{ano_sel}", type="primary"):
+                    val_str_3521 = url_informada.strip()
+                    val_lk_3521 = link_35_2_1_input.strip()
+                    comentarios_3521 = d35_2_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="35.2.1",
+                        valor=val_str_3521,
+                        pontos=pts_35_2_1,
+                        link=val_lk_3521,
+                        comentarios=comentarios_3521
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_3521 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_35_2_1_input or "")]
+                    links_antigos_3521 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_3521 or "")]
+
+                    if (val_str_3521 != d35_2_1.get("valor", "") or val_lk_3521 != l_salvo_3521) and links_atuais_3521 and links_atuais_3521 != links_antigos_3521:
+                        st.session_state[f"links_pendentes_35_2_1_{ano_sel}"] = links_atuais_3521
+                        st.session_state[f"gatilho_modal_35_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 35.2.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 35.2.1
+        if st.session_state.get(f"gatilho_modal_35_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("35.2.1", st.session_state.get(f"links_pendentes_35_2_1_{ano_sel}", []), ano_sel)
