@@ -14258,14 +14258,11 @@ def mostrar_formulario_saude():
 
                 with c311_1:
                     df_tmr_editado = st.data_editor(
-                        pd.DataFrame(
-                            {
-                                "Mínimo (min)": [safe_int(v_salvo_311[0]), safe_int(v_salvo_311[3]), safe_int(v_salvo_311[6])],
-                                "Médio (min)": [safe_int(v_salvo_311[1]), safe_int(v_salvo_311[4]), safe_int(v_salvo_311[7])],
-                                "Máximo (min)": [safe_int(v_salvo_311[2]), safe_int(v_salvo_311[5]), safe_int(v_salvo_311[8])]
-                            },
-                            index=[f"Ano {ano_tmr2} (TMR-2)", f"Ano {ano_tmr1} (TMR-1)", f"Ano {ano_tmr} (Atual)"]
-                        ),
+                        {
+                            "Mínimo (min)": [safe_int(v_salvo_311[0]), safe_int(v_salvo_311[3]), safe_int(v_salvo_311[6])],
+                            "Médio (min)": [safe_int(v_salvo_311[1]), safe_int(v_salvo_311[4]), safe_int(v_salvo_311[7])],
+                            "Máximo (min)": [safe_int(v_salvo_311[2]), safe_int(v_salvo_311[5]), safe_int(v_salvo_311[8])]
+                        },
                         key=f"editor_tmr_31_1_{ano_sel}",
                         use_container_width=True,
                         column_config={
@@ -14275,17 +14272,17 @@ def mostrar_formulario_saude():
                         }
                     )
 
-                    tmr2_min = safe_int(df_tmr_editado.iloc[0]["Mínimo (min)"])
-                    tmr2_med = safe_int(df_tmr_editado.iloc[0]["Médio (min)"])
-                    tmr2_max = safe_int(df_tmr_editado.iloc[0]["Máximo (min)"])
+                    tmr2_min = safe_int(df_tmr_editado["Mínimo (min)"][0])
+                    tmr2_med = safe_int(df_tmr_editado["Médio (min)"][0])
+                    tmr2_max = safe_int(df_tmr_editado["Máximo (min)"][0])
 
-                    tmr1_min = safe_int(df_tmr_editado.iloc[1]["Mínimo (min)"])
-                    tmr1_med = safe_int(df_tmr_editado.iloc[1]["Médio (min)"])
-                    tmr1_max = safe_int(df_tmr_editado.iloc[1]["Máximo (min)"])
+                    tmr1_min = safe_int(df_tmr_editado["Mínimo (min)"][1])
+                    tmr1_med = safe_int(df_tmr_editado["Médio (min)"][1])
+                    tmr1_max = safe_int(df_tmr_editado["Máximo (min)"][1])
 
-                    tmr_min = safe_int(df_tmr_editado.iloc[2]["Mínimo (min)"])
-                    tmr_med = safe_int(df_tmr_editado.iloc[2]["Médio (min)"])
-                    tmr_max = safe_int(df_tmr_editado.iloc[2]["Máximo (min)"])
+                    tmr_min = safe_int(df_tmr_editado["Mínimo (min)"][2])
+                    tmr_med = safe_int(df_tmr_editado["Médio (min)"][2])
+                    tmr_max = safe_int(df_tmr_editado["Máximo (min)"][2])
 
                 with c311_2:
                     link_31_1_input = st.text_area(
@@ -14359,6 +14356,7 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_31_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("31.1", st.session_state.get(f"links_pendentes_31_1_{ano_sel}", []), ano_sel)
+                
                 
         # -----------------------------------------------------------------------------
         # QUESITO 31.2 - COMPOSIÇÃO MÍNIMA DA CENTRAL DE REGULAÇÃO DE URGÊNCIAS
