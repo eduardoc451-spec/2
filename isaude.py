@@ -17104,6 +17104,324 @@ def mostrar_formulario_saude():
                         ano_sel,
                     )
 
+                    # =============================================================================
+        # INDICADOR S2 • CONSULTAS MÉDICAS POR HABITANTE (SIA/SUS E IBGE)
+        # =============================================================================
+
+        # Funções auxiliares de higienização e formatação para números inteiros
+        def tratar_string_inteiro_para_float(texto):
+            if not texto:
+                return 0.0
+            apenas_numeros = "".join(c for c in texto if c.isdigit())
+            try:
+                return float(apenas_numeros) if apenas_numeros else 0.0
+            except ValueError:
+                return 0.0
+
+
+        def formatar_para_inteiro_br(valor_float):
+            return f"{int(valor_float):,}".replace(",", ".")
+
+
+        with st.container(
+            key=f"container_bloco_isaude_S2_{ano_sel}", border=True
+        ):
+            with st.expander(
+                f"📌 Indicador S2 - Consultas Médicas por Habitante (SIA/SUS / IBGE - {ano_sel})",
+                expanded=True,
+            ):
+                st.subheader("S2 • Evolução de Consultas Médicas por Habitante")
+                st.write(
+                    "**Mede se a proporção de consultas médicas por habitante no ano"
+                    " corrente (PAA) foi maior ou igual à média dos dois anos anteriores"
+                    " (MAA):**"
+                )
+
+                # Regras de Avaliação e Pontuação
+                st.markdown(r"""
+| Resultado do Indicador | Impacto / Pontuação do Indicador |
+| :--- | :--- |
+| Proporção do Ano Atual maior ou igual à Média Anterior ($PAA \ge MAA$) | ✅ 20,00 pontos (Meta Atingida ou Evolução Positiva) |
+| Proporção do Ano Atual menor que a Média Anterior ($PAA < MAA$) | ❌ 0,00 pontos (Redução na Proporção de Consultas) |
+                """)
+                st.caption(
+                    "ℹ️ *Dados extraídos do Sistema de Informações Ambulatoriais do SUS"
+                    " (SIA/SUS) e Estimativas Populacionais do IBGE. Insira os dados,"
+                    " o link e clique no botão 'Salvar Indicador S2' para registrar.*"
+                )
+
+                # Processamento dos anos de referência
+                try:
+                    ano_atual_int = int(ano_sel)
+                except Exception:
+                    ano_atual_int = 2025
+
+                ano_aa1 = ano_atual_int - 1
+                ano_aa2 = ano_atual_int - 2
+
+                # Estado inicial / persistente
+                dS2 = res_data.get("S2") or {
+                    "valor": "0/0/0/1/1/1",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": "",
+                }
+
+                try:
+                    v_cmaa2, v_cmaa1, v_cmaa, v_pop2, v_pop1, v_pop = map(
+                        float, dS2.get("valor", "0/0/0/1/1/1").split("/")
+                    )
+                except Exception:
+                    v_cmaa2, v_cmaa1, v_cmaa, v_pop2, v_pop1, v_pop = (
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                    )
+
+                evidencia_S2_salva = dS2.get("link", "")
+
+                # Chaves fixas para componentes do Streamlit
+                chave_link_S2 = f"txt_s2_link_{ano_sel}"
+
+                # Inicialização do session_state no padrão BR
+                if f"s2_str_cmaa2_{ano_sel}" not in st.session_state:
+                    st.session_state[f"s2_str_cmaa2_{ano_sel}"] = (
+                        formatar_para_inteiro_br(v_cmaa2)
+                    )
+                if f"s2_str_cmaa1_{ano_sel}" not in st.session_state:
+                    st.session_state[f"s2_str_cmaa1_{ano_sel}"] = (
+                        formatar_para_inteiro_br(v_cmaa1)
+                    )
+                if f"s2_str_cmaa_{ano_sel}" not in st.session_state:
+                    st.session_state[f"s2_str_cmaa_{ano_sel}"] = (
+                        formatar_para_inteiro_br(v_cmaa)
+                    )
+                if f"s2_str_pop2_{ano_sel}" not in st.session_state:
+                    st.session_state[f"s2_str_pop2_{ano_sel}"] = (
+                        formatar_para_inteiro_br(v_pop2)
+                    )
+                if f"s2_str_pop1_{ano_sel}" not in st.session_state:
+                    st.session_state[f"s2_str_pop1_{ano_sel}"] = (
+                        formatar_para_inteiro_br(v_pop1)
+                    )
+                if f"s2_str_pop_{ano_sel}" not in st.session_state:
+                    st.session_state[f"s2_str_pop_{ano_sel}"] = (
+                        formatar_para_inteiro_br(v_pop)
+                    )
+
+                cS2_1, cS2_2 = st.columns([1, 1])
+
+                with cS2_1:
+                    st.markdown("##### 🩺 Número de Consultas Médicas (SIA/SUS)")
+                    input_cmaa2_str = st.text_input(
+                        f"Consultas em {ano_aa2} (CMAA-2):",
+                        value=st.session_state[f"s2_str_cmaa2_{ano_sel}"],
+                        key=f"txt_s2_cmaa2_{ano_sel}",
+                    )
+                    input_cmaa1_str = st.text_input(
+                        f"Consultas em {ano_aa1} (CMAA-1):",
+                        value=st.session_state[f"s2_str_cmaa1_{ano_sel}"],
+                        key=f"txt_s2_cmaa1_{ano_sel}",
+                    )
+                    input_cmaa_str = st.text_input(
+                        f"Consultas em {ano_sel} (CMAA):",
+                        value=st.session_state[f"s2_str_cmaa_{ano_sel}"],
+                        key=f"txt_s2_cmaa_{ano_sel}",
+                    )
+
+                    st.markdown("##### 👥 População Estimada (IBGE)")
+                    input_pop2_str = st.text_input(
+                        f"População em {ano_aa2} (PopAA-2):",
+                        value=st.session_state[f"s2_str_pop2_{ano_sel}"],
+                        key=f"txt_s2_pop2_{ano_sel}",
+                    )
+                    input_pop1_str = st.text_input(
+                        f"População em {ano_aa1} (PopAA-1):",
+                        value=st.session_state[f"s2_str_pop1_{ano_sel}"],
+                        key=f"txt_s2_pop1_{ano_sel}",
+                    )
+                    input_pop_str = st.text_input(
+                        f"População em {ano_sel} (PopAA):",
+                        value=st.session_state[f"s2_str_pop_{ano_sel}"],
+                        key=f"txt_s2_pop_{ano_sel}",
+                    )
+
+                    # Conversão segura para valores numéricos
+                    cmaa2 = tratar_string_inteiro_para_float(input_cmaa2_str)
+                    cmaa1 = tratar_string_inteiro_para_float(input_cmaa1_str)
+                    cmaa = tratar_string_inteiro_para_float(input_cmaa_str)
+                    pop2 = max(tratar_string_inteiro_para_float(input_pop2_str), 1.0)
+                    pop1 = max(tratar_string_inteiro_para_float(input_pop1_str), 1.0)
+                    pop = max(tratar_string_inteiro_para_float(input_pop_str), 1.0)
+
+                    # Sincronização do estado com formatação limpa
+                    st.session_state[f"s2_str_cmaa2_{ano_sel}"] = (
+                        formatar_para_inteiro_br(cmaa2)
+                    )
+                    st.session_state[f"s2_str_cmaa1_{ano_sel}"] = (
+                        formatar_para_inteiro_br(cmaa1)
+                    )
+                    st.session_state[f"s2_str_cmaa_{ano_sel}"] = (
+                        formatar_para_inteiro_br(cmaa)
+                    )
+                    st.session_state[f"s2_str_pop2_{ano_sel}"] = (
+                        formatar_para_inteiro_br(pop2)
+                    )
+                    st.session_state[f"s2_str_pop1_{ano_sel}"] = (
+                        formatar_para_inteiro_br(pop1)
+                    )
+                    st.session_state[f"s2_str_pop_{ano_sel}"] = (
+                        formatar_para_inteiro_br(pop)
+                    )
+
+                with cS2_2:
+                    link_S2 = st.text_area(
+                        "Link/Evidência (S2 - SIA/SUS e IBGE):",
+                        value=evidencia_S2_salva,
+                        key=chave_link_S2,
+                        placeholder="Insira o link oficial referente ao indicador S2...",
+                        height=280,
+                    )
+                    placeholder_links_S2 = st.empty()
+                    links_S2_visuais = re.findall(REGEX_PURE_URL, link_S2 or "")
+                    if links_S2_visuais:
+                        placeholder_links_S2.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join([
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_S2_visuais
+                            ])
+                        )
+
+                # Cálculo de PAA e MAA
+                PAA = cmaa / pop
+                MAA = (cmaa2 + cmaa1) / (pop2 + pop1)
+
+                # Definição do motor de regras e mensagem de feedback
+                if cmaa2 == 0.0 and cmaa1 == 0.0 and cmaa == 0.0:
+                    ptsS2_calc = 0.0
+                    texto_resultado = (
+                        "Aguardando o preenchimento dos dados de consultas..."
+                    )
+                    texto_pontuacao = "⏳ Sem avaliação"
+                    estilo_status = "color: #64748b;"
+                else:
+                    if PAA >= MAA:
+                        ptsS2_calc = 20.0
+                        texto_resultado = (
+                            "✅ EVOLUÇÃO POSITIVA: Proporção atual do município foi"
+                            " superior ou igual à média anterior"
+                        )
+                        texto_pontuacao = "20,00 pontos (Pontuação Máxima)"
+                        estilo_status = "color: #16a34a; font-weight: bold;"
+                    else:
+                        ptsS2_calc = 0.0
+                        texto_resultado = (
+                            "🚨 REDUÇÃO: Proporção de consultas por habitante caiu em"
+                            " relação à média anterior"
+                        )
+                        texto_pontuacao = "0,00 pontos"
+                        estilo_status = "color: #dc2626; font-weight: bold;"
+
+                # Painel consolidador de métricas de saúde pública
+                paa_br = f"{PAA:.4f}".replace(".", ",")
+                maa_br = f"{MAA:.4f}".replace(".", ",")
+
+                st.markdown(
+                    f"""
+                    <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                        📌 <b>Proporção em {ano_sel} (PAA):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{paa_br}</code> consultas/hab.<br>
+                        📊 <b>Média Anos Anteriores ({ano_aa2} e {ano_aa1}) (MAA):</b> <code style="font-size: 14px; font-weight: bold; color: #475569;">{maa_br}</code> consultas/hab.<br>
+                        ⚖️ <b>Status do Indicador:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                        🎯 <b>Pontuação do Indicador:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                # Renderização do chat de comentários
+                if "bloco_comentarios_isaude" in globals():
+                    bloco_comentarios_isaude("S2", res_data)
+                elif "bloco_comentarios" in globals():
+                    bloco_comentarios("S2", res_data)
+
+                # Botão de salvamento
+                if st.button(
+                    "💾 Salvar Indicador S2",
+                    key=f"btn_salvar_S2_{ano_sel}",
+                    type="primary",
+                ):
+                    str_concatenada_s2 = (
+                        f"{cmaa2:.0f}/{cmaa1:.0f}/{cmaa:.0f}/{pop2:.0f}/{pop1:.0f}/{pop:.0f}"
+                    )
+                    ptsS2 = ptsS2_calc
+                    lnk_val = link_S2.strip()
+                    comentarios_historico = dS2.get("comentarios", [])
+
+                    if "save_resp_isaude" in globals():
+                        save_resp_isaude(
+                            qid="S2",
+                            valor=str_concatenada_s2,
+                            pontos=ptsS2,
+                            link=lnk_val,
+                            comentarios=comentarios_historico,
+                        )
+                    elif "save_resp" in globals():
+                        save_resp("S2", str_concatenada_s2, ptsS2, lnk_val)
+
+                    res_data["S2"] = {
+                        "valor": str_concatenada_s2,
+                        "pontos": ptsS2,
+                        "link": lnk_val,
+                        "comentarios": comentarios_historico,
+                    }
+
+                    links_atuais = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                    ]
+                    links_antigos = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, evidencia_S2_salva or "")
+                    ]
+
+                    if (
+                        lnk_val != evidencia_S2_salva
+                        and links_atuais
+                        and links_atuais != links_antigos
+                    ):
+                        st.session_state[f"links_pendentes_S2_{ano_sel}"] = (
+                            links_atuais
+                        )
+                        st.session_state[f"gatilho_modal_S2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Indicador S2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_S2 = dS2.get("pontos", 0.0)
+                cor_txt_S2 = "#28a745" if pts_atuais_S2 > 0.0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_S2}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Indicador S2: +{pts_atuais_S2:.1f}"
+                    " pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL S2
+        if st.session_state.get(f"gatilho_modal_S2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link(
+                    "S2",
+                    st.session_state.get(f"links_pendentes_S2_{ano_sel}", []),
+                    ano_sel,
+                )
+
 
 
        
