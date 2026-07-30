@@ -15889,4 +15889,661 @@ def mostrar_formulario_saude():
             if "modal_aviso_link" in globals():
                 modal_aviso_link("37.0", st.session_state.get(f"links_pendentes_37_0_{ano_sel}", []), ano_sel)
 
+        # =============================================================================
+        # QUESITO 38.0 • DISPONIBILIZAÇÃO DE TELEMEDICINA (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+
+        with st.container(
+            key=f"container_bloco_isaude_38_0_{ano_sel}", border=True
+        ):
+            with st.expander(
+                f"📌 Quesito 38.0 - Disponibilização de Telemedicina em {ano_sel}",
+                expanded=True,
+            ):
+                st.subheader("38.0 • Disponibilização de Telemedicina")
+                st.write(
+                    f"**Houve a disponibilização do serviço de telemedicina em"
+                    f" {ano_sel}?**"
+                )
+                st.caption(
+                    "ℹ️ *Selecione a opção, insira o link/evidência e clique no botão 'Salvar"
+                    " Quesito 38.0' para registrar.*"
+                )
+
+                # Estado inicial / persistente
+                d38_0 = res_data.get("38.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": "",
+                }
+
+                opts_38_0 = {"Selecione...": 0.0, "Sim": 0.0, "Não": 0.0}
+
+                val_salvo_380 = d38_0.get("valor", "Selecione...")
+                if val_salvo_380 not in opts_38_0:
+                    val_salvo_380 = "Selecione..."
+
+                idx_inicial_380 = list(opts_38_0.keys()).index(val_salvo_380)
+                evidencia_38_0_salva = d38_0.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_rb_38_0 = f"rb_38_0_{ano_sel}"
+                chave_link_38_0 = f"l_38_0_txt_{ano_sel}"
+
+                c380_1, c380_2 = st.columns([1, 1])
+                with c380_1:
+                    sel_38_0 = st.radio(
+                        "Disponibilizou telemedicina:",
+                        options=list(opts_38_0.keys()),
+                        index=idx_inicial_380,
+                        key=chave_rb_38_0,
+                        label_visibility="collapsed",
+                    )
+
+                with c380_2:
+                    link_38_0 = st.text_area(
+                        "Link/Evidência ou Relatório de Implantação (38.0):",
+                        value=evidencia_38_0_salva,
+                        key=chave_link_38_0,
+                        placeholder="Insira o link oficial referente ao quesito 38.0...",
+                        height=110,
+                    )
+                    placeholder_links_38_0 = st.empty()
+                    links_38_0_visuais = re.findall(REGEX_PURE_URL, link_38_0 or "")
+                    if links_38_0_visuais:
+                        placeholder_links_38_0.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join([
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_38_0_visuais
+                            ])
+                        )
+
+                # Feedback reativo de pontuação
+                pts_38_0_calc = opts_38_0.get(sel_38_0, 0.0)
+                if sel_38_0 == "Selecione...":
+                    st.warning("⚠️ **Status:** Por favor, selecione uma opção válida.")
+                else:
+                    st.info(
+                        f"📊 **Pontuação Prevista no Quesito 38.0:** `{pts_38_0_calc:.1f}"
+                        " pontos` (Dados Informativos)"
+                    )
+
+                # Renderização do chat de comentários
+                if "bloco_comentarios_isaude" in globals():
+                    bloco_comentarios_isaude("38.0", res_data)
+                elif "bloco_comentarios" in globals():
+                    bloco_comentarios("38.0", res_data)
+
+                # Botão de salvamento
+                if st.button(
+                    "💾 Salvar Quesito 38.0", key=f"btn_salvar_38_0_{ano_sel}", type="primary"
+                ):
+                    sel_input = st.session_state.get(chave_rb_38_0, val_salvo_380)
+                    pts_38_0 = opts_38_0.get(sel_input, 0.0)
+                    lnk_val = link_38_0.strip()
+                    comentarios_historico = d38_0.get("comentarios", [])
+
+                    if "save_resp_isaude" in globals():
+                        save_resp_isaude(
+                            qid="38.0",
+                            valor=sel_input,
+                            pontos=pts_38_0,
+                            link=lnk_val,
+                            comentarios=comentarios_historico,
+                        )
+                    elif "save_resp" in globals():
+                        save_resp("38.0", sel_input, pts_38_0, lnk_val)
+
+                    res_data["38.0"] = {
+                        "valor": sel_input,
+                        "pontos": pts_38_0,
+                        "link": lnk_val,
+                        "comentarios": comentarios_historico,
+                    }
+
+                    links_atuais = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                    ]
+                    links_antigos = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, evidencia_38_0_salva or "")
+                    ]
+
+                    if (
+                        lnk_val != evidencia_38_0_salva
+                        and links_atuais
+                        and links_atuais != links_antigos
+                    ):
+                        st.session_state[f"links_pendentes_38_0_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_38_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 38.0 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_38_0 = d38_0.get("pontos", 0.0)
+                cor_txt_38_0 = "#28a745" if pts_atuais_38_0 > 0.0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_38_0}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 38.0: +{pts_atuais_38_0:.1f}"
+                    " pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 38.0
+        if st.session_state.get(f"gatilho_modal_38_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link(
+                    "38.0",
+                    st.session_state.get(f"links_pendentes_38_0_{ano_sel}", []),
+                    ano_sel,
+                )
+
+        # =============================================================================
+        # QUESITO 38.1 • SERVIÇOS DISPONIBILIZADOS (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+
+        with st.container(
+            key=f"container_bloco_isaude_38_1_{ano_sel}", border=True
+        ):
+            with st.expander(
+                f"📌 Quesito 38.1 - Serviços de Telemedicina Disponibilizados ({ano_sel})",
+                expanded=True,
+            ):
+                st.subheader("38.1 • Serviços Disponibilizados")
+                st.write("**Assinale os serviços disponibilizados:**")
+                st.caption(
+                    "ℹ️ *Marque os serviços prestados, insira o link/evidência e clique no"
+                    " botão 'Salvar Quesito 38.1' para registrar.*"
+                )
+
+                # Estado inicial / persistente
+                d38_1 = res_data.get("38.1") or {
+                    "valor": "0|0|0|0|0|0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": "",
+                }
+
+                p_381 = d38_1.get("valor", "0|0|0|0|0|0|0").split("|")
+                while len(p_381) < 7:
+                    p_381.append("0")
+
+                evidencia_38_1_salva = d38_1.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_ch1 = f"ch_381_1_{ano_sel}"
+                chave_ch2 = f"ch_381_2_{ano_sel}"
+                chave_ch3 = f"ch_381_3_{ano_sel}"
+                chave_ch4 = f"ch_381_4_{ano_sel}"
+                chave_ch5 = f"ch_381_5_{ano_sel}"
+                chave_ch6 = f"ch_381_6_{ano_sel}"
+                chave_ch7 = f"ch_381_7_{ano_sel}"
+                chave_link_38_1 = f"l_38_1_txt_{ano_sel}"
+
+                c381_1, c381_2 = st.columns([1, 1])
+                with c381_1:
+                    ch1_381 = st.checkbox(
+                        "Teleconsulta", value=(p_381[0] == "1"), key=chave_ch1
+                    )
+                    ch2_381 = st.checkbox(
+                        "Teleinterconsulta", value=(p_381[1] == "1"), key=chave_ch2
+                    )
+                    ch3_381 = st.checkbox(
+                        "Telediagnóstico", value=(p_381[2] == "1"), key=chave_ch3
+                    )
+                    ch4_381 = st.checkbox(
+                        "Teletriagem", value=(p_381[3] == "1"), key=chave_ch4
+                    )
+
+                with c381_2:
+                    ch5_381 = st.checkbox(
+                        "Telemonitoramento", value=(p_381[4] == "1"), key=chave_ch5
+                    )
+                    ch6_381 = st.checkbox(
+                        "Teleconsultoria", value=(p_381[5] == "1"), key=chave_ch6
+                    )
+                    ch7_381 = st.checkbox("Outros", value=(p_381[6] == "1"), key=chave_ch7)
+
+                    link_38_1 = st.text_area(
+                        "Link/Evidência ou Telas do Sistema de Telemedicina (38.1):",
+                        value=evidencia_38_1_salva,
+                        key=chave_link_38_1,
+                        placeholder="Insira o link oficial referente ao quesito 38.1...",
+                        height=110,
+                    )
+                    placeholder_links_38_1 = st.empty()
+                    links_38_1_visuais = re.findall(REGEX_PURE_URL, link_38_1 or "")
+                    if links_38_1_visuais:
+                        placeholder_links_38_1.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join([
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_38_1_visuais
+                            ])
+                        )
+
+                string_estruturada_38_1 = f"{1 if ch1_381 else 0}|{1 if ch2_381 else 0}|{1 if ch3_381 else 0}|{1 if ch4_381 else 0}|{1 if ch5_381 else 0}|{1 if ch6_381 else 0}|{1 if ch7_381 else 0}"
+
+                # Feedback reativo
+                pts_38_1_calc = 0.0
+                if "1" not in string_estruturada_38_1:
+                    st.warning("⚠️ **Status:** Nenhum serviço selecionado.")
+                else:
+                    st.info(
+                        f"📊 **Pontuação Aplicada no Quesito 38.1:** `{pts_38_1_calc:.1f}"
+                        " pontos` (Dados Informativos)"
+                    )
+
+                # Renderização do chat de comentários
+                if "bloco_comentarios_isaude" in globals():
+                    bloco_comentarios_isaude("38.1", res_data)
+                elif "bloco_comentarios" in globals():
+                    bloco_comentarios("38.1", res_data)
+
+                # Botão de salvamento
+                if st.button(
+                    "💾 Salvar Quesito 38.1", key=f"btn_salvar_38_1_{ano_sel}", type="primary"
+                ):
+                    v1 = 1 if st.session_state.get(chave_ch1, ch1_381) else 0
+                    v2 = 1 if st.session_state.get(chave_ch2, ch2_381) else 0
+                    v3 = 1 if st.session_state.get(chave_ch3, ch3_381) else 0
+                    v4 = 1 if st.session_state.get(chave_ch4, ch4_381) else 0
+                    v5 = 1 if st.session_state.get(chave_ch5, ch5_381) else 0
+                    v6 = 1 if st.session_state.get(chave_ch6, ch6_381) else 0
+                    v7 = 1 if st.session_state.get(chave_ch7, ch7_381) else 0
+
+                    val_str_salvar = f"{v1}|{v2}|{v3}|{v4}|{v5}|{v6}|{v7}"
+                    pts_38_1 = 0.0
+                    lnk_val = link_38_1.strip()
+                    comentarios_historico = d38_1.get("comentarios", [])
+
+                    if "save_resp_isaude" in globals():
+                        save_resp_isaude(
+                            qid="38.1",
+                            valor=val_str_salvar,
+                            pontos=pts_38_1,
+                            link=lnk_val,
+                            comentarios=comentarios_historico,
+                        )
+                    elif "save_resp" in globals():
+                        save_resp("38.1", val_str_salvar, pts_38_1, lnk_val)
+
+                    res_data["38.1"] = {
+                        "valor": val_str_salvar,
+                        "pontos": pts_38_1,
+                        "link": lnk_val,
+                        "comentarios": comentarios_historico,
+                    }
+
+                    links_atuais = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                    ]
+                    links_antigos = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, evidencia_38_1_salva or "")
+                    ]
+
+                    if (
+                        lnk_val != evidencia_38_1_salva
+                        and links_atuais
+                        and links_atuais != links_antigos
+                    ):
+                        st.session_state[f"links_pendentes_38_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_38_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 38.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_38_1 = d38_1.get("pontos", 0.0)
+                cor_txt_38_1 = "#28a745" if pts_atuais_38_1 > 0.0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_38_1}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 38.1: +{pts_atuais_38_1:.1f}"
+                    " pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 38.1
+        if st.session_state.get(f"gatilho_modal_38_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link(
+                    "38.1",
+                    st.session_state.get(f"links_pendentes_38_1_{ano_sel}", []),
+                    ano_sel,
+                )
+
+        # =============================================================================
+        # QUESITO 38.2 • SISTEMA PARA PRESCRIÇÃO ELETRÔNICA (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+
+        with st.container(
+            key=f"container_bloco_isaude_38_2_{ano_sel}", border=True
+        ):
+            with st.expander(
+                f"📌 Quesito 38.2 - Sistema para Prescrição Eletrônica ({ano_sel})",
+                expanded=True,
+            ):
+                st.subheader("38.2 • Sistema Informatizado para Prescrição Eletrônica")
+                st.write(
+                    "**Foi utilizado sistema informatizado para prescrição eletrônica, que"
+                    " possibilitasse a emissão de receitas e atestados, assinados"
+                    " eletronicamente?**"
+                )
+                st.caption(
+                    "ℹ️ *Selecione a opção, insira o link/evidência e clique no botão 'Salvar"
+                    " Quesito 38.2' para registrar.*"
+                )
+
+                # Estado inicial / persistente
+                d38_2 = res_data.get("38.2") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": "",
+                }
+
+                opts_38_2 = {"Selecione...": 0.0, "Sim": 0.0, "Não": 0.0}
+
+                val_salvo_382 = d38_2.get("valor", "Selecione...")
+                if val_salvo_382 not in opts_38_2:
+                    val_salvo_382 = "Selecione..."
+
+                idx_inicial_382 = list(opts_38_2.keys()).index(val_salvo_382)
+                evidencia_38_2_salva = d38_2.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_rb_38_2 = f"rb_38_2_{ano_sel}"
+                chave_link_38_2 = f"l_38_2_txt_{ano_sel}"
+
+                c382_1, c382_2 = st.columns([1, 1])
+                with c382_1:
+                    sel_38_2 = st.radio(
+                        "Utilizou prescrição eletrônica:",
+                        options=list(opts_38_2.keys()),
+                        index=idx_inicial_382,
+                        key=chave_rb_38_2,
+                        label_visibility="collapsed",
+                    )
+
+                with c382_2:
+                    link_38_2 = st.text_area(
+                        "Link/Evidência ou Modelo de Prescrição Assinada (38.2):",
+                        value=evidencia_38_2_salva,
+                        key=chave_link_38_2,
+                        placeholder="Insira o link oficial referente ao quesito 38.2...",
+                        height=110,
+                    )
+                    placeholder_links_38_2 = st.empty()
+                    links_38_2_visuais = re.findall(REGEX_PURE_URL, link_38_2 or "")
+                    if links_38_2_visuais:
+                        placeholder_links_38_2.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join([
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_38_2_visuais
+                            ])
+                        )
+
+                # Feedback reativo de pontuação
+                pts_38_2_calc = opts_38_2.get(sel_38_2, 0.0)
+                if sel_38_2 == "Selecione...":
+                    st.warning("⚠️ **Status:** Por favor, selecione uma opção válida.")
+                else:
+                    st.info(
+                        f"📊 **Pontuação Aplicada no Quesito 38.2:** `{pts_38_2_calc:.1f}"
+                        " pontos` (Dados Informativos)"
+                    )
+
+                # Renderização do chat de comentários
+                if "bloco_comentarios_isaude" in globals():
+                    bloco_comentarios_isaude("38.2", res_data)
+                elif "bloco_comentarios" in globals():
+                    bloco_comentarios("38.2", res_data)
+
+                # Botão de salvamento
+                if st.button(
+                    "💾 Salvar Quesito 38.2", key=f"btn_salvar_38_2_{ano_sel}", type="primary"
+                ):
+                    sel_input = st.session_state.get(chave_rb_38_2, val_salvo_382)
+                    pts_38_2 = opts_38_2.get(sel_input, 0.0)
+                    lnk_val = link_38_2.strip()
+                    comentarios_historico = d38_2.get("comentarios", [])
+
+                    if "save_resp_isaude" in globals():
+                        save_resp_isaude(
+                            qid="38.2",
+                            valor=sel_input,
+                            pontos=pts_38_2,
+                            link=lnk_val,
+                            comentarios=comentarios_historico,
+                        )
+                    elif "save_resp" in globals():
+                        save_resp("38.2", sel_input, pts_38_2, lnk_val)
+
+                    res_data["38.2"] = {
+                        "valor": sel_input,
+                        "pontos": pts_38_2,
+                        "link": lnk_val,
+                        "comentarios": comentarios_historico,
+                    }
+
+                    links_atuais = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                    ]
+                    links_antigos = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, evidencia_38_2_salva or "")
+                    ]
+
+                    if (
+                        lnk_val != evidencia_38_2_salva
+                        and links_atuais
+                        and links_atuais != links_antigos
+                    ):
+                        st.session_state[f"links_pendentes_38_2_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_38_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 38.2 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_38_2 = d38_2.get("pontos", 0.0)
+                cor_txt_38_2 = "#28a745" if pts_atuais_38_2 > 0.0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_38_2}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 38.2: +{pts_atuais_38_2:.1f}"
+                    " pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 38.2
+        if st.session_state.get(f"gatilho_modal_38_2_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link(
+                    "38.2",
+                    st.session_state.get(f"links_pendentes_38_2_{ano_sel}", []),
+                    ano_sel,
+                )
+
+        # =============================================================================
+        # QUESITO 38.2.1 • FERRAMENTA DE PRESCRIÇÃO E ASSINATURA ELETRÔNICA (MODELO PADRONIZADO iGov / iSaúde)
+        # =============================================================================
+
+        with st.container(
+            key=f"container_bloco_isaude_38_2_1_{ano_sel}", border=True
+        ):
+            with st.expander(
+                f"📌 Quesito 38.2.1 - Ferramenta de Prescrição Utilizada ({ano_sel})",
+                expanded=True,
+            ):
+                st.subheader("38.2.1 • Ferramenta Utilizada para Prescrição")
+                st.write(
+                    "**Assinale a ferramenta utilizada para prescrição e assinatura"
+                    " eletrônica:**"
+                )
+                st.caption(
+                    "ℹ️ *Selecione as opções utilizadas, insira o link/evidência e clique no"
+                    " botão 'Salvar Quesito 38.2.1' para registrar.*"
+                )
+
+                # Estado inicial / persistente
+                d38_2_1 = res_data.get("38.2.1") or {
+                    "valor": "0|0|0",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": "",
+                }
+
+                p_3821 = d38_2_1.get("valor", "0|0|0").split("|")
+                while len(p_3821) < 3:
+                    p_3821.append("0")
+
+                evidencia_38_2_1_salva = d38_2_1.get("link", "")
+
+                # Chaves fixas por componente e ano
+                chave_ch3821_1 = f"ch_3821_1_{ano_sel}"
+                chave_ch3821_2 = f"ch_3821_2_{ano_sel}"
+                chave_ch3821_3 = f"ch_3821_3_{ano_sel}"
+                chave_link_38_2_1 = f"l_38_2_1_txt_{ano_sel}"
+
+                c3821_1, c3821_2 = st.columns([1, 1])
+                with c3821_1:
+                    ch1_3821 = st.checkbox(
+                        "Consultório Virtual da Família do Ministério da Saúde",
+                        value=(p_3821[0] == "1"),
+                        key=chave_ch3821_1,
+                    )
+                    ch2_3821 = st.checkbox(
+                        "Prescrição Eletrônica do Conselho Federal de Medicina",
+                        value=(p_3821[1] == "1"),
+                        key=chave_ch3821_2,
+                    )
+                    ch3_3821 = st.checkbox(
+                        "Outras", value=(p_3821[2] == "1"), key=chave_ch3821_3
+                    )
+
+                with c3821_2:
+                    link_38_2_1 = st.text_area(
+                        "Link/Evidência ou Nome da Ferramenta de Assinatura (38.2.1):",
+                        value=evidencia_38_2_1_salva,
+                        key=chave_link_38_2_1,
+                        placeholder="Insira o link oficial referente ao quesito 38.2.1...",
+                        height=110,
+                    )
+                    placeholder_links_38_2_1 = st.empty()
+                    links_38_2_1_visuais = re.findall(REGEX_PURE_URL, link_38_2_1 or "")
+                    if links_38_2_1_visuais:
+                        placeholder_links_38_2_1.markdown(
+                            "**🔗 Link ativo:** "
+                            + " | ".join([
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_38_2_1_visuais
+                            ])
+                        )
+
+                string_estruturada_38_2_1 = f"{1 if ch1_3821 else 0}|{1 if ch2_3821 else 0}|{1 if ch3_3821 else 0}"
+
+                # Feedback reativo
+                pts_38_2_1_calc = 0.0
+                if "1" not in string_estruturada_38_2_1:
+                    st.warning("⚠️ **Status:** Nenhuma ferramenta selecionada.")
+                else:
+                    st.info(
+                        f"📊 **Pontuação Aplicada no Quesito 38.2.1:** `{pts_38_2_1_calc:.1f}"
+                        " pontos` (Dados Informativos)"
+                    )
+
+                # Renderização do chat de comentários
+                if "bloco_comentarios_isaude" in globals():
+                    bloco_comentarios_isaude("38.2.1", res_data)
+                elif "bloco_comentarios" in globals():
+                    bloco_comentarios("38.2.1", res_data)
+
+                # Botão de salvamento
+                if st.button(
+                    "💾 Salvar Quesito 38.2.1",
+                    key=f"btn_salvar_38_2_1_{ano_sel}",
+                    type="primary",
+                ):
+                    v1 = 1 if st.session_state.get(chave_ch3821_1, ch1_3821) else 0
+                    v2 = 1 if st.session_state.get(chave_ch3821_2, ch2_3821) else 0
+                    v3 = 1 if st.session_state.get(chave_ch3821_3, ch3_3821) else 0
+
+                    val_str_salvar = f"{v1}|{v2}|{v3}"
+                    pts_38_2_1 = 0.0
+                    lnk_val = link_38_2_1.strip()
+                    comentarios_historico = d38_2_1.get("comentarios", [])
+
+                    if "save_resp_isaude" in globals():
+                        save_resp_isaude(
+                            qid="38.2.1",
+                            valor=val_str_salvar,
+                            pontos=pts_38_2_1,
+                            link=lnk_val,
+                            comentarios=comentarios_historico,
+                        )
+                    elif "save_resp" in globals():
+                        save_resp("38.2.1", val_str_salvar, pts_38_2_1, lnk_val)
+
+                    res_data["38.2.1"] = {
+                        "valor": val_str_salvar,
+                        "pontos": pts_38_2_1,
+                        "link": lnk_val,
+                        "comentarios": comentarios_historico,
+                    }
+
+                    links_atuais = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                    ]
+                    links_antigos = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(REGEX_PURE_URL, evidencia_38_2_1_salva or "")
+                    ]
+
+                    if (
+                        lnk_val != evidencia_38_2_1_salva
+                        and links_atuais
+                        and links_atuais != links_antigos
+                    ):
+                        st.session_state[f"links_pendentes_38_2_1_{ano_sel}"] = links_atuais
+                        st.session_state[f"gatilho_modal_38_2_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta do Quesito 38.2.1 salva com sucesso!", icon="✅")
+                    st.rerun()
+
+                # Impacto de pontuação
+                pts_atuais_38_2_1 = d38_2_1.get("pontos", 0.0)
+                cor_txt_38_2_1 = "#28a745" if pts_atuais_38_2_1 > 0.0 else "#6c757d"
+                st.markdown(
+                    f"<span style='color:{cor_txt_38_2_1}; font-weight:bold;'>"
+                    f"📊 Impacto de Pontuação no Quesito 38.2.1: +{pts_atuais_38_2_1:.1f}"
+                    " pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+        # GATILHO DO MODAL 38.2.1
+        if st.session_state.get(f"gatilho_modal_38_2_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link(
+                    "38.2.1",
+                    st.session_state.get(f"links_pendentes_38_2_1_{ano_sel}", []),
+                    ano_sel,
+                )
+
        
