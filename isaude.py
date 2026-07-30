@@ -15742,14 +15742,6 @@ def mostrar_formulario_saude():
         # QUESITO 37.0 • DESABASTECIMENTO DE MEDICAMENTOS (MODELO PADRONIZADO iGov / iSaúde)
         # =============================================================================
         
-        # Garantia de inicialização preventiva para prevenir UnboundLocalError
-        if "ano_sel" not in locals():
-            ano_sel = st.session_state.get("ano_selecionado", "2024")
-        if "res_data" not in locals():
-            res_data = st.session_state.get("res_data", {})
-        if "REGEX_PURE_URL" not in globals():
-            REGEX_PURE_URL = r'(https?://[^\s]+)'
-
         with st.container(key=f"container_bloco_isaude_37_0_{ano_sel}", border=True):
             with st.expander(f"📌 Quesito 37.0 - Monitoramento de Desabastecimento em {ano_sel}", expanded=True):
                 st.subheader("37.0 • Monitoramento de Desabastecimento")
