@@ -15512,3 +15512,228 @@ def mostrar_formulario_saude():
         if st.session_state.get(f"gatilho_modal_35_2_1_{ano_sel}", False):
             if "modal_aviso_link" in globals():
                 modal_aviso_link("35.2.1", st.session_state.get(f"links_pendentes_35_2_1_{ano_sel}", []), ano_sel)
+
+        # =============================================================================
+        # SEÇÃO 36 - SISTEMA DE GESTÃO DE ESTOQUE DE MEDICAMENTOS
+        # =============================================================================
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 36.0 - SISTEMA INFORMATIZADO PARA GERENCIAMENTO DE MEDICAMENTOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_estoque_medicamentos_36_0_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 36.0 • Sistema Informatizado para Gerenciamento de Medicamentos ({ano_sel})", expanded=True):
+                st.subheader(f"36.0 • Sistema Informatizado para Gerenciamento de Medicamentos ({ano_sel})")
+                st.write("**36.0 O município utiliza sistema informatizado para gerenciar o estoque de itens de medicamentos?**")
+                st.caption("ℹ️ *Selecione uma opção, informe o link de comprovação e clique no botão 'Salvar Quesito 36.0' para registrar as alterações.*")
+
+                opts_36_0 = [
+                    "Selecione...",
+                    "Sim, utiliza o Sistema Hórus – 40",
+                    "Sim, utiliza Sistema Próprio – 00",
+                    "Não – 00"
+                ]
+
+                d36_0 = res_data.get("36.0") or {
+                    "valor": "Selecione...",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_360 = d36_0.get("valor", "Selecione...")
+                idx_36_0 = opts_36_0.index(v_salvo_360) if v_salvo_360 in opts_36_0 else 0
+                l_salvo_360 = d36_0.get("link", "")
+
+                c360_1, c360_2 = st.columns([1, 1])
+                with c360_1:
+                    sel_36_0 = st.radio(
+                        "Gerenciamento de medicamentos:",
+                        options=opts_36_0,
+                        index=idx_36_0,
+                        key=f"rad_36_0_{ano_sel}",
+                        label_visibility="collapsed"
+                    )
+
+                with c360_2:
+                    link_36_0_input = st.text_area(
+                        "Link/Evidência (36.0):",
+                        value=l_salvo_360,
+                        key=f"txt_link_36_0_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_360 = st.empty()
+                links_360_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_36_0_input or "")]
+                if links_360_visuais:
+                    placeholder_links_360.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_360_visuais])
+                    )
+
+                # Regra de pontuação para o quesito 36.0
+                opcoes_pts_360 = {
+                    "Sim, utiliza o Sistema Hórus – 40": 40.0,
+                    "Sim, utiliza Sistema Próprio – 00": 0.0,
+                    "Não – 00": 0.0,
+                    "Selecione...": 0.0
+                }
+                pts_36_0 = opcoes_pts_360.get(sel_36_0, 0.0)
+
+                # Feedback visual e Pontuação
+                if sel_36_0 == "Selecione...":
+                    st.warning("⚠️ **Atenção:** Nenhuma opção selecionada.")
+                else:
+                    st.success(f"✅ Opção selecionada: **{sel_36_0}**")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("36.0", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 36.0: +{pts_36_0:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 36.0", key=f"btn_salvar_36_0_{ano_sel}", type="primary"):
+                    val_str_360 = sel_36_0
+                    val_lk_360 = link_36_0_input.strip()
+                    comentarios_360 = d36_0.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="36.0",
+                        valor=val_str_360,
+                        pontos=pts_36_0,
+                        link=val_lk_360,
+                        comentarios=comentarios_360
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_360 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_36_0_input or "")]
+                    links_antigos_360 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_360 or "")]
+
+                    if (val_str_360 != d36_0.get("valor", "") or val_lk_360 != l_salvo_360) and links_atuais_360 and links_atuais_360 != links_antigos_360:
+                        st.session_state[f"links_pendentes_36_0_{ano_sel}"] = links_atuais_360
+                        st.session_state[f"gatilho_modal_36_0_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 36.0 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 36.0
+        if st.session_state.get(f"gatilho_modal_36_0_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("36.0", st.session_state.get(f"links_pendentes_36_0_{ano_sel}", []), ano_sel)
+
+
+        # -----------------------------------------------------------------------------
+        # QUESITO 36.1 - FUNÇÕES DO SISTEMA PRÓPRIO DE MEDICAMENTOS
+        # -----------------------------------------------------------------------------
+        with st.container(key=f"container_bloco_funcoes_sistema_proprio_36_1_{ano_sel}", border=True):
+            with st.expander(f"📌 Quesito 36.1 • Funções do Sistema Próprio de Gestão de Estoque ({ano_sel})", expanded=True):
+                st.subheader(f"36.1 • Funções do Sistema Próprio de Gestão de Estoque ({ano_sel})")
+                st.write("**36.1 Assinale as funções existentes no sistema próprio de gestão de estoque de medicamentos:**")
+                st.caption("ℹ️ *Marque as caixas correspondentes, informe o link de comprovação e clique no botão 'Salvar Quesito 36.1' para registrar.*")
+
+                d36_1 = res_data.get("36.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": [],
+                    "comentario": ""
+                }
+                v_salvo_361 = d36_1.get("valor", "").split("|") if d36_1.get("valor") else []
+                l_salvo_361 = d36_1.get("link", "")
+
+                med_specs = {
+                    "posicao_lote": {"text": "Fornecer a posição de estoque, movimentação de entrada e saída, lote e validade – 10", "pts": 10.0},
+                    "rastreabilidade": {"text": "Permitir a rastreabilidade dos medicamentos dispensados aos pacientes – 10", "pts": 10.0},
+                    "processo_compras": {"text": "Gerenciar o processo de compras de itens de medicamentos, desde o planejamento até a entrega e o recebimento da nota fiscal – 10", "pts": 10.0},
+                    "reposicao_estab": {"text": "Gerenciar a reposição de itens de medicamentos por estabelecimento de saúde – 10", "pts": 10.0},
+                    "integrado_bnafar": {"text": "Integrado à Base Nacional de Dados de Ações e Serviços da Assistência Farmacêutica (BNAFAR) – 00", "pts": 0.0},
+                    "outros": {"text": "Outros – 00", "pts": 0.0}
+                }
+
+                c361_1, c361_2 = st.columns([1, 1])
+                chks_selecionados_361 = []
+                pts_totais_36_1 = 0.0
+
+                keys_med = list(med_specs.keys())
+                metade_med = (len(keys_med) + 1) // 2
+
+                with c361_1:
+                    for k in keys_med[:metade_med]:
+                        marcado = st.checkbox(med_specs[k]["text"], value=k in v_salvo_361, key=f"chk_36_1_{k}_{ano_sel}")
+                        if marcado:
+                            chks_selecionados_361.append(k)
+                            pts_totais_36_1 += med_specs[k]["pts"]
+
+                with c361_2:
+                    for k in keys_med[metade_med:]:
+                        marcado = st.checkbox(med_specs[k]["text"], value=k in v_salvo_361, key=f"chk_36_1_{k}_{ano_sel}")
+                        if marcado:
+                            chks_selecionados_361.append(k)
+                            pts_totais_36_1 += med_specs[k]["pts"]
+
+                    link_36_1_input = st.text_area(
+                        "Link/Evidência (36.1):",
+                        value=l_salvo_361,
+                        key=f"txt_link_36_1_{ano_sel}",
+                        height=140
+                    )
+
+                placeholder_links_361 = st.empty()
+                links_361_visuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_36_1_input or "")]
+                if links_361_visuais:
+                    placeholder_links_361.markdown(
+                        "**🔗 Links ativos:** "
+                        + " | ".join([f"[{u}]({u})" for u in links_361_visuais])
+                    )
+
+                # Feedback visual de opções selecionadas
+                if not chks_selecionados_361:
+                    st.warning("⚠️ **Atenção:** Nenhuma função do sistema foi selecionada.")
+                else:
+                    st.success(f"✅ **{len(chks_selecionados_361)}** função(ões) selecionada(s).")
+
+                # Chat de comentários
+                bloco_comentarios_isaude("36.1", res_data)
+
+                # Impacto de pontuação
+                st.markdown(
+                    f"<span style='color:#6c757d; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada no Quesito 36.1: +{pts_totais_36_1:.1f} pontos</span>",
+                    unsafe_allow_html=True,
+                )
+
+                # Botão de salvamento dedicado
+                if st.button("💾 Salvar Quesito 36.1", key=f"btn_salvar_36_1_{ano_sel}", type="primary"):
+                    val_str_361 = "|".join(chks_selecionados_361)
+                    val_lk_361 = link_36_1_input.strip()
+                    comentarios_361 = d36_1.get("comentarios", [])
+
+                    save_resp_isaude(
+                        qid="36.1",
+                        valor=val_str_361,
+                        pontos=pts_totais_36_1,
+                        link=val_lk_361,
+                        comentarios=comentarios_361
+                    )
+
+                    # Modal de aviso para links novos/alterados
+                    links_atuais_361 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, link_36_1_input or "")]
+                    links_antigos_361 = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, l_salvo_361 or "")]
+
+                    if (val_str_361 != d36_1.get("valor", "") or val_lk_361 != l_salvo_361) and links_atuais_361 and links_atuais_361 != links_antigos_361:
+                        st.session_state[f"links_pendentes_36_1_{ano_sel}"] = links_atuais_361
+                        st.session_state[f"gatilho_modal_36_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Resposta e histórico do Quesito 36.1 salvos com sucesso!", icon="✅")
+                    st.rerun()
+
+        # GATILHO DO MODAL 36.1
+        if st.session_state.get(f"gatilho_modal_36_1_{ano_sel}", False):
+            if "modal_aviso_link" in globals():
+                modal_aviso_link("36.1", st.session_state.get(f"links_pendentes_36_1_{ano_sel}", []), ano_sel)
