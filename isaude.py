@@ -19130,3 +19130,248 @@ def mostrar_formulario_saude():
                         st.session_state.get(f"links_pendentes_S8_{ano_sel}", []),
                         ano_sel,
                     )
+
+                    # =============================================================================
+            # S9 • Quantidade de Internações SUS sob Gestão Municipal (SIH/SUS)
+            # =============================================================================
+            st.markdown('<div class="quesito-card">', unsafe_allow_html=True)
+            st.subheader("S9 • Sobre as internações SUS, informe a quantidade de internações em estabelecimentos de saúde sob Gestão Municipal:")
+            st.write("DADOS DO SISTEMA DE INFORMAÇÕES HOSPITALARES DO SUS (SIH/SUS)")
+
+            # 🧮 Cálculo dinâmico da linha temporal com base no ano selecionado
+            try:
+                        ano_atual_int_s9 = int(ano_sel)
+            except:
+                        ano_atual_int_s9 = 2025
+
+            ano_s9_aa1 = ano_atual_int_s9 - 1  # Ano Anterior - 1 (Ex: 2024 se selecionado 2025)
+            ano_s9_aa2 = ano_atual_int_s9 - 2  # Ano Anterior - 2 (Ex: 2023 se selecionado 2025)
+
+            # 🧹 Função de Higienização de inteiros puros
+            def tratar_string_inteiro_para_float(texto):
+                        if not texto: 
+                                    return 0.0
+                        apenas_numeros = "".join(c for c in texto if c.isdigit())
+                        try:
+                                    return float(apenas_numeros) if apenas_numeros else 0.0
+                        except ValueError:
+                                    return 0.0
+
+            # 🎨 Função de formatação para números inteiros padrão BR
+            def formatar_para_inteiro_br(valor_float):
+                        return f"{int(valor_float):,}".replace(",", ".")
+
+            # Carrega ou inicializa a string persistida no banco contendo os 3 valores de internação
+            # Formato: PIHAA-2/PIHAA-1/PIHAA
+            dS9 = res_data.get("S9", {"valor": "0/0/0", "points": 0.0, "link": ""})
+
+            try:
+                        v_pihaa2, v_pihaa1, v_pihaa = map(float, dS9["valor"].split("/"))
+            except:
+                        v_pihaa2, v_pihaa1, v_pihaa = 0.0, 0.0, 0.0
+
+            # Garante que o session_state inicialize no formato correto do Brasil para a tríade temporal
+            if f"s9_str_pihaa2_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s9_str_pihaa2_{ano_sel}"] = formatar_para_inteiro_br(v_pihaa2)
+            if f"s9_str_pihaa1_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s9_str_pihaa1_{ano_sel}"] = formatar_para_inteiro_br(v_pihaa1)
+            if f"s9_str_pihaa_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s9_str_pihaa_{ano_sel}"] = formatar_para_inteiro_br(v_pihaa)
+
+            c1, c2 = st.columns([1, 2])
+
+            with c1:
+                        # Inputs de dados estruturados com os labels dinâmicos e anos retroativos
+                        input_pihaa2_str = st.text_input(
+                                    f"Quantidade de internações em estabelecimentos de saúde sob Gestão Municipal em {ano_s9_aa2} (PIHAA-2) • Em {ano_s9_aa2}:",
+                                    value=st.session_state[f"s9_str_pihaa2_{ano_sel}"],
+                                    key=f"txt_s9_pihaa2_{ano_sel}"
+                        )
+                        
+                        input_pihaa1_str = st.text_input(
+                                    f"Quantidade de internações em estabelecimentos de saúde sob Gestão Municipal em {ano_s9_aa1} (PIHAA-1) • Em {ano_s9_aa1}:",
+                                    value=st.session_state[f"s9_str_pihaa1_{ano_sel}"],
+                                    key=f"txt_s9_pihaa1_{ano_sel}"
+                        )
+                        
+                        input_pihaa_str = st.text_input(
+                                    f"Quantidade de internações em estabelecimentos de saúde sob Gestão Municipal em {ano_sel} (PIHAA) • Em {ano_sel}:",
+                                    value=st.session_state[f"s9_str_pihaa_{ano_sel}"],
+                                    key=f"txt_s9_pihaa_{ano_sel}"
+                        )
+
+                        # Conversão segura para processamento numérico
+                        pihaa2 = tratar_string_inteiro_para_float(input_pihaa2_str)
+                        pihaa1 = tratar_string_inteiro_para_float(input_pihaa1_str)
+                        pihaa = tratar_string_inteiro_para_float(input_pihaa_str)
+
+                        # Sincroniza as máscaras visuais no session_state da view
+                        st.session_state[f"s9_str_pihaa2_{ano_sel}"] = formatar_para_inteiro_br(pihaa2)
+                        st.session_state[f"s9_str_pihaa1_{ano_sel}"] = formatar_para_inteiro_br(pihaa1)
+                        st.session_state[f"s9_str_pihaa_{ano_sel}"] = formatar_para_inteiro_br(pihaa)
+
+                        # 🧮 Lógica do Motor de Regras (Média histórica dos dois anos anteriores)
+                        media_historica_s9 = (pihaa2 + pihaa1) / 2.0
+
+                        # 🛑 TRAVA DE INICIALIZAÇÃO / CAMPOS ZERADOS
+                        if pihaa2 == 0.0 and pihaa1 == 0.0 and pihaa == 0.0:
+                                    ptsS9 = 0.0
+                                    texto_resultado = "Aguardando lançamento do histórico de internações hospitalares..."
+                                    texto_pontuacao = "⏳ Sem avaliação"
+                                    estilo_status = "color: #64748b;"
+                        else:
+                                    # Aplicação estrita da regra de corte de penalização
+                                    if pihaa <= media_historica_s9:
+                                                ptsS9 = 0.0
+                                                texto_resultado = f"✅ Sob Controle: O volume de internações em {ano_sel} manteve-se igual ou abaixo da média histórica"
+                                                texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                                                estilo_status = "color: #16a34a; font-weight: bold;"
+                                    else:
+                                                ptsS9 = -5.0
+                                                texto_resultado = f"🚨 Alerta de Impacto: O volume de internações em {ano_sel} superou a média histórica de {ano_s9_aa2}-{ano_s9_aa1}"
+                                                texto_pontuacao = "-5,00 pontos (Perde 5 pontos)"
+                                                estilo_status = "color: #dc2626; font-weight: bold;"
+
+            with c2:
+                        lS9 = st.text_area(f"Link/Evidência (S9 - Relatório de Produção SIH/SUS {ano_sel}):", value=dS9.get("link", ""), key=f"txt_s9_link_{ano_sel}", height=150)
+
+            # Formatação das métricas finais calculadas para o padrão brasileiro
+            media_s9_br = f"{media_historica_s9:.2f}".replace(".", ",")
+            pihaa_atual_br = formatar_para_inteiro_br(pihaa)
+
+            # Painel consolidador de métricas hospitalares
+            st.markdown(f"""
+            <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                        📌 <b>Internações Registradas em {ano_sel} (PIHAA):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{pihaa_atual_br}</code> internações<br>
+                        📊 <b>Média Limiar de Reference ({ano_s9_aa2} e {ano_s9_aa1}):</b> <code style="font-size: 14px; font-weight: bold; color: #475569;">{media_s9_br}</code> internações<br>
+                        ⚖️ <b>Status do Indicador:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                        🎯 <b>Impacto na Nota Geral:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Agrupa os valores brutos para persistência no banco de dados
+            str_concatenada_s9 = f"{pihaa2:.0f}/{pihaa1:.0f}/{pihaa:.0f}"
+
+            if str_concatenada_s9 != dS9["valor"] or lS9 != dS9.get("link", ""):
+                        save_resp("S9", str_concatenada_s9, ptsS9, lS9)
+                        st.rerun()
+
+            bloco_comentarios("S9", res_data)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # =============================================================================
+            # S10 • Especialidade Obstétrica: Métrica de Permanência e Frequência (SIH/SUS)
+            # =============================================================================
+            st.markdown('<div class="quesito-card">', unsafe_allow_html=True)
+            st.subheader(f"S10 • Sobre a especialidade Obstétrica em estabelecimentos de saúde sob gestão municipal em {ano_sel}, informe:")
+            st.write("DADOS DO SISTEMA DE INFORMAÇÕES HOSPITALARES DO SUS (SIH/SUS)")
+
+            # 🧮 Captura o ano selecionado de forma dinâmica para os labels
+            try:
+                        ano_atual_s10 = int(ano_sel)
+            except:
+                        ano_atual_s10 = 2025
+
+            # 🧹 Função de Higienização para inputs numéricos reais/decimais (Ex: "1.250" ou "12,5" -> Float)
+            def tratar_string_numerica_para_float(texto):
+                        if not texto:
+                                    return 0.0
+                        texto_limpo = texto.replace(".", "").replace(",", ".").strip()
+                        try:
+                                    return float(texto_limpo) if texto_limpo else 0.0
+                        except ValueError:
+                                    return 0.0
+
+            # 🎨 Função de formatação para exibição padrão BR com duas casas decimais
+            def formatar_para_numero_br(valor_float):
+                        return f"{valor_float:.2f}".replace(".", ",")
+
+            # Carrega ou inicializa a string persistida no banco contendo os valores de Permanência e Frequência
+            # Formato interno: Permanencia/Frequencia
+            dS10 = res_data.get("S10", {"valor": "0.0/0.0", "pontos": 0.0, "link": ""})
+
+            try:
+                        v_perm_s10, v_freq_s10 = map(float, dS10["valor"].split("/"))
+            except:
+                        v_perm_s10, v_freq_s10 = 0.0, 0.0
+
+            # Garante que o session_state inicialize no formato correto do Brasil para o ano corrente
+            if f"s10_str_perm_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s10_str_perm_{ano_sel}"] = formatar_para_numero_br(v_perm_s10)
+            if f"s10_str_freq_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s10_str_freq_{ano_sel}"] = formatar_para_numero_br(v_freq_s10)
+
+            c1, c2 = st.columns([1, 2])
+
+            with c1:
+                        # Inputs estruturados capturando os dados de produção hospitalar obstétrica
+                        input_perm_str = st.text_input(
+                                    f"Permanência (P) em {ano_sel}:",
+                                    value=st.session_state[f"s10_str_perm_{ano_sel}"],
+                                    key=f"txt_s10_perm_{ano_sel}"
+                        )
+
+                        input_freq_str = st.text_input(
+                                    f"Frequência (F) em {ano_sel}:",
+                                    value=st.session_state[f"s10_str_freq_{ano_sel}"],
+                                    key=f"txt_s10_freq_{ano_sel}"
+                        )
+
+                        # Conversão higienizada para execução dos cálculos aritméticos
+                        permanencia_s10 = tratar_string_numerica_para_float(input_perm_str)
+                        frequencia_s10 = tratar_string_numerica_para_float(input_freq_str)
+
+                        # Sincroniza a máscara visual de volta para o estado da tela
+                        st.session_state[f"s10_str_perm_{ano_sel}"] = formatar_para_numero_br(permanencia_s10)
+                        st.session_state[f"s10_str_freq_{ano_sel}"] = formatar_para_numero_br(frequencia_s10)
+
+                        # Limiar estabelecido pela fórmula de cálculo do manual
+                        limiar_s10 = 3.1
+
+                        # 🛑 TRAVA DE INICIALIZAÇÃO / CAMPOS ZERADOS OU DIVISÃO POR ZERO
+                        if permanencia_s10 == 0.0 or frequencia_s10 == 0.0:
+                                    ptsS10 = 0.0
+                                    razao_s10 = 0.0
+                                    texto_resultado = "Aguardando preenchimento dos indicadores de Permanência e Frequência..."
+                                    texto_pontuacao = "⏳ Sem avaliação"
+                                    estilo_status = "color: #64748b;"
+                        else:
+                                    # 🧮 Execução da fórmula: Razão de dias de internação por paciente (P / F)
+                                    razao_s10 = round(permanencia_s10 / frequencia_s10, 4)
+
+                                    # Verificação estrita dos limites de corte
+                                    if razao_s10 <= limiar_s10:
+                                                ptsS10 = 0.0
+                                                texto_resultado = f"✅ Parâmetro Otimizado: Razão P/F ({formatar_para_numero_br(razao_s10)}) em conformidade com o referencial regulatório"
+                                                texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                                                estilo_status = "color: #16a34a; font-weight: bold;"
+                                    else:
+                                                ptsS10 = -2.0
+                                                texto_resultado = f"🚨 Alerta de Permanência: Razão P/F ({formatar_para_numero_br(razao_s10)}) superou o limite de {formatar_para_numero_br(limiar_s10)} dias"
+                                                texto_pontuacao = "-2,00 pontos (Perde 2 pontos)"
+                                                estilo_status = "color: #dc2626; font-weight: bold;"
+
+            with c2:
+                        lS10 = st.text_area(f"Link/Evidência (S10 - Módulo Especialidades SIH/SUS {ano_sel}):", value=dS10.get("link", ""), key=f"txt_s10_link_{ano_sel}", height=150)
+
+            # Painel consolidador do monitoramento do plano de parto e internação obstétrica
+            st.markdown(f"""
+            <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                        📌 <b>Indicador Geral S10:</b> Eficiência da Internação na Especialidade Obstétrica ({ano_sel})<br>
+                        📊 <b>Média do Período de Permanência por Paciente (P/F):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{formatar_para_numero_br(razao_s10)} dias</code><br>
+                        ⚖️ <b>Status da Corte:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                        🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Agrupa os valores floats brutos separados por barra para armazenamento no banco
+            str_concatenada_s10 = f"{permanencia_s10:.2f}/{frequencia_s10:.2f}"
+
+            if str_concatenada_s10 != dS10["valor"] or lS10 != dS10.get("link", ""):
+                        save_resp("S10", str_concatenada_s10, ptsS10, lS10)
+                        st.rerun()
+
+            bloco_comentarios("S10", res_data)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+
