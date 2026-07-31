@@ -1,5 +1,3 @@
-from datetime import date, datetime
-from io import BytesIO
 import html
 import json
 import logging
@@ -7,8 +5,10 @@ import os
 import re
 import sys
 import warnings
-import pandas as pd
+from datetime import date, datetime
+from io import BytesIO
 
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import psycopg2
@@ -170,6 +170,17 @@ style_subtitulo_capa = ParagraphStyle(
     spaceAfter=20,
 )
 
+style_ano_capa = ParagraphStyle(
+    "AnoCapaIEduc",
+    parent=styles["Normal"],
+    fontName="Helvetica-Bold",
+    fontSize=16,
+    leading=20,
+    alignment=TA_CENTER,
+    textColor=colors.HexColor("#1F2937"),
+    spaceAfter=25,
+)
+
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÕES INICIAIS E SUPRESSÃO DE WARNINGS
 # -----------------------------------------------------------------------------
@@ -241,7 +252,6 @@ CATEGORIAS_MAP_IEDUC = {
     }
 }
 
-# Alias de compatibilidade para usar tanto PONTUACOES_MAX quanto PONTUACOES_MAX_IEDUC
 PONTUACOES_MAX = PONTUACOES_MAX_IEDUC
 CATEGORIAS_MAP = CATEGORIAS_MAP_IEDUC
 
@@ -261,32 +271,13 @@ def modal_aviso_link(qid, links_encontrados, ano_sel):
     Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
     """)
     
-    # Gera a chave exata limpa
     qid_key = str(qid).replace('.', '_')
     chave_gatilho = f"gatilho_modal_{qid_key}_{ano_sel}"
     
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid_key}_{ano_sel}", type="primary"):
-        # Desliga o gatilho no session_state para fechar o modal e não reabrir em outros salvamentos
         st.session_state[chave_gatilho] = False
         st.rerun()
 
-style_ano_capa = ParagraphStyle(
-    "AnoCapaIEduc",
-    parent=styles["Normal"],
-    fontName="Helvetica-Bold",
-    fontSize=16,
-    leading=20,
-    alignment=TA_CENTER,
-    textColor=colors.HexColor("#1F2937"),
-    spaceAfter=25,
-)
-
-import json
-import logging
-import re
-import streamlit as st
-from datetime import datetime
-from psycopg2.extras import RealDictCursor
 
 # =============================================================================
 # 1. GESTÃO DE ESTADO E PERSISTÊNCIA NEON POSTGRES - iEduc
@@ -362,7 +353,6 @@ def save_resp_ieduc(qid, valor, pontos, link="", comentarios=None, comentario=""
         "comentario": str(comentario or "")
     }
 
-    # 1. ATUALIZAÇÃO IMEDIATA DO SESSION STATE
     st.session_state[key_ano][str(qid)] = {
         "valor": str(valor or ""),
         "pontos": float(pontos or 0.0),
@@ -373,7 +363,6 @@ def save_resp_ieduc(qid, valor, pontos, link="", comentarios=None, comentario=""
         "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    # 2. PERSISTÊNCIA NO BANCO DE DADOS NEON
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -395,7 +384,6 @@ def save_resp_ieduc(qid, valor, pontos, link="", comentarios=None, comentario=""
                 ))
             conn.commit()
 
-            # Força sincronização do cache local
             load_respostas_ieduc(ano=ano_int, forcar_recarga=True)
             return True
 
@@ -444,7 +432,6 @@ def bloco_comentarios_ieduc(questao_id: str, res_data: dict, sufixo: str = None)
             key=key_radio
         )
 
-        # 1. Alteração de Status Automática
         if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
@@ -463,7 +450,6 @@ def bloco_comentarios_ieduc(questao_id: str, res_data: dict, sufixo: str = None)
             )
             st.rerun()
 
-        # 2. Renderização do Histórico de Balões de Comentários
         if historico:
             for idx, com in enumerate(historico):
                 if not isinstance(com, dict):
@@ -504,14 +490,12 @@ def bloco_comentarios_ieduc(questao_id: str, res_data: dict, sufixo: str = None)
                         )
                         st.rerun()
 
-        # Limpeza reativa da caixa de texto
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
 
         novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
 
-        # 3. Botão para Postar Novo Comentário
         if st.button("Postar Comentário", key=f"btn_com_ieduc_{id_chave}_{ano_sel}", type="primary"):
             if novo_texto.strip():
                 nova_mensagem = {
@@ -573,14 +557,13 @@ def render_dashboard_ieduc(questoes: list):
 
 
 # =============================================================================
-# 4. RENDERIZADOR DE QUESITOS E FORMULÁRIO (PADRÃO IAMB INTEGRADO COM COMENTÁRIOS)
+# 4. RENDERIZADOR DE QUESITOS E FORMULÁRIO
 # =============================================================================
 
 def render_modulo_ieduc(questoes_ieduc: list):
     """Interface principal do módulo i-Educ."""
     st.title("🎓 i-Educ - Índice de Educação")
     
-    # 1. Renderiza o resumo dinâmico
     render_dashboard_ieduc(questoes_ieduc)
 
     ano = get_ano_atual_ieduc()
@@ -594,13 +577,11 @@ def render_modulo_ieduc(questoes_ieduc: list):
         opcoes = questao.get("opcoes", ["Sim", "Não"])
         pontos_map = questao.get("pontos_map", {})
         
-        # Recupera dados salvos previamente
         resp_salva = respostas.get(qid, {})
         val_atual = resp_salva.get("valor", "")
         link_atual = resp_salva.get("link", "")
         obs_atual = resp_salva.get("comentario", "")
 
-        # Índice padrão para o Selectbox
         idx_padrao = 0
         if val_atual in opcoes:
             idx_padrao = opcoes.index(val_atual) + 1
@@ -608,7 +589,6 @@ def render_modulo_ieduc(questoes_ieduc: list):
         opcoes_com_vazio = ["-- Selecione --"] + opcoes
 
         with st.expander(f"**{qid} - {titulo}**", expanded=False):
-            # Campo de Resposta
             opcao_sel = st.selectbox(
                 f"Resposta para {qid}",
                 options=opcoes_com_vazio,
@@ -616,21 +596,18 @@ def render_modulo_ieduc(questoes_ieduc: list):
                 key=f"select_ieduc_{ano}_{qid}"
             )
 
-            # Evidência / Link
             link_input = st.text_input(
                 "Link da Evidência / Comprovação:",
                 value=link_atual,
                 key=f"link_ieduc_{ano}_{qid}"
             )
 
-            # Observações adicionais
             obs_input = st.text_area(
                 "Observações / Justificativa:",
                 value=obs_atual,
                 key=f"obs_ieduc_{ano}_{qid}"
             )
 
-            # Ação de Salvar por Quesito
             if st.button(f"Salvar Quesito {qid}", key=f"btn_save_ieduc_{ano}_{qid}", type="primary"):
                 if opcao_sel != "-- Selecione --":
                     pts = float(pontos_map.get(opcao_sel, 0.0))
@@ -646,7 +623,6 @@ def render_modulo_ieduc(questoes_ieduc: list):
                     if sucesso:
                         st.toast(f"Quesito {qid} salvo com sucesso!", icon="✅")
                         
-                        # Modal de link
                         links = re.findall(r'https?://[^\s]+', link_input)
                         if links and "modal_aviso_link" in globals():
                             modal_aviso_link(qid, links, ano)
@@ -655,48 +631,11 @@ def render_modulo_ieduc(questoes_ieduc: list):
                 else:
                     st.warning("Selecione uma opção válida antes de salvar.")
 
-            # INTEGRAÇÃO DO DIÁLOGO INTERNO / HISTÓRICO DE COMENTÁRIOS
             bloco_comentarios_ieduc(qid, respostas)
 
-# =============================================================================
-# CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (i-Educ)
-# =============================================================================
-styles = getSampleStyleSheet()
-
-# --- ESTILOS DE CAPA ---
-style_titulo_capa = ParagraphStyle(
-    "TituloCapaIEduc",
-    parent=styles["Normal"],
-    fontName="Helvetica-Bold",
-    fontSize=24,
-    leading=28,
-    alignment=TA_CENTER,
-    textColor=colors.HexColor("#1E3A8A"),  # Azul escuro institucional (i-Educ)
-    spaceAfter=15,
-)
-
-style_subtitulo_capa = ParagraphStyle(
-    "SubtituloCapaIEduc",
-    parent=styles["Normal"],
-    fontName="Helvetica",
-    fontSize=14,
-    leading=18,
-    alignment=TA_CENTER,
-    textColor=colors.HexColor("#4B5563"),
-    spaceAfter=30,
-)
-
-import html
-from io import BytesIO
-from datetime import datetime
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 # =============================================================================
-# 2. GERADOR DO RELATÓRIO PDF (i-Educ)
+# 5. GERADOR DO RELATÓRIO PDF (i-Educ)
 # =============================================================================
 
 def get_all_years_data_ieduc():
@@ -705,7 +644,7 @@ def get_all_years_data_ieduc():
 
 
 def gerar_relatorio_pdf_ieduc(dados, ano, total, faixa, all_data=None):
-    """Gera o documento PDF consolidado para o i-Educ sem dependências externas incorretas."""
+    """Gera o documento PDF consolidado para o i-Educ."""
     
     # 1. TRATAMENTO DE ANOS E DADOS HISTÓRICOS
     try:
@@ -767,86 +706,6 @@ def gerar_relatorio_pdf_ieduc(dados, ano, total, faixa, all_data=None):
     )
     elements = []
 
-    styles = getSampleStyleSheet()
-
-    style_tabela_cabecalho = ParagraphStyle(
-        "TabelaCabecalho",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
-        fontSize=9,
-        leading=11,
-        alignment=TA_CENTER,
-        textColor=colors.whitesmoke,
-    )
-
-    style_tabela_esquerda = ParagraphStyle(
-        "TabelaEsquerda",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=11,
-        alignment=TA_LEFT,
-    )
-
-    style_tabela_centro = ParagraphStyle(
-        "TabelaCentro",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=11,
-        alignment=TA_CENTER,
-    )
-
-    title_style = ParagraphStyle(
-        "DocTitle",
-        parent=styles["Heading1"],
-        fontName="Helvetica-Bold",
-        fontSize=18,
-        leading=22,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor("#1e3a8a"),
-    )
-
-    subtitle_style = ParagraphStyle(
-        "DocSubTitle",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=11,
-        leading=14,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor("#4b5563"),
-    )
-
-    section_header_style = ParagraphStyle(
-        "SectionHeader",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
-        fontSize=13,
-        leading=16,
-        textColor=colors.HexColor("#0f172a"),
-    )
-
-    style_titulo_capa = ParagraphStyle(
-        "TituloCapaIEduc",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
-        fontSize=24,
-        leading=28,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor("#1e3a8a"),
-        spaceAfter=15,
-    )
-
-    style_ano_capa = ParagraphStyle(
-        "AnoCapaIEduc",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=12,
-        leading=15,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor("#2563eb"),
-    )
-
     # -------------------------------------------------------------------------
     # FOLHA 1: CAPA
     # -------------------------------------------------------------------------
@@ -863,7 +722,15 @@ def gerar_relatorio_pdf_ieduc(dados, ano, total, faixa, all_data=None):
     elements.append(Spacer(1, 5))
     elements.append(Paragraph(
         "Índice de Fiscalização e Gestão da Educação Municipal",
-        ParagraphStyle('SubCapa', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=13, leading=16, textColor=colors.HexColor("#718096"), alignment=TA_CENTER)
+        ParagraphStyle(
+            'SubCapa',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=13,
+            leading=16,
+            textColor=colors.HexColor("#718096"),
+            alignment=TA_CENTER
+        )
     ))
     elements.append(Spacer(1, 25))
     elements.append(Paragraph(f"Exercício de Referência: <b>{ano_atual}</b>", style_ano_capa))
