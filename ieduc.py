@@ -1954,4 +1954,3 @@ def mostrar_formulario_educ(questoes: list = None):
     with aba_graf:
         render_graficos_ieduc(res_data, ano_sel)
 
-
