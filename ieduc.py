@@ -1567,3 +1567,84 @@ if analise_ods:
     ]))
     elements.append(tabela_ods)
     elements.append(Spacer(1, 15))
+
+# --- SEÇÃO 7: SÉRIE HISTÓRICA DO i-EDUC / i-FISCAL ---
+elements.append(Paragraph("7. SÉRIE HISTÓRICA DO i-EDUC (CONSOLIDADO FINAL)", styles["Heading2"]))
+elements.append(Spacer(1, 6))
+
+data_serie = [[
+    Paragraph("Ano", style_th), 
+    Paragraph("Pontuação Total", style_th), 
+    Paragraph("Faixa Alcançada", style_th), 
+    Paragraph("Evolução", style_th)
+]]
+
+# Processa histórico disponível em all_data
+anos_ordenados = sorted([str(a) for a in all_data.keys() if str(a).isdigit()], key=lambda x: int(x))
+if str(ano_atual) not in anos_ordenados:
+    anos_ordenados.append(str(ano_atual))
+
+pts_anterior_loop = None
+
+for ano_item in anos_ordenados:
+    if str(ano_item) == str(ano_atual):
+        pts_h = float(nota_atual)
+        faixa_h = faixa_real_atual
+    else:
+        d_h = all_data.get(ano_item) or all_data.get(int(ano_item), {})
+        if isinstance(d_h, dict):
+            pts_h = float(d_h.get("pontuacao_total", 0.0))
+        else:
+            try:
+                pts_h = float(d_h)
+            except (ValueError, TypeError):
+                pts_h = 0.0
+        
+        # Função de faixa com fallback para i-Educ ou i-Fiscal
+        if "converter_pontos_em_faixa_ieduc" in globals():
+            faixa_h = converter_pontos_em_faixa_ieduc(pts_h)
+        elif "converter_pontos_em_faixa_ifiscal" in globals():
+            faixa_h = converter_pontos_em_faixa_ifiscal(pts_h)
+        else:
+            faixa_h = "N/A"
+
+    # Cálculo da tendência para a coluna Evolução
+    if pts_anterior_loop is None:
+        texto_evolucao = "Exercício Base"
+    else:
+        dif = pts_h - pts_anterior_loop
+        if dif > 0.05:
+            texto_evolucao = f"<font color='#28a745'>▲ +{dif:.2f} pts</font>"
+        elif dif < -0.05:
+            texto_evolucao = f"<font color='#dc3545'>▼ {dif:.2f} pts</font>"
+        else:
+            texto_evolucao = "<font color='#6c757d'>= Estável</font>"
+
+    data_serie.append([
+        Paragraph(str(ano_item), style_tabela_centro),
+        Paragraph(f"{pts_h:.2f} pts", style_tabela_centro),
+        Paragraph(str(faixa_h), style_tabela_centro),
+        Paragraph(texto_evolucao, style_tabela_centro)
+    ])
+    
+    pts_anterior_loop = pts_h
+
+tabela_serie = Table(data_serie, colWidths=[80, 130, 130, 155])
+tabela_serie.setStyle(TableStyle([
+    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e3a8a")),
+    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+    ("TOPPADDING", (0, 0), (-1, -1), 6),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+]))
+elements.append(tabela_serie)
+elements.append(Spacer(1, 15))
+
+# -------------------------------------------------------------------------
+# FINALIZAÇÃO E GERAÇÃO DO PDF i-EDUC
+# -------------------------------------------------------------------------
+doc.build(elements)
+pdf = buffer.getvalue()
+buffer.close()
+return pdf
