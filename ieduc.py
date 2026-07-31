@@ -532,3 +532,157 @@ def bloco_comentarios_ieduc(questao_id: str, res_data: dict, sufixo: str = None)
                 st.session_state[key_estado_limpar] = True
                 st.rerun()
 
+# =============================================================================
+# 3. PAINEL DE RESUMO E PONTUAÇÃO (DESEMPENHO DO I-EDUC)
+# =============================================================================
+
+def render_dashboard_ieduc(questoes: list):
+    """Exibe os cartões de status e progresso do i-Educ."""
+    ano = get_ano_atual_ieduc()
+    respostas = load_respostas_ieduc(ano)
+
+    total_quesitos = len(questoes)
+    preenchidos = 0
+    pontuacao_obtida = 0.0
+    pontuacao_maxima = 0.0
+
+    for q in questoes:
+        qid = str(q["id"])
+        peso_max = float(q.get("peso", 1.0))
+        pontuacao_maxima += peso_max
+
+        if qid in respostas and respostas[qid].get("valor"):
+            preenchidos += 1
+            pontuacao_obtida += float(respostas[qid].get("pontos", 0.0))
+
+    progresso_pct = (preenchidos / total_quesitos * 100) if total_quesitos > 0 else 0
+    nota_final = (pontuacao_obtida / pontuacao_maxima * 10) if pontuacao_maxima > 0 else 0.0
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Ano de Referência", f"{ano}")
+    with col2:
+        st.metric("Quesitos Preenchidos", f"{preenchidos} / {total_quesitos}", f"{progresso_pct:.1f}%")
+    with col3:
+        st.metric("Pontuação Total", f"{pontuacao_obtida:.2f} / {pontuacao_maxima:.2f}")
+    with col4:
+        st.metric("Nota i-Educ", f"{nota_final:.2f} / 10.0")
+
+    st.progress(min(progresso_pct / 100.0, 1.0))
+    st.markdown("---")
+
+
+# =============================================================================
+# 4. RENDERIZADOR DE QUESITOS E FORMULÁRIO (PADRÃO IAMB INTEGRADO COM COMENTÁRIOS)
+# =============================================================================
+
+def render_modulo_ieduc(questoes_ieduc: list):
+    """Interface principal do módulo i-Educ."""
+    st.title("🎓 i-Educ - Índice de Educação")
+    
+    # 1. Renderiza o resumo dinâmico
+    render_dashboard_ieduc(questoes_ieduc)
+
+    ano = get_ano_atual_ieduc()
+    respostas = load_respostas_ieduc(ano)
+
+    st.subheader("Formulário de Avaliação")
+
+    for questao in questoes_ieduc:
+        qid = str(questao["id"])
+        titulo = questao.get("titulo", f"Quesito {qid}")
+        opcoes = questao.get("opcoes", ["Sim", "Não"])
+        pontos_map = questao.get("pontos_map", {})
+        
+        # Recupera dados salvos previamente
+        resp_salva = respostas.get(qid, {})
+        val_atual = resp_salva.get("valor", "")
+        link_atual = resp_salva.get("link", "")
+        obs_atual = resp_salva.get("comentario", "")
+
+        # Índice padrão para o Selectbox
+        idx_padrao = 0
+        if val_atual in opcoes:
+            idx_padrao = opcoes.index(val_atual) + 1
+
+        opcoes_com_vazio = ["-- Selecione --"] + opcoes
+
+        with st.expander(f"**{qid} - {titulo}**", expanded=False):
+            # Campo de Resposta
+            opcao_sel = st.selectbox(
+                f"Resposta para {qid}",
+                options=opcoes_com_vazio,
+                index=idx_padrao,
+                key=f"select_ieduc_{ano}_{qid}"
+            )
+
+            # Evidência / Link
+            link_input = st.text_input(
+                "Link da Evidência / Comprovação:",
+                value=link_atual,
+                key=f"link_ieduc_{ano}_{qid}"
+            )
+
+            # Observações adicionais
+            obs_input = st.text_area(
+                "Observações / Justificativa:",
+                value=obs_atual,
+                key=f"obs_ieduc_{ano}_{qid}"
+            )
+
+            # Ação de Salvar por Quesito
+            if st.button(f"Salvar Quesito {qid}", key=f"btn_save_ieduc_{ano}_{qid}", type="primary"):
+                if opcao_sel != "-- Selecione --":
+                    pts = float(pontos_map.get(opcao_sel, 0.0))
+                    
+                    sucesso = save_resp_ieduc(
+                        qid=qid,
+                        valor=opcao_sel,
+                        pontos=pts,
+                        link=link_input,
+                        comentario=obs_input
+                    )
+                    
+                    if sucesso:
+                        st.toast(f"Quesito {qid} salvo com sucesso!", icon="✅")
+                        
+                        # Modal de link
+                        links = re.findall(r'https?://[^\s]+', link_input)
+                        if links and "modal_aviso_link" in globals():
+                            modal_aviso_link(qid, links, ano)
+                            
+                        st.rerun()
+                else:
+                    st.warning("Selecione uma opção válida antes de salvar.")
+
+            # INTEGRAÇÃO DO DIÁLOGO INTERNO / HISTÓRICO DE COMENTÁRIOS
+            bloco_comentarios_ieduc(qid, respostas)
+
+# =============================================================================
+# CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (i-Educ)
+# =============================================================================
+styles = getSampleStyleSheet()
+
+# --- ESTILOS DE CAPA ---
+style_titulo_capa = ParagraphStyle(
+    "TituloCapaIEduc",
+    parent=styles["Normal"],
+    fontName="Helvetica-Bold",
+    fontSize=24,
+    leading=28,
+    alignment=TA_CENTER,
+    textColor=colors.HexColor("#1E3A8A"),  # Azul escuro institucional (i-Educ)
+    spaceAfter=15,
+)
+
+style_subtitulo_capa = ParagraphStyle(
+    "SubtituloCapaIEduc",
+    parent=styles["Normal"],
+    fontName="Helvetica",
+    fontSize=14,
+    leading=18,
+    alignment=TA_CENTER,
+    textColor=colors.HexColor("#4B5563"),
+    spaceAfter=30,
+)
+
