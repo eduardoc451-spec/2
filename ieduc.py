@@ -1648,3 +1648,297 @@ doc.build(elements)
 pdf = buffer.getvalue()
 buffer.close()
 return pdf
+
+import logging
+import re
+import plotly.graph_objects as go
+import streamlit as st
+
+# =============================================================================
+# 4. SIDEBAR - i-Educ
+# =============================================================================
+
+
+def zerar_questionario_ieduc(ano: int):
+    """Deleta todas as respostas do ano selecionado na tabela respostas_ieduc."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM respostas_ieduc WHERE ano = %s",
+                    (int(ano),),
+                )
+            conn.commit()
+        st.cache_data.clear()  # Limpa o cache após deletar
+    except Exception as e:
+        logging.error(f"Erro ao zerar questionário i-Educ: {e}")
+        st.error(f"Erro ao zerar questionário i-Educ: {e}")
+
+
+@st.dialog("⚠️ Zerar Respostas do i-Educ")
+def confirmar_zerar_dialog_ieduc(ano):
+    st.warning(
+        f"Tem certeza que deseja apagar TODAS as respostas do i-Educ para o ano {ano}?"
+    )
+    st.write(
+        "Esta ação é irreversível e excluirá os dados salvos no banco Neon."
+    )
+
+    # Campo para inserção da senha de confirmação
+    senha_digitada = st.text_input(
+        "Digite a senha de confirmação para prosseguir:",
+        type="password",
+        placeholder="Digite a senha...",
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(
+            "🔴 Sim, Zerar Tudo", type="primary", use_container_width=True
+        ):
+            if senha_digitada.strip() == "fidelios":
+                try:
+                    zerar_questionario_ieduc(ano)
+
+                    # Limpa a sessão
+                    key_ano = f"respostas_ieduc_{ano}"
+                    st.session_state[key_ano] = {}
+
+                    st.toast(
+                        "Respostas do i-Educ zeradas com sucesso!", icon="🗑️"
+                    )
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao zerar banco: {e}")
+            else:
+                st.error("🔒 Senha incorreta! Ação cancelada.")
+
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+
+def render_sidebar_ieduc():
+    st.sidebar.title("🎓 Painel de Controle - i-Educ")
+    anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+
+    # Seleção do ano no session_state
+    ano_sel = st.sidebar.selectbox(
+        "Ano de Referência:", anos, key="ano_referencia_ieduc"
+    )
+
+    if "load_respostas_ieduc" in globals():
+        res_data = load_respostas_ieduc(ano_sel)
+    else:
+        res_data = load_respostas(ano_sel)
+
+    total_pts = sum(
+        float(item.get("pontos", 0.0))
+        for item in res_data.values()
+        if isinstance(item, dict)
+    )
+
+    # Régua de Classificação IEGM / i-Educ
+    if total_pts <= 500:
+        faixa, cor = "C", "red"
+    elif total_pts <= 599:
+        faixa, cor = "C+", "orange"
+    elif total_pts <= 749:
+        faixa, cor = "B", "#d4d400"
+    elif total_pts <= 899:
+        faixa, cor = "B+", "lightgreen"
+    else:
+        faixa, cor = "A", "green"
+
+    st.sidebar.metric("Pontuação Total i-Educ", f"{total_pts:.1f} pts")
+    st.sidebar.markdown(
+        f"**Faixa:** <span style='color:{cor}; font-size:18px; font-weight:bold;'>{faixa}</span>",
+        unsafe_allow_html=True,
+    )
+
+    st.sidebar.divider()
+
+    col1, col2 = st.sidebar.columns(2)
+
+    # Botão de Download direto
+    with col1:
+        pdf_bytes = b""
+        if "gerar_relatorio_pdf_ieduc" in globals():
+            res_pdf = gerar_relatorio_pdf_ieduc(
+                res_data, ano_sel, total_pts, faixa
+            )
+            pdf_bytes = (
+                res_pdf.getvalue()
+                if hasattr(res_pdf, "getvalue")
+                else res_pdf
+            )
+        elif "gerar_relatorio_pdf" in globals():
+            res_pdf = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
+            pdf_bytes = (
+                res_pdf.getvalue()
+                if hasattr(res_pdf, "getvalue")
+                else res_pdf
+            )
+
+        st.download_button(
+            label="📄 Baixar PDF",
+            data=pdf_bytes,
+            file_name=f"Relatorio_iEduc_{ano_sel}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            disabled=(pdf_bytes == b""),
+        )
+
+    # Botão para abrir o Modal de confirmação
+    with col2:
+        if st.button(
+            "🔄 Zerar",
+            help="Limpar todas as respostas do ano selecionado",
+            use_container_width=True,
+        ):
+            confirmar_zerar_dialog_ieduc(ano_sel)
+
+    return total_pts, res_data, ano_sel
+
+
+# =============================================================================
+# 5. GRÁFICOS E HISTÓRICO - i-Educ
+# =============================================================================
+
+
+def get_all_years_data_ieduc() -> dict:
+    """Busca o histórico de dados de todos os anos salvos na tabela respostas_ieduc e session_state."""
+    all_data = {}
+
+    # 1. Carrega via Banco
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT DISTINCT ano FROM respostas_ieduc ORDER BY ano"
+                )
+                anos_banco = [row[0] for row in cursor.fetchall()]
+                for a in anos_banco:
+                    all_data[a] = (
+                        load_respostas_ieduc(a)
+                        if "load_respostas_ieduc" in globals()
+                        else load_respostas(a)
+                    )
+    except Exception as e:
+        logging.error(
+            f"Erro ao buscar histórico de anos i-Educ no banco: {e}"
+        )
+
+    # 2. Carrega via Session State (para capturar anos ainda não persistidos)
+    prefixo = "respostas_ieduc_"
+    for key in list(st.session_state.keys()):
+        if key.startswith(prefixo):
+            try:
+                ano = int(key.replace(prefixo, ""))
+                if ano not in all_data or not all_data[ano]:
+                    all_data[ano] = st.session_state[key]
+            except ValueError:
+                continue
+
+    return all_data
+
+
+def get_faixa_ieduc(total: float) -> str:
+    if total <= 500:
+        return "C - Inefetivo"
+    if total <= 599:
+        return "C+ - Em Adequação"
+    if total <= 749:
+        return "B - Efetivo"
+    if total <= 899:
+        return "B+ - Muito Efetivo"
+    return "A - Altamente Efetivo"
+
+
+def grafico_pontos_por_ano_ieduc(all_data):
+    """Gráfico de barras vertical com pontos totais por ano para o i-Educ."""
+    anos = sorted(all_data.keys())
+    totais = []
+    cores = []
+
+    for ano in anos:
+        res = all_data[ano]
+        total = sum(
+            float(v.get("pontos", 0.0))
+            for k, v in res.items()
+            if isinstance(v, dict) and not str(k).startswith("COM_")
+        )
+        totais.append(total)
+
+        if total <= 500:
+            cores.append("#ef4444")  # Vermelho
+        elif total <= 599:
+            cores.append("#f97316")  # Laranja
+        elif total <= 749:
+            cores.append("#eab308")  # Amarelo
+        elif total <= 899:
+            cores.append("#84cc16")  # Verde Claro
+        else:
+            cores.append("#16a34a")  # Verde Escuro
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=[str(a) for a in anos],
+            y=totais,
+            marker_color=cores,
+            text=[f"{t:.1f} pts" for t in totais],
+            textposition="outside",
+            hovertemplate="<b>Ano: %{x}</b><br>i-Educ Total: %{y:.1f} pts<extra></extra>",
+        )
+    )
+
+    fig.update_layout(
+        title="Índice Histórico i-Educ (Gestão Educacional) por Exercício",
+        xaxis_title="Ano",
+        yaxis_title="Pontuação i-Educ",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        showlegend=False,
+        height=400,
+    )
+
+    return fig
+
+
+def render_graficos_ieduc(res_data_atual, ano_sel):
+    st.header("📊 Painel de Análise do i-Educ")
+
+    all_data = get_all_years_data_ieduc()
+
+    if not all_data:
+        st.info(
+            "Nenhum dado do i-Educ registrado ainda. Preencha os itens para visualizar os gráficos."
+        )
+        return
+
+    st.plotly_chart(
+        grafico_pontos_por_ano_ieduc(all_data), use_container_width=True
+    )
+
+
+# =============================================================================
+# 6. FORMULÁRIO PRINCIPAL - i-Educ
+# =============================================================================
+
+def mostrar_formulario_educacao():
+    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
+
+    Gerencia a barra lateral, abas de navegação, carregamento de dados
+    e renderização dos quesitos de avaliação.
+    """
+    # Carregamento do estado e da barra lateral
+    total_pts, res_data, ano_sel = render_sidebar_ieduc()
+
+    # Título principal da página
+    st.title(f"🎓 Educação (i-Educ) - Exercício {ano_sel}")
+
+    # Estrutura de abas principal
+    aba_quest, aba_dados_ext, aba_graf = st.tabs(
+        ["📋 Questionário i-Educ", "🌐 Dados Externos", "📊 Gráficos"]
+    )
