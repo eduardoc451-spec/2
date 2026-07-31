@@ -684,18 +684,22 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     ano_ant = ano_atual - 1
     dados_ano_anterior = all_data.get(ano_ant, {})
 
-    # -------------------------------------------------------------------------
+   # -------------------------------------------------------------------------
     # FOLHA 1: CAPA
     # -------------------------------------------------------------------------
-    elements.append(Spacer(1, 100))
+    elements.append(
+        Spacer(1, 40)
+    )  # Reduzido de 100 para 40 para não estourar a página
     try:
-        logo = Image("iegm.png", width=380, height=180)
+        logo = Image(
+            "iegm.png", width=300, height=140
+        )  # Ajustado o tamanho da imagem
         logo.hAlign = "CENTER"
         elements.append(logo)
     except Exception:
         elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
 
-    elements.append(Spacer(1, 50))
+    elements.append(Spacer(1, 30))  # Reduzido de 50 para 30
     elements.append(Paragraph("Relatório i-Saúde", style_titulo_capa))
     elements.append(Spacer(1, 5))
     elements.append(
@@ -714,35 +718,106 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     )
     elements.append(Spacer(1, 15))
     elements.append(Paragraph(str(ano_atual), style_ano_capa))
-    
+
+    # OBRIGATÓRIO: Força a ida para a Folha 2 (Sumário)
+    elements.append(PageBreak())
+
     # -------------------------------------------------------------------------
-    # FOLHA 2: SUMÁRIO (ATUALIZADO)
+    # FOLHA 2: SUMÁRIO
     # -------------------------------------------------------------------------
     elements.append(Paragraph("<b>SUMÁRIO</b>", styles["h1"]))
-    elements.append(Spacer(1, 30))
-    
-    style_item_esquerda = ParagraphStyle('ItemEsq', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, leading=14, textColor=colors.HexColor("#2c3e50"))
-    style_pag_direita = ParagraphStyle('PagDir', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, leading=14, textColor=colors.HexColor("#00897b"), alignment=2)
-    
+    elements.append(Spacer(1, 20))
+
+    style_item_esquerda = ParagraphStyle(
+        "ItemEsq",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor("#2c3e50"),
+    )
+    style_pag_direita = ParagraphStyle(
+        "PagDir",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor("#00897b"),
+        alignment=2,
+    )
+
     dados_sumario = [
-        [Paragraph("1. Resumo Executivo (Análise Comparativa de Gestão da Saúde)", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
-        [Paragraph("2. Análise de Desempenho por Quesito i-Saúde", style_item_esquerda), Paragraph("Pág. 3", style_pag_direita)],
-        [Paragraph("3. Análise de Impacto e Penalidades (Eficiência Preventiva)", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("4. Diagnóstico de Reincidências (Gargalos Persistentes)", style_item_esquerda), Paragraph("Pág. 4", style_pag_direita)],
-        [Paragraph("5. Alinhamento com a Agenda 2030 (Metas ODS / ONU)", style_item_esquerda), Paragraph("Pág. 5", style_pag_direita)],
-        # Novos itens adicionados abaixo com paginação estimada de fluxo:
-        [Paragraph("6. Análise Comparativa de Prazos e Indicadores Históricos", style_item_esquerda), Paragraph("Pág. 5", style_pag_direita)],
-        [Paragraph("7. Série Histórica do iSaúde (Consolidado Final)", style_item_esquerda), Paragraph("Pág. 6", style_pag_direita)],
+        [
+            Paragraph(
+                "1. Resumo Executivo (Análise Comparativa de Gestão da Saúde)",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 3", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "2. Análise de Desempenho por Quesito i-Saúde",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 3", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "3. Análise de Impacto e Penalidades (Eficiência Preventiva)",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 4", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "4. Diagnóstico de Reincidências (Gargalos Persistentes)",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 4", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "5. Alinhamento com a Agenda 2030 (Metas ODS / ONU)",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 5", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "6. Análise Comparativa de Prazos e Indicadores Históricos",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 5", style_pag_direita),
+        ],
+        [
+            Paragraph(
+                "7. Série Histórica do iSaúde (Consolidado Final)",
+                style_item_esquerda,
+            ),
+            Paragraph("Pág. 6", style_pag_direita),
+        ],
     ]
-    
+
     tabela_sumario = Table(dados_sumario, colWidths=[400, 90])
-    tabela_sumario.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10), # Reduzi levemente de 12 para 10 para caber tudo na folha 2 sem quebrar
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#bdc3c7"), 1, (2, 4)), 
-    ]))
+    tabela_sumario.setStyle(
+        TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            (
+                "LINEBELOW",
+                (0, 0),
+                (-1, -1),
+                0.5,
+                colors.HexColor("#bdc3c7"),
+                1,
+                (2, 4),
+            ),
+        ])
+    )
     elements.append(tabela_sumario)
+
+    # Força a ida para a Folha 3 (Conteúdo)
     elements.append(PageBreak())
 
     # -------------------------------------------------------------------------
