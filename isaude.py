@@ -621,8 +621,8 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
         pagesize=A4,
         rightMargin=30,
         leftMargin=30,
-        topMargin=30,
-        bottomMargin=30,
+        topMargin=20,     # Reduzido levemente para evitar transbordamento
+        bottomMargin=20,
     )
     elements = []
     styles = getSampleStyleSheet()
@@ -684,22 +684,19 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     ano_ant = ano_atual - 1
     dados_ano_anterior = all_data.get(ano_ant, {})
 
-   # -------------------------------------------------------------------------
-    # FOLHA 1: CAPA
     # -------------------------------------------------------------------------
-    elements.append(
-        Spacer(1, 40)
-    )  # Reduzido de 100 para 40 para não estourar a página
+    # FOLHA 1: CAPA (Corrigida)
+    # -------------------------------------------------------------------------
+    elements.append(Spacer(1, 15)) # Spacer inicial bem curto
     try:
-        logo = Image(
-            "iegm.png", width=300, height=140
-        )  # Ajustado o tamanho da imagem
+        # Altura ajustada para 90px mantendo o visual sem estourar o limite vertical
+        logo = Image("iegm.png", width=350, height=90)
         logo.hAlign = "CENTER"
         elements.append(logo)
     except Exception:
         elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
 
-    elements.append(Spacer(1, 30))  # Reduzido de 50 para 30
+    elements.append(Spacer(1, 25))
     elements.append(Paragraph("Relatório i-Saúde", style_titulo_capa))
     elements.append(Spacer(1, 5))
     elements.append(
@@ -719,12 +716,13 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements.append(Spacer(1, 15))
     elements.append(Paragraph(str(ano_atual), style_ano_capa))
 
-    # OBRIGATÓRIO: Força a ida para a Folha 2 (Sumário)
+    # FORÇA A PÁGINA 2 EXCLUSIVA PARA O SUMÁRIO
     elements.append(PageBreak())
 
     # -------------------------------------------------------------------------
     # FOLHA 2: SUMÁRIO
     # -------------------------------------------------------------------------
+    elements.append(Spacer(1, 10))
     elements.append(Paragraph("<b>SUMÁRIO</b>", styles["h1"]))
     elements.append(Spacer(1, 20))
 
@@ -748,52 +746,31 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
 
     dados_sumario = [
         [
-            Paragraph(
-                "1. Resumo Executivo (Análise Comparativa de Gestão da Saúde)",
-                style_item_esquerda,
-            ),
+            Paragraph("1. Resumo Executivo (Análise Comparativa de Gestão da Saúde)", style_item_esquerda),
             Paragraph("Pág. 3", style_pag_direita),
         ],
         [
-            Paragraph(
-                "2. Análise de Desempenho por Quesito i-Saúde",
-                style_item_esquerda,
-            ),
+            Paragraph("2. Análise de Desempenho por Quesito i-Saúde", style_item_esquerda),
             Paragraph("Pág. 3", style_pag_direita),
         ],
         [
-            Paragraph(
-                "3. Análise de Impacto e Penalidades (Eficiência Preventiva)",
-                style_item_esquerda,
-            ),
+            Paragraph("3. Análise de Impacto e Penalidades (Eficiência Preventiva)", style_item_esquerda),
             Paragraph("Pág. 4", style_pag_direita),
         ],
         [
-            Paragraph(
-                "4. Diagnóstico de Reincidências (Gargalos Persistentes)",
-                style_item_esquerda,
-            ),
+            Paragraph("4. Diagnóstico de Reincidências (Gargalos Persistentes)", style_item_esquerda),
             Paragraph("Pág. 4", style_pag_direita),
         ],
         [
-            Paragraph(
-                "5. Alinhamento com a Agenda 2030 (Metas ODS / ONU)",
-                style_item_esquerda,
-            ),
+            Paragraph("5. Alinhamento com a Agenda 2030 (Metas ODS / ONU)", style_item_esquerda),
             Paragraph("Pág. 5", style_pag_direita),
         ],
         [
-            Paragraph(
-                "6. Análise Comparativa de Prazos e Indicadores Históricos",
-                style_item_esquerda,
-            ),
+            Paragraph("6. Análise Comparativa de Prazos e Indicadores Históricos", style_item_esquerda),
             Paragraph("Pág. 5", style_pag_direita),
         ],
         [
-            Paragraph(
-                "7. Série Histórica do iSaúde (Consolidado Final)",
-                style_item_esquerda,
-            ),
+            Paragraph("7. Série Histórica do iSaúde (Consolidado Final)", style_item_esquerda),
             Paragraph("Pág. 6", style_pag_direita),
         ],
     ]
@@ -804,20 +781,12 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ("TOPPADDING", (0, 0), (-1, -1), 8),
-            (
-                "LINEBELOW",
-                (0, 0),
-                (-1, -1),
-                0.5,
-                colors.HexColor("#bdc3c7"),
-                1,
-                (2, 4),
-            ),
+            ("LINEBELOW", (0, 0), (-1, -1), 0.5, colors.HexColor("#bdc3c7"), 1, (2, 4)),
         ])
     )
     elements.append(tabela_sumario)
 
-    # Força a ida para a Folha 3 (Conteúdo)
+    # VAI PARA A PÁGINA 3 (CONTEÚDO/RESUMO EXECUTIVO)
     elements.append(PageBreak())
 
     # -------------------------------------------------------------------------
