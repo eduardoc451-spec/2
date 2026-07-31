@@ -99,6 +99,30 @@ except ImportError:
 # CONFIGURAÇÃO COMPLETA DE ESTILOS DE RELATÓRIO (PDF) - iEduc
 # =============================================================================
 styles = getSampleStyleSheet()
+# --- ESTILOS ADICIONAIS PARA O PDF ---
+title_style = ParagraphStyle(
+    'TitleStyle',
+    parent=styles['Heading1'],
+    fontSize=16,
+    alignment=TA_CENTER,
+    spaceAfter=12
+)
+subtitle_style = ParagraphStyle(
+    'SubtitleStyle',
+    parent=styles['Normal'],
+    fontSize=12,
+    alignment=TA_CENTER,
+    spaceAfter=10
+)
+section_header_style = ParagraphStyle(
+    'SectionHeaderStyle',
+    parent=styles['Heading2'],
+    fontSize=14,
+    spaceBefore=12,
+    spaceAfter=6,
+    textColor=colors.HexColor("#1e3a8a")
+)
+
 
 # --- ESTILOS DE TABELA ---
 style_tabela_padrao = ParagraphStyle(
@@ -893,243 +917,10 @@ def gerar_relatorio_pdf_ieduc(dados, ano, total, faixa, all_data=None):
         ])
     )
     elements.append(t_detalhes)
-# -------------------------------------------------------------------------
-# FOLHA 3+: CONTEÚDO TÉCNICO COMPLETO
-# -------------------------------------------------------------------------
-elements.append(Paragraph(f"RELATÓRIO DE AUDITORIA i-FISCAL (GESTÃO EM EDUCAÇÃO) - {ano_atual}", styles["Heading1"]))
-elements.append(Spacer(1, 10))
 
-# --- SEÇÃO 1: RESUMO EXECUTIVO ---
-elements.append(Paragraph("1. RESUMO EXECUTIVO (ANÁLISE COMPARATIVA DE GESTÃO DA EDUCAÇÃO)", styles["Heading2"]))
-elements.append(Spacer(1, 6))
-
-dados_comparativos = [
-    [Paragraph("Exercício", style_th), Paragraph("Pontuação Obtida", style_th), Paragraph("Faixa / Conceito", style_th), Paragraph("Variação Nominal", style_th), Paragraph("Variação Percentual", style_th)],
-    [Paragraph(str(ano_ant), style_td_ano), Paragraph(f"{nota_ant:.1f} pts", style_td_pts), Paragraph(str(faixa_anterior if 'faixa_anterior' in locals() else 'N/A'), style_td_faixa), Paragraph("-", style_td_var), Paragraph("-", style_td_var)],
-    [Paragraph(str(ano_atual), style_td_ano), Paragraph(f"{nota_atual:.1f} pts", style_td_pts), Paragraph(str(faixa_real_atual), style_td_faixa), Paragraph(f"{seta_tendencia} {variacao_pontos:+.1f} pts", style_td_var), Paragraph(f"{seta_tendencia} {texto_percentual}", style_td_var)]
-]
-
-tabela_comp = Table(dados_comparativos, colWidths=[80, 105, 95, 105, 110])
-tabela_comp.setStyle(TableStyle([
-    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e3a8a")),
-    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-    ("TOPPADDING", (0, 0), (-1, -1), 6),
-    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#f8fafc")),
-    ("BACKGROUND", (0, 2), (-1, 2), colors.white),
-]))
-elements.append(tabela_comp)
-elements.append(Spacer(1, 8))
-
-if variacao_pontos > 0:
-    texto_analise = f"<b>Análise de Tendência:</b> O município registrou uma evolução de desempenho com incremento de <b>{texto_percentual}</b> na sua pontuação global da gestão em educação comparado ao exercício de {ano_ant}."
-elif variacao_pontos < 0:
-    texto_analise = f"<b>Análise de Tendência:</b> <font color='#dc3545'><b>Alerta de Retrocesso:</b></font> Foi identificada uma redução de <b>{texto_percentual}</b> na eficiência dos indicadores educacionais, pedagógicos e de infraestrutura em relação a {ano_ant}."
-else:
-    texto_analise = "<b>Análise de Tendência:</b> O município apresentou estagnação absoluta (0.00%) no seu índice geral de conformidade i-Fiscal / i-Educ."
-
-elements.append(Paragraph(texto_analise, style_analise if 'style_analise' in locals() else styles["Normal"]))
-elements.append(Spacer(1, 12))
-
-# --- SEÇÃO 2: DESEMPENHO POR QUESITO ---
-elements.append(Paragraph("2. ANÁLISE DE DESEMPENHO POR QUESITO i-FISCAL", styles["Heading2"]))
-elements.append(Spacer(1, 6))
-
-lista_pontos_fortes = []
-lista_pontos_fracos = []
-dados_consolidados = {}
-
-pontuacoes_max_referencia = globals().get("PONTUACOES_MAX_IEDUC", globals().get("PONTUACOES_MAX_IFISCAL", {}))
-pontuacoes_max_norm = {normalizar_chave(k): v for k, v in pontuacoes_max_referencia.items()}
-
-for qid, info in dados.items():
-    if str(qid).startswith("COM_") or not isinstance(info, dict):
-        continue
-    pts_obtidos = float(info.get("pontos", 0))
-    valor_resposta = info.get("valor", "")
-    link_evidencia = info.get("link", "")
-    qid_limpo = normalizar_chave(qid)
-
-    if qid_limpo not in pontuacoes_max_norm:
-        continue
-
-    if qid_limpo not in dados_consolidados:
-        dados_consolidados[qid_limpo] = {"pts_obtidos": 0.0, "valores": [], "links": []}
-
-    dados_consolidados[qid_limpo]["pts_obtidos"] += pts_obtidos
-    if valor_resposta:
-        dados_consolidados[qid_limpo]["valores"].append(limpar_xml(valor_resposta) if 'limpar_xml' in globals() else html.escape(str(valor_resposta)))
-    if link_evidencia:
-        link_limpo = limpar_xml(link_evidencia) if 'limpar_xml' in globals() else html.escape(str(link_evidencia))
-        if link_limpo not in dados_consolidados[qid_limpo]["links"]:
-            dados_consolidados[qid_limpo]["links"].append(link_limpo)
-
-for qid_norm, info in dados_consolidados.items():
-    pts_maximo = float(pontuacoes_max_norm.get(qid_norm, 10.0))
-    if pts_maximo <= 0:
-        pts_maximo = 10.0
-    pts_obtidos = max(0.0, min(info["pts_obtidos"], pts_maximo))
-    eficiencia = (pts_obtidos / pts_maximo) * 100
-    respostas_unificadas = " | ".join(info["valores"]) if info["valores"] else "-"
-    evidencias_unificadas = ", ".join(info["links"]) if info["links"] else ""
-
-    item_data = {
-        "qid": qid_norm,
-        "pts_obtidos": pts_obtidos,
-        "pts_maximo": pts_maximo,
-        "eficiencia": eficiencia,
-        "valor": respostas_unificadas,
-        "link": evidencias_unificadas
-    }
-    if eficiencia < 80.0:
-        lista_pontos_fracos.append(item_data)
-    else:
-        lista_pontos_fortes.append(item_data)
-
-if lista_pontos_fortes:
-    elements.append(Paragraph("<b>✅ Pontos Fortes da Gestão da Educação (Eficiência >= 80%):</b>", styles["Heading3"]))
-    data_fortes = [[Paragraph("Quesito", style_th), Paragraph("Nota / Teto", style_th), Paragraph("Eficiência", style_th), Paragraph("Resposta / Evidência", style_th)]]
-    for item in sorted(lista_pontos_fortes, key=lambda x: x["eficiencia"], reverse=True):
-        texto_celula = f"<b>{item['valor']}</b>"
-        if item['link']:
-            texto_celula += f"<br/><font size=7 color='gray'>{item['link']}</font>"
-        data_fortes.append([
-            Paragraph(item['qid'], style_tabela_centro),
-            Paragraph(f"{item['pts_obtidos']:.1f} / {item['pts_maximo']:.1f}", style_tabela_centro),
-            Paragraph(f"{item['eficiencia']:.1f}%", style_tabela_centro),
-            Paragraph(texto_celula, style_tabela_esquerda)
-        ])
-    tabela_fortes = Table(data_fortes, colWidths=[65, 75, 65, 290])
-    tabela_fortes.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563eb")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(tabela_fortes)
-    elements.append(Spacer(1, 10))
-
-if lista_pontos_fracos:
-    elements.append(Paragraph("<b>⚠️ Oportunidades de Melhoria / Fragilidades (< 80% de Eficiência):</b>", styles["Heading3"]))
-    data_fracos = [[Paragraph("Quesito", style_th), Paragraph("Nota / Teto", style_th), Paragraph("Eficiência", style_th), Paragraph("Resposta / Evidência", style_th)]]
-    for item in sorted(lista_pontos_fracos, key=lambda x: x["eficiencia"]):
-        texto_celula = f"<b>{item['valor']}</b>"
-        if item['link']:
-            texto_celula += f"<br/><font size=7 color='gray'>{item['link']}</font>"
-        data_fracos.append([
-            Paragraph(item['qid'], style_tabela_centro),
-            Paragraph(f"{item['pts_obtidos']:.1f} / {item['pts_maximo']:.1f}", style_tabela_centro),
-            Paragraph(f"{item['eficiencia']:.1f}%", style_tabela_centro),
-            Paragraph(texto_celula, style_tabela_esquerda)
-        ])
-    tabela_fracos = Table(data_fracos, colWidths=[65, 75, 65, 290])
-    tabela_fracos.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d97706")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(tabela_fracos)
-    elements.append(Spacer(1, 12))
-
-# --- SEÇÃO 3: IMPACTO E PENALIDADES ---
-elements.append(Paragraph("3. ANÁLISE DE IMPACTO E PENALIDADES (EFICIÊNCIA PREVENTIVA)", styles["Heading2"]))
-elements.append(Spacer(1, 6))
-
-penalidades_referencia = globals().get("PENALIDADES_MAX_IEDUC", globals().get("PENALIDADES_MAX", {}))
-penalidades_max_norm = {normalizar_chave(k): v for k, v in penalidades_referencia.items()}
-dados_penalidades = {}
-
-for k, v in dados.items():
-    if isinstance(v, dict):
-        dados_penalidades[normalizar_chave(k)] = v
-
-for qid_pen, val_max in penalidades_max_norm.items():
-    if qid_pen not in dados_penalidades:
-        dados_penalidades[qid_pen] = {"pontos": val_max, "valor": "Não preenchido / Ocultado por condicional", "link": ""}
-
-lista_penalidades = []
-reincidencias_detectadas = []
-
-dados_ano_anterior = all_data.get(ano_ant) or all_data.get(str(ano_ant), {}) if isinstance(all_data, dict) else {}
-
-for qid_norm, pen_max in penalidades_max_norm.items():
-    if qid_norm in dados_penalidades:
-        info = dados_penalidades[qid_norm]
-        nota_real = float(info.get("pontos", 0.0))
-        nota_risco = nota_real if nota_real <= 0.0 else 0.0
-
-        if pen_max != 0:
-            eficiencia_preventiva = (1.0 - (nota_risco / pen_max)) * 100.0
-        else:
-            eficiencia_preventiva = 100.0
-
-        eficiencia_preventiva = max(0.0, min(eficiencia_preventiva, 100.0))
-        lista_penalidades.append({
-            "qid": qid_norm, "nota_real": nota_real, "pen_max": pen_max, "eficiencia": eficiencia_preventiva,
-            "valor": info.get("valor", ""), "link": info.get("link", "")
-        })
-
-        if eficiencia_preventiva < 100.0 and isinstance(dados_ano_anterior, dict) and dados_ano_anterior:
-            dados_ant_norm = {normalizar_chave(ka): va for ka, va in dados_ano_anterior.items() if isinstance(va, dict)}
-            if qid_norm in dados_ant_norm:
-                info_ant = dados_ant_norm[qid_norm]
-                nota_real_ant = float(info_ant.get("pontos", 0.0))
-                if nota_real == nota_real_ant:
-                    reincidencias_detectadas.append({
-                        "qid": qid_norm, "tipo": "Penalidade Aplicada",
-                        "detalhe": f"Impacto Recorrente de Penalidade de {nota_real:.1f} pts",
-                        "ant": f"{nota_real_ant:.1f} pts", "atual": f"{nota_real:.1f} pts"
-                    })
-
-if lista_penalidades:
-    data_penalidades = [[
-        Paragraph("Quesito", style_th),
-        Paragraph("Penalidade Aplicada", style_th),
-        Paragraph("Pior Cenário", style_th),
-        Paragraph("Eficiência Preventiva", style_th),
-        Paragraph("Status de Risco", style_th)
-    ]]
-
-    def ordenar_quesitos(x):
-        limpo = ''.join(c for c in x["qid"] if c.isdigit() or c == '.')
-        partes = [int(i) for i in limpo.split('.') if i.isdigit()]
-        return partes if partes else [999]
-
-    for item in sorted(lista_penalidades, key=ordenar_quesitos):
-        nota_txt = f"{item['nota_real']:.1f} pts"
-        teto_txt = f"{item['pen_max']:.1f} pts"
-        ef_txt = f"{item['eficiencia']:.1f}%"
-
-        if item['eficiencia'] >= 100.0:
-            status = "<font color='#2e7d32'><b>Risco Mitigado</b></font>"
-        elif item['eficiencia'] <= 0.0:
-            status = "<font color='#c0392b'><b>Impacto Máximo</b></font>"
-        else:
-            status = "<font color='#d35400'><b>Impacto Parcial</b></font>"
-
-        data_penalidades.append([
-            Paragraph(item['qid'], style_tabela_centro),
-            Paragraph(nota_txt, style_tabela_centro),
-            Paragraph(teto_txt, style_tabela_centro),
-            Paragraph(ef_txt, style_tabela_centro),
-            Paragraph(status, style_tabela_esquerda)
-        ])
-
-    tabela_pen = Table(data_penalidades, colWidths=[70, 105, 80, 115, 125])
-    tabela_pen.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1b4f72")),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
-    elements.append(tabela_pen)
-    elements.append(Spacer(1, 12))
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
 
 # --- SEÇÃO 4: DIAGNÓSTICO DE REINCIDÊNCIAS ---
 elements.append(Paragraph("4. DIAGNÓSTICO DE REINCIDÊNCIAS (GARGALOS PERSISTENTES)", styles["Heading2"]))
