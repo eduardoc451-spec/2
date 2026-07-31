@@ -1527,20 +1527,51 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # =============================================================================
+# ESTRUTURA DE DADOS PADRÃO (FALLBACK PARA QUESITOS DO I-EDUC)
+# =============================================================================
+QUESTOES_IEDUC_PADRAO = [
+    {
+        "id": "EDUC-01",
+        "titulo": "Plano Municipal de Educação (PME) vigente e atualizado",
+        "opcoes": ["Sim", "Não"],
+        "pontos_map": {"Sim": 100.0, "Não": 0.0},
+    },
+    {
+        "id": "EDUC-02",
+        "titulo": "Cumprimento das metas de cobertura em creches e pré-escola",
+        "opcoes": ["Totalmente", "Parcialmente", "Não atende"],
+        "pontos_map": {"Totalmente": 100.0, "Parcialmente": 50.0, "Não atende": 0.0},
+    },
+    {
+        "id": "EDUC-03",
+        "titulo": "Disponibilização de transporte escolar com frota regularizada",
+        "opcoes": ["Sim", "Não"],
+        "pontos_map": {"Sim": 100.0, "Não": 0.0},
+    },
+]
+
+# =============================================================================
+# HELPER DE ANO ATUAL
+# =============================================================================
+def get_ano_atual_ieduc() -> int:
+    """Retorna o ano selecionado no session_state ou o padrão atual."""
+    return st.session_state.get("ano_referencia_ieduc", 2024)
+
+# =============================================================================
 # 4. SIDEBAR - i-Educ
 # =============================================================================
-
 
 def zerar_questionario_ieduc(ano: int):
     """Deleta todas as respostas do ano selecionado na tabela respostas_ieduc."""
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "DELETE FROM respostas_ieduc WHERE ano = %s",
-                    (int(ano),),
-                )
-            conn.commit()
+        if "get_connection" in globals():
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "DELETE FROM respostas_ieduc WHERE ano = %s",
+                        (int(ano),),
+                    )
+                conn.commit()
         st.cache_data.clear()  # Limpa o cache após deletar
     except Exception as e:
         logging.error(f"Erro ao zerar questionário i-Educ: {e}")
@@ -1601,8 +1632,10 @@ def render_sidebar_ieduc():
 
     if "load_respostas_ieduc" in globals():
         res_data = load_respostas_ieduc(ano_sel)
-    else:
+    elif "load_respostas" in globals():
         res_data = load_respostas(ano_sel)
+    else:
+        res_data = st.session_state.get(f"respostas_ieduc_{ano_sel}", {})
 
     total_pts = sum(
         float(item.get("pontos", 0.0))
@@ -1677,25 +1710,25 @@ def render_sidebar_ieduc():
 # 5. GRÁFICOS E HISTÓRICO - i-Educ
 # =============================================================================
 
-
 def get_all_years_data_ieduc() -> dict:
     """Busca o histórico de dados de todos os anos salvos na tabela respostas_ieduc e session_state."""
     all_data = {}
 
     # 1. Carrega via Banco
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT DISTINCT ano FROM respostas_ieduc ORDER BY ano"
-                )
-                anos_banco = [row[0] for row in cursor.fetchall()]
-                for a in anos_banco:
-                    all_data[a] = (
-                        load_respostas_ieduc(a)
-                        if "load_respostas_ieduc" in globals()
-                        else load_respostas(a)
+        if "get_connection" in globals():
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT DISTINCT ano FROM respostas_ieduc ORDER BY ano"
                     )
+                    anos_banco = [row[0] for row in cursor.fetchall()]
+                    for a in anos_banco:
+                        all_data[a] = (
+                            load_respostas_ieduc(a)
+                            if "load_respostas_ieduc" in globals()
+                            else load_respostas(a)
+                        )
     except Exception as e:
         logging.error(
             f"Erro ao buscar histórico de anos i-Educ no banco: {e}"
@@ -1778,7 +1811,7 @@ def grafico_pontos_por_ano_ieduc(all_data):
     return fig
 
 
-def render_graficos_ieduc(res_data_atual, ano_sel):
+def render_graficos_ieduc(res_data_atual=None, ano_sel=None):
     st.header("📊 Painel de Análise do i-Educ")
 
     all_data = get_all_years_data_ieduc()
@@ -1795,14 +1828,107 @@ def render_graficos_ieduc(res_data_atual, ano_sel):
 
 
 # =============================================================================
-# 6. FORMULÁRIO PRINCIPAL - i-Educ
+# 6. RENDERIZADOR DE FORMULÁRIO E QUESITOS
 # =============================================================================
 
-def mostrar_formulario_educacao():
-    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
+def render_modulo_ieduc(questoes_ieduc: list):
+    """Interface principal dos quesitos do módulo i-Educ."""
+    ano = get_ano_atual_ieduc()
+    
+    if "load_respostas_ieduc" in globals():
+        respostas = load_respostas_ieduc(ano)
+    else:
+        respostas = st.session_state.get(f"respostas_ieduc_{ano}", {})
 
+    st.subheader("Formulário de Avaliação")
+
+    for questao in questoes_ieduc:
+        qid = str(questao["id"])
+        titulo = questao.get("titulo", f"Quesito {qid}")
+        opcoes = questao.get("opcoes", ["Sim", "Não"])
+        pontos_map = questao.get("pontos_map", {})
+
+        resp_salva = respostas.get(qid, {})
+        val_atual = resp_salva.get("valor", "")
+        link_atual = resp_salva.get("link", "")
+        obs_atual = resp_salva.get("comentario", "")
+
+        idx_padrao = 0
+        if val_atual in opcoes:
+            idx_padrao = opcoes.index(val_atual) + 1
+
+        opcoes_com_vazio = ["-- Selecione --"] + opcoes
+
+        with st.expander(f"**{qid} - {titulo}**", expanded=False):
+            opcao_sel = st.selectbox(
+                f"Resposta para {qid}",
+                options=opcoes_com_vazio,
+                index=idx_padrao,
+                key=f"select_ieduc_{ano}_{qid}",
+            )
+
+            link_input = st.text_input(
+                "Link da Evidência / Comprovação:",
+                value=link_atual,
+                key=f"link_ieduc_{ano}_{qid}",
+            )
+
+            obs_input = st.text_area(
+                "Observações / Justificativa:",
+                value=obs_atual,
+                key=f"obs_ieduc_{ano}_{qid}",
+            )
+
+            if st.button(
+                f"Salvar Quesito {qid}",
+                key=f"btn_save_ieduc_{ano}_{qid}",
+                type="primary",
+            ):
+                if opcao_sel != "-- Selecione --":
+                    pts = float(pontos_map.get(opcao_sel, 0.0))
+
+                    if "save_resp_ieduc" in globals():
+                        sucesso = save_resp_ieduc(
+                            qid=qid,
+                            valor=opcao_sel,
+                            pontos=pts,
+                            link=link_input,
+                            comentario=obs_input,
+                        )
+                    else:
+                        # Salva no Session State como fallback
+                        key_ano = f"respostas_ieduc_{ano}"
+                        if key_ano not in st.session_state:
+                            st.session_state[key_ano] = {}
+                        st.session_state[key_ano][qid] = {
+                            "valor": opcao_sel,
+                            "pontos": pts,
+                            "link": link_input,
+                            "comentario": obs_input,
+                        }
+                        sucesso = True
+
+                    if sucesso:
+                        st.toast(f"Quesito {qid} salvo com sucesso!", icon="✅")
+
+                        links = re.findall(r"https?://[^\s]+", link_input)
+                        if links and "modal_aviso_link" in globals():
+                            modal_aviso_link(qid, links, ano)
+
+                        st.rerun()
+                else:
+                    st.warning("Selecione uma opção válida antes de salvar.")
+
+
+# =============================================================================
+# 7. FUNÇÃO PRINCIPAL / WRAPPER PARA O MAIN.PY
+# =============================================================================
+
+def mostrar_formulario_educ(questoes: list = None):
+    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
+    
     Gerencia a barra lateral, abas de navegação, carregamento de dados
-    e renderização dos quesitos de avaliação.
+    e renderização dos quesitos de avaliação. Compatível com a chamada do main.py.
     """
     # Carregamento do estado e da barra lateral
     total_pts, res_data, ano_sel = render_sidebar_ieduc()
@@ -1810,7 +1936,23 @@ def mostrar_formulario_educacao():
     # Título principal da página
     st.title(f"🎓 Educação (i-Educ) - Exercício {ano_sel}")
 
+    # Fallback para lista de questões
+    if questoes is None:
+        questoes = globals().get("QUESTOES_IEDUC", QUESTOES_IEDUC_PADRAO)
+
     # Estrutura de abas principal
     aba_quest, aba_dados_ext, aba_graf = st.tabs(
         ["📋 Questionário i-Educ", "🌐 Dados Externos", "📊 Gráficos"]
     )
+
+    with aba_quest:
+        render_modulo_ieduc(questoes)
+
+    with aba_dados_ext:
+        st.subheader("🌐 Fontes e Dados Externos da Educação")
+        st.info("Integração com bases públicas como Censo Escolar, IDEB e SIOPE.")
+
+    with aba_graf:
+        render_graficos_ieduc(res_data, ano_sel)
+
+
