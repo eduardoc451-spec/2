@@ -22194,3 +22194,73 @@ def mostrar_formulario_saude():
                         ano_sel,
                     )
 
+            # =============================================================================
+            # ABA 3: GRÁFICOS - SÉRIE HISTÓRICA (BARRAS EM AZUL)
+            # =============================================================================
+            with aba_graf:
+                st.subheader("📈 Série Histórica de Pontuação do i-Saúde")
+                st.write("Evolução da pontuação absoluta calculada de forma idêntica ao painel principal.")
+
+                import pandas as pd
+                import plotly.express as px
+
+                # 1. Varre os anos aplicando exatamente a mesma regra de soma da sua interface
+                anos_historico = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+                pontuacoes_validas = []
+
+                for ano_hist in anos_historico:
+                    # Carrega o dicionário bruto do banco para o ano específico usando sua função
+                    dados_ano = load_respostas(ano_hist)
+
+                    total_pts_ano = 0.0
+                    for qid, item in dados_ano.items():
+                        if qid.startswith("COM_"):
+                            continue
+                        if "_" in qid and not qid.startswith("S"):
+                            continue
+                        total_pts_ano += float(item.get("pontos", 0))
+
+                    pontuacoes_validas.append(round(total_pts_ano, 1))
+
+                # 2. Criação do DataFrame para o Plotly
+                df_historico = pd.DataFrame({
+                    "Ano": [str(a) for a in anos_historico],
+                    "Pontuação Real": pontuacoes_validas
+                })
+
+                # Filtra para mostrar no gráfico apenas anos que já possuem alguma pontuação (evita poluir com zeros do futuro)
+                df_visivel = df_historico[df_historico["Pontuação Real"] > 0].copy()
+                if df_visivel.empty:
+                    df_visivel = df_historico.head(4)  # Fallback seguro caso tudo esteja zerado inicialmente
+
+                # 3. Montagem do gráfico de barras com cor azul fixa
+                fig = px.bar(
+                    df_visivel,
+                    x="Ano",
+                    y="Pontuação Real",
+                    text="Pontuação Real",
+                    labels={"Pontuação Real": "Pontos Brutos", "Ano": "Ano de Exercício"},
+                    # Define a cor azul fixa para todas as barras através do color_discrete_sequence
+                    color_discrete_sequence=["#0078D4"]
+                )
+
+                # Ajusta os rótulos de pontuação para o topo das barras
+                fig.update_traces(texttemplate='%{text:.1f} pts', textposition='outside')
+
+                maior_pontuacao = max(df_visivel["Pontuação Real"].max(), 100.0)
+
+                fig.update_layout(
+                    xaxis_type='category',
+                    yaxis_range=[0, maior_pontuacao + 120],  # Margem para o texto não cortar no topo
+                    showlegend=False,
+                    margin=dict(l=20, r=20, t=30, b=20),
+                    height=400
+                )
+
+                # Renderiza o gráfico na tela
+                st.plotly_chart(fig, use_container_width=True)
+
+                # 4. Tabela analítica resumida
+                st.markdown("### 📋 Resumo da Evolução")
+                st.dataframe(df_historico.set_index("Ano").T, use_container_width=True)
+
