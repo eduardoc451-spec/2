@@ -699,6 +699,11 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 # 2. GERADOR DO RELATÓRIO PDF (i-Educ)
 # =============================================================================
 
+def get_all_years_data_ieduc():
+    """Função auxiliar para obter dados históricos do iEduc no estado local/banco."""
+    return st.session_state.get("historico_anos_ieduc", {})
+
+
 def gerar_relatorio_pdf_ieduc(dados, ano, total, faixa, all_data=None):
     """Gera o documento PDF consolidado para o i-Educ sem dependências externas incorretas."""
     
