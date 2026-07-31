@@ -685,36 +685,47 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     dados_ano_anterior = all_data.get(ano_ant, {})
 
     # -------------------------------------------------------------------------
-    # FOLHA 1: CAPA (Corrigida)
+    # FOLHA 1: CAPA
     # -------------------------------------------------------------------------
-    elements.append(Spacer(1, 15)) # Spacer inicial bem curto
-    try:
-        # Altura ajustada para 90px mantendo o visual sem estourar o limite vertical
-        logo = Image("iegm.png", width=350, height=90)
-        logo.hAlign = "CENTER"
-        elements.append(logo)
-    except Exception:
+    elements.append(Spacer(1, 20))
+
+    # --- TRATAMENTO SEGURO DA IMAGEM DA CAPA ---
+    logo_path = "iegm.png"
+    if os.path.exists(logo_path):
+        try:
+            logo = Image(logo_path, width=380, height=180)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+        except Exception as e:
+            elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
+    else:
         elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
 
     elements.append(Spacer(1, 25))
-    elements.append(Paragraph("Relatório i-Saúde", style_titulo_capa))
-    elements.append(Spacer(1, 5))
-    elements.append(
-        Paragraph(
-            "Índice de Fiscalização e Gestão da Saúde Municipal",
-            ParagraphStyle(
-                "SubCapa",
-                parent=styles["Normal"],
-                fontName="Helvetica-Bold",
-                fontSize=14,
-                leading=18,
-                textColor=colors.HexColor("#718096"),
-                alignment=1,
-            ),
-        )
+
+    style_titulo_capa = ParagraphStyle(
+        'TituloCapa', 
+        parent=styles['Normal'], 
+        fontName='Helvetica-Bold', 
+        fontSize=24, 
+        leading=28,
+        textColor=colors.HexColor("#2c3e50"), 
+        alignment=1
     )
-    elements.append(Spacer(1, 15))
-    elements.append(Paragraph(str(ano_atual), style_ano_capa))
+
+    elements.append(Paragraph("Relatório i-Saúde", style_titulo_capa))
+    elements.append(Spacer(1, 10))
+
+    style_ano_capa = ParagraphStyle(
+        'AnoCapa', 
+        parent=styles['Normal'], 
+        fontName='Helvetica', 
+        fontSize=16, 
+        leading=20,
+        textColor=colors.HexColor("#7f8c8d"), 
+        alignment=1
+    )
+    elements.append(Paragraph(str(ano), style_ano_capa))
 
     # FORÇA A PÁGINA 2 EXCLUSIVA PARA O SUMÁRIO
     elements.append(PageBreak())
