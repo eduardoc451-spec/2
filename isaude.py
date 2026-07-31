@@ -1788,7 +1788,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements.append(Paragraph("<b>6. SÉRIE HISTÓRICA DO ISAÚDE (CONSOLIDADO FINAL)</b>", styles["h2"]))
     elements.append(Spacer(1, 10))
 
-    anos_serie = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    anos_serie = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
     valores_serie = []
     
     # Sincroniza com a variável 'ano' recebida na assinatura da função
