@@ -20970,3 +20970,626 @@ def mostrar_formulario_saude():
                         ano_sel,
                     )
 
+                    # =============================================================================
+            # INDICADOR S17 • COBERTURA DE EXAME CITOPATOLÓGICO NA APS (SISAB)
+            # =============================================================================
+
+            def tratar_string_inteiro_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in str(texto) if c.isdigit())
+                try:
+                    return float(apenas_numeros) if apenas_numeros else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_inteiro_br(valor_float):
+                return f"{int(valor_float):,}".replace(",", ".")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S17_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S17 - Cobertura de Exame Citopatológico ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S17 • Cobertura de Exame Citopatológico em Mulheres de 25 a 64 anos na APS (SISAB)"
+                    )
+                    st.write(
+                        "**Sobre a realização de exames citopatológicos na APS nos últimos"
+                        f" 36 meses no 1º, 2º e 3º Quadrimestres de {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s17 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s17 = 2025
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Pontuação |
+| :--- | :--- | :--- |
+| Se $Cobertura \ge 100,00\%$ | 🥇 Excelência Crítica | 25,00 pontos |
+| Se $80,00\% \le Cobertura < 100,00\%$ | 🟢 Meta Atingida | 20,00 pontos |
+| Se $40,00\% \le Cobertura < 80,00\%$ | 🟡 Cobertura Moderada | 15,00 pontos |
+| Se $28,00\% \le Cobertura < 40,00\%$ | 🟠 Alerta de Cobertura | 10,00 pontos |
+| Se $16,00\% \le Cobertura < 28,00\%$ | 🚨 Risco na Linha de Cuidado | 5,00 pontos |
+| Se $Cobertura < 16,00\%$ | ❌ Alerta Máximo | 0,00 pontos |
+                    """)
+                    st.caption(
+                        "🌐 *Fonte oficial (SISAB). "
+                        "Insira os dados quadrimestrais, o link da evidência e clique em 'Salvar Indicador S17'.*"
+                    )
+
+                    dS17 = res_data.get("S17") or {
+                        "valor": "0/0/0/0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    valores_s17 = dS17.get("valor", "0/0/0/0/0/0").split("/")
+                    if len(valores_s17) != 6:
+                        valores_s17 = [0.0] * 6
+                    else:
+                        try:
+                            valores_s17 = [float(v) for v in valores_s17]
+                        except Exception:
+                            valores_s17 = [0.0] * 6
+
+                    cit1q, cit2q, cit3q, tm1q, tm2q, tm3q = valores_s17
+                    evidencia_S17_salva = dS17.get("link", "")
+                    chave_link_S17 = f"txt_s17_link_{ano_sel}"
+
+                    if f"s17_str_cit1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s17_str_cit1q_{ano_sel}"] = formatar_para_inteiro_br(cit1q)
+                    if f"s17_str_cit2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s17_str_cit2q_{ano_sel}"] = formatar_para_inteiro_br(cit2q)
+                    if f"s17_str_cit3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s17_str_cit3q_{ano_sel}"] = formatar_para_inteiro_br(cit3q)
+                    if f"s17_str_tm1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s17_str_tm1q_{ano_sel}"] = formatar_para_inteiro_br(tm1q)
+                    if f"s17_str_tm2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s17_str_tm2q_{ano_sel}"] = formatar_para_inteiro_br(tm2q)
+                    if f"s17_str_tm3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s17_str_tm3q_{ano_sel}"] = formatar_para_inteiro_br(tm3q)
+
+                    cS17_1, cS17_2 = st.columns([1, 1])
+
+                    with cS17_1:
+                        st.markdown("##### 🔬 Exames Coletados (Últimos 36 meses)")
+                        input_cit1q_str = st.text_input(
+                            f"Coletas no 1º Quadrimestre de {ano_atual_s17} (CIT1Q):",
+                            value=st.session_state[f"s17_str_cit1q_{ano_sel}"],
+                            key=f"txt_s17_cit1q_{ano_sel}",
+                        )
+                        input_cit2q_str = st.text_input(
+                            f"Coletas no 2º Quadrimestre de {ano_atual_s17} (CIT2Q):",
+                            value=st.session_state[f"s17_str_cit2q_{ano_sel}"],
+                            key=f"txt_s17_cit2q_{ano_sel}",
+                        )
+                        input_cit3q_str = st.text_input(
+                            f"Coletas no 3º Quadrimestre de {ano_atual_s17} (CIT3Q):",
+                            value=st.session_state[f"s17_str_cit3q_{ano_sel}"],
+                            key=f"txt_s17_cit3q_{ano_sel}",
+                        )
+
+                        st.markdown("##### 👥 População Alvo Total (25 a 64 anos)")
+                        input_tm1q_str = st.text_input(
+                            f"Total de mulheres no 1º Quadrimestre de {ano_atual_s17} (TM1Q):",
+                            value=st.session_state[f"s17_str_tm1q_{ano_sel}"],
+                            key=f"txt_s17_tm1q_{ano_sel}",
+                        )
+                        input_tm2q_str = st.text_input(
+                            f"Total de mulheres no 2º Quadrimestre de {ano_atual_s17} (TM2Q):",
+                            value=st.session_state[f"s17_str_tm2q_{ano_sel}"],
+                            key=f"txt_s17_tm2q_{ano_sel}",
+                        )
+                        input_tm3q_str = st.text_input(
+                            f"Total de mulheres no 3º Quadrimestre de {ano_atual_s17} (TM3Q):",
+                            value=st.session_state[f"s17_str_tm3q_{ano_sel}"],
+                            key=f"txt_s17_tm3q_{ano_sel}",
+                        )
+
+                        cit1q = tratar_string_inteiro_para_float(input_cit1q_str)
+                        cit2q = tratar_string_inteiro_para_float(input_cit2q_str)
+                        cit3q = tratar_string_inteiro_para_float(input_cit3q_str)
+                        tm1q = tratar_string_inteiro_para_float(input_tm1q_str)
+                        tm2q = tratar_string_inteiro_para_float(input_tm2q_str)
+                        tm3q = tratar_string_inteiro_para_float(input_tm3q_str)
+
+                        st.session_state[f"s17_str_cit1q_{ano_sel}"] = formatar_para_inteiro_br(cit1q)
+                        st.session_state[f"s17_str_cit2q_{ano_sel}"] = formatar_para_inteiro_br(cit2q)
+                        st.session_state[f"s17_str_cit3q_{ano_sel}"] = formatar_para_inteiro_br(cit3q)
+                        st.session_state[f"s17_str_tm1q_{ano_sel}"] = formatar_para_inteiro_br(tm1q)
+                        st.session_state[f"s17_str_tm2q_{ano_sel}"] = formatar_para_inteiro_br(tm2q)
+                        st.session_state[f"s17_str_tm3q_{ano_sel}"] = formatar_para_inteiro_br(tm3q)
+
+                        total_coletas_s17 = cit1q + cit2q + cit3q
+                        total_mulheres_s17 = tm1q + tm2q + tm3q
+
+                    with cS17_2:
+                        link_S17 = st.text_area(
+                            f"Link/Evidência (S17 - Relatório Unificado {ano_sel}):",
+                            value=evidencia_S17_salva,
+                            key=chave_link_S17,
+                            placeholder="Insira o link oficial referente ao indicador S17...",
+                            height=380,
+                        )
+                        placeholder_links_S17 = st.empty()
+                        links_S17_visuais = re.findall(REGEX_PURE_URL, link_S17 or "")
+                        if links_S17_visuais:
+                            placeholder_links_S17.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S17_visuais
+                                ])
+                            )
+
+                    if total_mulheres_s17 == 0.0 or total_coletas_s17 == 0.0:
+                        ptsS17_calc = 0.0
+                        p_cobertura = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos indicadores quadrimestrais do SISAB..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        p_cobertura = round(
+                            (total_coletas_s17 / total_mulheres_s17) * 100.0, 2
+                        )
+
+                        if p_cobertura >= 100.0:
+                            ptsS17_calc = 25.0
+                            texto_resultado = (
+                                "🥇 EXCELÊNCIA CRÍTICA: Cobertura integral registrada (100% ou mais)"
+                            )
+                            texto_pontuacao = "25,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 80.0 <= p_cobertura < 100.0:
+                            ptsS17_calc = 20.0
+                            texto_resultado = (
+                                f"🟢 META ATINGIDA: Excelente índice de triagem preventiva ({f'{p_cobertura:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "20,00 pontos"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 40.0 <= p_cobertura < 80.0:
+                            ptsS17_calc = 15.0
+                            texto_resultado = (
+                                f"🟡 COBERTURA MODERADA: Necessidade de busca ativa de pacientes ({f'{p_cobertura:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "15,00 pontos"
+                            estilo_status = "color: #eab308; font-weight: bold;"
+                        elif 28.0 <= p_cobertura < 40.0:
+                            ptsS17_calc = 10.0
+                            texto_resultado = (
+                                f"🟠 ALERTA DE COBERTURA: Índice abaixo da linha de segurança epidemiológica ({f'{p_cobertura:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "10,00 pontos"
+                            estilo_status = "color: #ea580c; font-weight: bold;"
+                        elif 16.0 <= p_cobertura < 28.0:
+                            ptsS17_calc = 5.0
+                            texto_resultado = (
+                                f"🚨 RISCO DE LINHA DE CUIDADO: Cobertura vacilante e muito fragilizada ({f'{p_cobertura:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "5,00 pontos"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+                        else:
+                            ptsS17_calc = 0.0
+                            texto_resultado = (
+                                f"❌ ALERTA MÁXIMO: Cobertura em nível crítico de desassistência ({f'{p_cobertura:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "0,00 pontos"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    p_cobertura_br = f"{p_cobertura:.2f}".replace(".", ",") + "%"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S17:</b> Proporção de Cobertura de Exame Citopatológico (Colo de Útero)<br>
+                            📊 <b>Percentual de Cobertura Geral Calculado (P):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{p_cobertura_br}</code><br>
+                            ⚖️ <b>Status da Assistência Preventiva:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Pontuação Homologada para o Ano:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S17", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S17", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S17")
+                            except TypeError:
+                                bloco_comentarios("S17", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S17",
+                        key=f"btn_salvar_S17_{ano_sel}",
+                        type="primary",
+                    ):
+                        lista_salvar_s17 = [
+                            f"{cit1q:.0f}",
+                            f"{cit2q:.0f}",
+                            f"{cit3q:.0f}",
+                            f"{tm1q:.0f}",
+                            f"{tm2q:.0f}",
+                            f"{tm3q:.0f}",
+                        ]
+                        str_salvar_s17 = "/".join(lista_salvar_s17)
+                        ptsS17 = ptsS17_calc
+                        lnk_val = link_S17.strip()
+                        comentarios_historico = dS17.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S17",
+                                valor=str_salvar_s17,
+                                pontos=ptsS17,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S17", str_salvar_s17, ptsS17, lnk_val)
+
+                        res_data["S17"] = {
+                            "valor": str_salvar_s17,
+                            "pontos": ptsS17,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S17_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S17_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S17_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S17_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S17 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S17 = dS17.get("pontos", 0.0)
+                    cor_txt_S17 = (
+                        "#dc2626"
+                        if pts_atuais_S17 < 0.0
+                        else ("#28a745" if pts_atuais_S17 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S17}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S17: {pts_atuais_S17:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S17
+            if st.session_state.get(f"gatilho_modal_S17_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S17",
+                        st.session_state.get(f"links_pendentes_S17_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S18 • ACOMPANHAMENTO E AFERIÇÃO DE PRESSÃO DE HIPERTENSOS NA APS (SISAB)
+            # =============================================================================
+
+            with st.container(
+                key=f"container_bloco_isaude_S18_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S18 - Acompanhamento de Hipertensos ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S18 • Acompanhamento e Aferição de Pressão Arterial de Hipertensos na APS (SISAB)"
+                    )
+                    st.write(
+                        "**Sobre o número de hipertensos com consulta e aferição de pressão"
+                        f" arterial nos últimos 6 meses nos quadrimestres de {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s18 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s18 = 2025
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Pontuação |
+| :--- | :--- | :--- |
+| Se $Cobertura \ge 100,00\%$ | 🥇 Excelência Crítica | 25,00 pontos |
+| Se $50,00\% \le Cobertura < 100,00\%$ | 🟢 Meta Alcançada | 15,00 pontos |
+| Se $35,00\% \le Cobertura < 50,00\%$ | 🟡 Acompanhamento Intermediário | 10,00 pontos |
+| Se $20,00\% \le Cobertura < 35,00\%$ | 🟠 Alerta de Cobertura | 5,00 pontos |
+| Se $Cobertura < 20,00\%$ | ❌ Crítico | 0,00 pontos |
+                    """)
+                    st.caption(
+                        "🌐 *Fonte oficial (SISAB). "
+                        "Insira os dados quadrimestrais, o link da evidência e clique em 'Salvar Indicador S18'.*"
+                    )
+
+                    dS18 = res_data.get("S18") or {
+                        "valor": "0/0/0/0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    valores_s18 = dS18.get("valor", "0/0/0/0/0/0").split("/")
+                    if len(valores_s18) != 6:
+                        valores_s18 = [0.0] * 6
+                    else:
+                        try:
+                            valores_s18 = [float(v) for v in valores_s18]
+                        except Exception:
+                            valores_s18 = [0.0] * 6
+
+                    hpa1q, hpa2q, hpa3q, th1q, th2q, th3q = valores_s18
+                    evidencia_S18_salva = dS18.get("link", "")
+                    chave_link_S18 = f"txt_s18_link_{ano_sel}"
+
+                    if f"s18_str_hpa1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s18_str_hpa1q_{ano_sel}"] = formatar_para_inteiro_br(hpa1q)
+                    if f"s18_str_hpa2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s18_str_hpa2q_{ano_sel}"] = formatar_para_inteiro_br(hpa2q)
+                    if f"s18_str_hpa3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s18_str_hpa3q_{ano_sel}"] = formatar_para_inteiro_br(hpa3q)
+                    if f"s18_str_th1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s18_str_th1q_{ano_sel}"] = formatar_para_inteiro_br(th1q)
+                    if f"s18_str_th2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s18_str_th2q_{ano_sel}"] = formatar_para_inteiro_br(th2q)
+                    if f"s18_str_th3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s18_str_th3q_{ano_sel}"] = formatar_para_inteiro_br(th3q)
+
+                    cS18_1, cS18_2 = st.columns([1, 1])
+
+                    with cS18_1:
+                        st.markdown("##### 🩺 Hipertensos com Consulta e Aferição (Últimos 6 meses)")
+                        input_hpa1q_str = st.text_input(
+                            f"Consultas/Aferições no 1º Quadrimestre de {ano_atual_s18} (HPA1Q):",
+                            value=st.session_state[f"s18_str_hpa1q_{ano_sel}"],
+                            key=f"txt_s18_hpa1q_{ano_sel}",
+                        )
+                        input_hpa2q_str = st.text_input(
+                            f"Consultas/Aferições no 2º Quadrimestre de {ano_atual_s18} (HPA2Q):",
+                            value=st.session_state[f"s18_str_hpa2q_{ano_sel}"],
+                            key=f"txt_s18_hpa2q_{ano_sel}",
+                        )
+                        input_hpa3q_str = st.text_input(
+                            f"Consultas/Aferições no 3º Quadrimestre de {ano_atual_s18} (HPA3Q):",
+                            value=st.session_state[f"s18_str_hpa3q_{ano_sel}"],
+                            key=f"txt_s18_hpa3q_{ano_sel}",
+                        )
+
+                        st.markdown("##### 👥 Total de Hipertensos Cadastrados")
+                        input_th1q_str = st.text_input(
+                            f"Total de hipertensos no 1º Quadrimestre de {ano_atual_s18} (TH1Q):",
+                            value=st.session_state[f"s18_str_th1q_{ano_sel}"],
+                            key=f"txt_s18_th1q_{ano_sel}",
+                        )
+                        input_th2q_str = st.text_input(
+                            f"Total de hipertensos no 2º Quadrimestre de {ano_atual_s18} (TH2Q):",
+                            value=st.session_state[f"s18_str_th2q_{ano_sel}"],
+                            key=f"txt_s18_th2q_{ano_sel}",
+                        )
+                        input_th3q_str = st.text_input(
+                            f"Total de hipertensos no 3º Quadrimestre de {ano_atual_s18} (TH3Q):",
+                            value=st.session_state[f"s18_str_th3q_{ano_sel}"],
+                            key=f"txt_s18_th3q_{ano_sel}",
+                        )
+
+                        hpa1q = tratar_string_inteiro_para_float(input_hpa1q_str)
+                        hpa2q = tratar_string_inteiro_para_float(input_hpa2q_str)
+                        hpa3q = tratar_string_inteiro_para_float(input_hpa3q_str)
+                        th1q = tratar_string_inteiro_para_float(input_th1q_str)
+                        th2q = tratar_string_inteiro_para_float(input_th2q_str)
+                        th3q = tratar_string_inteiro_para_float(input_th3q_str)
+
+                        st.session_state[f"s18_str_hpa1q_{ano_sel}"] = formatar_para_inteiro_br(hpa1q)
+                        st.session_state[f"s18_str_hpa2q_{ano_sel}"] = formatar_para_inteiro_br(hpa2q)
+                        st.session_state[f"s18_str_hpa3q_{ano_sel}"] = formatar_para_inteiro_br(hpa3q)
+                        st.session_state[f"s18_str_th1q_{ano_sel}"] = formatar_para_inteiro_br(th1q)
+                        st.session_state[f"s18_str_th2q_{ano_sel}"] = formatar_para_inteiro_br(th2q)
+                        st.session_state[f"s18_str_th3q_{ano_sel}"] = formatar_para_inteiro_br(th3q)
+
+                        total_consultas_s18 = hpa1q + hpa2q + hpa3q
+                        total_hipertensos_s18 = th1q + th2q + th3q
+
+                    with cS18_2:
+                        link_S18 = st.text_area(
+                            f"Link/Evidência (S18 - Relatório de Hipertensão Previne Brasil {ano_sel}):",
+                            value=evidencia_S18_salva,
+                            key=chave_link_S18,
+                            placeholder="Insira o link oficial referente ao indicador S18...",
+                            height=380,
+                        )
+                        placeholder_links_S18 = st.empty()
+                        links_S18_visuais = re.findall(REGEX_PURE_URL, link_S18 or "")
+                        if links_S18_visuais:
+                            placeholder_links_S18.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S18_visuais
+                                ])
+                            )
+
+                    if total_hipertensos_s18 == 0.0 or total_consultas_s18 == 0.0:
+                        ptsS18_calc = 0.0
+                        p_acompanhamento = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos indicadores quadrimestrais de hipertensão no SISAB..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        p_acompanhamento = round(
+                            (total_consultas_s18 / total_hipertensos_s18) * 100.0, 2
+                        )
+
+                        if p_acompanhamento >= 100.0:
+                            ptsS18_calc = 25.0
+                            texto_resultado = (
+                                "🥇 EXCELÊNCIA CRÍTICA: Monitoramento integral da coorte de hipertensos (100%)"
+                            )
+                            texto_pontuacao = "25,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 50.0 <= p_acompanhamento < 100.0:
+                            ptsS18_calc = 15.0
+                            texto_resultado = (
+                                f"🟢 META ALCANÇADA: Adequado controle clínico e acompanhamento semestral ({f'{p_acompanhamento:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "15,00 pontos"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 35.0 <= p_acompanhamento < 50.0:
+                            ptsS18_calc = 10.0
+                            texto_resultado = (
+                                f"🟡 ACOMPANHAMENTO INTERMEDIÁRIO: Intensificar agendamentos na atenção primária ({f'{p_acompanhamento:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "10,00 pontos"
+                            estilo_status = "color: #eab308; font-weight: bold;"
+                        elif 20.0 <= p_acompanhamento < 35.0:
+                            ptsS18_calc = 5.0
+                            texto_resultado = (
+                                f"🟠 ALERTA DE COBERTURA: Baixo índice de aferição de pressão arterial ({f'{p_acompanhamento:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "5,00 pontos"
+                            estilo_status = "color: #ea580c; font-weight: bold;"
+                        else:
+                            ptsS18_calc = 0.0
+                            texto_resultado = (
+                                f"❌ CRÍTICO: Alto risco cardiovascular por falta de acompanhamento clínico ({f'{p_acompanhamento:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "0,00 pontos"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    p_acompanhamento_br = f"{p_acompanhamento:.2f}".replace(".", ",") + "%"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S18:</b> Proporção de Hipertensos com Consulta e Aferição de PA em Dia<br>
+                            📊 <b>Percentual de Cobertura Clínico-Semestral (P):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{p_acompanhamento_br}</code><br>
+                            ⚖️ <b>Status da Assistência Cardiovascular:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Pontuação Homologada para o Ano:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S18", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S18", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S18")
+                            except TypeError:
+                                bloco_comentarios("S18", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S18",
+                        key=f"btn_salvar_S18_{ano_sel}",
+                        type="primary",
+                    ):
+                        lista_salvar_s18 = [
+                            f"{hpa1q:.0f}",
+                            f"{hpa2q:.0f}",
+                            f"{hpa3q:.0f}",
+                            f"{th1q:.0f}",
+                            f"{th2q:.0f}",
+                            f"{th3q:.0f}",
+                        ]
+                        str_salvar_s18 = "/".join(lista_salvar_s18)
+                        ptsS18 = ptsS18_calc
+                        lnk_val = link_S18.strip()
+                        comentarios_historico = dS18.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S18",
+                                valor=str_salvar_s18,
+                                pontos=ptsS18,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S18", str_salvar_s18, ptsS18, lnk_val)
+
+                        res_data["S18"] = {
+                            "valor": str_salvar_s18,
+                            "pontos": ptsS18,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S18_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S18_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S18_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S18_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S18 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S18 = dS18.get("pontos", 0.0)
+                    cor_txt_S18 = (
+                        "#dc2626"
+                        if pts_atuais_S18 < 0.0
+                        else ("#28a745" if pts_atuais_S18 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S18}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S18: {pts_atuais_S18:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S18
+            if st.session_state.get(f"gatilho_modal_S18_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S18",
+                        st.session_state.get(f"links_pendentes_S18_{ano_sel}", []),
+                        ano_sel,
+                    )
+
