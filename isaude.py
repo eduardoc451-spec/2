@@ -19443,7 +19443,7 @@ def mostrar_formulario_saude():
                         ano_sel,
                     )
 
-# =============================================================================
+            # =============================================================================
             # INDICADOR S11 • ESPECIALIDADE PEDIÁTRICA: PERMANÊNCIA E FREQUÊNCIA (SIH/SUS)
             # =============================================================================
 
@@ -19952,6 +19952,524 @@ def mostrar_formulario_saude():
                     modal_aviso_link(
                         "S12",
                         st.session_state.get(f"links_pendentes_S12_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+                    # =============================================================================
+            # INDICADOR S13 • ESPECIALIDADE CIRÚRGICA: PERMANÊNCIA E FREQUÊNCIA (SIH/SUS)
+            # =============================================================================
+
+            # Funções auxiliares de higienização e formatação
+            def tratar_string_numerica_para_float(texto):
+                if not texto:
+                    return 0.0
+                texto_limpo = str(texto).replace(".", "").replace(",", ".").strip()
+                try:
+                    return float(texto_limpo) if texto_limpo else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_numero_br(valor_float):
+                return f"{valor_float:.2f}".replace(".", ",")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S13_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S13 - Eficiência na Especialidade Cirúrgica ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S13 • Métrica de Permanência e Frequência Cirúrgica (SIH/SUS)"
+                    )
+                    st.write(
+                        "**Sobre a especialidade Cirúrgica em estabelecimentos de saúde"
+                        f" sob gestão municipal em {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s13 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s13 = 2025
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $Raz\tilde{a}o (P/F) \le 6,50$ dias | ✅ Parâmetro Otimizado / Em Conformidade | 0,00 pontos (Sem penalidade) |
+| Se $Raz\tilde{a}o (P/F) > 6,50$ dias | 🚨 Alerta de Permanência Excessiva | -2,00 pontos (Penalidade) |
+                    """)
+                    st.caption(
+                        "🏥 *Fórmula de cálculo: $\\text{Razão} = \\frac{\\text{Permanência (P)}}{\\text{Frequência (F)}}$. "
+                        "Insira os valores, o link e clique no botão 'Salvar Indicador S13' para registrar.*"
+                    )
+
+                    dS13 = res_data.get("S13") or {
+                        "valor": "0.0/0.0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_perm_s13, v_freq_s13 = map(
+                            float, dS13.get("valor", "0.0/0.0").split("/")
+                        )
+                    except Exception:
+                        v_perm_s13, v_freq_s13 = 0.0, 0.0
+
+                    evidencia_S13_salva = dS13.get("link", "")
+                    chave_link_S13 = f"txt_s13_link_{ano_sel}"
+
+                    if f"s13_str_perm_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s13_str_perm_{ano_sel}"] = (
+                            formatar_para_numero_br(v_perm_s13)
+                        )
+                    if f"s13_str_freq_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s13_str_freq_{ano_sel}"] = (
+                            formatar_para_numero_br(v_freq_s13)
+                        )
+
+                    cS13_1, cS13_2 = st.columns([1, 1])
+
+                    with cS13_1:
+                        st.markdown(f"##### 🔪 Produção Hospitalar Cirúrgica")
+
+                        input_perm_str = st.text_input(
+                            f"Permanência (P) em {ano_sel}:",
+                            value=st.session_state[f"s13_str_perm_{ano_sel}"],
+                            key=f"txt_s13_perm_{ano_sel}",
+                        )
+
+                        input_freq_str = st.text_input(
+                            f"Frequência (F) em {ano_sel}:",
+                            value=st.session_state[f"s13_str_freq_{ano_sel}"],
+                            key=f"txt_s13_freq_{ano_sel}",
+                        )
+
+                        permanencia_s13 = tratar_string_numerica_para_float(input_perm_str)
+                        frequencia_s13 = tratar_string_numerica_para_float(input_freq_str)
+
+                        st.session_state[f"s13_str_perm_{ano_sel}"] = (
+                            formatar_para_numero_br(permanencia_s13)
+                        )
+                        st.session_state[f"s13_str_freq_{ano_sel}"] = (
+                            formatar_para_numero_br(frequencia_s13)
+                        )
+
+                        limiar_s13 = 6.5
+
+                    with cS13_2:
+                        link_S13 = st.text_area(
+                            f"Link/Evidência (S13 - Módulo Cirúrgico {ano_sel}):",
+                            value=evidencia_S13_salva,
+                            key=chave_link_S13,
+                            placeholder="Insira o link oficial referente ao indicador S13...",
+                            height=280,
+                        )
+                        placeholder_links_S13 = st.empty()
+                        links_S13_visuais = re.findall(REGEX_PURE_URL, link_S13 or "")
+                        if links_S13_visuais:
+                            placeholder_links_S13.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S13_visuais
+                                ])
+                            )
+
+                    if permanencia_s13 == 0.0 or frequencia_s13 == 0.0:
+                        ptsS13_calc = 0.0
+                        razao_s13 = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos indicadores de Permanência e Frequência..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        razao_s13 = round(permanencia_s13 / frequencia_s13, 4)
+
+                        if razao_s13 <= limiar_s13:
+                            ptsS13_calc = 0.0
+                            texto_resultado = (
+                                f"✅ PARÂMETRO OTIMIZADO: Razão P/F ({formatar_para_numero_br(razao_s13)})"
+                                " em conformidade com o referencial regulatório cirúrgico"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS13_calc = -2.0
+                            texto_resultado = (
+                                f"🚨 ALERTA DE PERMANÊNCIA: Razão P/F ({formatar_para_numero_br(razao_s13)})"
+                                f" superou o limite de {formatar_para_numero_br(limiar_s13)} dias"
+                            )
+                            texto_pontuacao = "-2,00 pontos (Penalidade Aplicada)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S13:</b> Eficiência da Internação na Especialidade Cirúrgica ({ano_sel})<br>
+                            📊 <b>Média do Período de Permanência por Paciente (P/F):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{formatar_para_numero_br(razao_s13)} dias</code><br>
+                            ⚖️ <b>Status da Coorte:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S13", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S13", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S13")
+                            except TypeError:
+                                bloco_comentarios("S13", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S13",
+                        key=f"btn_salvar_S13_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_salvar_s13 = f"{permanencia_s13:.2f}/{frequencia_s13:.2f}"
+                        ptsS13 = ptsS13_calc
+                        lnk_val = link_S13.strip()
+                        comentarios_historico = dS13.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S13",
+                                valor=str_salvar_s13,
+                                pontos=ptsS13,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S13", str_salvar_s13, ptsS13, lnk_val)
+
+                        res_data["S13"] = {
+                            "valor": str_salvar_s13,
+                            "pontos": ptsS13,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S13_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S13_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S13_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S13_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S13 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S13 = dS13.get("pontos", 0.0)
+                    cor_txt_S13 = (
+                        "#dc2626"
+                        if pts_atuais_S13 < 0.0
+                        else ("#28a745" if pts_atuais_S13 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S13}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S13: {pts_atuais_S13:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S13
+            if st.session_state.get(f"gatilho_modal_S13_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S13",
+                        st.session_state.get(f"links_pendentes_S13_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S14 • TAXA DE MORTALIDADE HOSPITALAR (SIH/SUS)
+            # =============================================================================
+
+            def tratar_string_inteiro_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in str(texto) if c.isdigit())
+                try:
+                    return float(apenas_numeros) if apenas_numeros else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_inteiro_br(valor_float):
+                return f"{int(valor_float):,}".replace(",", ".")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S14_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S14 - Taxa de Mortalidade Hospitalar ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S14 • Taxa de Mortalidade Hospitalar sob Gestão Municipal (SIH/SUS)"
+                    )
+                    st.write(
+                        "**Sobre os pacientes internados em estabelecimentos de saúde"
+                        f" sob gestão municipal em {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s14 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s14 = 2025
+
+                    ano_s14_aa1 = ano_atual_s14 - 1
+                    ano_s14_aa2 = ano_atual_s14 - 2
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $Taxa_{Atual} \le Taxa_{Ref}$ | ✅ Regularizado / Dentro da Referência | 0,00 pontos (Sem penalidade) |
+| Se $Taxa_{Atual} > Taxa_{Ref}$ | 🚨 Alerta Crítico / Aumento de Mortalidade | -2,00 pontos (Penalidade) |
+                    """)
+                    st.caption(
+                        f"🏥 *Taxa de Referência calculada pelo biênio anterior ({ano_s14_aa2}-{ano_s14_aa1}). "
+                        "Insira os dados, o link e clique em 'Salvar Indicador S14'.*"
+                    )
+
+                    dS14 = res_data.get("S14") or {
+                        "valor": "0/0/0/0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    valores_s14 = dS14.get("valor", "0/0/0/0/0/0").split("/")
+                    if len(valores_s14) != 6:
+                        valores_s14 = [0.0] * 6
+                    else:
+                        try:
+                            valores_s14 = [float(v) for v in valores_s14]
+                        except Exception:
+                            valores_s14 = [0.0] * 6
+
+                    toaa2, toaa1, toaa, shaa2, shaa1, shaa = valores_s14
+                    evidencia_S14_salva = dS14.get("link", "")
+                    chave_link_S14 = f"txt_s14_link_{ano_sel}"
+
+                    if f"s14_str_toaa2_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s14_str_toaa2_{ano_sel}"] = formatar_para_inteiro_br(toaa2)
+                    if f"s14_str_toaa1_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s14_str_toaa1_{ano_sel}"] = formatar_para_inteiro_br(toaa1)
+                    if f"s14_str_toaa_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s14_str_toaa_{ano_sel}"] = formatar_para_inteiro_br(toaa)
+                    if f"s14_str_shaa2_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s14_str_shaa2_{ano_sel}"] = formatar_para_inteiro_br(shaa2)
+                    if f"s14_str_shaa1_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s14_str_shaa1_{ano_sel}"] = formatar_para_inteiro_br(shaa1)
+                    if f"s14_str_shaa_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s14_str_shaa_{ano_sel}"] = formatar_para_inteiro_br(shaa)
+
+                    cS14_1, cS14_2 = st.columns([1, 1])
+
+                    with cS14_1:
+                        st.markdown("##### 💀 Registro de Óbitos Hospitalares")
+                        input_toaa2_str = st.text_input(f"Nº de óbitos em {ano_s14_aa2} (TOAA-2):", value=st.session_state[f"s14_str_toaa2_{ano_sel}"], key=f"txt_s14_toaa2_{ano_sel}")
+                        input_toaa1_str = st.text_input(f"Nº de óbitos em {ano_s14_aa1} (TOAA-1):", value=st.session_state[f"s14_str_toaa1_{ano_sel}"], key=f"txt_s14_toaa1_{ano_sel}")
+                        input_toaa_str = st.text_input(f"Nº de óbitos em {ano_sel} (TOAA):", value=st.session_state[f"s14_str_toaa_{ano_sel}"], key=f"txt_s14_toaa_{ano_sel}")
+
+                        st.markdown("##### 🏥 Total de Saídas Hospitalares")
+                        input_shaa2_str = st.text_input(f"Total de saídas em {ano_s14_aa2} (SHAA-2):", value=st.session_state[f"s14_str_shaa2_{ano_sel}"], key=f"txt_s14_shaa2_{ano_sel}")
+                        input_shaa1_str = st.text_input(f"Total de saídas em {ano_s14_aa1} (SHAA-1):", value=st.session_state[f"s14_str_shaa1_{ano_sel}"], key=f"txt_s14_shaa1_{ano_sel}")
+                        input_shaa_str = st.text_input(f"Total de saídas em {ano_sel} (SHAA):", value=st.session_state[f"s14_str_shaa_{ano_sel}"], key=f"txt_s14_shaa_{ano_sel}")
+
+                        toaa2 = tratar_string_inteiro_para_float(input_toaa2_str)
+                        toaa1 = tratar_string_inteiro_para_float(input_toaa1_str)
+                        toaa = tratar_string_inteiro_para_float(input_toaa_str)
+                        shaa2 = tratar_string_inteiro_para_float(input_shaa2_str)
+                        shaa1 = tratar_string_inteiro_para_float(input_shaa1_str)
+                        shaa = tratar_string_inteiro_para_float(input_shaa_str)
+
+                        st.session_state[f"s14_str_toaa2_{ano_sel}"] = formatar_para_inteiro_br(toaa2)
+                        st.session_state[f"s14_str_toaa1_{ano_sel}"] = formatar_para_inteiro_br(toaa1)
+                        st.session_state[f"s14_str_toaa_{ano_sel}"] = formatar_para_inteiro_br(toaa)
+                        st.session_state[f"s14_str_shaa2_{ano_sel}"] = formatar_para_inteiro_br(shaa2)
+                        st.session_state[f"s14_str_shaa1_{ano_sel}"] = formatar_para_inteiro_br(shaa1)
+                        st.session_state[f"s14_str_shaa_{ano_sel}"] = formatar_para_inteiro_br(shaa)
+
+                    with cS14_2:
+                        link_S14 = st.text_area(
+                            f"Link/Evidência (S14 - Painel SIH/SUS {ano_sel}):",
+                            value=evidencia_S14_salva,
+                            key=chave_link_S14,
+                            placeholder="Insira o link oficial referente ao indicador S14...",
+                            height=380,
+                        )
+                        placeholder_links_S14 = st.empty()
+                        links_S14_visuais = re.findall(REGEX_PURE_URL, link_S14 or "")
+                        if links_S14_visuais:
+                            placeholder_links_S14.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S14_visuais
+                                ])
+                            )
+
+                    if shaa == 0.0 or (shaa2 + shaa1) == 0.0:
+                        ptsS14_calc = 0.0
+                        taxa_atual = 0.0
+                        taxa_referencia = 0.0
+                        texto_resultado = "Aguardando preenchimento completo dos dados hospitalares..."
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        taxa_atual = toaa / shaa
+                        taxa_referencia = (toaa2 + toaa1) / (shaa2 + shaa1)
+
+                        if taxa_atual <= taxa_referencia:
+                            ptsS14_calc = 0.0
+                            texto_resultado = (
+                                f"✅ REGULARIZADO: Taxa de mortalidade em {ano_sel} controlada "
+                                "ou menor que a média histórica de referência"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS14_calc = -2.0
+                            texto_resultado = (
+                                f"🚨 ALERTA CRÍTICO: Taxa de mortalidade em {ano_sel} superou "
+                                f"a média do biênio anterior ({ano_s14_aa2}-{ano_s14_aa1})"
+                            )
+                            texto_pontuacao = "-2,00 pontos (Penalidade Aplicada)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    taxa_atual_br = f"{(taxa_atual * 100):.3f}".replace(".", ",") + "%"
+                    taxa_ref_br = f"{(taxa_referencia * 100):.3f}".replace(".", ",") + "%"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S14:</b> Avaliação da Taxa de Mortalidade Hospitalar Líquida<br>
+                            📊 <b>Taxa de Mortalidade de Referência ({ano_s14_aa2}-{ano_s14_aa1}):</b> <code style="font-size: 13px; font-weight: bold; color: #475569;">{taxa_ref_br}</code><br>
+                            📈 <b>Taxa de Mortalidade Registrada em {ano_sel}:</b> <code style="font-size: 13px; font-weight: bold; color: #1e3a8a;">{taxa_atual_br}</code><br>
+                            ⚖️ <b>Comportamento Epidemiológico:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S14", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S14", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S14")
+                            except TypeError:
+                                bloco_comentarios("S14", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S14",
+                        key=f"btn_salvar_S14_{ano_sel}",
+                        type="primary",
+                    ):
+                        lista_salvar_s14 = [
+                            f"{toaa2:.0f}",
+                            f"{toaa1:.0f}",
+                            f"{toaa:.0f}",
+                            f"{shaa2:.0f}",
+                            f"{shaa1:.0f}",
+                            f"{shaa:.0f}",
+                        ]
+                        str_salvar_s14 = "/".join(lista_salvar_s14)
+                        ptsS14 = ptsS14_calc
+                        lnk_val = link_S14.strip()
+                        comentarios_historico = dS14.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S14",
+                                valor=str_salvar_s14,
+                                pontos=ptsS14,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S14", str_salvar_s14, ptsS14, lnk_val)
+
+                        res_data["S14"] = {
+                            "valor": str_salvar_s14,
+                            "pontos": ptsS14,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S14_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S14_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S14_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S14_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S14 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S14 = dS14.get("pontos", 0.0)
+                    cor_txt_S14 = (
+                        "#dc2626"
+                        if pts_atuais_S14 < 0.0
+                        else ("#28a745" if pts_atuais_S14 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S14}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S14: {pts_atuais_S14:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S14
+            if st.session_state.get(f"gatilho_modal_S14_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S14",
+                        st.session_state.get(f"links_pendentes_S14_{ano_sel}", []),
                         ano_sel,
                     )
 
