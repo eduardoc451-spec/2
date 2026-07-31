@@ -21593,3 +21593,604 @@ def mostrar_formulario_saude():
                         ano_sel,
                     )
 
+# =============================================================================
+            # INDICADOR S19 • ACOMPANHAMENTO E SOLICITAÇÃO DE HEMOGLOBINA GLICADA (SISAB)
+            # =============================================================================
+
+            with st.container(
+                key=f"container_bloco_isaude_S19_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S19 - Solicit. Hemoglobina Glicada em Diabéticos ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S19 • Acompanhamento e Solicitação de Hemoglobina Glicada em Diabéticos (SISAB)"
+                    )
+                    st.write(
+                        "**Sobre o número de diabéticos com consulta e solicitação de exame de Hemoglobina"
+                        f" Glicada nos últimos 6 meses nos quadrimestres de {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s19 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s19 = 2025
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Pontuação |
+| :--- | :--- | :--- |
+| Se $Cobertura \ge 100,00\%$ | 🥇 Excelência Crítica | 25,00 pontos |
+| Se $50,00\% \le Cobertura < 100,00\%$ | 🟢 Meta Alcançada | 15,00 pontos |
+| Se $35,00\% \le Cobertura < 50,00\%$ | 🟡 Acompanhamento Intermediário | 10,00 pontos |
+| Se $20,00\% \le Cobertura < 35,00\%$ | 🟠 Alerta de Cobertura | 5,00 pontos |
+| Se $Cobertura < 20,00\%$ | ❌ Crítico | 0,00 pontos |
+                    """)
+                    st.caption(
+                        "🌐 *Fonte oficial (SISAB). "
+                        "Insira os dados quadrimestrais, o link da evidência e clique em 'Salvar Indicador S19'.*"
+                    )
+
+                    dS19 = res_data.get("S19") or {
+                        "valor": "0/0/0/0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    valores_s19 = dS19.get("valor", "0/0/0/0/0/0").split("/")
+                    if len(valores_s19) != 6:
+                        valores_s19 = [0.0] * 6
+                    else:
+                        try:
+                            valores_s19 = [float(v) for v in valores_s19]
+                        except Exception:
+                            valores_s19 = [0.0] * 6
+
+                    dhg1q, dhg2q, dhg3q, td1q, td2q, td3q = valores_s19
+                    evidencia_S19_salva = dS19.get("link", "")
+                    chave_link_S19 = f"txt_s19_link_{ano_sel}"
+
+                    if f"s19_str_dhg1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s19_str_dhg1q_{ano_sel}"] = formatar_para_inteiro_br(dhg1q)
+                    if f"s19_str_dhg2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s19_str_dhg2q_{ano_sel}"] = formatar_para_inteiro_br(dhg2q)
+                    if f"s19_str_dhg3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s19_str_dhg3q_{ano_sel}"] = formatar_para_inteiro_br(dhg3q)
+                    if f"s19_str_td1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s19_str_td1q_{ano_sel}"] = formatar_para_inteiro_br(td1q)
+                    if f"s19_str_td2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s19_str_td2q_{ano_sel}"] = formatar_para_inteiro_br(td2q)
+                    if f"s19_str_td3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s19_str_td3q_{ano_sel}"] = formatar_para_inteiro_br(td3q)
+
+                    cS19_1, cS19_2 = st.columns([1, 1])
+
+                    with cS19_1:
+                        st.markdown("##### 🧪 Diabéticos com Solicitação de Hemoglobina Glicada (Últimos 6 meses)")
+                        input_dhg1q_str = st.text_input(
+                            f"Consultas/Exames no 1º Quadrimestre de {ano_atual_s19} (DHG1Q):",
+                            value=st.session_state[f"s19_str_dhg1q_{ano_sel}"],
+                            key=f"txt_s19_dhg1q_{ano_sel}",
+                        )
+                        input_dhg2q_str = st.text_input(
+                            f"Consultas/Exames no 2º Quadrimestre de {ano_atual_s19} (DHG2Q):",
+                            value=st.session_state[f"s19_str_dhg2q_{ano_sel}"],
+                            key=f"txt_s19_dhg2q_{ano_sel}",
+                        )
+                        input_dhg3q_str = st.text_input(
+                            f"Consultas/Exames no 3º Quadrimestre de {ano_atual_s19} (DHG3Q):",
+                            value=st.session_state[f"s19_str_dhg3q_{ano_sel}"],
+                            key=f"txt_s19_dhg3q_{ano_sel}",
+                        )
+
+                        st.markdown("##### 👥 Total de Diabéticos Cadastrados")
+                        input_td1q_str = st.text_input(
+                            f"Total de diabéticos no 1º Quadrimestre de {ano_atual_s19} (TD1Q):",
+                            value=st.session_state[f"s19_str_td1q_{ano_sel}"],
+                            key=f"txt_s19_td1q_{ano_sel}",
+                        )
+                        input_td2q_str = st.text_input(
+                            f"Total de diabéticos no 2º Quadrimestre de {ano_atual_s19} (TD2Q):",
+                            value=st.session_state[f"s19_str_td2q_{ano_sel}"],
+                            key=f"txt_s19_td2q_{ano_sel}",
+                        )
+                        input_td3q_str = st.text_input(
+                            f"Total de diabéticos no 3º Quadrimestre de {ano_atual_s19} (TD3Q):",
+                            value=st.session_state[f"s19_str_td3q_{ano_sel}"],
+                            key=f"txt_s19_td3q_{ano_sel}",
+                        )
+
+                        dhg1q = tratar_string_inteiro_para_float(input_dhg1q_str)
+                        dhg2q = tratar_string_inteiro_para_float(input_dhg2q_str)
+                        dhg3q = tratar_string_inteiro_para_float(input_dhg3q_str)
+                        td1q = tratar_string_inteiro_para_float(input_td1q_str)
+                        td2q = tratar_string_inteiro_para_float(input_td2q_str)
+                        td3q = tratar_string_inteiro_para_float(input_td3q_str)
+
+                        st.session_state[f"s19_str_dhg1q_{ano_sel}"] = formatar_para_inteiro_br(dhg1q)
+                        st.session_state[f"s19_str_dhg2q_{ano_sel}"] = formatar_para_inteiro_br(dhg2q)
+                        st.session_state[f"s19_str_dhg3q_{ano_sel}"] = formatar_para_inteiro_br(dhg3q)
+                        st.session_state[f"s19_str_td1q_{ano_sel}"] = formatar_para_inteiro_br(td1q)
+                        st.session_state[f"s19_str_td2q_{ano_sel}"] = formatar_para_inteiro_br(td2q)
+                        st.session_state[f"s19_str_td3q_{ano_sel}"] = formatar_para_inteiro_br(td3q)
+
+                        total_exames_s19 = dhg1q + dhg2q + dhg3q
+                        total_diabeticos_s19 = td1q + td2q + td3q
+
+                    with cS19_2:
+                        link_S19 = st.text_area(
+                            f"Link/Evidência (S19 - Relatório de Diabetes Previne Brasil {ano_sel}):",
+                            value=evidencia_S19_salva,
+                            key=chave_link_S19,
+                            placeholder="Insira o link oficial referente ao indicador S19...",
+                            height=380,
+                        )
+                        placeholder_links_S19 = st.empty()
+                        links_S19_visuais = re.findall(REGEX_PURE_URL, link_S19 or "")
+                        if links_S19_visuais:
+                            placeholder_links_S19.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S19_visuais
+                                ])
+                            )
+
+                    if total_diabeticos_s19 == 0.0 or total_exames_s19 == 0.0:
+                        ptsS19_calc = 0.0
+                        p_glicada = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos indicadores quadrimestrais de diabetes no SISAB..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        p_glicada = round(
+                            (total_exames_s19 / total_diabeticos_s19) * 100.0, 2
+                        )
+
+                        if p_glicada >= 100.0:
+                            ptsS19_calc = 25.0
+                            texto_resultado = (
+                                "🥇 EXCELÊNCIA CRÍTICA: Monitoramento integral da coorte de diabéticos (100%)"
+                            )
+                            texto_pontuacao = "25,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 50.0 <= p_glicada < 100.0:
+                            ptsS19_calc = 15.0
+                            texto_resultado = (
+                                f"🟢 META ALCANÇADA: Controlado acompanhamento laboratorial semestral ({f'{p_glicada:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "15,00 pontos"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 35.0 <= p_glicada < 50.0:
+                            ptsS19_calc = 10.0
+                            texto_resultado = (
+                                f"🟡 ACOMPANHAMENTO INTERMEDIÁRIO: Intensificar solicitações de hemoglobina glicada ({f'{p_glicada:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "10,00 pontos"
+                            estilo_status = "color: #eab308; font-weight: bold;"
+                        elif 20.0 <= p_glicada < 35.0:
+                            ptsS19_calc = 5.0
+                            texto_resultado = (
+                                f"🟠 ALERTA DE COBERTURA: Baixo índice de solicitações de exames ({f'{p_glicada:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "5,00 pontos"
+                            estilo_status = "color: #ea580c; font-weight: bold;"
+                        else:
+                            ptsS19_calc = 0.0
+                            texto_resultado = (
+                                f"❌ CRÍTICO: Desassistência no rastreio de complicações por falta de exames ({f'{p_glicada:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "0,00 pontos"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    p_glicada_br = f"{p_glicada:.2f}".replace(".", ",") + "%"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S19:</b> Proporção de Diabéticos com Solicitação de Hemoglobina Glicada em Dia<br>
+                            📊 <b>Percentual de Cobertura Clínico-Semestral (P):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{p_glicada_br}</code><br>
+                            ⚖️ <b>Status da Assistência ao Diabetes:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Pontuação Homologada para o Ano:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S19", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S19", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S19")
+                            except TypeError:
+                                bloco_comentarios("S19", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S19",
+                        key=f"btn_salvar_S19_{ano_sel}",
+                        type="primary",
+                    ):
+                        lista_salvar_s19 = [
+                            f"{dhg1q:.0f}",
+                            f"{dhg2q:.0f}",
+                            f"{dhg3q:.0f}",
+                            f"{td1q:.0f}",
+                            f"{td2q:.0f}",
+                            f"{td3q:.0f}",
+                        ]
+                        str_salvar_s19 = "/".join(lista_salvar_s19)
+                        ptsS19 = ptsS19_calc
+                        lnk_val = link_S19.strip()
+                        comentarios_historico = dS19.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S19",
+                                valor=str_salvar_s19,
+                                pontos=ptsS19,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S19", str_salvar_s19, ptsS19, lnk_val)
+
+                        res_data["S19"] = {
+                            "valor": str_salvar_s19,
+                            "pontos": ptsS19,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S19_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S19_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S19_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S19_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S19 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S19 = dS19.get("pontos", 0.0)
+                    cor_txt_S19 = (
+                        "#dc2626"
+                        if pts_atuais_S19 < 0.0
+                        else ("#28a745" if pts_atuais_S19 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S19}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S19: {pts_atuais_S19:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S19
+            if st.session_state.get(f"gatilho_modal_S19_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S19",
+                        st.session_state.get(f"links_pendentes_S19_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S20 • PROPORÇÃO DE GESTANTES COM ATENDIMENTO ODONTOLÓGICO (SISAB)
+            # =============================================================================
+
+            with st.container(
+                key=f"container_bloco_isaude_S20_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S20 - Atendimento Odontológico na Gestação ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S20 • Proporção de Gestantes com Atendimento Odontológico na APS (SISAB)"
+                    )
+                    st.write(
+                        "**Sobre o número de gestantes com pré-natal e atendimento odontológico"
+                        f" realizado nos quadrimestres de {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s20 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s20 = 2025
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Pontuação |
+| :--- | :--- | :--- |
+| Se $Cobertura \ge 100,00\%$ | 🥇 Excelência Crítica | 25,00 pontos |
+| Se $60,00\% \le Cobertura < 100,00\%$ | 🟢 Meta Alcançada | 15,00 pontos |
+| Se $42,00\% \le Cobertura < 60,00\%$ | 🟡 Cobertura Intermediária | 10,00 pontos |
+| Se $24,00\% \le Cobertura < 42,00\%$ | 🟠 Alerta de Cobertura | 5,00 pontos |
+| Se $Cobertura < 24,00\%$ | ❌ Crítico | 0,00 pontos |
+                    """)
+                    st.caption(
+                        "🌐 *Fonte oficial (SISAB). "
+                        "Insira os dados quadrimestrais, o link da evidência e clique em 'Salvar Indicador S20'.*"
+                    )
+
+                    dS20 = res_data.get("S20") or {
+                        "valor": "0/0/0/0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    valores_s20 = dS20.get("valor", "0/0/0/0/0/0").split("/")
+                    if len(valores_s20) != 6:
+                        valores_s20 = [0.0] * 6
+                    else:
+                        try:
+                            valores_s20 = [float(v) for v in valores_s20]
+                        except Exception:
+                            valores_s20 = [0.0] * 6
+
+                    gpao1q, gpao2q, gpao3q, tg1q, tg2q, tg3q = valores_s20
+                    evidencia_S20_salva = dS20.get("link", "")
+                    chave_link_S20 = f"txt_s20_link_{ano_sel}"
+
+                    if f"s20_str_gpao1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s20_str_gpao1q_{ano_sel}"] = formatar_para_inteiro_br(gpao1q)
+                    if f"s20_str_gpao2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s20_str_gpao2q_{ano_sel}"] = formatar_para_inteiro_br(gpao2q)
+                    if f"s20_str_gpao3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s20_str_gpao3q_{ano_sel}"] = formatar_para_inteiro_br(gpao3q)
+                    if f"s20_str_tg1q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s20_str_tg1q_{ano_sel}"] = formatar_para_inteiro_br(tg1q)
+                    if f"s20_str_tg2q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s20_str_tg2q_{ano_sel}"] = formatar_para_inteiro_br(tg2q)
+                    if f"s20_str_tg3q_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s20_str_tg3q_{ano_sel}"] = formatar_para_inteiro_br(tg3q)
+
+                    cS20_1, cS20_2 = st.columns([1, 1])
+
+                    with cS20_1:
+                        st.markdown("##### 🦷 Gestantes com Atendimento Odontológico Realizado")
+                        input_gpao1q_str = st.text_input(
+                            f"Nº gestantes com atendimento odontológico no 1º Quadrimestre de {ano_atual_s20} (GPAO1Q):",
+                            value=st.session_state[f"s20_str_gpao1q_{ano_sel}"],
+                            key=f"txt_s20_gpao1q_{ano_sel}",
+                        )
+                        input_gpao2q_str = st.text_input(
+                            f"Nº gestantes com atendimento odontológico no 2º Quadrimestre de {ano_atual_s20} (GPAO2Q):",
+                            value=st.session_state[f"s20_str_gpao2q_{ano_sel}"],
+                            key=f"txt_s20_gpao2q_{ano_sel}",
+                        )
+                        input_gpao3q_str = st.text_input(
+                            f"Nº gestantes com atendimento odontológico no 3º Quadrimestre de {ano_atual_s20} (GPAO3Q):",
+                            value=st.session_state[f"s20_str_gpao3q_{ano_sel}"],
+                            key=f"txt_s20_gpao3q_{ano_sel}",
+                        )
+
+                        st.markdown("##### 👥 Total de Gestantes Cadastradas (Denominador)")
+                        input_tg1q_str = st.text_input(
+                            f"Total de gestantes no 1º Quadrimestre de {ano_atual_s20} (TG1Q):",
+                            value=st.session_state[f"s20_str_tg1q_{ano_sel}"],
+                            key=f"txt_s20_tg1q_{ano_sel}",
+                        )
+                        input_tg2q_str = st.text_input(
+                            f"Total de gestantes no 2º Quadrimestre de {ano_atual_s20} (TG2Q):",
+                            value=st.session_state[f"s20_str_tg2q_{ano_sel}"],
+                            key=f"txt_s20_tg2q_{ano_sel}",
+                        )
+                        input_tg3q_str = st.text_input(
+                            f"Total de gestantes no 3º Quadrimestre de {ano_atual_s20} (TG3Q):",
+                            value=st.session_state[f"s20_str_tg3q_{ano_sel}"],
+                            key=f"txt_s20_tg3q_{ano_sel}",
+                        )
+
+                        gpao1q = tratar_string_inteiro_para_float(input_gpao1q_str)
+                        gpao2q = tratar_string_inteiro_para_float(input_gpao2q_str)
+                        gpao3q = tratar_string_inteiro_para_float(input_gpao3q_str)
+                        tg1q = tratar_string_inteiro_para_float(input_tg1q_str)
+                        tg2q = tratar_string_inteiro_para_float(input_tg2q_str)
+                        tg3q = tratar_string_inteiro_para_float(input_tg3q_str)
+
+                        st.session_state[f"s20_str_gpao1q_{ano_sel}"] = formatar_para_inteiro_br(gpao1q)
+                        st.session_state[f"s20_str_gpao2q_{ano_sel}"] = formatar_para_inteiro_br(gpao2q)
+                        st.session_state[f"s20_str_gpao3q_{ano_sel}"] = formatar_para_inteiro_br(gpao3q)
+                        st.session_state[f"s20_str_tg1q_{ano_sel}"] = formatar_para_inteiro_br(tg1q)
+                        st.session_state[f"s20_str_tg2q_{ano_sel}"] = formatar_para_inteiro_br(tg2q)
+                        st.session_state[f"s20_str_tg3q_{ano_sel}"] = formatar_para_inteiro_br(tg3q)
+
+                        total_atendimentos_s20 = gpao1q + gpao2q + gpao3q
+                        total_gestantes_s20 = tg1q + tg2q + tg3q
+
+                    with cS20_2:
+                        link_S20 = st.text_area(
+                            f"Link/Evidência (S20 - Relatório de Saúde Bucal Previne Brasil {ano_sel}):",
+                            value=evidencia_S20_salva,
+                            key=chave_link_S20,
+                            placeholder="Insira o link oficial referente ao indicador S20...",
+                            height=380,
+                        )
+                        placeholder_links_S20 = st.empty()
+                        links_S20_visuais = re.findall(REGEX_PURE_URL, link_S20 or "")
+                        if links_S20_visuais:
+                            placeholder_links_S20.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S20_visuais
+                                ])
+                            )
+
+                    if total_gestantes_s20 == 0.0 or total_atendimentos_s20 == 0.0:
+                        ptsS20_calc = 0.0
+                        p_odonto = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos indicadores quadrimestrais de saúde bucal no SISAB..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        p_odonto = round(
+                            (total_atendimentos_s20 / total_gestantes_s20) * 100.0, 2
+                        )
+
+                        if p_odonto >= 100.0:
+                            ptsS20_calc = 25.0
+                            texto_resultado = (
+                                "🥇 EXCELÊNCIA CRÍTICA: Cobertura de saúde bucal integral nas gestantes (100%)"
+                            )
+                            texto_pontuacao = "25,00 pontos (Pontuação Máxima)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 60.0 <= p_odonto < 100.0:
+                            ptsS20_calc = 15.0
+                            texto_resultado = (
+                                f"🟢 META ALCANÇADA: Excelente integração da Saúde Bucal no Pré-Natal ({f'{p_odonto:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "15,00 pontos"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        elif 42.0 <= p_odonto < 60.0:
+                            ptsS20_calc = 10.0
+                            texto_resultado = (
+                                f"🟡 COBERTURA INTERMEDIÁRIA: Intensificar o fluxo de encaminhamento para a odontologia ({f'{p_odonto:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "10,00 pontos"
+                            estilo_status = "color: #eab308; font-weight: bold;"
+                        elif 24.0 <= p_odonto < 42.0:
+                            ptsS20_calc = 5.0
+                            texto_resultado = (
+                                f"🟠 ALERTA DE COBERTURA: Baixo índice de consultas odontológicas registradas ({f'{p_odonto:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "5,00 pontos"
+                            estilo_status = "color: #ea580c; font-weight: bold;"
+                        else:
+                            ptsS20_calc = 0.0
+                            texto_resultado = (
+                                f"❌ CRÍTICO: Risco de agravos bucais por ausência de atendimento odontológico ({f'{p_odonto:.2f}'.replace('.', ',')}%)"
+                            )
+                            texto_pontuacao = "0,00 pontos"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    p_odonto_br = f"{p_odonto:.2f}".replace(".", ",") + "%"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S20:</b> Proporção de Gestantes com Atendimento Odontológico Realizado<br>
+                            📊 <b>Percentual de Cobertura Odontológica (P):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{p_odonto_br}</code><br>
+                            ⚖️ <b>Status da Assistência Interdisciplinar:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Pontuação Homologada para o Ano:</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S20", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S20", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S20")
+                            except TypeError:
+                                bloco_comentarios("S20", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S20",
+                        key=f"btn_salvar_S20_{ano_sel}",
+                        type="primary",
+                    ):
+                        lista_salvar_s20 = [
+                            f"{gpao1q:.0f}",
+                            f"{gpao2q:.0f}",
+                            f"{gpao3q:.0f}",
+                            f"{tg1q:.0f}",
+                            f"{tg2q:.0f}",
+                            f"{tg3q:.0f}",
+                        ]
+                        str_salvar_s20 = "/".join(lista_salvar_s20)
+                        ptsS20 = ptsS20_calc
+                        lnk_val = link_S20.strip()
+                        comentarios_historico = dS20.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S20",
+                                valor=str_salvar_s20,
+                                pontos=ptsS20,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S20", str_salvar_s20, ptsS20, lnk_val)
+
+                        res_data["S20"] = {
+                            "valor": str_salvar_s20,
+                            "pontos": ptsS20,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S20_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S20_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S20_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S20_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S20 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S20 = dS20.get("pontos", 0.0)
+                    cor_txt_S20 = (
+                        "#dc2626"
+                        if pts_atuais_S20 < 0.0
+                        else ("#28a745" if pts_atuais_S20 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S20}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S20: {pts_atuais_S20:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S20
+            if st.session_state.get(f"gatilho_modal_S20_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S20",
+                        st.session_state.get(f"links_pendentes_S20_{ano_sel}", []),
+                        ano_sel,
+                    )
+
