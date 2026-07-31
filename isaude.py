@@ -1664,7 +1664,7 @@ def mostrar_formulario_saude():
 
     # Estrutura de abas principal
     aba_quest, aba_dados_ext, aba_graf = st.tabs(
-        ["📋 Questionário iSaúde", "🌐 Dados Externos", "📊 Gráficos e Evolução"]
+        ["📋 Questionário iSaúde", "🌐 Dados Externos", "📊 Gráficos"]
     )
 
     # -------------------------------------------------------------------------
