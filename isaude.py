@@ -22195,73 +22195,112 @@ def mostrar_formulario_saude():
                     )
 
             # =============================================================================
-            # SÉRIE HISTÓRICA DE PONTUAÇÃO (BARRAS EM AZUL)
+            # ABA DE GRÁFICOS E DESEMPENHO HISTÓRICO (i-Saúde)
             # =============================================================================
-            st.subheader("📈 Série Histórica de Pontuação do i-Saúde")
-            st.write("Evolução da pontuação absoluta calculada de forma idêntica ao painel principal.")
+            with aba_graf:
+                st.header("📈 Evolução e Desempenho Histórico - i-Saúde")
+                st.caption("Acompanhamento do progresso das pontuações consolidadas ao longo dos anos.")
 
-            import pandas as pd
-            import plotly.express as px
+                import pandas as pd
+                import plotly.express as px
 
-            # 1. Varre os anos aplicando exatamente a mesma regra de soma da interface
-            anos_historico = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
-            pontuacoes_validas = []
-
-            for ano_hist in anos_historico:
-                # Recupera os dados com fallback para evitar NameError caso load_respostas não esteja importado
-                if "load_respostas" in globals():
-                    dados_ano = load_respostas(ano_hist)
-                elif "load_respostas_isaude" in globals():
-                    dados_ano = load_respostas_isaude(ano_hist)
+                # Busca os dados de todos os anos com verificações de segurança para evitar NameError
+                all_data = {}
+                if "get_all_years_data" in globals():
+                    all_data = get_all_years_data()
+                elif "get_all_years_data_isaude" in globals():
+                    all_data = get_all_years_data_isaude()
                 else:
-                    # Fallback buscando no res_data ou session_state
-                    dados_ano = st.session_state.get(f"respostas_isaude_{ano_hist}", {})
+                    # Busca manual pelos anos da série histórica caso a função global não exista
+                    anos_busca = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+                    for a in anos_busca:
+                        if "load_respostas" in globals():
+                            d = load_respostas(a)
+                        elif "load_respostas_isaude" in globals():
+                            d = load_respostas_isaude(a)
+                        else:
+                            d = st.session_state.get(f"respostas_isaude_{a}", {})
+                        if d:
+                            all_data[a] = d
 
-                total_pts_ano = 0.0
-                if isinstance(dados_ano, dict):
-                    for qid, item in dados_ano.items():
-                        if qid.startswith("COM_"):
-                            continue
-                        if "_" in qid and not qid.startswith("S"):
-                            continue
-                        if isinstance(item, dict):
-                            total_pts_ano += float(item.get("pontos", 0))
+                if all_data:
+                    anos_lista = sorted(all_data.keys())
 
-                pontuacoes_validas.append(round(total_pts_ano, 1))
+                    # Cálculo dos totais desconsiderando comentários e chaves auxiliares
+                    totais = []
+                    for ano in anos_lista:
+                        dados_ano = all_data.get(ano, {})
+                        tot_ano = 0.0
+                        if isinstance(dados_ano, dict):
+                            for k, item in dados_ano.items():
+                                if k.startswith("COM_"):
+                                    continue
+                                if "_" in k and not k.startswith("S"):
+                                    continue
+                                if isinstance(item, dict):
+                                    tot_ano += float(item.get("pontos", 0.0))
+                        totais.append(round(tot_ano, 1))
 
-            # 2. Criação do DataFrame para o Plotly
-            df_historico = pd.DataFrame({
-                "Ano": [str(a) for a in anos_historico],
-                "Pontuação Real": pontuacoes_validas
-            })
+                    # -----------------------------------------------------------------
+                    # RESUMO EM MÉTRICAS (KPIs)
+                    # -----------------------------------------------------------------
+                    col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
 
-            # Filtra para mostrar no gráfico apenas anos com pontuação preenchida
-            df_visivel = df_historico[df_historico["Pontuação Real"] > 0].copy()
-            if df_visivel.empty:
-                df_visivel = df_historico.head(4)  # Fallback seguro com os primeiros anos caso tudo esteja zerado
+                    val_max = max(totais) if totais else 0.0
+                    val_atual = totais[-1] if totais else 0.0
+                    val_media = (sum(totais) / len(totais)) if totais else 0.0
 
-            # 3. Montagem do gráfico de barras em azul
-            fig = px.bar(
-                df_visivel,
-                x="Ano",
-                y="Pontuação Real",
-                text="Pontuação Real",
-                labels={"Pontuação Real": "Pontos Brutos", "Ano": "Ano de Exercício"},
-                color_discrete_sequence=["#0078D4"]
-            )
+                    with col_kpi1:
+                        st.metric("🏆 Maior Pontuação Histórica", f"{val_max:.1f} pts")
+                    with col_kpi2:
+                        st.metric("📌 Pontuação Atual", f"{val_atual:.1f} pts")
+                    with col_kpi3:
+                        st.metric("📊 Média Anual", f"{val_media:.1f} pts")
 
-            # Ajusta os rótulos de pontuação para o topo das barras
-            fig.update_traces(texttemplate='%{text:.1f} pts', textposition='outside')
+                    st.divider()
 
-            maior_pontuacao = max(df_visivel["Pontuação Real"].max(), 100.0)
+                    # -----------------------------------------------------------------
+                    # GRÁFICO DE BARRAS PLOTLY INTERATIVO
+                    # -----------------------------------------------------------------
+                    fig = px.bar(
+                        x=[str(a) for a in anos_lista],
+                        y=totais,
+                        labels={'x': 'Ano de Avaliação', 'y': 'Pontuação Total (pts)'},
+                        title="Evolução da Pontuação Total por Ano (i-Saúde)",
+                        text=[f"{v:.1f}" for v in totais],
+                        color=totais,
+                        color_continuous_scale="Blues"
+                    )
 
-            fig.update_layout(
-                xaxis_type='category',
-                yaxis_range=[0, maior_pontuacao + 120],  # Margem no topo para o rótulo
-                showlegend=False,
-                margin=dict(l=20, r=20, t=30, b=20),
-                height=400
-            )
+                    # Ajustes visuais no gráfico
+                    fig.update_traces(
+                        textposition='outside',
+                        hovertemplate="<b>Ano:</b> %{x}<br><b>Pontuação:</b> %{y:.1f} pts<extra></extra>"
+                    )
 
-            # Renderiza apenas o gráfico na tela
-            st.plotly_chart(fig, use_container_width=True)
+                    max_y = (max(totais) + 120) if totais else 100
+
+                    fig.update_layout(
+                        height=450,
+                        margin=dict(l=20, r=20, t=50, b=40),
+                        coloraxis_showscale=False,
+                        xaxis=dict(type='category', title_font=dict(size=14)),
+                        yaxis=dict(range=[0, max_y], title_font=dict(size=14), gridcolor="#E9ECEF"),
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)"
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # -----------------------------------------------------------------
+                    # TABELA COMPLEMENTAR DE DADOS
+                    # -----------------------------------------------------------------
+                    with st.expander("📄 Visualizar Tabela de Dados Históricos"):
+                        dados_tabela = [
+                            {"Ano": str(ano), "Pontuação Total": f"{tot:.1f} pts"}
+                            for ano, tot in zip(anos_lista, totais)
+                        ]
+                        st.dataframe(dados_tabela, use_container_width=True)
+
+                else:
+                    st.info("ℹ️ Ainda não há dados salvos suficientes para gerar o gráfico de evolução do i-Saúde.")
