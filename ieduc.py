@@ -281,3 +281,254 @@ style_ano_capa = ParagraphStyle(
     spaceAfter=25,
 )
 
+import json
+import logging
+import re
+import streamlit as st
+from datetime import datetime
+from psycopg2.extras import RealDictCursor
+
+# =============================================================================
+# 1. GESTÃO DE ESTADO E PERSISTÊNCIA NEON POSTGRES - iEduc
+# =============================================================================
+
+def get_ano_atual_ieduc() -> int:
+    """Recupera o ano de referência ativo para o iEduc."""
+    return int(
+        st.session_state.get("ano_referencia_ieduc")
+        or st.session_state.get("ano_referencia_global")
+        or 2026
+    )
+
+
+def load_respostas_ieduc(ano: int = None, forcar_recarga: bool = False) -> dict:
+    """Carrega respostas do Neon PostgreSQL diretamente para o st.session_state."""
+    if ano is None:
+        ano = get_ano_atual_ieduc()
+
+    key_ano = f"respostas_ieduc_{ano}"
+
+    if forcar_recarga or key_ano not in st.session_state:
+        st.session_state[key_ano] = {}
+        try:
+            with get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(
+                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_ieduc WHERE ano = %s",
+                        (int(ano),)
+                    )
+                    rows = cursor.fetchall()
+                    for r in rows:
+                        detalhes = r.get('detalhes') or {}
+                        if isinstance(detalhes, str):
+                            try:
+                                detalhes = json.loads(detalhes)
+                            except Exception:
+                                detalhes = {}
+
+                        st.session_state[key_ano][str(r['quesito'])] = {
+                            "valor": r['resposta'] or "",
+                            "pontos": float(r['pontos'] or 0.0),
+                            "link": detalhes.get("link", ""),
+                            "comentarios": detalhes.get("comentarios", []),
+                            "comentario": detalhes.get("comentario", ""),
+                            "detalhes": detalhes
+                        }
+        except Exception as e:
+            logging.error(f"Erro ao carregar respostas do banco iEduc: {e}")
+
+    return st.session_state[key_ano]
+
+
+def save_resp_ieduc(qid, valor, pontos, link="", comentarios=None, comentario=""):
+    """Salva a resposta no Neon PostgreSQL e sincroniza o estado local reativamente."""
+    ano_int = get_ano_atual_ieduc()
+    key_ano = f"respostas_ieduc_{ano_int}"
+
+    if key_ano not in st.session_state:
+        st.session_state[key_ano] = {}
+
+    dados_atuais = st.session_state[key_ano].get(str(qid), {})
+
+    if comentarios is None:
+        comentarios = dados_atuais.get("comentarios", [])
+
+    if not comentario:
+        comentario = dados_atuais.get("comentario", "")
+
+    dados_detalhes = {
+        "link": str(link or ""),
+        "comentarios": comentarios,
+        "comentario": str(comentario or "")
+    }
+
+    # 1. ATUALIZAÇÃO IMEDIATA DO SESSION STATE
+    st.session_state[key_ano][str(qid)] = {
+        "valor": str(valor or ""),
+        "pontos": float(pontos or 0.0),
+        "link": str(link or ""),
+        "comentarios": comentarios,
+        "comentario": str(comentario or ""),
+        "detalhes": dados_detalhes,
+        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    # 2. PERSISTÊNCIA NO BANCO DE DADOS NEON
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO respostas_ieduc (ano, quesito, resposta, pontos, detalhes, atualizado_em)
+                    VALUES (%s, %s, %s, %s, %s::jsonb, CURRENT_TIMESTAMP)
+                    ON CONFLICT (ano, quesito)
+                    DO UPDATE SET
+                        resposta = EXCLUDED.resposta,
+                        pontos = EXCLUDED.pontos,
+                        detalhes = EXCLUDED.detalhes,
+                        atualizado_em = CURRENT_TIMESTAMP;
+                """, (
+                    int(ano_int),
+                    str(qid),
+                    str(valor or ""),
+                    float(pontos or 0.0),
+                    json.dumps(dados_detalhes, ensure_ascii=False)
+                ))
+            conn.commit()
+
+            # Força sincronização do cache local
+            load_respostas_ieduc(ano=ano_int, forcar_recarga=True)
+            return True
+
+    except Exception as e:
+        logging.error(f"Erro ao salvar no Neon (iEduc): {e}")
+        st.error(f"Erro ao salvar no banco Neon: {e}")
+        return False
+
+
+# =============================================================================
+# 2. COMPONENTE DE DIÁLOGO INTERNO E COMENTÁRIOS (SISTEMA AVANÇADO)
+# =============================================================================
+
+def bloco_comentarios_ieduc(questao_id: str, res_data: dict, sufixo: str = None):
+    """Gera o diálogo interno avançado com histórico, status e salvamento direto no Neon."""
+    ano_sel = get_ano_atual_ieduc()
+    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+
+    id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
+    key_texto = f"v_txt_com_ieduc_{id_chave}_{ano_sel}"
+    key_estado_limpar = f"limpar_input_ieduc_{id_chave}_{ano_sel}"
+    key_radio = f"rad_status_ieduc_{id_chave}_{ano_sel}"
+
+    if key_estado_limpar not in st.session_state:
+        st.session_state[key_estado_limpar] = False
+
+    dados_questao = res_data.get(str(questao_id), {})
+    historico = list(dados_questao.get("comentarios", []))
+
+    status_global = "Resolvido"
+    for com in historico:
+        if isinstance(com, dict) and "status_definido" in com:
+            status_global = com["status_definido"]
+
+    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+
+    with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
+        opcoes_status = ["Resolvido", "Pendente"]
+        idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
+
+        novo_status_clicado = st.radio(
+            f"Definir status para {id_chave}:",
+            options=opcoes_status,
+            index=idx_status_atual,
+            horizontal=True,
+            key=key_radio
+        )
+
+        # 1. Alteração de Status Automática
+        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
+            log_mudanca = {
+                "autor": "Sistema / " + usuario_atual,
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
+                "status_definido": novo_status_clicado
+            }
+            historico.append(log_mudanca)
+            save_resp_ieduc(
+                qid=questao_id,
+                valor=dados_questao.get("valor", ""),
+                pontos=dados_questao.get("pontos", 0.0),
+                link=dados_questao.get("link", ""),
+                comentarios=historico,
+                comentario=dados_questao.get("comentario", "")
+            )
+            st.rerun()
+
+        # 2. Renderização do Histórico de Balões de Comentários
+        if historico:
+            for idx, com in enumerate(historico):
+                if not isinstance(com, dict):
+                    continue
+                col_balao, col_lixeira = st.columns([11, 1])
+
+                with col_balao:
+                    autor = com.get('autor', 'Anônimo')
+                    data_com = com.get('data', '')
+                    texto_com = com.get('texto', '')
+
+                    if "Sistema /" in autor:
+                        st.markdown(
+                            f"""<div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
+                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{autor} - {data_com}</span>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            f"""<div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e3a8a;">
+                                <span style="font-size: 11px; color: #1e3a8a; font-weight: bold;">{autor}</span> 
+                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{data_com}</span>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
+                        )
+
+                with col_lixeira:
+                    if st.button("🗑️", key=f"btn_del_com_ieduc_{id_chave}_{idx}_{ano_sel}"):
+                        historico.pop(idx)
+                        save_resp_ieduc(
+                            qid=questao_id,
+                            valor=dados_questao.get("valor", ""),
+                            pontos=dados_questao.get("pontos", 0.0),
+                            link=dados_questao.get("link", ""),
+                            comentarios=historico,
+                            comentario=dados_questao.get("comentario", "")
+                        )
+                        st.rerun()
+
+        # Limpeza reativa da caixa de texto
+        if st.session_state[key_estado_limpar]:
+            st.session_state[key_texto] = ""
+            st.session_state[key_estado_limpar] = False
+
+        novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
+
+        # 3. Botão para Postar Novo Comentário
+        if st.button("Postar Comentário", key=f"btn_com_ieduc_{id_chave}_{ano_sel}", type="primary"):
+            if novo_texto.strip():
+                nova_mensagem = {
+                    "autor": usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": novo_texto.strip(),
+                    "status_definido": status_global
+                }
+                historico.append(nova_mensagem)
+                save_resp_ieduc(
+                    qid=questao_id,
+                    valor=dados_questao.get("valor", ""),
+                    pontos=dados_questao.get("pontos", 0.0),
+                    link=dados_questao.get("link", ""),
+                    comentarios=historico,
+                    comentario=dados_questao.get("comentario", "")
+                )
+                st.session_state[key_estado_limpar] = True
+                st.rerun()
+
