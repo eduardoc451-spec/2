@@ -547,7 +547,31 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+# Configurações globais e dicionários auxiliares
+PONTUACOES_MAX_ISAUDE = globals().get("PONTUACOES_MAX_ISAUDE", {})
+
+
+def limpar_xml(texto):
+    """Auxiliar para evitar quebras por caracteres especiais de XML no ReportLab."""
+    if not texto:
+        return ""
+    return (
+        str(texto)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
 
 # =============================================================================
 # 1. ESTILOS DE CAPA E FORMATAÇÃO
@@ -581,7 +605,7 @@ style_subtitulo_capa = ParagraphStyle(
 # 2. GERADOR DO RELATÓRIO PDF (i-Saúde)
 # =============================================================================
 def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
-    """Wrapper para a geração do relatório do i-Saúde."""
+    """Wrapper principal para a chamada de geração do relatório i-Saúde."""
     return gerar_relatorio_pdf(dados, ano, total, faixa, all_data=all_data)
 
 
@@ -603,7 +627,7 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements = []
     styles = getSampleStyleSheet()
 
-    # Estilos de Parágrafos personalizados
+    # Estilos de Parágrafos
     style_titulo_capa = ParagraphStyle(
         "TituloCapa",
         parent=styles["Normal"],
