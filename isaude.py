@@ -1921,8 +1921,10 @@ def render_sidebar_isaude():
 
     if "load_respostas_isaude" in globals():
         res_data = load_respostas_isaude(ano_sel)
-    else:
+    elif "load_respostas" in globals():
         res_data = load_respostas(ano_sel)
+    else:
+        res_data = st.session_state.get(f"respostas_isaude_{ano_sel}", {})
 
     total_pts = sum(
         float(item.get("pontos", 0.0))
@@ -1952,25 +1954,29 @@ def render_sidebar_isaude():
 
     col1, col2 = st.sidebar.columns(2)
 
-    # Botão de Download direto
+    # Botão de Download direto com tratamento seguro de tipos
     with col1:
         pdf_bytes = b""
-        if "gerar_relatorio_pdf_isaude" in globals():
-            res_pdf = gerar_relatorio_pdf_isaude(
-                res_data, ano_sel, total_pts, faixa
-            )
-            pdf_bytes = (
-                res_pdf.getvalue()
-                if hasattr(res_pdf, "getvalue")
-                else res_pdf
-            )
-        elif "gerar_relatorio_pdf" in globals():
-            res_pdf = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
-            pdf_bytes = (
-                res_pdf.getvalue()
-                if hasattr(res_pdf, "getvalue")
-                else res_pdf
-            )
+        res_pdf = None
+
+        try:
+            if "gerar_relatorio_pdf_isaude" in globals():
+                res_pdf = gerar_relatorio_pdf_isaude(
+                    res_data, ano_sel, total_pts, faixa
+                )
+            elif "gerar_relatorio_pdf" in globals():
+                res_pdf = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
+
+            # Normalização estrita para bytes puros (evita erro no Streamlit)
+            if hasattr(res_pdf, "getvalue"):
+                pdf_bytes = res_pdf.getvalue()
+            elif isinstance(res_pdf, bytes):
+                pdf_bytes = res_pdf
+            elif isinstance(res_pdf, str):
+                pdf_bytes = res_pdf.encode("latin-1", errors="ignore")
+        except Exception as e:
+            logging.error(f"Erro ao gerar PDF do iSaúde: {e}")
+            pdf_bytes = b""
 
         st.download_button(
             label="📄 Baixar PDF",
@@ -1978,7 +1984,7 @@ def render_sidebar_isaude():
             file_name=f"Relatorio_iSaude_{ano_sel}.pdf",
             mime="application/pdf",
             use_container_width=True,
-            disabled=(pdf_bytes == b""),
+            disabled=(len(pdf_bytes) == 0),
         )
 
     # Botão para abrir o Modal de confirmação
@@ -1991,7 +1997,6 @@ def render_sidebar_isaude():
             confirmar_zerar_dialog_isaude(ano_sel)
 
     return total_pts, res_data, ano_sel
-
 
 # =============================================================================
 # 5. GRÁFICOS E HISTÓRICO - iSaúde
