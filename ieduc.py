@@ -893,8 +893,7 @@ def gerar_relatorio_pdf_ieduc(dados, ano, total, faixa, all_data=None):
         ])
     )
     elements.append(t_detalhes)
-
-   # -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # FOLHA 3+: CONTEÚDO TÉCNICO COMPLETO
 # -------------------------------------------------------------------------
 elements.append(Paragraph(f"RELATÓRIO DE AUDITORIA i-FISCAL (GESTÃO EM EDUCAÇÃO) - {ano_atual}", styles["Heading1"]))
