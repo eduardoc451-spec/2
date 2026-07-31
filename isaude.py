@@ -20473,3 +20473,500 @@ def mostrar_formulario_saude():
                         ano_sel,
                     )
 
+# =============================================================================
+            # INDICADOR S15 • PROPORÇÃO DE PARTOS CESARIANOS (SIH/SUS)
+            # =============================================================================
+
+            def tratar_string_inteiro_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in str(texto) if c.isdigit())
+                try:
+                    return float(apenas_numeros) if apenas_numeros else 0.0
+                except ValueError:
+                    return 0.0
+
+
+            def formatar_para_inteiro_br(valor_float):
+                return f"{int(valor_float):,}".replace(",", ".")
+
+
+            with st.container(
+                key=f"container_bloco_isaude_S15_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S15 - Proporção de Partos Cesarianos ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S15 • Proporção de Partos Cesarianos sob Gestão Municipal (SIH/SUS)"
+                    )
+                    st.write(
+                        "**Sobre a especialidade obstétrica em estabelecimentos de saúde"
+                        f" sob gestão municipal em {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s15 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s15 = 2025
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $Propor\tilde{a}o (PC/TP) \le 40,00\%$ | ✅ Parâmetro Otimizado / Em Conformidade | 0,00 pontos (Sem penalidade) |
+| Se $Propor\tilde{a}o (PC/TP) > 40,00\%$ | 🚨 Alerta de Cirurgias Excessivas | -2,00 pontos (Penalidade) |
+                    """)
+                    st.caption(
+                        "🏥 *Fórmula de cálculo: $\\text{Proporção} = \\left(\\frac{\\text{Partos Cesarianos (PC)}}{\\text{Total de Partos (TP)}}\\right) \\times 100$. "
+                        "Insira os valores, o link e clique em 'Salvar Indicador S15'.*"
+                    )
+
+                    dS15 = res_data.get("S15") or {
+                        "valor": "0.0/0.0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    try:
+                        v_pc_s15, v_tp_s15 = map(
+                            float, dS15.get("valor", "0.0/0.0").split("/")
+                        )
+                    except Exception:
+                        v_pc_s15, v_tp_s15 = 0.0, 0.0
+
+                    evidencia_S15_salva = dS15.get("link", "")
+                    chave_link_S15 = f"txt_s15_link_{ano_sel}"
+
+                    if f"s15_str_pc_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s15_str_pc_{ano_sel}"] = formatar_para_inteiro_br(v_pc_s15)
+                    if f"s15_str_tp_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s15_str_tp_{ano_sel}"] = formatar_para_inteiro_br(v_tp_s15)
+
+                    cS15_1, cS15_2 = st.columns([1, 1])
+
+                    with cS15_1:
+                        st.markdown(f"##### 🤱 Registros Obstétricos")
+
+                        input_pc_str = st.text_input(
+                            f"Total de partos cesarianos em {ano_sel} (PC):",
+                            value=st.session_state[f"s15_str_pc_{ano_sel}"],
+                            key=f"txt_s15_pc_{ano_sel}",
+                        )
+
+                        input_tp_str = st.text_input(
+                            f"Total de partos realizados em {ano_sel} (TP):",
+                            value=st.session_state[f"s15_str_tp_{ano_sel}"],
+                            key=f"txt_s15_tp_{ano_sel}",
+                        )
+
+                        pc_s15 = tratar_string_inteiro_para_float(input_pc_str)
+                        tp_s15 = tratar_string_inteiro_para_float(input_tp_str)
+
+                        st.session_state[f"s15_str_pc_{ano_sel}"] = formatar_para_inteiro_br(pc_s15)
+                        st.session_state[f"s15_str_tp_{ano_sel}"] = formatar_para_inteiro_br(tp_s15)
+
+                        limiar_s15 = 40.0
+
+                    with cS15_2:
+                        link_S15 = st.text_area(
+                            f"Link/Evidência (S15 - Relatórios Hospitalares {ano_sel}):",
+                            value=evidencia_S15_salva,
+                            key=chave_link_S15,
+                            placeholder="Insira o link oficial referente ao indicador S15...",
+                            height=280,
+                        )
+                        placeholder_links_S15 = st.empty()
+                        links_S15_visuais = re.findall(REGEX_PURE_URL, link_S15 or "")
+                        if links_S15_visuais:
+                            placeholder_links_S15.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S15_visuais
+                                ])
+                            )
+
+                    if pc_s15 == 0.0 or tp_s15 == 0.0:
+                        ptsS15_calc = 0.0
+                        proporcao_s15 = 0.0
+                        texto_resultado = (
+                            "Aguardando preenchimento dos totais de partos cesarianos e realizados..."
+                        )
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        proporcao_s15 = round((pc_s15 / tp_s15) * 100.0, 2)
+
+                        if proporcao_s15 <= limiar_s15:
+                            ptsS15_calc = 0.0
+                            texto_resultado = (
+                                f"✅ PARÂMETRO OTIMIZADO: Proporção de cesáreas ({f'{proporcao_s15:.2f}'.replace('.', ',')}%)"
+                                " em conformidade com o referencial de humanização"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS15_calc = -2.0
+                            texto_resultado = (
+                                f"🚨 ALERTA DE CIRURGIAS: Proporção de cesáreas ({f'{proporcao_s15:.2f}'.replace('.', ',')}%)"
+                                f" superou o limite de {f'{limiar_s15:.2f}'.replace('.', ',')}%"
+                            )
+                            texto_pontuacao = "-2,00 pontos (Penalidade Aplicada)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    proporcao_s15_br = f"{proporcao_s15:.2f}".replace(".", ",") + "%"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S15:</b> Proporção Hospitalar de Partos Cesarianos ({ano_sel})<br>
+                            📊 <b>Índice de Cesáreas Calculado (PC/TP):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{proporcao_s15_br}</code><br>
+                            ⚖️ <b>Status da Rede Municipal:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S15", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S15", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S15")
+                            except TypeError:
+                                bloco_comentarios("S15", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S15",
+                        key=f"btn_salvar_S15_{ano_sel}",
+                        type="primary",
+                    ):
+                        str_salvar_s15 = f"{pc_s15:.0f}/{tp_s15:.0f}"
+                        ptsS15 = ptsS15_calc
+                        lnk_val = link_S15.strip()
+                        comentarios_historico = dS15.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S15",
+                                valor=str_salvar_s15,
+                                pontos=ptsS15,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S15", str_salvar_s15, ptsS15, lnk_val)
+
+                        res_data["S15"] = {
+                            "valor": str_salvar_s15,
+                            "pontos": ptsS15,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S15_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S15_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S15_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S15_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S15 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S15 = dS15.get("pontos", 0.0)
+                    cor_txt_S15 = (
+                        "#dc2626"
+                        if pts_atuais_S15 < 0.0
+                        else ("#28a745" if pts_atuais_S15 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S15}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S15: {pts_atuais_S15:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S15
+            if st.session_state.get(f"gatilho_modal_S15_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S15",
+                        st.session_state.get(f"links_pendentes_S15_{ano_sel}", []),
+                        ano_sel,
+                    )
+
+
+            # =============================================================================
+            # INDICADOR S16 • TAXA DE MORTALIDADE NEONATAL MUNICIPAL (SESSP-CCD/FSEADE)
+            # =============================================================================
+
+            with st.container(
+                key=f"container_bloco_isaude_S16_{ano_sel}", border=True
+            ):
+                with st.expander(
+                    f"📌 Indicador S16 - Taxa de Mortalidade Neonatal ({ano_sel})",
+                    expanded=True,
+                ):
+                    st.subheader(
+                        f"S16 • Mortalidade Neonatal sob Gestão Municipal (SESSP-CCD/FSEADE)"
+                    )
+                    st.write(
+                        "**Sobre a mortalidade de recém-nascidos e total de nascidos vivos"
+                        f" em estabelecimentos sob gestão municipal em {ano_sel}, informe:**"
+                    )
+
+                    try:
+                        ano_atual_s16 = int(ano_sel)
+                    except Exception:
+                        ano_atual_s16 = 2025
+
+                    ano_s16_aa1 = ano_atual_s16 - 1
+                    ano_s16_aa2 = ano_atual_s16 - 2
+
+                    st.markdown(r"""
+| Resultado do Indicador | Critério de Avaliação | Impacto / Pontuação |
+| :--- | :--- | :--- |
+| Se $Taxa_{Atual} \le Taxa_{Ref}$ | ✅ Sob Controle / Dentro da Referência | 0,00 pontos (Sem penalidade) |
+| Se $Taxa_{Atual} > Taxa_{Ref}$ | 🚨 Alerta Crítico / Aumento de Óbitos | -2,00 pontos (Penalidade) |
+                    """)
+                    st.caption(
+                        f"🏥 *Taxa de Referência calculada pelo biênio anterior ({ano_s16_aa2}-{ano_s16_aa1}). "
+                        "Insira os dados, o link e clique em 'Salvar Indicador S16'.*"
+                    )
+
+                    dS16 = res_data.get("S16") or {
+                        "valor": "0/0/0/0/0/0",
+                        "pontos": 0.0,
+                        "link": "",
+                        "comentarios": [],
+                        "comentario": "",
+                    }
+
+                    valores_s16 = dS16.get("valor", "0/0/0/0/0/0").split("/")
+                    if len(valores_s16) != 6:
+                        valores_s16 = [0.0] * 6
+                    else:
+                        try:
+                            valores_s16 = [float(v) for v in valores_s16]
+                        except Exception:
+                            valores_s16 = [0.0] * 6
+
+                    ornaa2, ornaa1, ornaa, nvaa2, nvaa1, nvaa = valores_s16
+                    evidencia_S16_salva = dS16.get("link", "")
+                    chave_link_S16 = f"txt_s16_link_{ano_sel}"
+
+                    if f"s16_str_ornaa2_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s16_str_ornaa2_{ano_sel}"] = formatar_para_inteiro_br(ornaa2)
+                    if f"s16_str_ornaa1_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s16_str_ornaa1_{ano_sel}"] = formatar_para_inteiro_br(ornaa1)
+                    if f"s16_str_ornaa_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s16_str_ornaa_{ano_sel}"] = formatar_para_inteiro_br(ornaa)
+                    if f"s16_str_nvaa2_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s16_str_nvaa2_{ano_sel}"] = formatar_para_inteiro_br(nvaa2)
+                    if f"s16_str_nvaa1_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s16_str_nvaa1_{ano_sel}"] = formatar_para_inteiro_br(nvaa1)
+                    if f"s16_str_nvaa_{ano_sel}" not in st.session_state:
+                        st.session_state[f"s16_str_nvaa_{ano_sel}"] = formatar_para_inteiro_br(nvaa)
+
+                    cS16_1, cS16_2 = st.columns([1, 1])
+
+                    with cS16_1:
+                        st.markdown("##### 👶 Registro de Óbitos Neonatais")
+                        input_ornaa2_str = st.text_input(f"Nº de óbitos neonatais em {ano_s16_aa2} (ORNAA-2):", value=st.session_state[f"s16_str_ornaa2_{ano_sel}"], key=f"txt_s16_ornaa2_{ano_sel}")
+                        input_ornaa1_str = st.text_input(f"Nº de óbitos neonatais em {ano_s16_aa1} (ORNAA-1):", value=st.session_state[f"s16_str_ornaa1_{ano_sel}"], key=f"txt_s16_ornaa1_{ano_sel}")
+                        input_ornaa_str = st.text_input(f"Nº de óbitos neonatais em {ano_sel} (ORNAA):", value=st.session_state[f"s16_str_ornaa_{ano_sel}"], key=f"txt_s16_ornaa_{ano_sel}")
+
+                        st.markdown("##### 🍼 Total de Nascidos Vivos na Rede")
+                        input_nvaa2_str = st.text_input(f"Nascidos vivos em {ano_s16_aa2} (NVAA-2):", value=st.session_state[f"s16_str_nvaa2_{ano_sel}"], key=f"txt_s16_nvaa2_{ano_sel}")
+                        input_nvaa1_str = st.text_input(f"Nascidos vivos em {ano_s16_aa1} (NVAA-1):", value=st.session_state[f"s16_str_nvaa1_{ano_sel}"], key=f"txt_s16_nvaa1_{ano_sel}")
+                        input_nvaa_str = st.text_input(f"Nascidos vivos em {ano_sel} (NVAA):", value=st.session_state[f"s16_str_nvaa_{ano_sel}"], key=f"txt_s16_nvaa_{ano_sel}")
+
+                        ornaa2 = tratar_string_inteiro_para_float(input_ornaa2_str)
+                        ornaa1 = tratar_string_inteiro_para_float(input_ornaa1_str)
+                        ornaa = tratar_string_inteiro_para_float(input_ornaa_str)
+                        nvaa2 = tratar_string_inteiro_para_float(input_nvaa2_str)
+                        nvaa1 = tratar_string_inteiro_para_float(input_nvaa1_str)
+                        nvaa = tratar_string_inteiro_para_float(input_nvaa_str)
+
+                        st.session_state[f"s16_str_ornaa2_{ano_sel}"] = formatar_para_inteiro_br(ornaa2)
+                        st.session_state[f"s16_str_ornaa1_{ano_sel}"] = formatar_para_inteiro_br(ornaa1)
+                        st.session_state[f"s16_str_ornaa_{ano_sel}"] = formatar_para_inteiro_br(ornaa)
+                        st.session_state[f"s16_str_nvaa2_{ano_sel}"] = formatar_para_inteiro_br(nvaa2)
+                        st.session_state[f"s16_str_nvaa1_{ano_sel}"] = formatar_para_inteiro_br(nvaa1)
+                        st.session_state[f"s16_str_nvaa_{ano_sel}"] = formatar_para_inteiro_br(nvaa)
+
+                    with cS16_2:
+                        link_S16 = st.text_area(
+                            f"Link/Evidência (S16 - Base Unificada {ano_sel}):",
+                            value=evidencia_S16_salva,
+                            key=chave_link_S16,
+                            placeholder="Insira o link oficial referente ao indicador S16...",
+                            height=380,
+                        )
+                        placeholder_links_S16 = st.empty()
+                        links_S16_visuais = re.findall(REGEX_PURE_URL, link_S16 or "")
+                        if links_S16_visuais:
+                            placeholder_links_S16.markdown(
+                                "**🔗 Link ativo:** "
+                                + " | ".join([
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_S16_visuais
+                                ])
+                            )
+
+                    if nvaa == 0.0 or (nvaa2 + nvaa1) == 0.0:
+                        ptsS16_calc = 0.0
+                        taxa_neonatal_atual = 0.0
+                        taxa_neonatal_ref = 0.0
+                        texto_resultado = "Aguardando lançamento completo dos dados vitais..."
+                        texto_pontuacao = "⏳ Sem avaliação"
+                        estilo_status = "color: #64748b;"
+                    else:
+                        taxa_neonatal_atual = ornaa / nvaa
+                        taxa_neonatal_ref = (ornaa2 + ornaa1) / (nvaa2 + nvaa1)
+
+                        if taxa_neonatal_atual <= taxa_neonatal_ref:
+                            ptsS16_calc = 0.0
+                            texto_resultado = (
+                                f"✅ SOB CONTROLE: Taxa de mortalidade neonatal em {ano_sel} igual "
+                                "ou inferior à referência histórica do município"
+                            )
+                            texto_pontuacao = "0,00 pontos (Sem penalidades)"
+                            estilo_status = "color: #16a34a; font-weight: bold;"
+                        else:
+                            ptsS16_calc = -2.0
+                            texto_resultado = (
+                                f"🚨 ALERTA CRÍTICO: Proporção de óbitos neonatais em {ano_sel} superou "
+                                f"a média do biênio anterior ({ano_s16_aa2}-{ano_s16_aa1})"
+                            )
+                            texto_pontuacao = "-2,00 pontos (Penalidade Aplicada)"
+                            estilo_status = "color: #dc2626; font-weight: bold;"
+
+                    taxa_atual_br = f"{(taxa_neonatal_atual * 100):.3f}".replace(".", ",") + "%"
+                    taxa_ref_br = f"{(taxa_neonatal_ref * 100):.3f}".replace(".", ",") + "%"
+
+                    st.markdown(
+                        f"""
+                        <div style="padding: 12px; background-color: #f1f5f9; border-left: 5px solid #1e3a8a; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                            📌 <b>Indicador Geral S16:</b> Proporção de Mortalidade Neonatal Hospitalar sob Gestão Municipal<br>
+                            📊 <b>Proporção de Referência Histórica ({ano_s16_aa2}-{ano_s16_aa1}):</b> <code style="font-size: 13px; font-weight: bold; color: #475569;">{taxa_ref_br}</code><br>
+                            📈 <b>Proporção Calculada para o Ano de {ano_sel}:</b> <code style="font-size: 13px; font-weight: bold; color: #1e3a8a;">{taxa_atual_br}</code><br>
+                            ⚖️ <b>Comportamento do Indicador:</b> <span style="{estilo_status}">{texto_resultado}</span><br>
+                            🎯 <b>Impacto na Nota (N):</b> <code style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{texto_pontuacao}</code>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    if "bloco_comentarios_isaude" in globals():
+                        bloco_comentarios_isaude("S16", res_data)
+                    elif "bloco_comentarios" in globals():
+                        try:
+                            bloco_comentarios("S16", res_data)
+                        except TypeError:
+                            try:
+                                bloco_comentarios("S16")
+                            except TypeError:
+                                bloco_comentarios("S16", "isaude", res_data)
+
+                    if st.button(
+                        "💾 Salvar Indicador S16",
+                        key=f"btn_salvar_S16_{ano_sel}",
+                        type="primary",
+                    ):
+                        lista_salvar_s16 = [
+                            f"{ornaa2:.0f}",
+                            f"{ornaa1:.0f}",
+                            f"{ornaa:.0f}",
+                            f"{nvaa2:.0f}",
+                            f"{nvaa1:.0f}",
+                            f"{nvaa:.0f}",
+                        ]
+                        str_salvar_s16 = "/".join(lista_salvar_s16)
+                        ptsS16 = ptsS16_calc
+                        lnk_val = link_S16.strip()
+                        comentarios_historico = dS16.get("comentarios", [])
+
+                        if "save_resp_isaude" in globals():
+                            save_resp_isaude(
+                                qid="S16",
+                                valor=str_salvar_s16,
+                                pontos=ptsS16,
+                                link=lnk_val,
+                                comentarios=comentarios_historico,
+                            )
+                        elif "save_resp" in globals():
+                            save_resp("S16", str_salvar_s16, ptsS16, lnk_val)
+
+                        res_data["S16"] = {
+                            "valor": str_salvar_s16,
+                            "pontos": ptsS16,
+                            "link": lnk_val,
+                            "comentarios": comentarios_historico,
+                        }
+
+                        links_atuais = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, lnk_val or "")
+                        ]
+                        links_antigos = [
+                            u[0] if isinstance(u, tuple) else u
+                            for u in re.findall(REGEX_PURE_URL, evidencia_S16_salva or "")
+                        ]
+
+                        if (
+                            lnk_val != evidencia_S16_salva
+                            and links_atuais
+                            and links_atuais != links_antigos
+                        ):
+                            st.session_state[f"links_pendentes_S16_{ano_sel}"] = (
+                                links_atuais
+                            )
+                            st.session_state[f"gatilho_modal_S16_{ano_sel}"] = True
+
+                        st.cache_data.clear()
+                        st.toast("Resposta do Indicador S16 salva com sucesso!", icon="✅")
+                        st.rerun()
+
+                    pts_atuais_S16 = dS16.get("pontos", 0.0)
+                    cor_txt_S16 = (
+                        "#dc2626"
+                        if pts_atuais_S16 < 0.0
+                        else ("#28a745" if pts_atuais_S16 > 0.0 else "#6c757d")
+                    )
+                    st.markdown(
+                        f"<span style='color:{cor_txt_S16}; font-weight:bold;'>"
+                        f"📊 Impacto de Pontuação no Indicador S16: {pts_atuais_S16:+.2f}"
+                        " pontos</span>",
+                        unsafe_allow_html=True,
+                    )
+
+            # GATILHO DO MODAL S16
+            if st.session_state.get(f"gatilho_modal_S16_{ano_sel}", False):
+                if "modal_aviso_link" in globals():
+                    modal_aviso_link(
+                        "S16",
+                        st.session_state.get(f"links_pendentes_S16_{ano_sel}", []),
+                        ano_sel,
+                    )
+
