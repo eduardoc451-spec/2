@@ -627,12 +627,20 @@ def render_modulo_isaude(questoes_isaude: list):
             # INTEGRAÇÃO DO DIÁLOGO INTERNO / HISTÓRICO DE COMENTÁRIOS
             bloco_comentarios_isaude(qid, respostas)
 
+import logging
+from datetime import datetime
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer
+
 # =============================================================================
-# CONFIGURAÇÃO DE ESTILOS PADRÃO PARA RELATÓRIOS PDF (iSaúde)
+# 1. ESTILOS DE CAPA E FORMATAÇÃO
 # =============================================================================
 styles = getSampleStyleSheet()
 
-# --- ESTILOS DE CAPA (ADICIONE ESTE BLOCO) ---
 style_titulo_capa = ParagraphStyle(
     "TituloCapaISaude",
     parent=styles["Normal"],
@@ -640,7 +648,7 @@ style_titulo_capa = ParagraphStyle(
     fontSize=24,
     leading=28,
     alignment=TA_CENTER,
-    textColor=colors.HexColor("#0D9488"),  # Cor customizada (ex: Teal)
+    textColor=colors.HexColor("#0D9488"),
     spaceAfter=15,
 )
 
@@ -655,53 +663,89 @@ style_subtitulo_capa = ParagraphStyle(
     spaceAfter=30,
 )
 
+
 # =============================================================================
 # 2. GERADOR DO RELATÓRIO PDF (i-Saúde)
 # =============================================================================
-
 def gerar_relatorio_pdf_isaude(dados, ano, total, faixa, all_data=None):
-    """Gera o documento PDF consolidado para o i-Saúde sem dependências externas incorretas."""
-    
-    # 1. TRATAMENTO DE ANOS E DADOS HISTÓRICOS
+    """Wrapper para a geração do relatório do i-Saúde."""
+    return gerar_relatorio_pdf(dados, ano, total, faixa, all_data=all_data)
+
+
+def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
+    subquestoes_saude_local = globals().get("subquestoes_saude", [])
+    resposta_condicional_nao_local = globals().get(
+        "resposta_condicional_nao", False
+    )
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=30,
+    )
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Estilos de Parágrafos personalizados
+    style_titulo_capa = ParagraphStyle(
+        "TituloCapa",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=24,
+        leading=28,
+        textColor=colors.HexColor("#0078D4"),
+        alignment=1,
+    )
+    style_ano_capa = ParagraphStyle(
+        "AnoCapa",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=16,
+        leading=20,
+        textColor=colors.HexColor("#7f8c8d"),
+        alignment=1,
+    )
+    style_tabela_padrao = ParagraphStyle(
+        "TabPadrao",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        textColor=colors.HexColor("#2c3e50"),
+    )
+    style_tabela_centro = ParagraphStyle(
+        "TabCentro",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        textColor=colors.HexColor("#2c3e50"),
+        alignment=1,
+    )
+    style_th = ParagraphStyle(
+        "TabHeader",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=12,
+        textColor=colors.white,
+        alignment=1,
+    )
+
+    if all_data is None:
+        all_data = {}
+
     try:
-        ano_atual = int(ano)
-    except (ValueError, TypeError):
+        ano_atual = int(str(ano).strip()[:4])
+    except Exception:
         ano_atual = datetime.now().year
 
     ano_ant = ano_atual - 1
-
-    if all_data is None:
-        try:
-            all_data = get_all_years_data_isaude()
-        except Exception:
-            all_data = {}
-
- # =============================================================================
-# COLOQUE A DEFINIÇÃO DA FUNÇÃO EXATAMENTE AQUI (ANTES DO RESTO DA TELA)
-# =============================================================================
-def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
-    subquestoes_saude_local = globals().get('subquestoes_saude', [])
-    resposta_condicional_nao_local = globals().get('resposta_condicional_nao', False)
-
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-    elements = []
-    styles = getSampleStyleSheet()
-    
-    # Estilos de Parágrafos personalizados
-    style_titulo_capa = ParagraphStyle('TituloCapa', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=24, leading=28, textColor=colors.HexColor("#0078D4"), alignment=1)
-    style_ano_capa = ParagraphStyle('AnoCapa', parent=styles['Normal'], fontName='Helvetica', fontSize=16, leading=20, textColor=colors.HexColor("#7f8c8d"), alignment=1)
-    style_tabela_padrao = ParagraphStyle('TabPadrao', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=11, textColor=colors.HexColor("#2c3e50"))
-    style_tabela_centro = ParagraphStyle('TabCentro', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=11, textColor=colors.HexColor("#2c3e50"), alignment=1)
-    style_th = ParagraphStyle('TabHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, leading=12, textColor=colors.white, alignment=1)
-    
-    if all_data is None:
-        all_data = {}
-        
-    ano_atual = int(str(ano).strip()[:4])
-    ano_ant = ano_atual - 1
     dados_ano_anterior = all_data.get(ano_ant, {})
-
 
     # -------------------------------------------------------------------------
     # FOLHA 1: CAPA
@@ -709,19 +753,31 @@ def gerar_relatorio_pdf(dados, ano, total, faixa, all_data=None):
     elements.append(Spacer(1, 100))
     try:
         logo = Image("iegm.png", width=380, height=180)
-        logo.hAlign = 'CENTER'
+        logo.hAlign = "CENTER"
         elements.append(logo)
     except Exception:
         elements.append(Paragraph("[Logo: iegm.png]", styles["Title"]))
-        
+
     elements.append(Spacer(1, 50))
     elements.append(Paragraph("Relatório i-Saúde", style_titulo_capa))
     elements.append(Spacer(1, 5))
-    elements.append(Paragraph("Índice de Fiscalização e Gestão da Saúde Municipal", ParagraphStyle('SubCapa', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, leading=18, textColor=colors.HexColor("#718096"), alignment=1)))
+    elements.append(
+        Paragraph(
+            "Índice de Fiscalização e Gestão da Saúde Municipal",
+            ParagraphStyle(
+                "SubCapa",
+                parent=styles["Normal"],
+                fontName="Helvetica-Bold",
+                fontSize=14,
+                leading=18,
+                textColor=colors.HexColor("#718096"),
+                alignment=1,
+            ),
+        )
+    )
     elements.append(Spacer(1, 15))
-    elements.append(Paragraph(str(ano), style_ano_capa))
-    elements.append(PageBreak())
-
+    elements.append(Paragraph(str(ano_atual), style_ano_capa))
+    
     # -------------------------------------------------------------------------
     # FOLHA 2: SUMÁRIO (ATUALIZADO)
     # -------------------------------------------------------------------------
