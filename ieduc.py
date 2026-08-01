@@ -5527,3 +5527,265 @@ def render_questao_2_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("2.1", st.session_state.get(f"links_pendentes_2_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 2.1.1 - DADOS DE BRINQUEDOS NO PÁTIO INFANTIL DA PRÉ-ESCOLA (IEDUC)
+# =============================================================================
+def render_questao_2_1_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.1.1 (Cálculo de Brinquedos no Pátio Infantil - Pré-escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_1_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.1.1 • Brinquedos no Pátio Infantil (BPI) ({ano_sel})", expanded=True):
+            st.subheader("2.1.1 • Dados de Brinquedos no Pátio Infantil - Pré-Escola")
+            st.write(f"**Informe os dados para o cálculo de brinquedos no Pátio Infantil (BPI) na Pré-Escola em {ano_sel}:**")
+            st.caption("ℹ️ *Preencha os dados, insira o link de evidência e clique no botão 'Salvar Questão 2.1.1' para registrar.*")
+
+            d211 = res_data.get("2.1.1") or {
+                "valor": "BPI:0,TOTAL:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_211 = d211.get("valor", "BPI:0,TOTAL:0")
+            evidencia_211_salva = d211.get("link", "")
+
+            # Parse seguro dos campos salvas
+            try:
+                parts_211 = v_banco_211.split(",")
+                v_bpi_saved = int(parts_211[0].split(":")[1])
+                v_total_saved = int(parts_211[1].split(":")[1])
+            except Exception:
+                v_bpi_saved, v_total_saved = 0, 0
+
+            chave_bpi_211 = f"q211_bpi_val_{ano_sel}"
+            chave_total_211 = f"q211_total_val_{ano_sel}"
+            chave_link_211 = f"l211_txt_pre_final_{ano_sel}"
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Nº de pré-escolas com brinquedos no pátio infantil:</label>', unsafe_allow_html=True)
+                bpi_input = st.number_input(
+                    "", min_value=0, step=1, value=v_bpi_saved, key=chave_bpi_211, label_visibility="collapsed"
+                )
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Nº TOTAL de pré-escolas no município:</label>', unsafe_allow_html=True)
+                total_input = st.number_input(
+                    "", min_value=0, step=1, value=v_total_saved, key=chave_total_211, label_visibility="collapsed"
+                )
+
+            with col2:
+                link_211 = st.text_area(
+                    f"Link/Evidência (2.1.1) - {ano_sel}:",
+                    value=evidencia_211_salva,
+                    key=chave_link_211,
+                    placeholder="Insira os links...",
+                    height=180
+                )
+
+                placeholder_links_211 = st.empty()
+                links_211_visuais = re.findall(regex_url, link_211 or "")
+
+                if links_211_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_211_visuais
+                    ]
+                    placeholder_links_211.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de Pontuação e Painel
+            pts_211 = 0.0
+            if total_input > 0:
+                proporcao_p = bpi_input / total_input
+                pts_211 = float(min(2.0, proporcao_p * 2.0))
+                texto_painel = (
+                    f"📊 Proporção (BPI / Total): {proporcao_p*100:.1f}%\n"
+                    f"✨ Pontuação Calculada: {pts_211:.2f} pontos (Máximo: 2.0 pontos)"
+                )
+            else:
+                texto_painel = "⚠️ Status: Nenhuma pré-escola total informada para o cálculo de BPI."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.1.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.1.1", key=f"btn_salvar_2_1_1_{ano_sel}", type="primary"):
+                v_sel = f"BPI:{bpi_input},TOTAL:{total_input}"
+                lnk_val = link_211.strip()
+
+                comentarios_historico = d211.get("comentarios", [])
+                comentario_simples = d211.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.1.1",
+                        valor=v_sel,
+                        pontos=float(pts_211),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_211_salva or "")]
+
+                if lnk_val != evidencia_211_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_1_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 2.1.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_1_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.1.1", st.session_state.get(f"links_pendentes_2_1_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.1.2 - MANUTENÇÃO DE BRINQUEDOS NO PÁTIO DA PRÉ-ESCOLA (IEDUC)
+# =============================================================================
+def render_questao_2_1_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.1.2 (Manutenção de Brinquedos no Pátio Infantil - Pré-escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_1_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.1.2 • Manutenção de Brinquedos no Pátio ({ano_sel})", expanded=True):
+            st.subheader("2.1.2 • Manutenção de Brinquedos no Pátio Infantil")
+            st.write(f"**Informe os dados sobre a manutenção/troca de brinquedos no Pátio Infantil da Pré-Escola em {ano_sel}:**")
+            st.markdown("""
+            *Fórmula de cálculo:*
+            * $$Total = CRON + NCRON + SOLIC + NMANU$$
+            * $$P_1 = \\frac{NMANU}{Total} \\times (-2)$$ *(Perde até 2 pontos)*
+            * $$P_2 = \\frac{NCRON}{Total} \\times 1$$ *(Ganha até 1 ponto)*
+            * $$P_3 = \\frac{CRON}{Total} \\times 3$$ *(Ganha até 3 pontos)*
+            * **Nota Final (P) = P1 + P2 + P3**
+            """)
+            st.caption("ℹ️ *Preencha os quantitativos, insira o link de evidência e clique no botão 'Salvar Questão 2.1.2' para registrar.*")
+
+            d212 = res_data.get("2.1.2") or {
+                "valor": "CRON:0,NCRON:0,SOLIC:0,NMANU:0,TOTAL:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_212 = d212.get("valor", "CRON:0,NCRON:0,SOLIC:0,NMANU:0,TOTAL:0")
+            evidencia_212_salva = d212.get("link", "")
+
+            # Parse seguro das quantidades salvas
+            try:
+                parts_212 = v_banco_212.split(",")
+                v_cron = int(parts_212[0].split(":")[1])
+                v_ncron = int(parts_212[1].split(":")[1])
+                v_solic = int(parts_212[2].split(":")[1])
+                v_nmanu = int(parts_212[3].split(":")[1])
+            except Exception:
+                v_cron, v_ncron, v_solic, v_nmanu = 0, 0, 0, 0
+
+            k_q212_cron  = f"key_q212_cron_{ano_sel}"
+            k_q212_ncron = f"key_q212_ncron_{ano_sel}"
+            k_q212_solic = f"key_q212_solic_{ano_sel}"
+            k_q212_nmanu = f"key_q212_nmanu_{ano_sel}"
+            chave_link_212 = f"l212_txt_pre_manutencao_{ano_sel}"
+
+            col_m1, col_m2 = st.columns([1, 1])
+
+            with col_m1:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Possuem e CUMPRIRAM o cronograma de manutenção (CRON):</label>', unsafe_allow_html=True)
+                cron = st.number_input("", min_value=0, step=1, value=v_cron, key=k_q212_cron, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Possuem e NÃO CUMPRIRAM o cronograma (NCRON):</label>', unsafe_allow_html=True)
+                ncron = st.number_input("", min_value=0, step=1, value=v_ncron, key=k_q212_ncron, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Realizam manutenção SOMENTE por solicitação (SOLIC):</label>', unsafe_allow_html=True)
+                solic = st.number_input("", min_value=0, step=1, value=v_solic, key=k_q212_solic, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">NÃO realizam manutenção/troca dos brinquedos (NMANU):</label>', unsafe_allow_html=True)
+                nmanu = st.number_input("", min_value=0, step=1, value=v_nmanu, key=k_q212_nmanu, label_visibility="collapsed")
+
+                total_pre = cron + ncron + solic + nmanu
+                st.markdown('<label style="font-size: 13px; font-weight: 600; color: #1E3A8A;">Total de Pré-Escolas (Somatório Automático):</label>', unsafe_allow_html=True)
+                st.number_input("", value=int(total_pre), disabled=True, key=f"key_q212_disp_total_{ano_sel}", label_visibility="collapsed")
+
+            with col_m2:
+                link_212 = st.text_area(
+                    f"Link/Evidência (2.1.2) - {ano_sel}:",
+                    value=evidencia_212_salva,
+                    key=chave_link_212,
+                    placeholder="Insira os links...",
+                    height=320
+                )
+
+                placeholder_links_212 = st.empty()
+                links_212_visuais = re.findall(regex_url, link_212 or "")
+
+                if links_212_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_212_visuais
+                    ]
+                    placeholder_links_212.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo Matemático da Nota Ponderada
+            pts_212 = 0.0
+            if total_pre > 0:
+                p1 = (nmanu / total_pre) * (-2.0)
+                p2 = (ncron / total_pre) * 1.0
+                p3 = (cron / total_pre) * 3.0
+
+                pts_212 = float(p1 + p2 + p3)
+                texto_painel = (
+                    f"📊 Parciais: P1 (NMANU): {p1:.2f} pts | P2 (NCRON): {p2:.2f} pts | P3 (CRON): {p3:.2f} pts\n"
+                    f"✨ Nota Final Calculada: {pts_212:.2f} pontos (Total: {total_pre} pré-escolas)"
+                )
+            else:
+                texto_painel = "⚠️ Status: Nenhuma pré-escola informada nas faixas de manutenção."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.1.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.1.2", key=f"btn_salvar_2_1_2_{ano_sel}", type="primary"):
+                v_sel = f"CRON:{cron},NCRON:{ncron},SOLIC:{solic},NMANU:{nmanu},TOTAL:{total_pre}"
+                lnk_val = link_212.strip()
+
+                comentarios_historico = d212.get("comentarios", [])
+                comentario_simples = d212.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.1.2",
+                        valor=v_sel,
+                        pontos=float(round(pts_212, 2)),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_212_salva or "")]
+
+                if lnk_val != evidencia_212_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_1_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_1_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 2.1.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_1_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.1.2", st.session_state.get(f"links_pendentes_2_1_2_{ano_sel}", []), ano_sel)
