@@ -1174,6 +1174,9 @@ def render_modulo_ieduc(questoes_ieduc: list):
 def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
     """Renderiza a Questão 1.0 (Oferta de Creche) no modelo padrão iGov."""
     
+    # Garantia de regex local caso não esteja declarada no escopo global
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+    
     with st.container(key=f"container_bloco_ieduc_1_0_{ano_sel}", border=True):
         with st.expander(f"📌 Questão 1.0 • Oferta de Creche ({ano_sel})", expanded=True):
             st.subheader("1.0 • Infraestrutura da Educação Infantil")
@@ -1197,7 +1200,7 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
 
             evidencia_10_salva = d10.get("link", "")
 
-            # Chaves fixas por componente e ano (Modelo idêntico ao seu iAMB)
+            # Chaves fixas por componente e ano
             chave_radio_10 = f"r_10_{ano_sel}"
             chave_link_10 = f"l_10_txt_{ano_sel}"
             chave_coment_10 = f"coment_1.0_{ano_sel}"  # Chave padrão do bloco_comentarios
@@ -1223,7 +1226,7 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                     height=100
                 )
                 placeholder_links_10 = st.empty()
-                links_10_visuais = re.findall(REGEX_PURE_URL, link_10 or "")
+                links_10_visuais = re.findall(regex_url, link_10 or "")
                 if links_10_visuais:
                     placeholder_links_10.markdown(
                         "**🔗 Link ativo:** " + " | ".join(
@@ -1231,22 +1234,23 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                         )
                     )
 
-            # Renderiza o bloco de comentários EXATAMENTE igual ao seu modelo
+            # Renderiza o bloco de comentários
             bloco_comentarios("1.0", res_data, ano_sel)
 
             # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL (Modelo idêntico ao iAMB)
+            # BOTÃO DE SALVAMENTO MANUAL
             # -----------------------------------------------------------------
             if st.button("💾 Salvar Questão 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                 val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
                 pts_10 = float(opcoes_10.get(val_salvar, 0.0))
                 lnk_val = link_10.strip()
 
-                # Captura o comentário do session_state (Exatamente como o seu modelo do iAMB)
+                # Captura o comentário do session_state
                 comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
 
-                # Salva no banco de dados Neon
-                save_resp(
+                # ✅ CORREÇÃO APLICADA: Substituído save_resp por save_resp_ieduc
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                save_resp_func(
                     qid="1.0",
                     valor=val_salvar,
                     pontos=pts_10,
@@ -1263,8 +1267,8 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                 }
 
                 # Validação de novos links para acionar o modal
-                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
-                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_10_salva or "")]
 
                 if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
                     st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
@@ -1301,7 +1305,8 @@ def mostrar_formulario_educ(questoes: list = None):
 
     # Fallback para lista de questões
     if questoes is None:
-        questoes = globals().get("QUESTOES_IEDUC", QUESTOES_IEDUC_PADRAO)
+        questoes_padrao = globals().get("QUESTOES_IEDUC_PADRAO", [])
+        questoes = globals().get("QUESTOES_IEDUC", questoes_padrao)
 
     # Estrutura de abas principal
     aba_quest, aba_dados_ext, aba_graf = st.tabs(
