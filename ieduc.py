@@ -4696,3 +4696,330 @@ def render_questao_1_13_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.13.1", st.session_state.get(f"links_pendentes_1_13_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.12.2 • MOTIVO DA NÃO ENTREGA DO MATERIAL DIDÁTICO (IEDUC)
+# =============================================================================
+def render_questao_1_12_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.12.2 (Motivo da Não Entrega do Material Didático - Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_12_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.12.2 • Motivo da Não Entrega do Material Didático ({ano_sel})", expanded=True):
+            st.subheader("1.12.2 • Motivo da Não Entrega do Material Didático (Creche)")
+            st.write(f"**Informe o motivo de não ter sido entregue o material didático nas Creches em {ano_sel}:**")
+            st.caption("ℹ️ *Preencha o motivo, insira os links de evidência e clique no botão 'Salvar Questão 1.12.2' para registrar.*")
+
+            d1212 = res_data.get("1.12.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_1212 = d1212.get("valor", "")
+            evidencia_1212_salva = d1212.get("link", "")
+
+            chave_motivo_1212 = f"txt_motivo_1212_{ano_sel}"
+            chave_link_1212 = f"l1212_txt_creche_{ano_sel}"
+
+            c1212_1, c1212_2 = st.columns([3, 2])
+
+            with c1212_1:
+                st.markdown(f"##### 📝 Justificativa ({ano_sel})")
+                motivo_1212 = st.text_area(
+                    "Motivo da não entrega:",
+                    value=v_banco_1212,
+                    key=chave_motivo_1212,
+                    height=140,
+                    placeholder="Digite detalhadamente o motivo da não entrega do material didático..."
+                )
+
+            with c1212_2:
+                link_1212 = st.text_area(
+                    f"Link/Evidência (1.12.2) - {ano_sel}:",
+                    value=evidencia_1212_salva,
+                    key=chave_link_1212,
+                    placeholder="Insira os links...",
+                    height=140
+                )
+
+                placeholder_links_1212 = st.empty()
+                links_1212_visuais = re.findall(regex_url, link_1212 or "")
+
+                if links_1212_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_1212_visuais
+                    ]
+                    placeholder_links_1212.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            pts_1212 = 0.0
+
+            if motivo_1212.strip():
+                texto_painel = f"📊 Status: Motivo preenchido com sucesso. | Tamanho: {len(motivo_1212)} caracteres (Dados Informativos)."
+            else:
+                texto_painel = "⚠️ Status: Campo de motivo em branco. Por favor, insira a justificativa."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.12.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.12.2", key=f"btn_salvar_1_12_2_{ano_sel}", type="primary"):
+                v_sel = motivo_1212.strip()
+                lnk_val = link_1212.strip()
+
+                comentarios_historico = d1212.get("comentarios", [])
+                comentario_simples = d1212.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.12.2",
+                        valor=v_sel,
+                        pontos=float(pts_1212),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_1212_salva or "")]
+
+                if lnk_val != evidencia_1212_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_12_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_12_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.12.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_12_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.12.2", st.session_state.get(f"links_pendentes_1_12_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.13 • PESQUISA/ESTUDO DE DEMANDA POR CRECHES (IEDUC)
+# =============================================================================
+def render_questao_1_13_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.13 (Pesquisa/Estudo de Demanda por Creches)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_13_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.13 • Pesquisa de Demanda por Creches ({ano_sel})", expanded=True):
+            st.subheader("1.13 • Pesquisa de Demanda por Creches")
+            st.write(f"**A Prefeitura municipal fez uma pesquisa/estudo para levantar o número de crianças que necessitavam de Creches em {ano_sel}?**")
+            st.caption("ℹ️ *Selecione a opção desejada, insira os links e clique no botão 'Salvar Questão 1.13' para registrar.*")
+
+            d13 = res_data.get("1.13") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_13 = d13.get("valor", "")
+            evidencia_13_salva = d13.get("link", "")
+
+            opcoes_13 = [
+                "Sim",
+                "Não"
+            ]
+
+            idx_13 = None
+            if v_banco_13:
+                for idx, op in enumerate(opcoes_13):
+                    if op.lower() in v_banco_13.lower() or v_banco_13.lower() in op.lower():
+                        idx_13 = idx
+                        break
+
+            chave_radio_13 = f"radio_q13_{ano_sel}"
+            chave_link_13 = f"l13_txt_creche_{ano_sel}"
+
+            c13_1, c13_2 = st.columns([3, 2])
+
+            with c13_1:
+                st.markdown(f"##### 📊 Pesquisa de Demanda ({ano_sel})")
+                r13 = st.radio(
+                    f"Selecione uma opção para {ano_sel}:",
+                    opcoes_13,
+                    index=idx_13,
+                    key=chave_radio_13,
+                    help="Informe se o município realizou mapeamento da demanda reprimida por creches."
+                )
+
+            with c13_2:
+                link_13 = st.text_area(
+                    f"Link/Evidência (1.13) - {ano_sel}:",
+                    value=evidencia_13_salva,
+                    key=chave_link_13,
+                    placeholder="Insira os links...",
+                    height=100
+                )
+
+                placeholder_links_13 = st.empty()
+                links_13_visuais = re.findall(regex_url, link_13 or "")
+
+                if links_13_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_13_visuais
+                    ]
+                    placeholder_links_13.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            pts13 = 50.0 if (r13 and "sim" in r13.lower()) else 0.0
+
+            if r13:
+                st.code(f"📊 Selecionado: {r13} | Pontuação: {pts13:.1f} pontos", language="text")
+            else:
+                st.code("⚠️ Status: Nenhuma opção selecionada.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.13", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.13", key=f"btn_salvar_1_13_{ano_sel}", type="primary"):
+                v_sel = r13 if r13 else ""
+                lnk_val = link_13.strip()
+
+                comentarios_historico = d13.get("comentarios", [])
+                comentario_simples = d13.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.13",
+                        valor=v_sel,
+                        pontos=float(pts13),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_13_salva or "")]
+
+                if lnk_val != evidencia_13_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_13_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_13_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.13 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_13_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.13", st.session_state.get(f"links_pendentes_1_13_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.13.1 • DESCRIÇÃO DA PESQUISA/ESTUDO DE DEMANDA (IEDUC)
+# =============================================================================
+def render_questao_1_13_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.13.1 (Descrição da Pesquisa/Estudo de Demanda - Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_13_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.13.1 • Descrição da Pesquisa/Estudo ({ano_sel})", expanded=True):
+            st.subheader("1.13.1 • Descrição da Pesquisa/Estudo de Demanda (Creche)")
+            st.write(f"**Descreva a pesquisa/estudo realizada para o levantamento de demanda por Creches em {ano_sel}:**")
+            st.caption("ℹ️ *Descreva a metodologia e os resultados obtidos, insira os links de evidência e clique no botão 'Salvar Questão 1.13.1' para registrar.*")
+
+            d131 = res_data.get("1.13.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_131 = d131.get("valor", "")
+            evidencia_131_salva = d131.get("link", "")
+
+            chave_descricao_131 = f"txt_descricao_131_{ano_sel}"
+            chave_link_131 = f"l131_txt_creche_{ano_sel}"
+
+            c131_1, c131_2 = st.columns([3, 2])
+
+            with c131_1:
+                st.markdown(f"##### 📝 Metodologia e Detalhamento ({ano_sel})")
+                descricao_131 = st.text_area(
+                    "Pesquisa/estudo:",
+                    value=v_banco_131,
+                    key=chave_descricao_131,
+                    height=140,
+                    placeholder="Descreva detalhadamente a metodologia, objetivos e resultados alcançados pelo estudo..."
+                )
+
+            with c131_2:
+                link_131 = st.text_area(
+                    f"Link/Evidência (1.13.1) - {ano_sel}:",
+                    value=evidencia_131_salva,
+                    key=chave_link_131,
+                    placeholder="Insira os links...",
+                    height=140
+                )
+
+                placeholder_links_131 = st.empty()
+                links_131_visuais = re.findall(regex_url, link_131 or "")
+
+                if links_131_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_131_visuais
+                    ]
+                    placeholder_links_131.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            pts_131 = 0.0
+
+            if descricao_131.strip():
+                texto_painel = f"📊 Status: Descrição preenchida com sucesso. | Tamanho: {len(descricao_131)} caracteres (Dados Informativos)."
+            else:
+                texto_painel = "⚠️ Status: Campo de descrição em branco. Por favor, detalhe a pesquisa realizada."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.13.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.13.1", key=f"btn_salvar_1_13_1_{ano_sel}", type="primary"):
+                v_sel = descricao_131.strip()
+                lnk_val = link_131.strip()
+
+                comentarios_historico = d131.get("comentarios", [])
+                comentario_simples = d131.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.13.1",
+                        valor=v_sel,
+                        pontos=float(pts_131),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_131_salva or "")]
+
+                if lnk_val != evidencia_131_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_13_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_13_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.13.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_13_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.13.1", st.session_state.get(f"links_pendentes_1_13_1_{ano_sel}", []), ano_sel)
