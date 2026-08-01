@@ -1169,20 +1169,12 @@ def render_modulo_ieduc(questoes_ieduc: list):
 
 
 # =============================================================================
-# 7. FUNÇÃO PRINCIPAL / WRAPPER PARA O MAIN.PY E RENDERIZAÇÃO DO MÓDULO
+# QUESITO 1.0 • PLANO MUNICIPAL DE EDUCAÇÃO / OFERTA DE CRECHE (MODELO iEduc)
 # =============================================================================
-
 def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza a Questão 1.0 (Oferta de Creche) no modelo padrão iGov."""
+    """Renderiza a Questão 1.0 (Oferta de Creche) no modelo padrão iGov / iEduc."""
     
     regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
-    
-    # -------------------------------------------------------------------------
-    # VERIFICAÇÃO E EXECUÇÃO DO MODAL (Deve ficar ANTES ou FORA de containers/botões)
-    # -------------------------------------------------------------------------
-    if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-        links_pendentes = st.session_state.get(f"links_pendentes_1_0_{ano_sel}", [])
-        modal_aviso_link(qid="1.0", links_encontrados=links_pendentes, ano_sel=ano_sel)
 
     with st.container(key=f"container_bloco_ieduc_1_0_{ano_sel}", border=True):
         with st.expander(f"📌 Questão 1.0 • Oferta de Creche ({ano_sel})", expanded=True):
@@ -1190,13 +1182,21 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
             st.write("**A Prefeitura municipal oferece Creche?**")
             st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.0' para registrar.*")
 
+            # Dicionário com Mapeamento de Opções e Pontuações do iEduc
             opcoes_10 = {
                 "Selecione...": 0.0,
                 "Sim": 0.0,
                 "Não": 0.0
             }
 
-            d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            # Estado inicial / persistente
+            d10 = res_data.get("1.0") or {
+                "valor": "Selecione...",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
             v_salvo_10 = d10.get("valor", "Selecione...")
 
             if v_salvo_10 not in opcoes_10:
@@ -1204,12 +1204,12 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
 
             evidencia_10_salva = d10.get("link", "")
 
+            # Chaves fixas por componente e ano
             chave_radio_10 = f"r_10_{ano_sel}"
             chave_link_10 = f"l_10_txt_{ano_sel}"
-            chave_coment_10 = f"coment_1.0_{ano_sel}"
 
-            col1, col2 = st.columns([1, 1])
-            with col1:
+            c10_1, c10_2 = st.columns([1, 1])
+            with c10_1:
                 lista_opcoes_10 = list(opcoes_10.keys())
                 idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
 
@@ -1217,73 +1217,76 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                     "Selecione a situação da Oferta de Creche:",
                     options=lista_opcoes_10,
                     index=idx_10,
-                    key=chave_radio_10
+                    key=chave_radio_10,
                 )
 
-            with col2:
+            with c10_2:
                 link_10 = st.text_area(
-                    "Link / Evidência (1.0):",
+                    "Link de Evidência (Lei, Decreto, Fotos, Matrículas, etc.):",
                     value=evidencia_10_salva,
                     key=chave_link_10,
-                    placeholder="Insira o link oficial das evidências da oferta de creche...",
-                    height=100
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.0...",
+                    height=100,
                 )
                 placeholder_links_10 = st.empty()
                 links_10_visuais = re.findall(regex_url, link_10 or "")
                 if links_10_visuais:
                     placeholder_links_10.markdown(
-                        "**🔗 Link ativo:** " + " | ".join(
+                        "**🔗 Link ativo:** "
+                        + " | ".join(
                             [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10_visuais]
                         )
                     )
 
-            # Bloco de comentários
-            bloco_comentarios("1.0", res_data, ano_sel)
+            # Renderização do chat de comentários / histórico
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.0", res_data, ano_sel)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
+            # Botão de salvamento
             if st.button("💾 Salvar Questão 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                 val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
                 pts_10 = float(opcoes_10.get(val_salvar, 0.0))
                 lnk_val = link_10.strip()
 
-                comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+                comentarios_historico = d10.get("comentarios", [])
+                comentario_simples = d10.get("comentario", "")
 
                 save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
-                save_resp_func(
-                    qid="1.0",
-                    valor=val_salvar,
-                    pontos=pts_10,
-                    link=lnk_val,
-                    comentario=comentario_para_salvar
-                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.0",
+                        valor=val_salvar,
+                        pontos=pts_10,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
 
-                # Atualiza os dados locais
-                res_data["1.0"] = {
-                    "valor": val_salvar,
-                    "pontos": pts_10,
-                    "link": lnk_val,
-                    "comentario": comentario_para_salvar
-                }
-
-                # Extrai os links do campo
                 links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_10_salva or "")]
 
-                # Se houver link digitado, ativa a flag para abrir o modal no próximo ciclo
-                if links_atuais:
+                # Se detectou novo link, ativa o modal antes de recarregar a tela
+                if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
                     st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                     st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
                 st.cache_data.clear()
-                st.toast("Resposta salva com sucesso!", icon="✅")
+                st.toast("Resposta e histórico do Quesito 1.0 salvos com sucesso!", icon="✅")
                 st.rerun()
 
-            # Resumo de impacto de pontuação
+            # Impacto de pontuação
             pts_atuais_10 = d10.get("pontos", 0.0)
             cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
 
             st.markdown(
                 f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
                 f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
+            )
+
+    # GATILHO DO MODAL 1.0 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []), ano_sel)
