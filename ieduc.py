@@ -2167,3 +2167,305 @@ def render_questao_1_2_3_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.2.3", st.session_state.get(f"links_pendentes_1_2_3_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.3 • ESPAÇO POR ALUNO EM SALA DE AULA (IEDUC)
+# =============================================================================
+
+def render_questao_1_3_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.3 (Espaço por Aluno em Sala de Aula)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_3_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.3 • Espaço por Aluno em Sala de Aula ({ano_sel})", expanded=True):
+            st.subheader("1.3 • Espaço por Aluno em Sala de Aula (Creche)")
+            st.write("**Informe a quantidade de turmas de Creche em que o espaço por aluno em sala de aula (área da sala dividido pelo nº de alunos) era:**")
+            st.caption("*Considerar como sala de aula o local principal ocupado pelos alunos para seu ensino e aprendizagem pelos professores.*")
+            
+            st.markdown("""
+            **Fórmula de cálculo ($P_{máx} = 10,0$ pontos):**
+            * $N_1 = 1,0 \\times P_1$ *(Superior ou igual a 2,30 m²)*
+            * $N_2 = 0,5 \\times P_2$ *(Superior ou igual a 2,00 m² e inferior a 2,30 m²)*
+            * $N_3 = 0,25 \\times P_3$ *(Superior ou igual a 1,50 m² e inferior a 2,00 m²)*
+            * $N_4 = 0,0 \\times P_4$ *(Inferior a 1,50 m²)*
+            * $NF = P_{máx} \\times (N_1 + N_2 + N_3 + N_4)$ — *onde $P_i$ é a proporção de turmas em cada faixa.*
+            """)
+            st.caption("ℹ️ *Preencha as quantidades abaixo e clique no botão 'Salvar Questão 1.3' para registrar.*")
+
+            d13 = res_data.get("1.3") or {
+                "valor": "F1:0,F2:0,F3:0,F4:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_13 = d13.get("valor", "F1:0,F2:0,F3:0,F4:0")
+            evidencia_13_salva = d13.get("link", "")
+
+            # Parsing seguro dos valores salvos no banco
+            try:
+                parts_13 = v_banco_13.split(",")
+                init_f1 = int(parts_13[0].split(":")[1])
+                init_f2 = int(parts_13[1].split(":")[1])
+                init_f3 = int(parts_13[2].split(":")[1])
+                init_f4 = int(parts_13[3].split(":")[1])
+            except Exception:
+                init_f1, init_f2, init_f3, init_f4 = 0, 0, 0, 0
+
+            chave_f1_13 = f"num_q13_f1_{ano_sel}"
+            chave_f2_13 = f"num_q13_f2_{ano_sel}"
+            chave_f3_13 = f"num_q13_f3_{ano_sel}"
+            chave_f4_13 = f"num_q13_f4_{ano_sel}"
+            chave_link_13 = f"l_13_txt_{ano_sel}"
+
+            c13_1, c13_2 = st.columns([1, 1])
+
+            with c13_1:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Superior ou igual a 2,30 m² por aluno (F1):</label>', unsafe_allow_html=True)
+                val_f1 = st.number_input("F1", min_value=0, value=init_f1, step=1, key=chave_f1_13, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Superior ou igual a 2,00 m² e inferior a 2,30 m² por aluno (F2):</label>', unsafe_allow_html=True)
+                val_f2 = st.number_input("F2", min_value=0, value=init_f2, step=1, key=chave_f2_13, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Superior ou igual a 1,50 m² e inferior a 2,00 m² por aluno (F3):</label>', unsafe_allow_html=True)
+                val_f3 = st.number_input("F3", min_value=0, value=init_f3, step=1, key=chave_f3_13, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Inferior a 1,50 m² por aluno (F4):</label>', unsafe_allow_html=True)
+                val_f4 = st.number_input("F4", min_value=0, value=init_f4, step=1, key=chave_f4_13, label_visibility="collapsed")
+
+            with c13_2:
+                link_13 = st.text_area(
+                    "Link de Evidência (Relatório de Metragem, Fotos das Salas, Censo Escolar, etc.):",
+                    value=evidencia_13_salva,
+                    key=chave_link_13,
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.3...",
+                    height=270,
+                )
+
+                placeholder_links_13 = st.empty()
+                links_13_visuais = re.findall(regex_url, link_13 or "")
+
+                if links_13_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_13_visuais
+                    ]
+                    placeholder_links_13.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo Matemático Dinâmico para Feedback Visual
+            total_turmas = val_f1 + val_f2 + val_f3 + val_f4
+            if total_turmas > 0:
+                p1 = val_f1 / total_turmas
+                p2 = val_f2 / total_turmas
+                p3 = val_f3 / total_turmas
+                pts_calculados_13 = min(10.0, round(10.0 * (p1 + (0.5 * p2) + (0.25 * p3)), 2))
+                st.code(f"📊 Total: {total_turmas} turmas apuradas ➡️ Pontuação Ponderada: {pts_calculados_13:.2f} / 10.00 pontos máximos.", language="text")
+            else:
+                pts_calculados_13 = 0.0
+                st.code("💡 Insira a quantidade de turmas nas faixas correspondentes para calcular a pontuação.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.3", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.3", key=f"btn_salvar_1_3_{ano_sel}", type="primary"):
+                str_valor_salvar = f"F1:{val_f1},F2:{val_f2},F3:{val_f3},F4:{val_f4}"
+                lnk_val = link_13.strip()
+
+                comentarios_historico = d13.get("comentarios", [])
+                comentario_simples = d13.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.3",
+                        valor=str_valor_salvar,
+                        pontos=float(pts_calculados_13),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_13_salva or "")]
+
+                if lnk_val != evidencia_13_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.3 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_3_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.4 • FORMAÇÃO DOS PROFESSORES DE CRECHE (IEDUC)
+# =============================================================================
+
+def calcular_pontuacao_q14(g_val: int, t_val: int, p_val: int) -> float:
+    """Calcula a nota final do quesito 1.4 baseada na proporção de graduação e pós-graduação."""
+    if t_val <= 0:
+        return 0.0
+
+    # N1 (Licenciatura / Graduação)
+    g_perc = min(1.0, g_val / t_val)
+    if g_perc >= 1.0:
+        n1 = 11.0
+    elif g_perc >= 0.90:
+        n1 = 7.0
+    elif g_perc >= 0.80:
+        n1 = 3.0
+    elif g_perc >= 0.70:
+        n1 = 1.0
+    else:
+        n1 = 0.0
+
+    # N2 (Pós-Graduação)
+    p_perc = min(1.0, p_val / t_val)
+    if p_perc >= 0.50:
+        n2 = 7.0
+    elif p_perc >= 0.40:
+        n2 = 5.0
+    elif p_perc >= 0.20:
+        n2 = 3.0
+    else:
+        n2 = 0.0
+
+    return float(n1 + n2)
+
+
+def render_questao_1_4_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.4 (Formação dos Professores de Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_4_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.4 • Formação dos Professores de Creche ({ano_sel})", expanded=True):
+            st.subheader("1.4 • Formação dos Professores de Creche")
+            st.write("**Informe os dados sobre a formação dos professores regentes de Creche (Efetivos e Temporários - Censo Escolar):**")
+            
+            st.markdown("""
+            **Regras de Pontuação ($P_{máx} = 18,0$ pontos):**
+            * **N1 (Licenciatura - GRAD):** $100\\% = 11$ pts | $90\\%$ a $99,9\\% = 7$ pts | $80\\%$ a $89,9\\% = 3$ pts | $70\\%$ a $79,9\\% = 1$ pt | $< 70\\% = 0$ pts
+            * **N2 (Pós-Graduação - PGRAD):** $\\ge 50\\% = 7$ pts | $40\\%$ a $49,9\\% = 5$ pts | $20\\%$ a $39,9\\% = 3$ pts | $< 20\\% = 0$ pts
+            * **Nota Final:** $NF = N1 + N2$
+            """)
+            st.caption("ℹ️ *Preencha os dados abaixo e clique no botão 'Salvar Questão 1.4' para registrar.*")
+
+            d14 = res_data.get("1.4") or {
+                "valor": "GRAD:0,PGRAD:0,TOTAL:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_14 = d14.get("valor", "GRAD:0,PGRAD:0,TOTAL:0")
+            evidencia_14_salva = d14.get("link", "")
+
+            # Parsing seguro dos dados salvos no banco
+            try:
+                parts_14 = v_banco_14.split(",")
+                init_grad, init_pgrad, init_total = 0, 0, 0
+                for part in parts_14:
+                    if "GRAD" in part and "PGRAD" not in part:
+                        init_grad = int(part.split(":")[1])
+                    if "PGRAD" in part:
+                        init_pgrad = int(part.split(":")[1])
+                    if "TOTAL" in part:
+                        init_total = int(part.split(":")[1])
+            except Exception:
+                init_grad, init_pgrad, init_total = 0, 0, 0
+
+            chave_total_14 = f"num_q14_total_{ano_sel}"
+            chave_grad_14 = f"num_q14_grad_{ano_sel}"
+            chave_pgrad_14 = f"num_q14_pgrad_{ano_sel}"
+            chave_link_14 = f"l_14_txt_{ano_sel}"
+
+            c14_1, c14_2 = st.columns([1, 1])
+
+            with c14_1:
+                st.markdown('<label style="font-size: 13px; font-weight: 600; color: #1E3A8A;">Total de Professores Regentes de Creche (Censo Escolar):</label>', unsafe_allow_html=True)
+                val_total = st.number_input("TOTAL", min_value=0, value=init_total, step=1, key=chave_total_14, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Professores com formação superior em LICENCIATURA (GRAD):</label>', unsafe_allow_html=True)
+                val_grad = st.number_input("GRAD", min_value=0, value=init_grad, step=1, key=chave_grad_14, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500; color: #10B981;">Deste total, quantos possuem PÓS-GRADUAÇÃO (PGRAD):</label>', unsafe_allow_html=True)
+                val_pgrad = st.number_input("PGRAD", min_value=0, value=init_pgrad, step=1, key=chave_pgrad_14, label_visibility="collapsed")
+
+            with c14_2:
+                link_14 = st.text_area(
+                    "Link de Evidência (Relatório de Quadro Docente, Censo Escolar, Diplomas, etc.):",
+                    value=evidencia_14_salva,
+                    key=chave_link_14,
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.4...",
+                    height=220,
+                )
+
+                placeholder_links_14 = st.empty()
+                links_14_visuais = re.findall(regex_url, link_14 or "")
+
+                if links_14_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_14_visuais
+                    ]
+                    placeholder_links_14.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de feedback dinâmico
+            pts_calculados_14 = calcular_pontuacao_q14(val_grad, val_total, val_pgrad)
+            
+            if val_total > 0:
+                perc_g = (val_grad / val_total) * 100
+                perc_p = (val_pgrad / val_total) * 100
+                st.code(
+                    f"📊 Proporções: Licenciatura {perc_g:.1f}% | Pós-Graduação {perc_p:.1f}%\n"
+                    f"🏆 Pontuação Calculada no Quesito 1.4: {pts_calculados_14:.2f} / 18.00 pontos máximos.",
+                    language="text"
+                )
+            else:
+                st.code("💡 Insira o Total de Professores Regentes para calcular a pontuação da questão.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.4", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.4", key=f"btn_salvar_1_4_{ano_sel}", type="primary"):
+                str_valor_salvar = f"GRAD:{val_grad},PGRAD:{val_pgrad},TOTAL:{val_total}"
+                lnk_val = link_14.strip()
+
+                comentarios_historico = d14.get("comentarios", [])
+                comentario_simples = d14.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.4",
+                        valor=str_valor_salvar,
+                        pontos=float(pts_calculados_14),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_14_salva or "")]
+
+                if lnk_val != evidencia_14_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.4 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_4_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []), ano_sel)
