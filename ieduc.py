@@ -11246,3 +11246,350 @@ def render_questao_3_13_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.13", st.session_state.get(f"links_pendentes_3_13_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.13.1 • Data da Última Entrega do Material Didático - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_13_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.13.1 (Data da Última Entrega do Material Didático - Anos Iniciais)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_13_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.13.1 • Data da Última Entrega do Material Didático ({ano_sel})", expanded=True):
+            st.subheader("3.13.1 • Data da Última Entrega do Material Didático")
+            st.write(f"**Informe as datas de início das aulas e da última entrega do Material Didático nos Anos Iniciais em {ano_sel}:**")
+            st.markdown("""
+            *Fórmula de cálculo:*
+            * **Data de Entrega $\le$ início das aulas:** 20.0 pontos
+            * **Data de Entrega < início das aulas + 15 dias:** 10.0 pontos
+            * **Data de Entrega $\ge$ início das aulas + 15 dias:** 4.0 pontos
+            """)
+
+            d313_1 = res_data.get("3.13.1") or {
+                "valor": f"01/02/{ano_sel}",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_3131_salva = d313_1.get("link", "")
+            v_banco_3131 = str(d313_1.get("valor", ""))
+
+            # 1. Recuperação da Data de Início das Aulas
+            key_ini_aulas_313 = f"data_inicio_aulas_iniciais_didatico_{ano_sel}"
+            if key_ini_aulas_313 not in st.session_state:
+                st.session_state[key_ini_aulas_313] = datetime.date(int(ano_sel), 2, 5)
+
+            # 2. Estado do Checkbox
+            key_chk_313 = f"chk_ativar_auditoria_iniciais_didatico_{ano_sel}"
+            padrao_check_313 = v_banco_3131 != "" and v_banco_3131 != f"01/02/{ano_sel}"
+            if key_chk_313 not in st.session_state:
+                st.session_state[key_chk_313] = padrao_check_313
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Controle de Auditoria:</label>', unsafe_allow_html=True)
+                ativou_datas_313 = st.checkbox("Informar/Alterar datas de entrega", key=key_chk_313)
+
+                if ativou_datas_313:
+                    dt_inicio_313 = st.date_input("Data de início das aulas:", value=st.session_state[key_ini_aulas_313], format="DD/MM/YYYY", key=f"q313_dt_inicio_{ano_sel}")
+                    st.session_state[key_ini_aulas_313] = dt_inicio_313
+
+                    try:
+                        dia_s, mes_s, ano_s = v_banco_3131.split("/")
+                        data_inicial_entrega_313 = datetime.date(int(ano_s), int(mes_s), int(dia_s))
+                    except:
+                        data_inicial_entrega_313 = st.session_state[key_ini_aulas_313]
+
+                    dt_entrega_313 = st.date_input("Data da última entrega na escola:", value=data_inicial_entrega_313, format="DD/MM/YYYY", key=f"q313_dt_entrega_{ano_sel}")
+                else:
+                    dt_inicio_313 = st.session_state[key_ini_aulas_313]
+                    dt_entrega_313 = None
+
+                # Processamento da pontuação e status
+                if ativou_datas_313 and dt_entrega_313 is not None:
+                    prazo_15_dias_313 = dt_inicio_313 + datetime.timedelta(days=15)
+                    if dt_entrega_313 <= dt_inicio_313:
+                        pts313_1 = 20.0
+                        msg_status = "Sucesso: Entrega realizada até o início das aulas!"
+                    elif dt_entrega_313 < prazo_15_dias_313:
+                        pts313_1 = 10.0
+                        msg_status = "Atenção: Entrega com até 15 dias de atraso."
+                    else:
+                        pts313_1 = 4.0
+                        msg_status = "Aviso: Entrega realizada após 15 dias."
+
+                    str_dt_313 = dt_entrega_313.strftime("%d/%m/%Y")
+                    texto_painel = f"🎯 Pontos: {pts313_1:.1f} | {msg_status}"
+                else:
+                    pts313_1 = 0.0
+                    str_dt_313 = ""
+                    texto_painel = "⚠️ Status: Nenhuma data de entrega preenchida."
+
+                st.code(texto_painel, language="text")
+
+            with col_evidencia:
+                link_3131 = st.text_area(
+                    f"Link/Evidência (3.13.1) - {ano_sel}:",
+                    value=evidencia_3131_salva,
+                    key=f"link_q3131_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=150
+                )
+
+                placeholder_links_3131 = st.empty()
+                links_3131_visuais = re.findall(regex_url, link_3131 or "")
+
+                if links_3131_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_3131_visuais
+                    ]
+                    placeholder_links_3131.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.13.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.13.1", key=f"btn_salvar_3_13_1_{ano_sel}", type="primary"):
+                lnk_val = link_3131.strip()
+
+                comentarios_historico = d313_1.get("comentarios", [])
+                comentario_simples = d313_1.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.13.1",
+                        valor=str_dt_313,
+                        pontos=pts313_1,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_3131_salva or "")]
+
+                if lnk_val != evidencia_3131_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_13_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_13_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.13.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_13_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.13.1", st.session_state.get(f"links_pendentes_3_13_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.13.2 • Motivo da Não Entrega do Material Didático - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_13_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.13.2 (Motivo da Não Entrega do Material Didático)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_13_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.13.2 • Motivo da Não Entrega do Material Didático ({ano_sel})", expanded=True):
+            st.subheader("3.13.2 • Motivo da Não Entrega do Material Didático")
+            st.write(f"**Informe o motivo de não ter sido entregue o material didático nos Anos Iniciais (caso aplique):**")
+            st.caption("ℹ️ *Quesito puramente descritivo justificativo (não soma pontos adicionais).*")
+
+            d3132 = res_data.get("3.13.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_3132_salva = d3132.get("link", "")
+            v_banco_3132 = str(d3132.get("valor", ""))
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Motivo da não entrega:</label>', unsafe_allow_html=True)
+                motivo_nao_entrega = st.text_area(
+                    "",
+                    value=v_banco_3132,
+                    placeholder="Descreva aqui os motivos de o material didático não ter sido fornecido...",
+                    key=f"txt_q3132_motivo_{ano_sel}",
+                    label_visibility="collapsed",
+                    height=150
+                )
+
+                if motivo_nao_entrega.strip():
+                    st.code("📝 Justificativa registrada.", language="text")
+                else:
+                    st.info("💡 Opcional: Preencha caso a entrega não tenha ocorrido na conformidade esperada.")
+
+            with col_evidencia:
+                link_3132 = st.text_area(
+                    f"Link/Evidência (3.13.2) - {ano_sel}:",
+                    value=evidencia_3132_salva,
+                    key=f"link_q3132_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=150
+                )
+
+                placeholder_links_3132 = st.empty()
+                links_3132_visuais = re.findall(regex_url, link_3132 or "")
+
+                if links_3132_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_3132_visuais
+                    ]
+                    placeholder_links_3132.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.13.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.13.2", key=f"btn_salvar_3_13_2_{ano_sel}", type="primary"):
+                str_valor_3132 = motivo_nao_entrega.strip()
+                lnk_val = link_3132.strip()
+
+                comentarios_historico = d3132.get("comentarios", [])
+                comentario_simples = d3132.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.13.2",
+                        valor=str_valor_3132,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_3132_salva or "")]
+
+                if lnk_val != evidencia_3132_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_13_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_13_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.13.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_13_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.13.2", st.session_state.get(f"links_pendentes_3_13_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.14 • Entrega de Uniforme Escolar - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_14_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.14 (Entrega de Uniforme Escolar - Anos Iniciais)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_14_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.14 • Entrega de Uniforme Escolar ({ano_sel})", expanded=True):
+            st.subheader("3.14 • Entrega de Uniforme Escolar")
+            st.write(f"**Houve entrega do uniforme escolar nas escolas dos Anos Iniciais em {ano_sel}?**")
+
+            d314 = res_data.get("3.14") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_314_salva = d314.get("link", "")
+            v_banco_314 = str(d314.get("valor", ""))
+
+            opc314 = [
+                "Selecione...",
+                "Sim",
+                "Não"
+            ]
+            idx_314 = opc314.index(v_banco_314) if v_banco_314 in opc314 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione a opção para o Quesito 3.14:</label>', unsafe_allow_html=True)
+                r314 = st.radio(
+                    "",
+                    opc314,
+                    index=idx_314,
+                    key=f"q314_uni_radio_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r314 != "Selecione...":
+                    if r314 == "Sim":
+                        st.code("📅 Opção 'Sim' selecionada. Prossiga preenchendo as datas de entrega no quesito seguinte.", language="text")
+                    else:
+                        st.code("🎯 Opção 'Não' selecionada. Pontuação base: 0.0 pontos.", language="text")
+                else:
+                    st.info("⚠️ Selecione uma opção válida.")
+
+            with col_evidencia:
+                link_314 = st.text_area(
+                    f"Link/Evidência (3.14) - {ano_sel}:",
+                    value=evidencia_314_salva,
+                    key=f"link_q314_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=150
+                )
+
+                placeholder_links_314 = st.empty()
+                links_314_visuais = re.findall(regex_url, link_314 or "")
+
+                if links_314_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_314_visuais
+                    ]
+                    placeholder_links_314.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.14", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.14", key=f"btn_salvar_3_14_{ano_sel}", type="primary"):
+                str_valor_314 = r314 if r314 != "Selecione..." else ""
+                lnk_val = link_314.strip()
+
+                comentarios_historico = d314.get("comentarios", [])
+                comentario_simples = d314.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.14",
+                        valor=str_valor_314,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_314_salva or "")]
+
+                if lnk_val != evidencia_314_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_14_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_14_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.14 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_14_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.14", st.session_state.get(f"links_pendentes_3_14_{ano_sel}", []), ano_sel)
