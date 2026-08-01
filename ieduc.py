@@ -3634,7 +3634,7 @@ def render_questao_1_10_1_ieduc(res_data: dict, ano_sel: str):
                     value=evidencia_1101_salva,
                     key=chave_link_1101,
                     placeholder="Insira os links dos calendários escolares, regimentos ou cronogramas...",
-                    height=200,
+                    height=110,
                 )
 
                 placeholder_links_1101 = st.empty()
@@ -3728,7 +3728,6 @@ def render_questao_1_11_ieduc(res_data: dict, ano_sel: str):
 
             opcoes_111 = list(mapa_pontos_111.keys())
 
-            # Resolução defensiva de índice legado
             idx_111 = None
             if v_banco_111:
                 for idx, op in enumerate(opcoes_111):
@@ -3758,7 +3757,7 @@ def render_questao_1_11_ieduc(res_data: dict, ano_sel: str):
                     value=evidencia_111_salva,
                     key=chave_link_111,
                     placeholder="Insira os links dos comprovantes de entrega, termos de recebimento ou notas...",
-                    height=180,
+                    height=110,
                 )
 
                 placeholder_links_111 = st.empty()
@@ -3849,7 +3848,6 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
             v_banco_1111 = d1111.get("valor", f"01/02/{ano_sel}")
             evidencia_1111_salva = d1111.get("link", "")
 
-            # Inicialização de variáveis de sessão para datas
             key_ini_aulas = f"data_inicio_aulas_creche_{ano_sel}"
             if key_ini_aulas not in st.session_state:
                 st.session_state[key_ini_aulas] = datetime.date(int(ano_sel), 2, 5)
@@ -3899,7 +3897,7 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
                     value=evidencia_1111_salva,
                     key=chave_link_1111,
                     placeholder="Insira os links dos guias de remessa, relatórios de entrega ou fotos...",
-                    height=185,
+                    height=110,
                 )
 
                 placeholder_links_1111 = st.empty()
@@ -3912,7 +3910,6 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
                     ]
                     placeholder_links_1111.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
-            # Processamento dinâmico de pontuação e texto
             if ativou_datas and dt_entrega is not None:
                 prazo_15_dias = dt_inicio + datetime.timedelta(days=15)
 
