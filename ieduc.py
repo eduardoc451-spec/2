@@ -13874,3 +13874,228 @@ def render_questao_3_19_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.19", st.session_state.get(f"links_pendentes_3_19_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.20 • Processo de Sondagem ou Avaliação Diagnóstica (IEDUC)
+# =============================================================================
+def render_questao_3_20_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.20 (Processo de Sondagem ou Avaliação Diagnóstica)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_20_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.20 • Processo de Sondagem ou Avaliação Diagnóstica ({ano_sel})", expanded=True):
+            st.subheader("3.20 • Processo de Sondagem ou Avaliação Diagnóstica")
+            st.write(f"**O município utilizou processo de sondagem ou avaliação diagnóstica para os Anos Iniciais do ensino fundamental em {ano_sel}?**")
+
+            d320 = res_data.get("3.20") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_320_salva = d320.get("link", "")
+            v_banco_320 = str(d320.get("valor", ""))
+
+            opc320 = [
+                "Selecione...",
+                "Sim, utilizando metodologia desenvolvida exclusivamente pelos profissionais da rede – 2,5",
+                "Sim, utilizando contratação de terceiros – 01",
+                "Não utilizou – 00"
+            ]
+
+            val_inicial_320 = v_banco_320 if v_banco_320 in opc320 else "Selecione..."
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r320 = st.radio(
+                    f"Selecione a opção para o Quesito 3.20 ({ano_sel}):",
+                    options=opc320,
+                    index=opc320.index(val_inicial_320),
+                    key=f"radio_q320_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                # Cálculo de pontos para preview
+                if r320 == "Sim, utilizando metodologia desenvolvida exclusivamente pelos profissionais da rede – 2,5":
+                    c_pts_320 = 2.5
+                elif r320 == "Sim, utilizando contratação de terceiros – 01":
+                    c_pts_320 = 1.0
+                else:
+                    c_pts_320 = 0.0
+
+                if r320 != "Selecione...":
+                    if c_pts_320 > 0:
+                        st.code(f"✨ Pontuação do Quesito 3.20: {c_pts_320:.1f} pontos obtidos.", language="text")
+                    else:
+                        st.code("❌ Pontuação do Quesito 3.20: 0.0 pontos obtidos.", language="text")
+                else:
+                    st.info("💡 Por favor, selecione uma opção válida para calcular a pontuação.")
+
+            with col_evidencia:
+                link_320 = st.text_area(
+                    f"Link/Evidência (3.20) - {ano_sel}:",
+                    value=evidencia_320_salva,
+                    key=f"link_q320_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_320 = st.empty()
+                links_320_visuais = re.findall(regex_url, link_320 or "")
+
+                if links_320_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_320_visuais
+                    ]
+                    placeholder_links_320.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.20", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.20", key=f"btn_salvar_3_20_{ano_sel}", type="primary"):
+                str_valor_320 = r320 if r320 != "Selecione..." else ""
+                
+                if str_valor_320 == "Sim, utilizando metodologia desenvolvida exclusivamente pelos profissionais da rede – 2,5":
+                    pts_calculados = 2.5
+                elif str_valor_320 == "Sim, utilizando contratação de terceiros – 01":
+                    pts_calculados = 1.0
+                else:
+                    pts_calculados = 0.0
+
+                lnk_val = link_320.strip()
+
+                comentarios_historico = d320.get("comentarios", [])
+                comentario_simples = d320.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.20",
+                        valor=str_valor_320,
+                        pontos=float(pts_calculados),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_320_salva or "")]
+
+                if lnk_val != evidencia_320_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_20_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_20_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.20 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_20_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.20", st.session_state.get(f"links_pendentes_3_20_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.20.1 • Periodicidade da Sondagem/Avaliação Diagnóstica (IEDUC)
+# =============================================================================
+def render_questao_3_20_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.20.1 (Periodicidade da Sondagem)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_20_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.20.1 • Periodicidade da Sondagem/Avaliação ({ano_sel})", expanded=True):
+            st.subheader("3.20.1 • Periodicidade da Sondagem/Avaliação")
+            st.write("**Qual foi a periodicidade da aplicação do processo de sondagem ou avaliação diagnóstica para os Anos Iniciais do ensino fundamental?**")
+            st.caption("ℹ️ *Sub-quesito de caráter puramente informativo/descritivo (Não soma pontos adicionais).*")
+
+            d3201 = res_data.get("3.20.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_3201_salva = d3201.get("link", "")
+            v_banco_3201 = str(d3201.get("valor", ""))
+
+            opc3201 = ["Selecione...", "Mensal", "Bimestral", "Trimestral", "Quadrimestral", "Semestral", "Anual"]
+            val_inicial_3201 = v_banco_3201 if v_banco_3201 in opc3201 else "Selecione..."
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r3201 = st.radio(
+                    f"Selecione a opção para o Quesito 3.20.1 ({ano_sel}):",
+                    options=opc3201,
+                    index=opc3201.index(val_inicial_3201),
+                    key=f"radio_q3201_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r3201 != "Selecione...":
+                    st.code(f"📝 Periodicidade registrada: Frequência {r3201}.", language="text")
+                else:
+                    st.info("💡 Por favor, selecione uma periodicidade válida.")
+
+            with col_evidencia:
+                link_3201 = st.text_area(
+                    f"Link/Evidência (3.20.1) - {ano_sel}:",
+                    value=evidencia_3201_salva,
+                    key=f"link_q3201_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_3201 = st.empty()
+                links_3201_visuais = re.findall(regex_url, link_3201 or "")
+
+                if links_3201_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_3201_visuais
+                    ]
+                    placeholder_links_3201.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.20.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.20.1", key=f"btn_salvar_3_20_1_{ano_sel}", type="primary"):
+                str_valor_3201 = r3201 if r3201 != "Selecione..." else ""
+                lnk_val = link_3201.strip()
+
+                comentarios_historico = d3201.get("comentarios", [])
+                comentario_simples = d3201.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.20.1",
+                        valor=str_valor_3201,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_3201_salva or "")]
+
+                if lnk_val != evidencia_3201_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_20_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_20_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.20.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_20_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.20.1", st.session_state.get(f"links_pendentes_3_20_1_{ano_sel}", []), ano_sel)
