@@ -3922,7 +3922,7 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
                     placeholder_links_1111.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
             if ativou_datas and dt_entrega is not None:
-                prazo_15_dias = dt_inicio + datetime.timedelta(days=15)
+                prazo_15_dias = dt_inicio + timedelta(days=15)
 
                 if dt_entrega <= dt_inicio:
                     pts_1111 = 18.0
