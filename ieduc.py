@@ -12093,8 +12093,6 @@ def render_quesito_3_15_1_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_3_15_1_{ano_sel}", []),
                 ano_sel,
             )
-
-
 # =============================================================================
 # QUESITO 3.15.2 • Classificação por Nível de Desempenho - Anos Iniciais (IEDUC)
 # =============================================================================
@@ -12253,7 +12251,6 @@ def render_quesito_3_15_2_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_3_15_2_{ano_sel}", []),
                 ano_sel,
             )
-
 
 # =============================================================================
 # QUESITO 3.15.2.1 • Especificação dos Níveis de Desempenho - Anos Iniciais (IEDUC)
