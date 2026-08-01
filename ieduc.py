@@ -23197,3 +23197,322 @@ def render_questao_18_2_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_18_2_{ano_sel}", []),
                 ano_sel,
             )
+
+# ==============================================================================
+# --- QUESITO 18.3 (Divulgação das Atividades do CAE) ---
+# ==============================================================================
+def render_questao_18_3_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 18.3 (Divulgação das Atividades do CAE)."""
+    import re
+
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_18_3_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 18.3 - Divulgação das Atividades do CAE ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("18.3 • Divulgação das Atividades do CAE")
+            st.write(
+                "**A Prefeitura divulgou as atividades do CAE por meio de comunicação oficial?**"
+            )
+
+            d183 = res_data.get("18.3") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_183 = d183.get("valor", "")
+            v_link_183 = d183.get("link", "")
+
+            opc183 = ["Selecione...", "Sim", "Não"]
+            idx_183 = opc183.index(v_banco_183) if v_banco_183 in opc183 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                sel_183 = st.radio(
+                    "Selecione a opção para o Quesito 18.3:",
+                    opc183,
+                    index=idx_183,
+                    key=f"rad_q183_div_{ano_sel}",
+                    label_visibility="collapsed",
+                )
+
+                if sel_183 == "Selecione...":
+                    st.code(
+                        "💡 Por favor, selecione uma opção válida.",
+                        language="text",
+                    )
+                else:
+                    st.code(
+                        "✨ Opção registrada (Quesito Informativo).",
+                        language="text",
+                    )
+
+            with col_evidencia:
+                link_183 = st.text_area(
+                    f"Link/Evidência (18.3) - {ano_sel}:",
+                    value=v_link_183,
+                    key=f"link_q183_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_183 = st.empty()
+                links_183_visuais = re.findall(regex_url, link_183 or "")
+
+                if links_183_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_183_visuais
+                    ]
+                    placeholder_links_183.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("18.3", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 18.3",
+                key=f"btn_salvar_18_3_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = sel_183 if sel_183 != "Selecione..." else ""
+                lnk_val = link_183.strip()
+
+                comentarios_historico = d183.get("comentarios", [])
+                comentario_simples = d183.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="18.3",
+                        valor=valor_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_183 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_183
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_18_3_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_18_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 18.3 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_18_3_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "18.3",
+                st.session_state.get(f"links_pendentes_18_3_{ano_sel}", []),
+                ano_sel,
+            )
+
+# ==============================================================================
+# --- QUESITO 18.3.1 (Checklist de Atividades Realizadas pelo CAE) ---
+# ==============================================================================
+def render_questao_18_3_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 18.3.1 (Checklist de Atividades Realizadas pelo CAE)."""
+    import json
+    import ast
+    import re
+
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_18_3_1_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 18.3.1 - Checklist de Atividades Realizadas pelo CAE ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("18.3.1 • Checklist de Atividades Realizadas pelo CAE")
+            st.write("**Assinale as atividades realizadas pelo CAE no ano:**")
+
+            d1831 = res_data.get("18.3.1") or {
+                "valor": "[]",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_1831 = d1831.get("valor", "[]")
+            v_link_1831 = d1831.get("link", "")
+
+            # Desserialização segura do banco usando ast.literal_eval
+            try:
+                if isinstance(v_banco_1831, str):
+                    sel1831_inicial = ast.literal_eval(v_banco_1831)
+                else:
+                    sel1831_inicial = v_banco_1831
+
+                if not isinstance(sel1831_inicial, list):
+                    sel1831_inicial = []
+            except Exception:
+                sel1831_inicial = []
+
+            opcoes_1831 = [
+                "Acompanhamento e fiscalização do cumprimento das diretrizes estabelecidas sobre alimentação escolar – 0,5",
+                "Acompanhamento e fiscalização da aplicação dos recursos destinados à alimentação escolar – 01",
+                "Aferição da qualidade dos alimentos, em especial quanto às condições higiênicas, bem como a aceitabilidade dos cardápios oferecidos – 01",
+                "Aferição das condições físicas e estruturais da cozinha – 01",
+                "Sobre o relatório anual de gestão do PNAE, emitiu parecer conclusivo a respeito, aprovando ou reprovando a execução do Programa – 01",
+                "Comunicou aos órgãos de controle as irregularidades observadas – 00",
+                "Forneceu informações e apresentou relatórios de acompanhamento da execução do PNAE sempre que solicitado – 00",
+                "Realizou visitas periódicas às escolas – 01",
+                "Realizou reuniões periódicas – 0,5",
+            ]
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                marcados_1831 = []
+                c_check1, c_check2 = st.columns([1, 1])
+
+                for idx, opcao in enumerate(opcoes_1831):
+                    target_col = c_check1 if idx % 2 == 0 else c_check2
+                    with target_col:
+                        is_checked = opcao in sel1831_inicial
+                        chk_val = st.checkbox(
+                            opcao,
+                            value=is_checked,
+                            key=f"chk_1831_{idx}_{ano_sel}",
+                        )
+                        if chk_val:
+                            marcados_1831.append(opcao)
+
+                # Regra de pontuação específica do quesito 18.3.1
+                pts_atuais = 0.0
+                for item in marcados_1831:
+                    if "cumprimento das diretrizes" in item:
+                        pts_atuais += 0.5
+                    elif "aplicação dos recursos" in item:
+                        pts_atuais += 1.0
+                    elif "qualidade dos alimentos" in item:
+                        pts_atuais += 1.0
+                    elif "condições físicas e estruturais" in item:
+                        pts_atuais += 1.0
+                    elif "relatório anual de gestão" in item:
+                        pts_atuais += 1.0
+                    elif "visitas periódicas" in item:
+                        pts_atuais += 1.0
+                    elif "reuniões periódicas" in item:
+                        pts_atuais += 0.5
+
+                pts_atuais = round(pts_atuais, 2)
+                st.code(
+                    f"✨ Pontuação Obtida: {pts_atuais:.1f} / 6.0 pontos.",
+                    language="text",
+                )
+
+            with col_evidencia:
+                link_1831 = st.text_area(
+                    f"Link/Evidência (18.3.1) - {ano_sel}:",
+                    value=v_link_1831,
+                    key=f"link_q1831_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_1831 = st.empty()
+                links_1831_visuais = re.findall(regex_url, link_1831 or "")
+
+                if links_1831_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1831_visuais
+                    ]
+                    placeholder_links_1831.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("18.3.1", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 18.3.1",
+                key=f"btn_salvar_18_3_1_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = json.dumps(marcados_1831, ensure_ascii=False)
+                lnk_val = link_1831.strip()
+
+                comentarios_historico = d1831.get("comentarios", [])
+                comentario_simples = d1831.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="18.3.1",
+                        valor=valor_salvar,
+                        pontos=pts_atuais,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_1831 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_1831
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_18_3_1_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_18_3_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 18.3.1 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_18_3_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "18.3.1",
+                st.session_state.get(f"links_pendentes_18_3_1_{ano_sel}", []),
+                ano_sel,
+            )
