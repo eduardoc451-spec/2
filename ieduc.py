@@ -6621,3 +6621,386 @@ def render_questao_2_4_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("2.4", st.session_state.get(f"links_pendentes_2_4_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 2.5 - PISO SALARIAL DOS PROFESSORES DE PRÉ-ESCOLA
+# =============================================================================
+def render_questao_2_5_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.5 (Piso Salarial dos Professores de Pré-escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    def limpa_conversao_monetaria_q25(texto: str):
+        if not texto or not texto.strip():
+            return None
+        num_limpo = texto.replace("R$", "").replace(" ", "")
+        if "." in num_limpo and "," in num_limpo:
+            num_limpo = num_limpo.replace(".", "").replace(",", ".")
+        elif "," in num_limpo:
+            num_limpo = num_limpo.replace(",", ".")
+        try:
+            return float(num_limpo)
+        except Exception:
+            return None
+
+    with st.container(key=f"container_bloco_ieduc_2_5_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.5 • Piso Salarial dos Professores de Pré-escola ({ano_sel})", expanded=True):
+            st.subheader("2.5 • Piso Salarial dos Professores de Pré-escola")
+            st.write("**Qual o piso salarial mensal dos professores de Pré-escola no município?**")
+            st.caption("ℹ️ *Considerar o piso base proporcional para a jornada de 40 horas semanais.*")
+            st.caption("ℹ️ *Se piso < Salário Mínimo Informado ➔ Penalidade (-20.0 pts) | Se piso >= Salário Mínimo ➔ 0.0 pts*")
+
+            d25 = res_data.get("2.5") or {
+                "valor": "/",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_25 = d25.get("valor", "/")
+            evidencia_25_salva = d25.get("link", "")
+
+            try:
+                val_salvo_piso, val_salvo_minimo = v_banco_25.split("/")
+                float_piso = float(val_salvo_piso) if val_salvo_piso != "" else None
+                float_minimo = float(val_salvo_minimo) if val_salvo_minimo != "" else None
+            except Exception:
+                float_piso, float_minimo = None, None
+
+            str_inicial_piso = f"R$ {float_piso:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if float_piso is not None else ""
+            str_inicial_minimo = f"R$ {float_minimo:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if float_minimo is not None else ""
+
+            chave_minimo_25 = f"txt_q25_minimo_estatico_final_{ano_sel}"
+            chave_piso_25 = f"txt_q25_piso_estatico_final_{ano_sel}"
+            chave_link_25 = f"l25_txt_{ano_sel}"
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                input_minimo_str = st.text_input(
+                    "Salário Mínimo Vigente (R$):",
+                    value=str_inicial_minimo,
+                    placeholder="Ex: 1.512,00",
+                    key=chave_minimo_25
+                )
+
+                input_piso_str = st.text_input(
+                    "Piso Salarial Base (R$):",
+                    value=str_inicial_piso,
+                    placeholder="Ex: 4.580,57",
+                    key=chave_piso_25
+                )
+
+            with col_evidencia:
+                link_25 = st.text_area(
+                    f"Link/Evidência (2.5) - {ano_sel}:",
+                    value=evidencia_25_salva,
+                    key=chave_link_25,
+                    placeholder="Insira os links...",
+                    height=140
+                )
+
+                placeholder_links_25 = st.empty()
+                links_25_visuais = re.findall(regex_url, link_25 or "")
+
+                if links_25_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_25_visuais
+                    ]
+                    placeholder_links_25.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            v_piso_atual = limpa_conversao_monetaria_q25(input_piso_str)
+            v_minimo_atual = limpa_conversao_monetaria_q25(input_minimo_str)
+
+            if v_piso_atual is None or v_minimo_atual is None:
+                pts25 = 0.0
+                st.info("⚠️ **Status:** `Aguardando preenchimento` (Informe ambos os valores salariais)")
+            else:
+                piso_formatado = f"R$ {v_piso_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                ref_formatada = f"R$ {v_minimo_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+                if v_piso_atual < v_minimo_atual:
+                    pts25 = -20.0
+                    st.error(f"⚠️ **Atenção:** Piso informado ({piso_formatado}) está abaixo do salário mínimo cadastrado ({ref_formatada}). Penalidade: `{pts25:.1f} pontos`.")
+                else:
+                    pts25 = 0.0
+                    st.success(f"✅ Piso salarial ({piso_formatado}) em conformidade com o salário mínimo cadastrado ({ref_formatada}). Pontuação: `{pts25:.1f} pontos`.")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.5_pre", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.5", key=f"btn_salvar_2_5_{ano_sel}", type="primary"):
+                str_piso_banco = f"{v_piso_atual:.2f}" if v_piso_atual is not None else ""
+                str_minimo_banco = f"{v_minimo_atual:.2f}" if v_minimo_atual is not None else ""
+                string_banco_salvar = f"{str_piso_banco}/{str_minimo_banco}"
+                lnk_val = link_25.strip()
+
+                comentarios_historico = d25.get("comentarios", [])
+                comentario_simples = d25.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.5",
+                        valor=string_banco_salvar,
+                        pontos=float(pts25),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_25_salva or "")]
+
+                if lnk_val != evidencia_25_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta da Questão 2.5 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_5_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.5", st.session_state.get(f"links_pendentes_2_5_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.6 - TOTAL DE DIAS DE AUSÊNCIA DOS PROFESSORES (PRÉ-ESCOLA)
+# =============================================================================
+def render_questao_2_6_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.6 (Total de Dias de Ausência dos Professores - Pré-Escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_6_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.6 • Ausência de Professores - Pré-Escola ({ano_sel})", expanded=True):
+            st.subheader("2.6 • Ausência de Professores")
+            st.write(f"**Informe a quantidade total (em dias) de ausência dos professores por faltas e afastamentos na Pré-Escola em {ano_sel}:**")
+            st.caption("ℹ️ *Considerar todos os dias de ausência (justificadas ou injustificadas), incluindo afastamentos legais.*")
+
+            d26 = res_data.get("2.6") or {
+                "valor": "INJUST:0,JUST:0,MEDIC:0,MATERN:0,ABONO:0,OUTROS:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_26 = d26.get("valor", "INJUST:0,JUST:0,MEDIC:0,MATERN:0,ABONO:0,OUTROS:0")
+            evidencia_26_salva = d26.get("link", "")
+
+            try:
+                parts_26 = v_banco_26.split(",")
+                v_injust = int(parts_26[0].split(":")[1])
+                v_just = int(parts_26[1].split(":")[1])
+                v_medic = int(parts_26[2].split(":")[1])
+                v_matern = int(parts_26[3].split(":")[1])
+                v_abono = int(parts_26[4].split(":")[1])
+                v_outros = int(parts_26[5].split(":")[1])
+            except Exception:
+                v_injust, v_just, v_medic, v_matern, v_abono, v_outros = 0, 0, 0, 0, 0, 0
+
+            k_injust = f"q26_injust_{ano_sel}"
+            k_just = f"q26_just_{ano_sel}"
+            k_medic = f"q26_medic_{ano_sel}"
+            k_matern = f"q26_matern_{ano_sel}"
+            k_abono = f"q26_abono_{ano_sel}"
+            k_outros = f"q26_outros_{ano_sel}"
+            chave_link_26 = f"l26_txt_{ano_sel}"
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Faltas injustificadas (dias):</label>', unsafe_allow_html=True)
+                injust = st.number_input("", min_value=0, step=1, value=v_injust, key=k_injust, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Faltas justificadas (dias):</label>', unsafe_allow_html=True)
+                just = st.number_input("", min_value=0, step=1, value=v_just, key=k_just, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Licença médica (dias):</label>', unsafe_allow_html=True)
+                medic = st.number_input("", min_value=0, step=1, value=v_medic, key=k_medic, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Licença maternidade/paternidade (dias):</label>', unsafe_allow_html=True)
+                matern = st.number_input("", min_value=0, step=1, value=v_matern, key=k_matern, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Abonos (dias):</label>', unsafe_allow_html=True)
+                abono = st.number_input("", min_value=0, step=1, value=v_abono, key=k_abono, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Outros (ausências amparadas por lei):</label>', unsafe_allow_html=True)
+                outros = st.number_input("", min_value=0, step=1, value=v_outros, key=k_outros, label_visibility="collapsed")
+
+                total_dias_ausencia = injust + just + medic + matern + abono + outros
+                st.markdown('<label style="font-size: 13px; font-weight: 600; color: #1E3A8A;">Total de Dias Declarados:</label>', unsafe_allow_html=True)
+                st.number_input("", value=int(total_dias_ausencia), disabled=True, key=f"disabled_total_26_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_26 = st.text_area(
+                    f"Link/Evidência de comprovação/QTA (2.6) - {ano_sel}:",
+                    value=evidencia_26_salva,
+                    key=chave_link_26,
+                    placeholder="Insira os links...",
+                    height=450
+                )
+
+                placeholder_links_26 = st.empty()
+                links_26_visuais = re.findall(regex_url, link_26 or "")
+
+                if links_26_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_26_visuais
+                    ]
+                    placeholder_links_26.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            st.info(f"📊 **Métrica Consolidada:** Universo de `{total_dias_ausencia} dias` de afastamentos/faltas declarados no ano letivo. (Quesito Informativo - 0.0 pts)")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.6_pre", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.6", key=f"btn_salvar_2_6_{ano_sel}", type="primary"):
+                str_valor_salvar = f"INJUST:{injust},JUST:{just},MEDIC:{medic},MATERN:{matern},ABONO:{abono},OUTROS:{outros}"
+                lnk_val = link_26.strip()
+
+                comentarios_historico = d26.get("comentarios", [])
+                comentario_simples = d26.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.6",
+                        valor=str_valor_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_26_salva or "")]
+
+                if lnk_val != evidencia_26_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_6_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_6_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta da Questão 2.6 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_6_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.6", st.session_state.get(f"links_pendentes_2_6_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.7 - CURSOS DE CAPACITAÇÃO DOS PROFISSIONAIS (PRÉ-ESCOLA)
+# =============================================================================
+def render_questao_2_7_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.7 (Cursos de Capacitação dos Profissionais - Pré-escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_7_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.7 • Cursos de Capacitação - Pré-escola ({ano_sel})", expanded=True):
+            st.subheader("2.7 • Cursos de Capacitação dos Profissionais")
+            st.write(f"**Os profissionais de Pré-escola da rede municipal participaram de cursos de capacitação durante o ano de {ano_sel}?**")
+            st.caption("ℹ️ *Selecione uma opção, insira os links de evidência e clique no botão 'Salvar Questão 2.7'.*")
+
+            d27 = res_data.get("2.7") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_27 = d27.get("valor", "")
+            evidencia_27_salva = d27.get("link", "")
+
+            opcoes_27 = [
+                "Selecione...",
+                "Sim",
+                "Não"
+            ]
+            idx_27 = opcoes_27.index(v_banco_27) if v_banco_27 in opcoes_27 else 0
+
+            chave_radio_27 = f"q27_cap_pre_{ano_sel}"
+            chave_link_27 = f"l27_txt_{ano_sel}"
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione uma opção:</label>', unsafe_allow_html=True)
+                r27 = st.radio(
+                    "Opções 2.7",
+                    options=opcoes_27,
+                    index=idx_27,
+                    key=chave_radio_27,
+                    label_visibility="collapsed"
+                )
+
+            with col_evidencia:
+                link_27 = st.text_area(
+                    f"Link/Evidência (2.7) - {ano_sel}:",
+                    value=evidencia_27_salva,
+                    key=chave_link_27,
+                    placeholder="Insira os links...",
+                    height=140
+                )
+
+                placeholder_links_27 = st.empty()
+                links_27_visuais = re.findall(regex_url, link_27 or "")
+
+                if links_27_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_27_visuais
+                    ]
+                    placeholder_links_27.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Exibição do Status/Pontuação
+            if r27 == "Selecione...":
+                st.markdown("⚠️ **Status:** `Aguardando preenchimento` (Selecione uma opção válida)")
+            else:
+                st.markdown(f"📊 **Resposta Selecionada:** `{r27}` (Quesito Informativo - 0.0 pts)")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.7_pre", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.7", key=f"btn_salvar_2_7_{ano_sel}", type="primary"):
+                valor_salvar = "" if r27 == "Selecione..." else r27
+                lnk_val = link_27.strip()
+
+                comentarios_historico = d27.get("comentarios", [])
+                comentario_simples = d27.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.7",
+                        valor=valor_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_27_salva or "")]
+
+                if lnk_val != evidencia_27_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_7_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_7_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.7 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_7_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.7", st.session_state.get(f"links_pendentes_2_7_{ano_sel}", []), ano_sel)
