@@ -37,7 +37,7 @@ import streamlit as st
 REGEX_PURE_URL = r"(https?://[^\s]+)"
 
 # =============================================================================
-# IMPORTAÇÃO DAS FUNÇÕES UTILITÁRIAS COMPARTILHADAS (UTILS)
+# 1. IMPORTAÇÃO DAS FUNÇÕES UTILITÁRIAS COMPARTILHADAS (UTILS)
 # =============================================================================
 try:
     from utils import (
@@ -69,25 +69,136 @@ except ImportError:
         if key_ano not in st.session_state:
             st.session_state[key_ano] = {}
 
+        # Compatibilidade de comentários em lista ou string
+        comentarios_lista = comentarios if comentarios is not None else []
+
         st.session_state[key_ano][str(qid)] = {
             "valor": str(valor),
             "pontos": float(pontos),
             "link": str(link),
             "comentario": str(comentario),
-            "detalhes": {"link": str(link), "comentario": str(comentario)}
+            "comentarios": comentarios_lista,
+            "detalhes": {"link": str(link), "comentario": str(comentario), "comentarios": comentarios_lista}
         }
         return True
 
-    def bloco_comentarios(qid: str, res_data: dict, ano_sel: int):
-        d_item = res_data.get(str(qid), {})
-        coment_salvo = d_item.get("comentario", "")
-        return st.text_area(
-            "💬 Observações / Comentários:",
-            value=coment_salvo,
-            key=f"coment_ieduc_{qid}_{ano_sel}",
-            placeholder="Escreva aqui observações ou justificativas...",
-            height=80,
-        )
+    def bloco_comentarios(questao_id: str, res_data: dict, sufixo=None):
+        """Fallback do Diálogo Interno avançado com histórico, status e deleção."""
+        ano_sel = st.session_state.get("ano_referencia_ieduc", st.session_state.get("ano_referencia_igov", date.today().year))
+        usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+        
+        id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
+        key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
+        key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
+        key_radio = f"rad_status_{id_chave}_{ano_sel}"
+        
+        if key_estado_limpar not in st.session_state:
+            st.session_state[key_estado_limpar] = False
+            
+        dados_questao = res_data.get(str(questao_id), {})
+        historico = list(dados_questao.get("comentarios", []))
+        
+        status_global = "Resolvido"
+        for com in historico:
+            if isinstance(com, dict) and "status_definido" in com:
+                status_global = com["status_definido"]
+                
+        badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+        
+        with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
+            opcoes_status = ["Resolvido", "Pendente"]
+            idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
+            
+            novo_status_clicado = st.radio(
+                f"Definir status para {id_chave}:",
+                options=opcoes_status,
+                index=idx_status_atual,
+                horizontal=True,
+                key=key_radio
+            )
+            
+            # Mudança de Status
+            if key_radio in st.session_state and st.session_state[key_radio] != status_global:
+                log_mudanca = {
+                    "autor": "Sistema / " + usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
+                    "status_definido": novo_status_clicado
+                }
+                historico.append(log_mudanca)
+                save_resp_ieduc(
+                    qid=questao_id,
+                    valor=dados_questao.get("valor", ""),
+                    pontos=dados_questao.get("pontos", 0),
+                    link=dados_questao.get("link", ""),
+                    comentarios=historico
+                )
+                st.rerun()
+
+            if historico:
+                for idx, com in enumerate(historico):
+                    if not isinstance(com, dict):
+                        continue
+                    col_balao, col_lixeira = st.columns([11, 1])
+                    
+                    with col_balao:
+                        autor = com.get('autor', 'Anônimo')
+                        data_com = com.get('data', '')
+                        texto_com = com.get('texto', '')
+                        
+                        if "Sistema /" in autor:
+                            st.markdown(
+                                f"""<div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
+                                    <span style="font-size: 11px; color: #6c757d; font-style: italic;">{autor} - {data_com}</span>
+                                    <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057;">{texto_com}</p>
+                                </div>""", unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown(
+                                f"""<div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e88e5;">
+                                    <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">{autor}</span> 
+                                    <span style="font-size: 10px; color: #999; margin-left: 10px;">{data_com}</span>
+                                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{texto_com}</p>
+                                </div>""", unsafe_allow_html=True
+                            )
+                    
+                    with col_lixeira:
+                        if st.button("🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}"):
+                            historico.pop(idx)
+                            save_resp_ieduc(
+                                qid=questao_id,
+                                valor=dados_questao.get("valor", ""),
+                                pontos=dados_questao.get("pontos", 0),
+                                link=dados_questao.get("link", ""),
+                                comentarios=historico
+                            )
+                            st.rerun()
+            
+            # Limpeza do campo de entrada
+            if st.session_state[key_estado_limpar]:
+                st.session_state[key_texto] = ""
+                st.session_state[key_estado_limpar] = False
+                
+            novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
+            
+            if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
+                if novo_texto.strip():
+                    nova_mensagem = {
+                        "autor": usuario_atual,
+                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "texto": novo_texto.strip(),
+                        "status_definido": status_global
+                    }
+                    historico.append(nova_mensagem)
+                    save_resp_ieduc(
+                        qid=questao_id, 
+                        valor=dados_questao.get("valor", ""), 
+                        pontos=dados_questao.get("pontos", 0), 
+                        link=dados_questao.get("link", ""),
+                        comentarios=historico
+                    )
+                    st.session_state[key_estado_limpar] = True
+                    st.rerun()
 
     def modal_aviso_link(*args, **kwargs):
         pass
