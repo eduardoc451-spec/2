@@ -21132,3 +21132,393 @@ def render_questao_16_5_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_16_5_{ano_sel}", []),
                 ano_sel,
             )
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 17.0 (Conselho do FUNDEB) ---
+# ------------------------------------------------------------------------------
+def render_questao_17_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.0 (Conselho do FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_0_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.0 - Conselho de Acompanhamento e Controle Social do FUNDEB ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.0 • Conselho de Acompanhamento e Controle Social do FUNDEB")
+            st.write(
+                "**O município possui Conselho de Acompanhamento e Controle Social do FUNDEB?**"
+            )
+
+            d170 = res_data.get("17.0") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_170 = d170.get("valor", "")
+            v_link_170 = d170.get("link", "")
+
+            opc170 = [
+                "Selecione...",
+                "Sim, com estrutura independente do Conselho Municipal de Educação",
+                "Sim, integrado ao Conselho Municipal de Educação",
+                "Não",
+            ]
+
+            idx_padrao = (
+                opc170.index(v_banco_170) if v_banco_170 in opc170 else 0
+            )
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r170 = st.radio(
+                    "Selecione a opção para o Quesito 17.0:",
+                    opc170,
+                    index=idx_padrao,
+                    key=f"rad_q170_{ano_sel}",
+                )
+
+                if r170 == "Selecione...":
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+                else:
+                    st.code("✨ Opção registrada (Quesito Informativo).", language="text")
+
+            with col_evidencia:
+                link_170 = st.text_area(
+                    f"Link/Evidência (17.0) - {ano_sel}:",
+                    value=v_link_170,
+                    key=f"link_q170_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=135,
+                )
+
+                placeholder_links_170 = st.empty()
+                links_170_visuais = re.findall(regex_url, link_170 or "")
+
+                if links_170_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_170_visuais
+                    ]
+                    placeholder_links_170.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.0", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.0",
+                key=f"btn_salvar_17_0_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = r170 if r170 != "Selecione..." else ""
+                pts_salvar = 0.0
+                lnk_val = link_170.strip()
+
+                comentarios_historico = d170.get("comentarios", [])
+                comentario_simples = d170.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.0",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_170 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_170
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_17_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 17.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.0",
+                st.session_state.get(f"links_pendentes_17_0_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 17.1 (Instrumento Normativo do FUNDEB) ---
+# ------------------------------------------------------------------------------
+def render_questao_17_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.1 (Instrumento Normativo do CACS-FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_1_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.1 - Instrumento Normativo, Número e Data ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.1 • Instrumento Normativo do CACS-FUNDEB")
+            st.write(
+                "**Informe o Instrumento Normativo, Número e Data da publicação que instituiu o Conselho de Acompanhamento e Controle Social do FUNDEB:**"
+            )
+
+            d171 = res_data.get("17.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_171 = d171.get("valor", "")
+            v_link_171 = d171.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_171 = st.text_area(
+                    "Instrumento normativo, Número e Data da publicação:",
+                    value=v_banco_171,
+                    key=f"txt_q171_{ano_sel}",
+                    placeholder="Ex: Lei Municipal nº 1.234 de 10/01/2021",
+                    height=135,
+                )
+
+                if txt_171.strip():
+                    st.code("✨ Dados normativos registrados com sucesso.", language="text")
+                else:
+                    st.code("💡 Por favor, informe o instrumento normativo.", language="text")
+
+            with col_evidencia:
+                link_171 = st.text_area(
+                    f"Link/Evidência (17.1) - {ano_sel}:",
+                    value=v_link_171,
+                    key=f"link_q171_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=135,
+                )
+
+                placeholder_links_171 = st.empty()
+                links_171_visuais = re.findall(regex_url, link_171 or "")
+
+                if links_171_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_171_visuais
+                    ]
+                    placeholder_links_171.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.1", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.1",
+                key=f"btn_salvar_17_1_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = txt_171.strip()
+                pts_salvar = 0.0
+                lnk_val = link_171.strip()
+
+                comentarios_historico = d171.get("comentarios", [])
+                comentario_simples = d171.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.1",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_171 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_171
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_17_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 17.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.1",
+                st.session_state.get(f"links_pendentes_17_1_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 17.2 (Link do Instrumento Normativo do FUNDEB) ---
+# ------------------------------------------------------------------------------
+def render_questao_17_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.2 (Página eletrônica do Instrumento Normativo)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_2_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.2 - Link do Instrumento Normativo ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.2 • Link do Instrumento Normativo")
+            st.write(
+                f"**Informe a página eletrônica (link na internet) do instrumento normativo que instituiu o Conselho de Acompanhamento e Controle Social do FUNDEB em {ano_sel}:**"
+            )
+            st.caption("ℹ️ *Se não estiver disponível na internet, inserir no campo o texto **XYZ***")
+
+            d172 = res_data.get("17.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_172 = d172.get("valor", "")
+            v_link_172 = d172.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_172 = st.text_input(
+                    f"Página eletrônica (link na internet) - {ano_sel}:",
+                    value=v_banco_172,
+                    key=f"txt_q172_{ano_sel}",
+                    placeholder="https://... ou XYZ",
+                )
+
+                val_limpo = txt_172.strip()
+                if val_limpo.upper() == "XYZ":
+                    st.code("⚠️ Declarado indisponível na internet (XYZ).", language="text")
+                elif val_limpo:
+                    st.code("✨ Página eletrônica registrada com sucesso.", language="text")
+                else:
+                    st.code("💡 Informe o link completo ou 'XYZ' se indisponível.", language="text")
+
+            with col_evidencia:
+                link_172 = st.text_area(
+                    f"Link/Evidência (17.2) - {ano_sel}:",
+                    value=v_link_172 or v_banco_172,
+                    key=f"link_q172_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=135,
+                )
+
+                placeholder_links_172 = st.empty()
+                links_172_visuais = re.findall(regex_url, link_172 or "")
+
+                if links_172_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_172_visuais
+                    ]
+                    placeholder_links_172.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.2", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.2",
+                key=f"btn_salvar_17_2_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = txt_172.strip()
+                pts_salvar = 0.0
+                lnk_val = link_172.strip() if link_172.strip() else valor_salvar
+
+                comentarios_historico = d172.get("comentarios", [])
+                comentario_simples = d172.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.2",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_172 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_172
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_17_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 17.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.2",
+                st.session_state.get(f"links_pendentes_17_2_{ano_sel}", []),
+                ano_sel,
+            )
