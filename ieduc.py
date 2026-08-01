@@ -15541,3 +15541,96 @@ def render_questao_6_2_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("6.2", st.session_state.get(f"links_pendentes_6_2_{ano_sel}", []), ano_sel)
+
+# --- QUESITO 6.1 (Instrumento Normativo) ---
+def render_questao_6_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 6.1 (Instrumento Normativo)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_6_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 6.1 - Instrumento Normativo ({ano_sel})", expanded=True):
+            st.subheader("6.1 • Instrumento Normativo")
+            st.write(f"**Informe o Instrumento Normativo, Número e Data da publicação do PCCS em {ano_sel}:**")
+            st.caption("ℹ️ *Lembre-se de anexar o documento em PDF por meio do botão de anexos geral.*")
+
+            d61 = res_data.get("6.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_61 = d61.get("valor", "")
+            v_link_61 = d61.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_61 = st.text_input(
+                    "Instrumento, Nº e Data:",
+                    value=v_banco_61,
+                    key=f"txt_q61_{ano_sel}",
+                    placeholder="Ex: Lei Complementar nº 123, de 15/05/2018"
+                )
+
+                if txt_61.strip():
+                    st.code("✨ Informação registrada com sucesso (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, preencha os dados do instrumento normativo.", language="text")
+
+            with col_evidencia:
+                link_61 = st.text_area(
+                    f"Link/Evidência (6.1) - {ano_sel}:",
+                    value=v_link_61,
+                    key=f"link_q61_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_61 = st.empty()
+                links_61_visuais = re.findall(regex_url, link_61 or "")
+
+                if links_61_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_61_visuais
+                    ]
+                    placeholder_links_61.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("6.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 6.1", key=f"btn_salvar_6_1_{ano_sel}", type="primary"):
+                str_valor_61 = txt_61.strip()
+                lnk_val = link_61.strip()
+
+                comentarios_historico = d61.get("comentarios", [])
+                comentario_simples = d61.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="6.1",
+                        valor=str_valor_61,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_61 or "")]
+
+                if lnk_val != v_link_61 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_6_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 6.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_6_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []), ano_sel)
