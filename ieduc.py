@@ -3575,6 +3575,10 @@ def render_questao_1_10_ieduc(res_data: dict, ano_sel: str):
         if modal_aviso_func:
             modal_aviso_func("1.10", st.session_state.get(f"links_pendentes_1_10_{ano_sel}", []), ano_sel)
 
+import re
+import datetime
+import streamlit as st
+
 # =============================================================================
 # QUESITO 1.10.1 • PERIODICIDADE DAS REUNIÕES (CRECHE)
 # =============================================================================
@@ -3616,7 +3620,6 @@ def render_questao_1_10_1_ieduc(res_data: dict, ano_sel: str):
             chave_radio_1101 = f"rad_ieduc_1101_{ano_sel}"
             chave_link_1101 = f"txt_ieduc_1101_{ano_sel}"
 
-            # Alterado de [1, 2] para [3, 2] para reduzir a largura da coluna de links
             c1101_1, c1101_2 = st.columns([3, 2])
 
             with c1101_1:
@@ -3648,7 +3651,6 @@ def render_questao_1_10_1_ieduc(res_data: dict, ano_sel: str):
                     ]
                     placeholder_links_1101.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
-            # Dados estritamente informativos
             pts_1101 = 0.0
 
             if r1101:
@@ -3740,7 +3742,6 @@ def render_questao_1_11_ieduc(res_data: dict, ano_sel: str):
             chave_radio_111 = f"rad_ieduc_111_{ano_sel}"
             chave_link_111 = f"txt_ieduc_111_{ano_sel}"
 
-            # Alterado de [1, 2] para [3, 2]
             c111_1, c111_2 = st.columns([3, 2])
 
             with c111_1:
