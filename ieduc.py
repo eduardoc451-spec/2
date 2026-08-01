@@ -15432,3 +15432,112 @@ def render_questao_6_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []), ano_sel)
+
+def render_questao_6_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 6.2 (Requisitos do PCCS)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_6_2_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 6.2 - Requisitos do PCCS ({ano_sel})", expanded=True):
+            st.subheader("6.2 • Requisitos do PCCS")
+            st.write("**Assinale os requisitos contidos no Plano de Cargos e Salários dos professores:**")
+
+            d62 = res_data.get("6.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_62 = d62.get("valor", "")
+            v_link_62 = d62.get("link", "")
+
+            req_opcoes = [
+                "Remuneração condigna dos profissionais na educação básica da rede pública",
+                "Integração entre o trabalho individual e a proposta pedagógica da escola",
+                "Melhoria da qualidade do ensino e da aprendizagem",
+                "Medidas de incentivo para que profissionais mais bem avaliados exerçam suas funções em escolas de locais com piores indicadores socioeconômicos ou que atendam estudantes com deficiência, transtornos globais do desenvolvimento e altas habilidades ou superdotação",
+                "Contempla capacitação profissional especialmente direcionada à formação continuada com vistas à melhoria da qualidade do ensino",
+                "Nenhum dos anteriores"
+            ]
+
+            salvos_62 = [x.strip() for x in v_banco_62.split(";") if x.strip()]
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                selecionados_62 = []
+                for i, opcao in enumerate(req_opcoes):
+                    default_chk = opcao in salvos_62
+                    chk = st.checkbox(
+                        opcao,
+                        value=default_chk,
+                        key=f"chk_q62_{i}_{ano_sel}"
+                    )
+                    if chk:
+                        selecionados_62.append(opcao)
+
+                if "Nenhum dos anteriores" in selecionados_62 and len(selecionados_62) > 1:
+                    st.warning("⚠️ Ao selecionar 'Nenhum dos anteriores', desmarque os outros requisitos.")
+
+                if selecionados_62:
+                    st.code("✨ Requisitos selecionados registrados (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, assinale os requisitos vigentes do PCCS.", language="text")
+
+            with col_evidencia:
+                link_62 = st.text_area(
+                    f"Link/Evidência (6.2) - {ano_sel}:",
+                    value=v_link_62,
+                    key=f"link_q62_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=310
+                )
+
+                placeholder_links_62 = st.empty()
+                links_62_visuais = re.findall(regex_url, link_62 or "")
+
+                if links_62_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_62_visuais
+                    ]
+                    placeholder_links_62.markdown("**🔗 Links ativos:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("6.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 6.2", key=f"btn_salvar_6_2_{ano_sel}", type="primary"):
+                str_valor_62 = "; ".join(selecionados_62)
+                lnk_val = link_62.strip()
+
+                comentarios_historico = d62.get("comentarios", [])
+                comentario_simples = d62.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="6.2",
+                        valor=str_valor_62,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_62 or "")]
+
+                if lnk_val != v_link_62 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_6_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_6_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 6.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_6_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("6.2", st.session_state.get(f"links_pendentes_6_2_{ano_sel}", []), ano_sel)
