@@ -10582,3 +10582,289 @@ def render_questao_3_10_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.10.1", st.session_state.get(f"links_pendentes_3_10_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.11 - AÇÕES CONTRA O BULLYING (ANOS INICIAIS)
+# =============================================================================
+with st.container(key=f"container_bloco_ieduc_3_11_{ano_sel}", border=True):
+with st.expander(f"📌 QUESITO 3.11 • Enfrentamento ao Bullying ({ano_sel})", expanded=True):
+st.subheader("3.11 • Enfrentamento ao Bullying")
+st.write(f"**O Município possui, no planejamento, ações governamentais para enfrentamento ao bullying nos Anos Iniciais em {ano_sel}?**")
+
+d311 = res_data.get("3.11") or {
+"valor": "",
+"pontos": 0.0,
+"link": "",
+"comentarios": [],
+"comentario": ""
+}
+evidencia_311_salva = d311.get("link", "")
+v_banco_311 = str(d311.get("valor", ""))
+
+opc311 = [
+"Selecione...",
+"Sim – 02",
+"Não – 00"
+]
+idx_311 = opc311.index(v_banco_311) if v_banco_311 in opc311 else 0
+
+col_inputs, col_evidencia = st.columns([1, 1])
+
+with col_inputs:
+st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione a opção para o Quesito 3.11:</label>', unsafe_allow_html=True)
+r311 = st.radio(
+"",
+opc311,
+index=idx_311,
+key=f"q311_bull_radio_{ano_sel}",
+label_visibility="collapsed"
+)
+
+pts_311 = 2.0 if r311 == "Sim – 02" else 0.0
+if r311 != "Selecione...":
+st.code(f"🎯 Pontuação do Quesito 3.11: {pts_311:.1f} / 2.0 pontos", language="text")
+else:
+st.info("⚠️ Selecione uma opção válida.")
+
+with col_evidencia:
+link_311 = st.text_area(
+f"Link/Evidência (3.11) - {ano_sel}:",
+value=evidencia_311_salva,
+key=f"link_q311_{ano_sel}",
+placeholder="Insira os links...",
+height=150
+)
+
+placeholder_links_311 = st.empty()
+links_311_visuais = re.findall(regex_url, link_311 or "")
+if links_311_visuais:
+links_formatados = [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_311_visuais]
+placeholder_links_311.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+if bloco_comentarios_func:
+bloco_comentarios_func("3.11", res_data, ano_sel)
+
+if st.button("💾 Salvar Questão 3.11", key=f"btn_salvar_3_11_{ano_sel}", type="primary"):
+str_valor_311 = r311 if r311 != "Selecione..." else ""
+lnk_val = link_311.strip()
+
+comentarios_historico = d311.get("comentarios", [])
+comentario_simples = d311.get("comentario", "")
+
+save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+if save_resp_func:
+save_resp_func(
+qid="3.11",
+valor=str_valor_311,
+pontos=pts_311,
+link=lnk_val,
+comentario=comentario_simples,
+comentarios=comentarios_historico
+)
+
+links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_311_salva or "")]
+
+if lnk_val != evidencia_311_salva and links_atuais and links_atuais != links_antigos:
+st.session_state[f"links_pendentes_3_11_{ano_sel}"] = links_atuais
+st.session_state[f"gatilho_modal_3_11_{ano_sel}"] = True
+
+st.cache_data.clear()
+st.toast("Resposta do Quesito 3.11 salva com sucesso!", icon="✅")
+st.rerun()
+
+if st.session_state.get(f"gatilho_modal_3_11_{ano_sel}", False):
+modal_aviso_func = globals().get("modal_aviso_link")
+if modal_aviso_func:
+modal_aviso_func("3.11", st.session_state.get(f"links_pendentes_3_11_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.11.1 - DESCRIÇÃO DAS AÇÕES CONTRA O BULLYING (ANOS INICIAIS)
+# =============================================================================
+with st.container(key=f"container_bloco_ieduc_3_11_1_{ano_sel}", border=True):
+with st.expander(f"📌 QUESITO 3.11.1 • Descrição das Ações contra o Bullying ({ano_sel})", expanded=True):
+st.subheader("3.11.1 • Descrição das Ações")
+st.write(f"**Descreva as ações governamentais para enfrentamento ao bullying:**")
+st.caption("ℹ️ *Quesito puramente descritivo informativo (não soma pontos adicionais).*")
+
+d3111 = res_data.get("3.11.1") or {
+"valor": "",
+"pontos": 0.0,
+"link": "",
+"comentarios": [],
+"comentario": ""
+}
+evidencia_3111_salva = d3111.get("link", "")
+v_banco_3111 = str(d3111.get("valor", ""))
+
+col_inputs, col_evidencia = st.columns([1, 1])
+
+with col_inputs:
+st.markdown('<label style="font-size: 13px; font-weight: 500;">Ações governamentais para enfrentamento ao bullying:</label>', unsafe_allow_html=True)
+desc_bullying = st.text_area(
+"",
+value=v_banco_3111,
+placeholder="Descreva aqui os programas pedagógicos, palestras, ouvidorias ou protocolos de acolhimento...",
+key=f"txt_q3111_desc_{ano_sel}",
+label_visibility="collapsed",
+height=150
+)
+
+if desc_bullying.strip():
+st.code("📝 Detalhamento das ações registrado.", language="text")
+else:
+st.info("⚠️ Aguardando o preenchimento da descrição das ações.")
+
+with col_evidencia:
+link_3111 = st.text_area(
+f"Link/Evidência (3.11.1) - {ano_sel}:",
+value=evidencia_3111_salva,
+key=f"link_q3111_{ano_sel}",
+placeholder="Insira os links...",
+height=150
+)
+
+placeholder_links_3111 = st.empty()
+links_3111_visuais = re.findall(regex_url, link_3111 or "")
+if links_3111_visuais:
+links_formatados = [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_3111_visuais]
+placeholder_links_3111.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+if bloco_comentarios_func:
+bloco_comentarios_func("3.11.1", res_data, ano_sel)
+
+if st.button("💾 Salvar Questão 3.11.1", key=f"btn_salvar_3_11_1_{ano_sel}", type="primary"):
+str_valor_3111 = desc_bullying.strip()
+lnk_val = link_3111.strip()
+
+comentarios_historico = d3111.get("comentarios", [])
+comentario_simples = d3111.get("comentario", "")
+
+save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+if save_resp_func:
+save_resp_func(
+qid="3.11.1",
+valor=str_valor_3111,
+pontos=0.0,
+link=lnk_val,
+comentario=comentario_simples,
+comentarios=comentarios_historico
+)
+
+links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_3111_salva or "")]
+
+if lnk_val != evidencia_3111_salva and links_atuais and links_atuais != links_antigos:
+st.session_state[f"links_pendentes_3_11_1_{ano_sel}"] = links_atuais
+st.session_state[f"gatilho_modal_3_11_1_{ano_sel}"] = True
+
+st.cache_data.clear()
+st.toast("Resposta do Quesito 3.11.1 salva com sucesso!", icon="✅")
+st.rerun()
+
+if st.session_state.get(f"gatilho_modal_3_11_1_{ano_sel}", False):
+modal_aviso_func = globals().get("modal_aviso_link")
+if modal_aviso_func:
+modal_aviso_func("3.11.1", st.session_state.get(f"links_pendentes_3_11_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.12 - ENTREGA DE KIT ESCOLAR (ANOS INICIAIS)
+# =============================================================================
+with st.container(key=f"container_bloco_ieduc_3_12_{ano_sel}", border=True):
+with st.expander(f"📌 QUESITO 3.12 • Entrega de Kit Escolar ({ano_sel})", expanded=True):
+st.subheader("3.12 • Entrega de Kit Escolar")
+st.write(f"**Houve entrega do Kit escolar (material escolar e pedagógico) nas escolas dos Anos Iniciais em {ano_sel}?**")
+
+d312 = res_data.get("3.12") or {
+"valor": "",
+"pontos": 0.0,
+"link": "",
+"comentarios": [],
+"comentario": ""
+}
+evidencia_312_salva = d312.get("link", "")
+v_banco_312 = str(d312.get("valor", ""))
+
+opc312 = [
+"Selecione...",
+"Sim – 00",
+"O kit escolar permanece no almoxarifado da escola e é retirado no momento do uso pelos alunos – 20",
+"Não – 00"
+]
+idx_312 = opc312.index(v_banco_312) if v_banco_312 in opc312 else 0
+
+col_inputs, col_evidencia = st.columns([1, 1])
+
+with col_inputs:
+st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione a opção para o Quesito 3.12:</label>', unsafe_allow_html=True)
+r312 = st.radio(
+"",
+opc312,
+index=idx_312,
+key=f"q312_kit_radio_{ano_sel}",
+label_visibility="collapsed"
+)
+
+pts_312 = 20.0 if r312 == "O kit escolar permanece no almoxarifado da escola e é retirado no momento do uso pelos alunos – 20" else 0.0
+if r312 != "Selecione...":
+if r312 == "Sim – 00":
+st.code("📅 Opção 'Sim' selecionada. Prossiga preenchendo as informações de datas abaixo se aplicável.", language="text")
+else:
+st.code(f"🎯 Pontuação Base do Quesito 3.12: {pts_312:.1f} pontos", language="text")
+else:
+st.info("⚠️ Selecione uma opção válida.")
+
+with col_evidencia:
+link_312 = st.text_area(
+f"Link/Evidência (3.12) - {ano_sel}:",
+value=evidencia_312_salva,
+key=f"link_q312_{ano_sel}",
+placeholder="Insira os links...",
+height=150
+)
+
+placeholder_links_312 = st.empty()
+links_312_visuais = re.findall(regex_url, link_312 or "")
+if links_312_visuais:
+links_formatados = [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_312_visuais]
+placeholder_links_312.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+if bloco_comentarios_func:
+bloco_comentarios_func("3.12", res_data, ano_sel)
+
+if st.button("💾 Salvar Questão 3.12", key=f"btn_salvar_3_12_{ano_sel}", type="primary"):
+str_valor_312 = r312 if r312 != "Selecione..." else ""
+lnk_val = link_312.strip()
+
+comentarios_historico = d312.get("comentarios", [])
+comentario_simples = d312.get("comentario", "")
+
+save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+if save_resp_func:
+save_resp_func(
+qid="3.12",
+valor=str_valor_312,
+pontos=pts_312,
+link=lnk_val,
+comentario=comentario_simples,
+comentarios=comentarios_historico
+)
+
+links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_312_salva or "")]
+
+if lnk_val != evidencia_312_salva and links_atuais and links_atuais != links_antigos:
+st.session_state[f"links_pendentes_3_12_{ano_sel}"] = links_atuais
+st.session_state[f"gatilho_modal_3_12_{ano_sel}"] = True
+
+st.cache_data.clear()
+st.toast("Resposta do Quesito 3.12 salva com sucesso!", icon="✅")
+st.rerun()
+
+if st.session_state.get(f"gatilho_modal_3_12_{ano_sel}", False):
+modal_aviso_func = globals().get("modal_aviso_link")
+if modal_aviso_func:
+modal_aviso_func("3.12", st.session_state.get(f"links_pendentes_3_12_{ano_sel}", []), ano_sel)
