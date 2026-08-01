@@ -22139,3 +22139,757 @@ def render_questao_17_4_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_17_4_{ano_sel}", []),
                 ano_sel,
             )
+
+# ==============================================================================
+# --- QUESITO 17.5 (Atividades Realizadas pelo CACS FUNDEB) ---
+# ==============================================================================
+def render_questao_17_5_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.5 (Atividades Realizadas pelo CACS FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_5_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.5 - Atividades Realizadas pelo CACS FUNDEB ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.5 • Atividades Realizadas pelo CACS FUNDEB")
+            st.write("**Assinale as atividades que o CACS Fundeb realizou no ano:**")
+
+            d175 = res_data.get("17.5") or {
+                "valor": "[]",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_175 = d175.get("valor", "[]")
+            v_link_175 = d175.get("link", "")
+
+            try:
+                val_banco_limpo = v_banco_175.replace("'", '"')
+                sel175_inicial = json.loads(val_banco_limpo)
+                if not isinstance(sel175_inicial, list):
+                    sel175_inicial = []
+            except Exception:
+                sel175_inicial = []
+
+            opcoes_175 = [
+                "Elaboração do parecer das prestações de contas do FUNDEB – 1,5",
+                "Supervisão da construção da proposta orçamentária anual – 0,5",
+                "Apresentação de manifestação formal acerca dos registros contábeis e demonstrativos gerenciais do Fundo aos órgãos competentes – 0,5",
+                "Convocação dos responsáveis para prestação de esclarecimentos acerca do fluxo de recursos e da execução das despesas do Fundo – 0,5",
+                "Requisição ao Poder Executivo de cópia de documentos – 0,5",
+                "Visitas para verificações in loco – 01",
+                "Supervisão do censo escolar anual – 01",
+                "Acompanhar a aplicação dos recursos federais transferidos à conta do PNATE e do PEJA e analisar suas prestações de contas – 0,5",
+            ]
+
+            c_check1, c_check2 = st.columns([1, 1])
+            selecionados_atuais = []
+
+            for idx, opcao in enumerate(opcoes_175):
+                target_col = c_check1 if idx % 2 == 0 else c_check2
+                with target_col:
+                    checked = st.checkbox(
+                        opcao,
+                        value=(opcao in sel175_inicial),
+                        key=f"chk_175_{idx}_{ano_sel}",
+                    )
+                    if checked:
+                        selecionados_atuais.append(opcao)
+
+            def calcular_pontos_175(lista_sel):
+                pts = 0.0
+                for op in lista_sel:
+                    if "parecer das prestações" in op:
+                        pts += 1.5
+                    elif "proposta orçamentária" in op:
+                        pts += 0.5
+                    elif "manifestação formal" in op:
+                        pts += 0.5
+                    elif "Convocação dos responsáveis" in op:
+                        pts += 0.5
+                    elif "cópia de documentos" in op:
+                        pts += 0.5
+                    elif "in loco" in op:
+                        pts += 1.0
+                    elif "censo escolar" in op:
+                        pts += 1.0
+                    elif "PNATE" in op:
+                        pts += 0.5
+                return round(pts, 2)
+
+            pts_exibir = calcular_pontos_175(selecionados_atuais)
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.code(
+                    f"✨ Pontuação Obtida: {pts_exibir:.1f} / 5.5 pontos.",
+                    language="text",
+                )
+
+            with col_evidencia:
+                link_175 = st.text_area(
+                    f"Link/Evidência (17.5) - {ano_sel}:",
+                    value=v_link_175,
+                    key=f"link_q175_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_175 = st.empty()
+                links_175_visuais = re.findall(regex_url, link_175 or "")
+
+                if links_175_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_175_visuais
+                    ]
+                    placeholder_links_175.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.5", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.5",
+                key=f"btn_salvar_17_5_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = json.dumps(
+                    selecionados_atuais, ensure_ascii=False
+                )
+                pts_salvar = pts_exibir
+                lnk_val = link_175.strip()
+
+                comentarios_historico = d175.get("comentarios", [])
+                comentario_simples = d175.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.5",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_175 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_175
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_5_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.5 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_5_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.5",
+                st.session_state.get(f"links_pendentes_17_5_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ==============================================================================
+# --- QUESITO 17.6 (Parecer da Prestação de Contas CACS FUNDEB) ---
+# ==============================================================================
+def render_questao_17_6_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.6 (Parecer da Prestação de Contas CACS FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_6_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.6 - Parecer da Prestação de Contas CACS FUNDEB ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.6 • Parecer da Prestação de Contas CACS FUNDEB")
+            st.write(
+                "**Qual foi o parecer da prestação de contas emitido pelo CACS FUNDEB referente ao exercício anterior?**"
+            )
+            st.caption(
+                "ℹ️ *Anexar o parecer por meio do campo de evidências à direita.*"
+            )
+
+            d176 = res_data.get("17.6") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_176 = d176.get("valor", "")
+            v_link_176 = d176.get("link", "")
+
+            opc176 = [
+                "Selecione...",
+                "Aprovado sem ressalva – 00",
+                "Aprovado com ressalva – 00",
+                "Não aprovado – -50 (perde 50 pontos)",
+                "Não apreciado – -20 (perde 20 pontos)",
+            ]
+
+            idx_inicial = opc176.index(v_banco_176) if v_banco_176 in opc176 else 0
+
+            def calcular_pontos_176(opcao):
+                if "Não aprovado" in opcao:
+                    return -50.0
+                elif "Não apreciado" in opcao:
+                    return -20.0
+                return 0.0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r176 = st.radio(
+                    f"Selecione a opção para o Quesito 17.6:",
+                    opc176,
+                    index=idx_inicial,
+                    key=f"rad_176_{ano_sel}",
+                    label_visibility="collapsed",
+                )
+
+                if r176 == "Selecione...":
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+                else:
+                    pts_exibir = calcular_pontos_176(r176)
+                    if pts_exibir < 0:
+                        st.code(
+                            f"📉 Penalidade Aplicada: {pts_exibir:.1f} pontos.",
+                            language="text",
+                        )
+                    else:
+                        st.code(
+                            f"✨ Pontuação Obtida: {pts_exibir:.1f} pontos.",
+                            language="text",
+                        )
+
+            with col_evidencia:
+                link_176 = st.text_area(
+                    f"Link/Evidência (17.6) - {ano_sel}:",
+                    value=v_link_176,
+                    key=f"link_q176_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=155,
+                )
+
+                placeholder_links_176 = st.empty()
+                links_176_visuais = re.findall(regex_url, link_176 or "")
+
+                if links_176_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_176_visuais
+                    ]
+                    placeholder_links_176.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.6", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.6",
+                key=f"btn_salvar_17_6_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = r176 if r176 != "Selecione..." else ""
+                pts_salvar = calcular_pontos_176(valor_salvar)
+                lnk_val = link_176.strip()
+
+                comentarios_historico = d176.get("comentarios", [])
+                comentario_simples = d176.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.6",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_176 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_176
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_6_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_6_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.6 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_6_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.6",
+                st.session_state.get(f"links_pendentes_17_6_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ==============================================================================
+# --- QUESITO 17.6.1 (Motivos da Não Aprovação do FUNDEB) ---
+# ==============================================================================
+def render_questao_17_6_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.6.1 (Motivos da Não Aprovação do FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_6_1_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.6.1 - Motivos da Não Aprovação ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.6.1 • Motivos da Não Aprovação")
+            st.write("**Informe quais os motivos da não aprovação:**")
+
+            d1761 = res_data.get("17.6.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_1761 = d1761.get("valor", "")
+            v_link_1761 = d1761.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_1761 = st.text_area(
+                    "Motivos da não aprovação:",
+                    value=v_banco_1761,
+                    key=f"txt_1761_{ano_sel}",
+                    height=120,
+                    label_visibility="collapsed",
+                )
+
+                if txt_1761.strip():
+                    st.code(
+                        "✨ Justificativa e motivos registrados com sucesso.",
+                        language="text",
+                    )
+                else:
+                    st.code(
+                        "💡 Por favor, descreva os motivos caso a prestação de contas não tenha sido aprovada.",
+                        language="text",
+                    )
+
+            with col_evidencia:
+                link_1761 = st.text_area(
+                    f"Link/Evidência (17.6.1) - {ano_sel}:",
+                    value=v_link_1761,
+                    key=f"link_q1761_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=120,
+                )
+
+                placeholder_links_1761 = st.empty()
+                links_1761_visuais = re.findall(regex_url, link_1761 or "")
+
+                if links_1761_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1761_visuais
+                    ]
+                    placeholder_links_1761.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.6.1", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.6.1",
+                key=f"btn_salvar_17_6_1_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = txt_1761.strip()
+                pts_salvar = 0.0
+                lnk_val = link_1761.strip()
+
+                comentarios_historico = d1761.get("comentarios", [])
+                comentario_simples = d1761.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.6.1",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_1761 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_1761
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_6_1_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_6_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.6.1 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_6_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.6.1",
+                st.session_state.get(f"links_pendentes_17_6_1_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ==============================================================================
+# --- QUESITO 17.7 (Quantidade de Reuniões CACS FUNDEB) ---
+# ==============================================================================
+def render_questao_17_7_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.7 (Quantidade de Reuniões CACS FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_7_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.7 - Quantidade de Reuniões CACS FUNDEB ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.7 • Quantidade de Reuniões CACS FUNDEB")
+            st.write(
+                "**Quantas reuniões foram realizadas pelo Conselho do FUNDEB no último exercício?**"
+            )
+            st.caption(
+                "⚠️ *Não considerar reuniões de eleição/exclusão de membros, aprovação de orçamento ou outro assunto não relacionado à natureza do Conselho.*"
+            )
+
+            d177 = res_data.get("17.7") or {
+                "valor": "0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_177 = d177.get("valor", "0")
+            v_link_177 = d177.get("link", "")
+
+            v_num_inicial = (
+                int(v_banco_177) if str(v_banco_177).isdigit() else 0
+            )
+
+            def calcular_pontos_177(qtd):
+                if qtd >= 12:
+                    return 3.0
+                elif 8 <= qtd < 12:
+                    return 1.5
+                elif 4 <= qtd < 8:
+                    return 1.0
+                return 0.0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                qtd_reunioes = st.number_input(
+                    "Quantidade de reuniões realizadas pelo CACS:",
+                    min_value=0,
+                    value=v_num_inicial,
+                    step=1,
+                    key=f"num_177_{ano_sel}",
+                    label_visibility="collapsed",
+                )
+
+                pts_exibir = calcular_pontos_177(qtd_reunioes)
+                st.code(
+                    f"✨ Pontuação Obtida: {pts_exibir:.1f} / 3.0 pontos.",
+                    language="text",
+                )
+
+            with col_evidencia:
+                link_177 = st.text_area(
+                    f"Link/Evidência (17.7) - {ano_sel}:",
+                    value=v_link_177,
+                    key=f"link_q177_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_177 = st.empty()
+                links_177_visuais = re.findall(regex_url, link_177 or "")
+
+                if links_177_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_177_visuais
+                    ]
+                    placeholder_links_177.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.7", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.7",
+                key=f"btn_salvar_17_7_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = str(qtd_reunioes)
+                pts_salvar = pts_exibir
+                lnk_val = link_177.strip()
+
+                comentarios_historico = d177.get("comentarios", [])
+                comentario_simples = d177.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.7",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_177 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_177
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_7_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_7_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.7 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_7_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.7",
+                st.session_state.get(f"links_pendentes_17_7_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ==============================================================================
+# --- QUESITO 18.0 (Conselho de Alimentação Escolar - CAE) ---
+# ==============================================================================
+def render_questao_18_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 18.0 (Conselho de Alimentação Escolar - CAE)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_18_0_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 18.0 - Conselho de Alimentação Escolar - CAE ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("18.0 • Conselho de Alimentação Escolar - CAE")
+            st.write(
+                "**O município constituiu o CAE (Conselho de Alimentação Escolar)?**"
+            )
+
+            d180 = res_data.get("18.0") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_180 = d180.get("valor", "")
+            v_link_180 = d180.get("link", "")
+
+            opc180 = ["Selecione...", "Sim", "Não"]
+            idx_inicial = opc180.index(v_banco_180) if v_banco_180 in opc180 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r180 = st.radio(
+                    f"Selecione a opção para o Quesito 18.0:",
+                    opc180,
+                    index=idx_inicial,
+                    key=f"rad_180_{ano_sel}",
+                    label_visibility="collapsed",
+                )
+
+                if r180 == "Selecione...":
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+                else:
+                    st.code(
+                        "✨ Opção registrada (Quesito Informativo).", language="text"
+                    )
+
+            with col_evidencia:
+                link_180 = st.text_area(
+                    f"Link/Evidência (18.0) - {ano_sel}:",
+                    value=v_link_180,
+                    key=f"link_q180_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_180 = st.empty()
+                links_180_visuais = re.findall(regex_url, link_180 or "")
+
+                if links_180_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_180_visuais
+                    ]
+                    placeholder_links_180.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("18.0", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 18.0",
+                key=f"btn_salvar_18_0_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = r180 if r180 != "Selecione..." else ""
+                pts_salvar = 0.0
+                lnk_val = link_180.strip()
+
+                comentarios_historico = d180.get("comentarios", [])
+                comentario_simples = d180.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="18.0",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_180 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_180
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_18_0_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_18_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 18.0 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_18_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "18.0",
+                st.session_state.get(f"links_pendentes_18_0_{ano_sel}", []),
+                ano_sel,
+            )
