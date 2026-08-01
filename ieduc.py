@@ -17704,3 +17704,597 @@ def render_questao_13_1_2_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("13.1.2.1", st.session_state.get(f"links_pendentes_13_1_2_1_{ano_sel}", []), ano_sel)
+
+# ==============================================================================
+# --- QUESITO 13.1.3 (Condições de Uso dos Veículos) ---
+# ==============================================================================
+def render_questao_13_1_3_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 13.1.3 (Condições de Uso dos Veículos)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_13_1_3_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 13.1.3 - Condições de Uso dos Veículos ({ano_sel})", expanded=True):
+            st.subheader("13.1.3 • Condições de Uso dos Veículos")
+            st.write("**Os veículos para transporte escolar de alunos estão em boas condições de uso?**")
+
+            d1313 = res_data.get("13.1.3") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_1313 = d1313.get("valor", "")
+            v_link_1313 = d1313.get("link", "")
+
+            opc1313 = [
+                "Selecione...",
+                "Sim, todos os veículos – 00",
+                "Sim, a maior parte dos veículos – -02 (perde 02 pontos)",
+                "Sim, a menor parte dos veículos – -03 (perde 03 pontos)",
+                "Não – -05 (perde 05 pontos)"
+            ]
+
+            def calcular_pontos_1313(opcao):
+                if "maior parte" in opcao: 
+                    return -2.0
+                elif "menor parte" in opcao: 
+                    return -3.0
+                elif "Não" in opcao: 
+                    return -5.0
+                return 0.0
+
+            idx_1313 = opc1313.index(v_banco_1313) if v_banco_1313 in opc1313 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r1313 = st.radio(
+                    "Selecione a opção para o Quesito 13.1.3:",
+                    opc1313,
+                    index=idx_1313,
+                    key=f"radio_q1313_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r1313 != "Selecione...":
+                    pts_exibir = calcular_pontos_1313(r1313)
+                    if pts_exibir < 0:
+                        st.code(f"⚠️ Penalidade aplicada: {pts_exibir:.1f} pontos.", language="text")
+                    else:
+                        st.code("✨ Nenhuma penalidade aplicada (0.0 pontos).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_1313 = st.text_area(
+                    f"Link/Evidência (13.1.3) - {ano_sel}:",
+                    value=v_link_1313,
+                    key=f"link_q1313_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_1313 = st.empty()
+                links_1313_visuais = re.findall(regex_url, link_1313 or "")
+
+                if links_1313_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1313_visuais
+                    ]
+                    placeholder_links_1313.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("13.1.3", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 13.1.3", key=f"btn_salvar_13_1_3_{ano_sel}", type="primary"):
+                valor_salvar = r1313 if r1313 != "Selecione..." else ""
+                pts_salvar = calcular_pontos_1313(r1313)
+                lnk_val = link_1313.strip()
+
+                comentarios_historico = d1313.get("comentarios", [])
+                comentario_simples = d1313.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="13.1.3",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_1313 or "")]
+
+                if lnk_val != v_link_1313 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_1_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_1_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 13.1.3 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_13_1_3_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("13.1.3", st.session_state.get(f"links_pendentes_13_1_3_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 13.1.4 (Curso de Especialização dos Condutores) ---
+# ==============================================================================
+def render_questao_13_1_4_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 13.1.4 (Curso de Especialização dos Condutores)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_13_1_4_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 13.1.4 - Curso de Especialização dos Condutores ({ano_sel})", expanded=True):
+            st.subheader("13.1.4 • Curso de Especialização dos Condutores")
+            st.write("**Os condutores possuem aprovação em curso de especialização sobre transporte escolar?**")
+
+            d1314 = res_data.get("13.1.4") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_1314 = d1314.get("valor", "")
+            v_link_1314 = d1314.get("link", "")
+
+            opc1314 = [
+                "Selecione...",
+                "Sim, todos os condutores – 00",
+                "Sim, a maior parte dos condutores – -02 (perde 02 pontos)",
+                "Sim, a menor parte dos condutores – -03 (perde 03 pontos)",
+                "Não – -05 (perde 05 pontos)"
+            ]
+
+            def calcular_pontos_1314(opcao):
+                if "maior parte" in opcao: 
+                    return -2.0
+                elif "menor parte" in opcao: 
+                    return -3.0
+                elif "Não" in opcao: 
+                    return -5.0
+                return 0.0
+
+            idx_1314 = opc1314.index(v_banco_1314) if v_banco_1314 in opc1314 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r1314 = st.radio(
+                    "Selecione a opção para o Quesito 13.1.4:",
+                    opc1314,
+                    index=idx_1314,
+                    key=f"radio_q1314_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r1314 != "Selecione...":
+                    pts_exibir = calcular_pontos_1314(r1314)
+                    if pts_exibir < 0:
+                        st.code(f"⚠️ Penalidade aplicada: {pts_exibir:.1f} pontos.", language="text")
+                    else:
+                        st.code("✨ Nenhuma penalidade aplicada (0.0 pontos).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_1314 = st.text_area(
+                    f"Link/Evidência (13.1.4) - {ano_sel}:",
+                    value=v_link_1314,
+                    key=f"link_q1314_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_1314 = st.empty()
+                links_1314_visuais = re.findall(regex_url, link_1314 or "")
+
+                if links_1314_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1314_visuais
+                    ]
+                    placeholder_links_1314.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("13.1.4", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 13.1.4", key=f"btn_salvar_13_1_4_{ano_sel}", type="primary"):
+                valor_salvar = r1314 if r1314 != "Selecione..." else ""
+                pts_salvar = calcular_pontos_1314(r1314)
+                lnk_val = link_1314.strip()
+
+                comentarios_historico = d1314.get("comentarios", [])
+                comentario_simples = d1314.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="13.1.4",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_1314 or "")]
+
+                if lnk_val != v_link_1314 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_1_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_1_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 13.1.4 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_13_1_4_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("13.1.4", st.session_state.get(f"links_pendentes_13_1_4_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 13.1.5 (Histórico de Infrações de Trânsito) ---
+# ==============================================================================
+def render_questao_13_1_5_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 13.1.5 (Histórico de Infrações de Trânsito)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_13_1_5_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 13.1.5 - Histórico de Infrações de Trânsito dos Condutores ({ano_sel})", expanded=True):
+            st.subheader("13.1.5 • Histórico de Infrações de Trânsito")
+            st.write("**Há condutores que cometeram alguma infração grave ou gravíssima, ou que são reincidentes em infrações médias nos últimos 12 meses?**")
+
+            d1315 = res_data.get("13.1.5") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_1315 = d1315.get("valor", "")
+            v_link_1315 = d1315.get("link", "")
+
+            opc1315 = ["Selecione...", "Sim – -03 (perde 03 pontos)", "Não – 00"]
+
+            def calcular_pontos_1315(opcao):
+                if "Sim" in opcao:
+                    return -3.0
+                return 0.0
+
+            idx_1315 = opc1315.index(v_banco_1315) if v_banco_1315 in opc1315 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r1315 = st.radio(
+                    "Selecione a opção para o Quesito 13.1.5:",
+                    opc1315,
+                    index=idx_1315,
+                    key=f"radio_q1315_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r1315 != "Selecione...":
+                    pts_exibir = calcular_pontos_1315(r1315)
+                    if pts_exibir < 0:
+                        st.code(f"⚠️ Penalidade aplicada: {pts_exibir:.1f} pontos.", language="text")
+                    else:
+                        st.code("✨ Nenhuma penalidade aplicada (0.0 pontos).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_1315 = st.text_area(
+                    f"Link/Evidência (13.1.5) - {ano_sel}:",
+                    value=v_link_1315,
+                    key=f"link_q1315_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_1315 = st.empty()
+                links_1315_visuais = re.findall(regex_url, link_1315 or "")
+
+                if links_1315_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1315_visuais
+                    ]
+                    placeholder_links_1315.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("13.1.5", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 13.1.5", key=f"btn_salvar_13_1_5_{ano_sel}", type="primary"):
+                valor_salvar = r1315 if r1315 != "Selecione..." else ""
+                pts_salvar = calcular_pontos_1315(r1315)
+                lnk_val = link_1315.strip()
+
+                comentarios_historico = d1315.get("comentarios", [])
+                comentario_simples = d1315.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="13.1.5",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_1315 or "")]
+
+                if lnk_val != v_link_1315 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_1_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_1_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 13.1.5 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_13_1_5_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("13.1.5", st.session_state.get(f"links_pendentes_13_1_5_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 13.1.6 (Certidão Negativa Criminal) ---
+# ==============================================================================
+def render_questao_13_1_6_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 13.1.6 (Certidão Negativa Criminal dos Condutores)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_13_1_6_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 13.1.6 - Certidão Negativa Criminal dos Condutores ({ano_sel})", expanded=True):
+            st.subheader("13.1.6 • Certidão Negativa Criminal")
+            st.write("**Os condutores apresentaram certidão negativa do registro de distribuição criminal (homicídio, roubo, estupro e corrupção de menores) dentro da validade (5 anos)?**")
+
+            d1316 = res_data.get("13.1.6") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_1316 = d1316.get("valor", "")
+            v_link_1316 = d1316.get("link", "")
+
+            opc1316 = [
+                "Selecione...",
+                "Sim, todos os condutores – 00",
+                "Sim, a maior parte dos condutores – -01 (perde 01 ponto)",
+                "Sim, a menor parte dos condutores – -02 (perde 02 pontos)",
+                "Não – -03 (perde 03 pontos)"
+            ]
+
+            def calcular_pontos_1316(opcao):
+                if "maior parte" in opcao: 
+                    return -1.0
+                elif "menor parte" in opcao: 
+                    return -2.0
+                elif "Não" in opcao: 
+                    return -3.0
+                return 0.0
+
+            idx_1316 = opc1316.index(v_banco_1316) if v_banco_1316 in opc1316 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r1316 = st.radio(
+                    "Selecione a opção para o Quesito 13.1.6:",
+                    opc1316,
+                    index=idx_1316,
+                    key=f"radio_q1316_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r1316 != "Selecione...":
+                    pts_exibir = calcular_pontos_1316(r1316)
+                    if pts_exibir < 0:
+                        st.code(f"⚠️ Penalidade aplicada: {pts_exibir:.1f} pontos.", language="text")
+                    else:
+                        st.code("✨ Nenhuma penalidade aplicada (0.0 pontos).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_1316 = st.text_area(
+                    f"Link/Evidência (13.1.6) - {ano_sel}:",
+                    value=v_link_1316,
+                    key=f"link_q1316_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_1316 = st.empty()
+                links_1316_visuais = re.findall(regex_url, link_1316 or "")
+
+                if links_1316_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1316_visuais
+                    ]
+                    placeholder_links_1316.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("13.1.6", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 13.1.6", key=f"btn_salvar_13_1_6_{ano_sel}", type="primary"):
+                valor_salvar = r1316 if r1316 != "Selecione..." else ""
+                pts_salvar = calcular_pontos_1316(r1316)
+                lnk_val = link_1316.strip()
+
+                comentarios_historico = d1316.get("comentarios", [])
+                comentario_simples = d1316.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="13.1.6",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_1316 or "")]
+
+                if lnk_val != v_link_1316 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_1_6_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_1_6_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 13.1.6 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_13_1_6_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("13.1.6", st.session_state.get(f"links_pendentes_13_1_6_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- FUNÇÃO AUXILIAR: Painel de Consolidação Eixo Transporte ---
+# ==============================================================================
+def render_painel_descontos_transporte(res_data: dict):
+    """Renderiza o resumo consolidado de penalidades aplicadas ao Eixo Transporte."""
+    penalidades_totais = sum([
+        res_data.get(q, {}).get("pontos", 0.0) 
+        for q in ["13.1.1", "13.1.2", "13.1.3", "13.1.4", "13.1.5", "13.1.6"]
+    ])
+    if penalidades_totais < 0:
+        st.warning(f"📉 **Penalidades acumuladas no Eixo Transporte:** {penalidades_totais:.1f} pontos")
+
+
+# ==============================================================================
+# --- QUESITO 14.0 (Plano Municipal de Educação) ---
+# ==============================================================================
+def render_questao_14_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 14.0 (Plano Municipal de Educação)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    st.markdown("## EIXO 10: PLANO MUNICIPAL DE EDUCAÇÃO")
+
+    with st.container(key=f"container_bloco_ieduc_14_0_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 14.0 - Plano Municipal de Educação ({ano_sel})", expanded=True):
+            st.subheader("14.0 • Plano Municipal de Educação")
+            st.write("**O município possui o Plano Municipal de Educação?**")
+
+            d140 = res_data.get("14.0") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_140 = d140.get("valor", "")
+            v_link_140 = d140.get("link", "")
+
+            opc140 = ["Selecione...", "Sim – 00", "Não – -50 (perde 50 pontos)"]
+
+            def calcular_pontos_140(opcao):
+                if "Não" in opcao:
+                    return -50.0
+                return 0.0
+
+            idx_140 = opc140.index(v_banco_140) if v_banco_140 in opc140 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r140 = st.radio(
+                    "Selecione a opção para o Quesito 14.0:",
+                    opc140,
+                    index=idx_140,
+                    key=f"radio_q140_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r140 != "Selecione...":
+                    pts_exibir = calcular_pontos_140(r140)
+                    if pts_exibir < 0:
+                        st.code(f"⚠️ Penalidade severa aplicada: {pts_exibir:.1f} pontos.", language="text")
+                    else:
+                        st.code("✨ Nenhuma penalidade aplicada (0.0 pontos).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_140 = st.text_area(
+                    f"Link Geral/Evidência (14.0) - {ano_sel}:",
+                    value=v_link_140,
+                    key=f"link_q140_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_140 = st.empty()
+                links_140_visuais = re.findall(regex_url, link_140 or "")
+
+                if links_140_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_140_visuais
+                    ]
+                    placeholder_links_140.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("14.0", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 14.0", key=f"btn_salvar_14_0_{ano_sel}", type="primary"):
+                valor_salvar = r140 if r140 != "Selecione..." else ""
+                pts_salvar = calcular_pontos_140(r140)
+                lnk_val = link_140.strip()
+
+                comentarios_historico = d140.get("comentarios", [])
+                comentario_simples = d140.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="14.0",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_140 or "")]
+
+                if lnk_val != v_link_140 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_14_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_14_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 14.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_14_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("14.0", st.session_state.get(f"links_pendentes_14_0_{ano_sel}", []), ano_sel)
