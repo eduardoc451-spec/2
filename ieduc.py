@@ -3451,7 +3451,6 @@ def render_questao_1_9_ieduc(res_data: dict, ano_sel: str):
         if modal_aviso_func:
             modal_aviso_func("1.9", st.session_state.get(f"links_pendentes_1_9_{ano_sel}", []), ano_sel)
 
-
 # =============================================================================
 # QUESITO 1.10 • REUNIÕES PERIÓDICAS COM OS PAIS (CRECHE)
 # =============================================================================
@@ -3477,22 +3476,22 @@ def render_questao_1_10_ieduc(res_data: dict, ano_sel: str):
             v_banco_110 = d110.get("valor", "")
             evidencia_110_salva = d110.get("link", "")
 
+            # Mapeamento com as pontuações exibidas nas alternativas
             mapa_pontos_110 = {
-                "Sobre planejamento e desempenho da criança": 2.0,
-                "Apenas sobre o projeto político-pedagógico": 1.5,
-                "Apenas sobre o desempenho da criança": 1.0,
-                "Não realiza reuniões periódicas": 0.0
+                "Sobre planejamento e desempenho da criança (2,0 pontos)": 2.0,
+                "Apenas sobre o projeto político-pedagógico (1,5 pontos)": 1.5,
+                "Apenas sobre o desempenho da criança (1,0 ponto)": 1.0,
+                "Não realiza reuniões periódicas (0,0 ponto)": 0.0
             }
 
             opcoes_110 = list(mapa_pontos_110.keys())
             
-            # Ajuste defensivo para recuperar opção vinda do banco (tratando legado com sufixo)
+            # Ajuste defensivo para recuperar a opção vinda do banco (compatível com textos legados sem pontuação no rótulo)
             idx110 = None
-            if v_banco_110 in opcoes_110:
-                idx110 = opcoes_110.index(v_banco_110)
-            else:
+            if v_banco_110:
                 for idx, op in enumerate(opcoes_110):
-                    if op in v_banco_110:
+                    texto_base = op.split(" (")[0]
+                    if v_banco_110 == op or v_banco_110 == texto_base or texto_base in v_banco_110:
                         idx110 = idx
                         break
 
@@ -3530,11 +3529,11 @@ def render_questao_1_10_ieduc(res_data: dict, ano_sel: str):
                     ]
                     placeholder_links_110.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
-            # Atribuição de pontos e exibição
+            # Atribuição de pontos e exibição reativa
             pts_110 = mapa_pontos_110.get(r110, 0.0) if r110 else 0.0
 
             if r110:
-                st.code(f"📊 Opção Selecionada: {r110} | Pontuação: {pts_110:.1f} pontos (Máx: 2.0 pontos).", language="text")
+                st.code(f"📊 Opção Selecionada: {r110} | Pontuação: {pts_110:.1f} pontos", language="text")
             else:
                 st.code("⚠️ Status: Nenhuma opção selecionada.", language="text")
 
