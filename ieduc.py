@@ -20862,3 +20862,273 @@ def render_questao_16_4_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_16_4_{ano_sel}", []),
                 ano_sel,
             )
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 16.4.1 (Motivos da Não Aprovação de Contas) ---
+# ------------------------------------------------------------------------------
+def render_questao_16_4_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 16.4.1 (Motivos da Não Aprovação de Contas)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_16_4_1_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 16.4.1 - Motivos da Não Aprovação de Contas ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("16.4.1 • Motivos da Não Aprovação de Contas")
+            st.write("**Informe quais os motivos da não aprovação:**")
+
+            d1641 = res_data.get("16.4.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_1641 = d1641.get("valor", "")
+            v_link_1641 = d1641.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_1641 = st.text_area(
+                    "Motivos da não aprovação:",
+                    value=v_banco_1641,
+                    key=f"txt_q1641_{ano_sel}",
+                    placeholder="Detalhe os motivos da rejeição das contas...",
+                    height=135,
+                )
+
+                if txt_1641.strip():
+                    st.code("✨ Justificativa registrada com sucesso.", language="text")
+                else:
+                    st.code(
+                        "💡 Caso aplicável, detalhe os motivos da rejeição das contas.",
+                        language="text",
+                    )
+
+            with col_evidencia:
+                link_1641 = st.text_area(
+                    f"Link/Evidência (16.4.1) - {ano_sel}:",
+                    value=v_link_1641,
+                    key=f"link_q1641_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=135,
+                )
+
+                placeholder_links_1641 = st.empty()
+                links_1641_visuais = re.findall(regex_url, link_1641 or "")
+
+                if links_1641_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1641_visuais
+                    ]
+                    placeholder_links_1641.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("16.4.1", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 16.4.1",
+                key=f"btn_salvar_16_4_1_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = txt_1641.strip()
+                pts_salvar = 0.0
+                lnk_val = link_1641.strip()
+
+                comentarios_historico = d1641.get("comentarios", [])
+                comentario_simples = d1641.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="16.4.1",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_1641 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_1641
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_16_4_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_16_4_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 16.4.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_16_4_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "16.4.1",
+                st.session_state.get(f"links_pendentes_16_4_1_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 16.5 (Quantidade de Reuniões Realizadas pelo CME) ---
+# ------------------------------------------------------------------------------
+def render_questao_16_5_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 16.5 (Reuniões Realizadas pelo CME)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_16_5_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 16.5 - Reuniões Realizadas pelo CME ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("16.5 • Reuniões Realizadas pelo CME")
+            st.write(
+                "**Quantas reuniões foram realizadas pelo Conselho Municipal de Educação no último exercício?**"
+            )
+            st.caption(
+                "⚠️ *Não considerar reuniões de eleição/exclusão de membros, aprovação de orçamento ou outro assunto não relacionado à natureza do Conselho.*"
+            )
+
+            d165 = res_data.get("16.5") or {
+                "valor": "0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_165 = d165.get("valor", "0")
+            v_link_165 = d165.get("link", "")
+
+            try:
+                val_int_padrao = int(v_banco_165) if str(v_banco_165).isdigit() else 0
+            except ValueError:
+                val_int_padrao = 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                qtd_reunioes = st.number_input(
+                    "Quantidade de reuniões realizadas:",
+                    min_value=0,
+                    step=1,
+                    value=val_int_padrao,
+                    key=f"num_q165_{ano_sel}",
+                )
+
+                # Regra de cálculo de pontuação para a 16.5
+                if qtd_reunioes >= 12:
+                    pts_exibir = 3.0
+                elif 8 <= qtd_reunioes < 12:
+                    pts_exibir = 1.5
+                elif 4 <= qtd_reunioes < 8:
+                    pts_exibir = 1.0
+                else:
+                    pts_exibir = 0.0
+
+                st.code(
+                    f"✨ Pontuação Obtida: {pts_exibir:.1f} / 3.0 pontos.",
+                    language="text",
+                )
+
+            with col_evidencia:
+                link_165 = st.text_area(
+                    f"Link/Evidência (16.5) - {ano_sel}:",
+                    value=v_link_165,
+                    key=f"link_q165_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=135,
+                )
+
+                placeholder_links_165 = st.empty()
+                links_165_visuais = re.findall(regex_url, link_165 or "")
+
+                if links_165_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_165_visuais
+                    ]
+                    placeholder_links_165.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("16.5", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 16.5",
+                key=f"btn_salvar_16_5_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = str(qtd_reunioes)
+                pts_salvar = pts_exibir
+                lnk_val = link_165.strip()
+
+                comentarios_historico = d165.get("comentarios", [])
+                comentario_simples = d165.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="16.5",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_165 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_165
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_16_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_16_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 16.5 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_16_5_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "16.5",
+                st.session_state.get(f"links_pendentes_16_5_{ano_sel}", []),
+                ano_sel,
+            )
