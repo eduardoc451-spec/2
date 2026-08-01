@@ -9465,3 +9465,337 @@ def render_questao_3_4_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.4", st.session_state.get(f"links_pendentes_3_4_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.5 • Participação em Capacitação - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_5_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.5 (Participação em Capacitação)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_5_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.5 • Participação em Capacitação - Anos Iniciais ({ano_sel})", expanded=True):
+            st.subheader("3.5 • Participação em Capacitação")
+            st.write(f"**Os profissionais dos Anos Iniciais da rede municipal participaram de cursos de capacitação durante o ano de {ano_sel}?**")
+
+            d35 = res_data.get("3.5") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_35_salva = d35.get("link", "")
+            v_banco_35 = str(d35.get("valor", ""))
+
+            opc35 = ["Selecione...", "Sim", "Não"]
+            idx_35 = opc35.index(v_banco_35) if v_banco_35 in opc35 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione a opção:</label>', unsafe_allow_html=True)
+                r35 = st.radio(
+                    "",
+                    options=opc35,
+                    index=idx_35,
+                    key=f"radio_q35_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r35 == "Sim":
+                    st.success("🟢 Capacitação realizada e registrada para o período.")
+                elif r35 == "Não":
+                    st.warning("⚠️ Atenção: Nenhuma atividade de capacitação foi registrada para este grupo.")
+                else:
+                    st.info("💡 Por favor, selecione uma opção válida (Sim/Não).")
+
+            with col_evidencia:
+                link_35 = st.text_area(
+                    f"Link/Evidência (3.5) - {ano_sel}:",
+                    value=evidencia_35_salva,
+                    key=f"link_q35_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_35 = st.empty()
+                links_35_visuais = re.findall(regex_url, link_35 or "")
+
+                if links_35_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_35_visuais
+                    ]
+                    placeholder_links_35.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.5", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.5", key=f"btn_salvar_3_5_{ano_sel}", type="primary"):
+                str_valor_35 = r35 if r35 != "Selecione..." else ""
+                lnk_val = link_35.strip()
+
+                comentarios_historico = d35.get("comentarios", [])
+                comentario_simples = d35.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.5",
+                        valor=str_valor_35,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_35_salva or "")]
+
+                if lnk_val != evidencia_35_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.5 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_5_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.5", st.session_state.get(f"links_pendentes_3_5_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.5.1 • Indicador de Capacitação PC - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_5_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.5.1 (Quantidade e Cálculo PC)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_5_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.5.1 • Indicador de Capacitação ({ano_sel})", expanded=True):
+            st.subheader("3.5.1 • Indicador de Capacitação")
+            st.write(f"**Informe a quantidade de profissionais dos Anos Iniciais capacitados e totais:**")
+            st.caption("ℹ️ *Não conte o mesmo profissional mais de uma vez, mesmo se tiver participado de vários cursos.*")
+
+            d351 = res_data.get("3.5.1") or {
+                "valor": "PRC:0,PAC:0,GSC:0,TOT_P:0,TOT_A:0,TOT_G:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_351_salva = d351.get("link", "")
+
+            # Parsing seguro
+            try:
+                parts_351 = {p.split(":")[0]: int(p.split(":")[1]) for p in str(d351.get("valor", "")).split(",")}
+            except Exception:
+                parts_351 = {"PRC": 0, "PAC": 0, "GSC": 0, "TOT_P": 0, "TOT_A": 0, "TOT_G": 0}
+
+            col1, col2, col3 = st.columns([1, 1, 1])
+
+            with col1:
+                st.markdown("**🟢 Profissionais Capacitados:**")
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Professores regentes capacitados:</label>', unsafe_allow_html=True)
+                prc = st.number_input("", min_value=0, value=int(parts_351.get("PRC", 0)), step=1, key=f"num_q351_prc_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Apoio/Supervisão capacitados:</label>', unsafe_allow_html=True)
+                pac = st.number_input("", min_value=0, value=int(parts_351.get("PAC", 0)), step=1, key=f"num_q351_pac_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Gestores escolares capacitados:</label>', unsafe_allow_html=True)
+                gsc = st.number_input("", min_value=0, value=int(parts_351.get("GSC", 0)), step=1, key=f"num_q351_gsc_{ano_sel}", label_visibility="collapsed")
+
+            with col2:
+                st.markdown("**📊 Total no Quadro:**")
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Total de professores regentes:</label>', unsafe_allow_html=True)
+                tot_p = st.number_input("", min_value=0, value=int(parts_351.get("TOT_P", 0)), step=1, key=f"num_q351_tot_p_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Total de apoio/supervisão:</label>', unsafe_allow_html=True)
+                tot_a = st.number_input("", min_value=0, value=int(parts_351.get("TOT_A", 0)), step=1, key=f"num_q351_tot_a_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Total de gestores escolares:</label>', unsafe_allow_html=True)
+                tot_g = st.number_input("", min_value=0, value=int(parts_351.get("TOT_G", 0)), step=1, key=f"num_q351_tot_g_{ano_sel}", label_visibility="collapsed")
+
+            with col3:
+                st.markdown("**🔗 Evidência:**")
+                link_351 = st.text_area(
+                    f"Link/Evidência (3.5.1) - {ano_sel}:",
+                    value=evidencia_351_salva,
+                    key=f"link_q351_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=205,
+                    label_visibility="collapsed"
+                )
+
+                placeholder_links_351 = st.empty()
+                links_351_visuais = re.findall(regex_url, link_351 or "")
+
+                if links_351_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_351_visuais
+                    ]
+                    placeholder_links_351.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo PC
+            total_capacitados = prc + pac + gsc
+            total_geral_quadro = tot_p + tot_a + tot_g
+            pc_pct = 0.0
+            pts351 = 0.0
+
+            if total_geral_quadro > 0:
+                pc_pct = (total_capacitados / total_geral_quadro) * 100.0
+                if pc_pct >= 100.0: pts351 = 7.0
+                elif pc_pct >= 70.0: pts351 = 5.0
+                elif pc_pct >= 50.0: pts351 = 3.0
+                else: pts351 = 0.0
+                texto_painel = f"🎯 Indicador PC: {pc_pct:.1f}% ({total_capacitados} de {total_geral_quadro} profissionais) | Pontuação: {pts351:.1f} / 7.0 pontos"
+            else:
+                texto_painel = "⚠️ Status: Aguardando o preenchimento dos totais do quadro para calcular o Indicador PC."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.5.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.5.1", key=f"btn_salvar_3_5_1_{ano_sel}", type="primary"):
+                str_valor_351 = f"PRC:{prc},PAC:{pac},GSC:{gsc},TOT_P:{tot_p},TOT_A:{tot_a},TOT_G:{tot_g}"
+                lnk_val = link_351.strip()
+
+                comentarios_historico = d351.get("comentarios", [])
+                comentario_simples = d351.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.5.1",
+                        valor=str_valor_351,
+                        pontos=float(pts351),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_351_salva or "")]
+
+                if lnk_val != evidencia_351_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_5_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_5_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.5.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_5_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.5.1", st.session_state.get(f"links_pendentes_3_5_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.5.2 • Formas de Capacitação - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_5_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.5.2 (Formas de Capacitação)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_5_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.5.2 • Formas de Capacitação ({ano_sel})", expanded=True):
+            st.subheader("3.5.2 • Formas de Capacitação")
+            st.write("**Assinale as modalidades de capacitação utilizadas:**")
+
+            d352 = res_data.get("3.5.2") or {
+                "valor": "PRE:0,DIS:0,MUL:0,OUT:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_352_salva = d352.get("link", "")
+
+            # Parsing seguro
+            try:
+                parts_352 = {p.split(":")[0]: int(p.split(":")[1]) for p in str(d352.get("valor", "")).split(",")}
+            except Exception:
+                parts_352 = {"PRE": 0, "DIS": 0, "MUL": 0, "OUT": 0}
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<div style="padding-top: 5px;"></div>', unsafe_allow_html=True)
+                c_pre = st.checkbox("Presencialmente", value=bool(parts_352.get("PRE", 0)), key=f"chk_q352_pre_{ano_sel}")
+                c_dis = st.checkbox("À distância/remotamente", value=bool(parts_352.get("DIS", 0)), key=f"chk_q352_dis_{ano_sel}")
+                c_mul = st.checkbox("Por meio de multiplicadores", value=bool(parts_352.get("MUL", 0)), key=f"chk_q352_mul_{ano_sel}")
+                c_out = st.checkbox("Outros", value=bool(parts_352.get("OUT", 0)), key=f"chk_q352_out_{ano_sel}")
+
+                total_marcados = sum([int(c_pre), int(c_dis), int(c_mul), int(c_out)])
+                if total_marcados > 0:
+                    st.caption(f"✅ {total_marcados} modalidade(s) selecionada(s).")
+                else:
+                    st.caption("⚠️ Nenhuma modalidade marcada.")
+
+            with col_evidencia:
+                link_352 = st.text_area(
+                    f"Link/Evidência (3.5.2) - {ano_sel}:",
+                    value=evidencia_352_salva,
+                    key=f"link_q352_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=155
+                )
+
+                placeholder_links_352 = st.empty()
+                links_352_visuais = re.findall(regex_url, link_352 or "")
+
+                if links_352_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_352_visuais
+                    ]
+                    placeholder_links_352.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.5.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.5.2", key=f"btn_salvar_3_5_2_{ano_sel}", type="primary"):
+                str_valor_352 = f"PRE:{int(c_pre)},DIS:{int(c_dis)},MUL:{int(c_mul)},OUT:{int(c_out)}"
+                lnk_val = link_352.strip()
+
+                comentarios_historico = d352.get("comentarios", [])
+                comentario_simples = d352.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.5.2",
+                        valor=str_valor_352,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_352_salva or "")]
+
+                if lnk_val != evidencia_352_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_5_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_5_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.5.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_5_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.5.2", st.session_state.get(f"links_pendentes_3_5_2_{ano_sel}", []), ano_sel)
