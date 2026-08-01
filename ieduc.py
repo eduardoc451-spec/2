@@ -1091,7 +1091,7 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
 
             opcoes_10 = {
                 "Selecione...": 0.0,
-                "Sim": 1.0,
+                "Sim": 0.0,
                 "Não": 0.0
             }
 
