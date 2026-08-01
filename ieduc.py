@@ -3980,3 +3980,389 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.11.1", st.session_state.get(f"links_pendentes_1_11_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.11.2 • MOTIVO DA NÃO ENTREGA DO KIT (CRECHE)
+# =============================================================================
+
+def render_questao_1_11_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.11.2 (Motivo da Não Entrega do Kit - Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_11_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.11.2 • Motivo da Não Entrega do Kit ({ano_sel})", expanded=True):
+            st.subheader("1.11.2 • Motivo da Não Entrega do Kit (Creche)")
+            st.write(f"**Informe o motivo de não ter sido entregue o kit escolar nas Creches em {ano_sel}:**")
+            st.caption("ℹ️ *Preencha o motivo, insira os links de evidência e clique no botão 'Salvar Questão 1.11.2' para registrar.*")
+
+            d1112 = res_data.get("1.11.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_1112 = d1112.get("valor", "")
+            evidencia_1112_salva = d1112.get("link", "")
+
+            chave_motivo_1112 = f"txt_motivo_1112_{ano_sel}"
+            chave_link_1112 = f"l1112_txt_creche_{ano_sel}"
+
+            c1112_1, c1112_2 = st.columns([3, 2])
+
+            with c1112_1:
+                st.markdown(f"##### 📝 Justificativa ({ano_sel})")
+                motivo_1112 = st.text_area(
+                    "Motivo da não entrega:",
+                    value=v_banco_1112,
+                    key=chave_motivo_1112,
+                    height=140,
+                    placeholder="Digite detalhadamente o motivo da não entrega dos kits..."
+                )
+
+            with c1112_2:
+                link_1112 = st.text_area(
+                    f"Link/Evidência (1.11.2) - {ano_sel}:",
+                    value=evidencia_1112_salva,
+                    key=chave_link_1112,
+                    placeholder="Insira os links...",
+                    height=140
+                )
+
+                placeholder_links_1112 = st.empty()
+                links_1112_visuais = re.findall(regex_url, link_1112 or "")
+
+                if links_1112_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_1112_visuais
+                    ]
+                    placeholder_links_1112.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            pts_1112 = 0.0
+
+            if motivo_1112.strip():
+                texto_painel = f"📊 Status: Motivo preenchido com sucesso. | Tamanho: {len(motivo_1112)} caracteres (Dados Informativos)."
+            else:
+                texto_painel = "⚠️ Status: Campo de motivo em branco. Por favor, insira a justificativa."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.11.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.11.2", key=f"btn_salvar_1_11_2_{ano_sel}", type="primary"):
+                v_sel = motivo_1112.strip()
+                lnk_val = link_1112.strip()
+
+                comentarios_historico = d1112.get("comentarios", [])
+                comentario_simples = d1112.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.11.2",
+                        valor=v_sel,
+                        pontos=float(pts_1112),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_1112_salva or "")]
+
+                if lnk_val != evidencia_1112_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_11_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_11_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.11.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_11_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.11.2", st.session_state.get(f"links_pendentes_1_11_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.12 • ENTREGA DE MATERIAL DIDÁTICO NAS CRECHES (IEDUC)
+# =============================================================================
+
+def render_questao_1_12_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.12 (Entrega de Material Didático - Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_12_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.12 • Entrega de Material Didático ({ano_sel})", expanded=True):
+            st.subheader("1.12 • Entrega de Material Didático (Creche)")
+            st.write(f"**Houve entrega do material didático (livros, apostilas, etc.) às Creches municipais em {ano_sel}?**")
+            st.caption("💡 *Apostilas/livros fornecidos pelo Município e/ou Estado e/ou Governo Federal.*")
+            st.caption("ℹ️ *Selecione a opção desejada, insira os links e clique no botão 'Salvar Questão 1.12' para registrar.*")
+
+            d12 = res_data.get("1.12") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_12 = d12.get("valor", "")
+            evidencia_12_salva = d12.get("link", "")
+
+            opcoes_12 = [
+                "Sim",
+                "Não",
+                "O material didático é elaborado na própria escola"
+            ]
+
+            idx_12 = None
+            if v_banco_12:
+                for idx, op in enumerate(opcoes_12):
+                    if op.lower() in v_banco_12.lower() or v_banco_12.lower() in op.lower():
+                        idx_12 = idx
+                        break
+
+            chave_radio_12 = f"radio_q12_{ano_sel}"
+            chave_link_12 = f"l12_txt_creche_{ano_sel}"
+
+            c12_1, c12_2 = st.columns([3, 2])
+
+            with c12_1:
+                st.markdown(f"##### 📚 Situação da Entrega ({ano_sel})")
+                r12 = st.radio(
+                    f"Selecione uma opção para {ano_sel}:",
+                    opcoes_12,
+                    index=idx_12,
+                    key=chave_radio_12,
+                    help="Escolha a condição em que os materiais didáticos foram disponibilizados."
+                )
+
+            with c12_2:
+                link_12 = st.text_area(
+                    f"Link/Evidência (1.12) - {ano_sel}:",
+                    value=evidencia_12_salva,
+                    key=chave_link_12,
+                    placeholder="Insira os links...",
+                    height=100
+                )
+
+                placeholder_links_12 = st.empty()
+                links_12_visuais = re.findall(regex_url, link_12 or "")
+
+                if links_12_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_12_visuais
+                    ]
+                    placeholder_links_12.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            pts12 = 18.0 if (r12 and "elaborado na própria escola" in r12.lower()) else 0.0
+
+            if r12:
+                st.code(f"📊 Selecionado: {r12} | Pontuação: {pts12:.1f} pontos", language="text")
+            else:
+                st.code("⚠️ Status: Nenhuma opção selecionada.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.12", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.12", key=f"btn_salvar_1_12_{ano_sel}", type="primary"):
+                v_sel = r12 if r12 else ""
+                lnk_val = link_12.strip()
+
+                comentarios_historico = d12.get("comentarios", [])
+                comentario_simples = d12.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.12",
+                        valor=v_sel,
+                        pontos=float(pts12),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_12_salva or "")]
+
+                if lnk_val != evidencia_12_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_12_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_12_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.12 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_12_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.12", st.session_state.get(f"links_pendentes_1_12_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.12.1 • DATA DA ÚLTIMA ENTREGA DO MATERIAL DIDÁTICO (IEDUC)
+# =============================================================================
+
+def render_questao_1_12_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.12.1 (Data da Última Entrega do Material Didático - Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_12_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.12.1 • Data da Última Entrega do Material ({ano_sel})", expanded=True):
+            st.subheader("1.12.1 • Data da Última Entrega do Material Didático (Creche)")
+            st.write(f"**Informe as datas de início das aulas e da última entrega do material didático nas Creches em {ano_sel}:**")
+            
+            st.markdown("""
+            **Fórmula de cálculo:**
+            * **Data de Entrega $\le$ início das aulas:** 18,0 pontos
+            * **Data de Entrega < início das aulas + 15 dias:** 9,0 pontos
+            * **Data de Entrega $\ge$ início das aulas + 15 dias:** 3,0 pontos
+            """)
+            st.caption("ℹ️ *Preencha/altere as datas abaixo, insira os links e clique no botão 'Salvar Questão 1.12.1' para registrar.*")
+
+            d121 = res_data.get("1.12.1") or {
+                "valor": f"01/02/{ano_sel}",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_121 = d121.get("valor", f"01/02/{ano_sel}")
+            evidencia_121_salva = d121.get("link", "")
+
+            # Trata o ano informado com fallback seguro
+            try:
+                ano_int = int(ano_sel)
+            except (ValueError, TypeError):
+                ano_int = datetime.date.today().year
+
+            # 1. Recuperação segura do session_state (evita reatribuição durante a renderização)
+            key_dt_inicio_mat = f"q121_dt_inicio_{ano_sel}"
+            if key_dt_inicio_mat not in st.session_state:
+                st.session_state[key_dt_inicio_mat] = datetime.date(ano_int, 2, 5)
+
+            key_chk_121 = f"chk_ativar_auditoria_mat_{ano_sel}"
+            padrao_check_121 = bool(v_banco_121 and v_banco_121 != f"01/02/{ano_sel}")
+            if key_chk_121 not in st.session_state:
+                st.session_state[key_chk_121] = padrao_check_121
+
+            chave_link_121 = f"l121_txt_creche_{ano_sel}"
+
+            c121_1, c121_2 = st.columns([3, 2])
+
+            with c121_1:
+                st.markdown("##### 📅 Datas de Auditoria")
+                ativou_datas_121 = st.checkbox("Informar/Alterar datas de entrega", key=key_chk_121)
+
+                if ativou_datas_121:
+                    st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
+                    
+                    dt_inicio_121 = st.date_input(
+                        "Data de início das aulas:",
+                        format="DD/MM/YYYY",
+                        key=key_dt_inicio_mat
+                    )
+
+                    try:
+                        dia_s, mes_s, ano_s = v_banco_121.split("/")
+                        data_inicial_entrega_121 = datetime.date(int(ano_s), int(mes_s), int(dia_s))
+                    except Exception:
+                        data_inicial_entrega_121 = dt_inicio_121
+
+                    dt_entrega_121 = st.date_input(
+                        "Data da última entrega na escola:",
+                        value=data_inicial_entrega_121,
+                        format="DD/MM/YYYY",
+                        key=f"q121_dt_entrega_{ano_sel}"
+                    )
+                else:
+                    dt_inicio_121 = st.session_state[key_dt_inicio_mat]
+                    dt_entrega_121 = None
+
+            with c121_2:
+                link_121 = st.text_area(
+                    f"Link/Evidência (1.12.1) - {ano_sel}:",
+                    value=evidencia_121_salva,
+                    key=chave_link_121,
+                    placeholder="Insira os links...",
+                    height=80
+                )
+
+                placeholder_links_121 = st.empty()
+                links_121_visuais = re.findall(regex_url, link_121 or "")
+
+                if links_121_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_121_visuais
+                    ]
+                    placeholder_links_121.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            if ativou_datas_121 and dt_entrega_121 is not None:
+                prazo_15_dias_121 = dt_inicio_121 + datetime.timedelta(days=15)
+
+                if dt_entrega_121 <= dt_inicio_121:
+                    pts121 = 18.0
+                    msg_status = f"Sucesso: Entrega realizada antes ou no início das aulas! | Entrega: {dt_entrega_121.strftime('%d/%m/%Y')} | Início: {dt_inicio_121.strftime('%d/%m/%Y')}"
+                elif dt_entrega_121 < prazo_15_dias_121:
+                    pts121 = 9.0
+                    msg_status = f"Atenção: Entrega realizada com até 15 dias de atraso. | Entrega: {dt_entrega_121.strftime('%d/%m/%Y')} | Início: {dt_inicio_121.strftime('%d/%m/%Y')}"
+                else:
+                    pts121 = 3.0
+                    msg_status = f"Aviso: Entrega realizada após 15 dias do início das aulas. | Entrega: {dt_entrega_121.strftime('%d/%m/%Y')} | Início: {dt_inicio_121.strftime('%d/%m/%Y')}"
+
+                str_dt_121 = dt_entrega_121.strftime("%d/%m/%Y")
+                texto_painel = f"📊 Pontuação Resultante: {pts121:.1f} pontos | {msg_status}"
+            else:
+                pts121 = 0.0
+                str_dt_121 = ""
+                texto_painel = "⚠️ Status: Nenhuma data de entrega preenchida (Caixa desmarcada)."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.12.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.12.1", key=f"btn_salvar_1_12_1_{ano_sel}", type="primary"):
+                v_sel = str_dt_121
+                lnk_val = link_121.strip()
+
+                comentarios_historico = d121.get("comentarios", [])
+                comentario_simples = d121.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.12.1",
+                        valor=v_sel,
+                        pontos=float(pts121),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_121_salva or "")]
+
+                if lnk_val != evidencia_121_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_12_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_12_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.12.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_12_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.12.1", st.session_state.get(f"links_pendentes_1_12_1_{ano_sel}", []), ano_sel)
