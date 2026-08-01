@@ -5023,3 +5023,286 @@ def render_questao_1_13_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.13.1", st.session_state.get(f"links_pendentes_1_13_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.14 • EQUILÍBRIO DE DEMANDA E OFERTA DE VAGAS EM CRECHE (IEDUC)
+# =============================================================================
+def render_questao_1_14_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.14 (Equilíbrio de Demanda e Oferta de Vagas - Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_14_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.14 • Equilíbrio de Demanda e Oferta de Vagas ({ano_sel})", expanded=True):
+            st.subheader("1.14 • Equilíbrio de Demanda e Oferta de Vagas (Creche)")
+            st.write(f"**Informe os dados de solicitação e oferta de vagas para frequência em {ano_sel}:**")
+            st.markdown("""
+            *Fórmula de cálculo:*
+            * **Demanda (Solicitadas) $>$ Oferta (Ofertadas):** $-50.0$ pontos (Penalidade)
+            * **Demanda (Solicitadas) $\le$ Oferta (Ofertadas):** $0.0$ pontos (Sem perda)
+            """)
+            st.caption("ℹ️ *Preencha os valores de solicitação, oferta e o link de evidência, depois clique no botão 'Salvar Questão 1.14' para registrar.*")
+
+            d14 = res_data.get("1.14") or {
+                "valor": "0;0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_14 = d14.get("valor", "0;0")
+            evidencia_14_salva = d14.get("link", "")
+
+            # Recupera os valores inteiros salvos
+            try:
+                demanda_salva, oferta_salva = map(int, v_banco_14.split(";"))
+            except Exception:
+                demanda_salva, oferta_salva = 0, 0
+
+            chave_demanda_14 = f"num_demanda_114_{ano_sel}"
+            chave_oferta_14 = f"num_oferta_114_{ano_sel}"
+            chave_link_14 = f"l14_txt_creche_{ano_sel}"
+
+            c14_1, c14_2 = st.columns([1, 1])
+
+            with c14_1:
+                st.markdown(f'<label style="font-size: 13px; font-weight: 500;">1. N° de crianças (0 a 3 anos) que solicitaram vaga até 31/12/{ano_sel}:</label>', unsafe_allow_html=True)
+                v_demanda = st.number_input(
+                    "Crianças que solicitaram vaga",
+                    min_value=0,
+                    value=demanda_salva,
+                    step=1,
+                    key=chave_demanda_14,
+                    label_visibility="collapsed"
+                )
+
+                st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+                st.markdown(f'<label style="font-size: 13px; font-weight: 500;">2. Número de vagas de creche ofertadas em {ano_sel}:</label>', unsafe_allow_html=True)
+                v_oferta = st.number_input(
+                    "Vagas ofertadas",
+                    min_value=0,
+                    value=oferta_salva,
+                    step=1,
+                    key=chave_oferta_14,
+                    label_visibility="collapsed"
+                )
+
+            with c14_2:
+                link_14 = st.text_area(
+                    f"Link/Evidência (1.14) - {ano_sel}:",
+                    value=evidencia_14_salva,
+                    key=chave_link_14,
+                    placeholder="Insira os links...",
+                    height=140
+                )
+
+                placeholder_links_14 = st.empty()
+                links_14_visuais = re.findall(regex_url, link_14 or "")
+
+                if links_14_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_14_visuais
+                    ]
+                    placeholder_links_14.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de pontuação e painel
+            if v_demanda > v_oferta:
+                pts_14 = -50.0
+                deficit = v_demanda - v_oferta
+                texto_painel = f"📊 Resultado: Demanda ({v_demanda}) > Oferta ({v_oferta}) | Déficit de {deficit} vagas | Pontos: {pts_14:.1f} (Penalidade Aplicada)"
+            else:
+                pts_14 = 0.0
+                texto_painel = f"📊 Resultado: Demanda ({v_demanda}) <= Oferta ({v_oferta}) | Atendimento Pleno | Pontos: {pts_14:.1f}"
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.14", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.14", key=f"btn_salvar_1_14_{ano_sel}", type="primary"):
+                v_sel = f"{v_demanda};{v_oferta}"
+                lnk_val = link_14.strip()
+
+                comentarios_historico = d14.get("comentarios", [])
+                comentario_simples = d14.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.14",
+                        valor=v_sel,
+                        pontos=float(pts_14),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_14_salva or "")]
+
+                if lnk_val != evidencia_14_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_14_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_14_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.14 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_14_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.14", st.session_state.get(f"links_pendentes_1_14_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.15 • QUANTIDADE DE TURMAS DE CRECHE POR FAIXA (IEDUC)
+# =============================================================================
+def render_questao_1_15_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.15 (Distribuição de Alunos por Turma de Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_15_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.15 • Distribuição de Alunos por Turma ({ano_sel})", expanded=True):
+            st.subheader("1.15 • Quantidade de Turmas de Creche por Faixa")
+            st.write(f"**Informe a quantidade de turmas de Creche em cada faixa de alunos em {ano_sel}:**")
+            st.markdown("""
+            *Fórmula de cálculo:*
+            * $$NF = Pmax \\times (N1 + N2 + N3 + N4)$$
+            * **N1 = 1 x P1** (Até 13 alunos)
+            * **N2 = 0,5 x P2** (De 14 a 20 alunos)
+            * **N3 = 0,25 x P3** (De 21 a 25 alunos)
+            * **N4 = 0 x P4** (Acima de 25 alunos)
+            
+            *Legenda: Ni = Nota obtida por cada faixa | Pi = Proporção de turmas na faixa | NF = Nota final*
+            * $Pmax = 10.0$ pontos
+            """)
+            st.caption("ℹ️ *Preencha as turmas em cada faixa, insira o link de evidência e clique no botão 'Salvar Questão 1.15' para registrar.*")
+
+            d15 = res_data.get("1.15") or {
+                "valor": "F1:0,F2:0,F3:0,F4:0,TOTAL:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_15 = d15.get("valor", "F1:0,F2:0,F3:0,F4:0,TOTAL:0")
+            evidencia_15_salva = d15.get("link", "")
+
+            # Parse seguro das faixas salvas
+            try:
+                parts_15 = v_banco_15.split(",")
+                v_t1 = int(parts_15[0].split(":")[1])
+                v_t2 = int(parts_15[1].split(":")[1])
+                v_t3 = int(parts_15[2].split(":")[1])
+                v_t4 = int(parts_15[3].split(":")[1])
+            except Exception:
+                v_t1, v_t2, v_t3, v_t4 = 0, 0, 0, 0
+
+            chave_f1 = f"key_q15_fx1_{ano_sel}"
+            chave_f2 = f"key_q15_fx2_{ano_sel}"
+            chave_f3 = f"key_q15_fx3_{ano_sel}"
+            chave_f4 = f"key_q15_fx4_{ano_sel}"
+            chave_link_15 = f"l15_txt_creche_{ano_sel}"
+
+            c15_1, c15_2 = st.columns([1, 1])
+
+            with c15_1:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Até 13 alunos:</label>', unsafe_allow_html=True)
+                t1 = st.number_input("", min_value=0, step=1, value=v_t1, key=chave_f1, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">De 14 a 20 alunos:</label>', unsafe_allow_html=True)
+                t2 = st.number_input("", min_value=0, step=1, value=v_t2, key=chave_f2, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">De 21 a 25 alunos:</label>', unsafe_allow_html=True)
+                t3 = st.number_input("", min_value=0, step=1, value=v_t3, key=chave_f3, label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Acima de 25 alunos:</label>', unsafe_allow_html=True)
+                t4 = st.number_input("", min_value=0, step=1, value=v_t4, key=chave_f4, label_visibility="collapsed")
+
+                total_turmas = t1 + t2 + t3 + t4
+                st.markdown('<label style="font-size: 13px; font-weight: 600; color: #1E3A8A;">Total de Turmas (Somatório Automático):</label>', unsafe_allow_html=True)
+                st.number_input("", value=int(total_turmas), disabled=True, key=f"disp_total_15_{ano_sel}", label_visibility="collapsed")
+
+            with c15_2:
+                link_15 = st.text_area(
+                    f"Link/Evidência (1.15) - {ano_sel}:",
+                    value=evidencia_15_salva,
+                    key=chave_link_15,
+                    placeholder="Insira os links...",
+                    height=260
+                )
+
+                placeholder_links_15 = st.empty()
+                links_15_visuais = re.findall(regex_url, link_15 or "")
+
+                if links_15_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_15_visuais
+                    ]
+                    placeholder_links_15.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo Matemático da Nota Ponderada
+            pts_15 = 0.0
+            if total_turmas > 0:
+                p1 = t1 / total_turmas
+                p2 = t2 / total_turmas
+                p3 = t3 / total_turmas
+                p4 = t4 / total_turmas
+
+                n1 = 1.0 * p1
+                n2 = 0.5 * p2
+                n3 = 0.25 * p3
+                n4 = 0.0 * p4
+
+                pts_15 = min(10.0, float(10.0 * (n1 + n2 + n3 + n4)))
+                texto_painel = (
+                    f"📊 Proporções: F1(<=13): {p1*100:.1f}% | F2(14-20): {p2*100:.1f}% | "
+                    f"F3(21-25): {p3*100:.1f}% | F4(>25): {p4*100:.1f}%\n"
+                    f"✨ Nota Final Calculada: {pts_15:.2f} pontos (Total de {total_turmas} turmas)"
+                )
+            else:
+                texto_painel = "⚠️ Status: Nenhuma turma informada. Insira os dados das faixas acima."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.15", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.15", key=f"btn_salvar_1_15_{ano_sel}", type="primary"):
+                v_sel = f"F1:{t1},F2:{t2},F3:{t3},F4:{t4},TOTAL:{total_turmas}"
+                lnk_val = link_15.strip()
+
+                comentarios_historico = d15.get("comentarios", [])
+                comentario_simples = d15.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.15",
+                        valor=v_sel,
+                        pontos=float(pts_15),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_15_salva or "")]
+
+                if lnk_val != evidencia_15_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_15_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_15_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.15 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_15_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.15", st.session_state.get(f"links_pendentes_1_15_{ano_sel}", []), ano_sel)
