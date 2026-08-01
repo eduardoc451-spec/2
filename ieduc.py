@@ -1435,3 +1435,260 @@ def render_questao_1_1_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.1.1", st.session_state.get(f"links_pendentes_1_1_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.1.2 • MANUTENÇÃO DAS CRECHES (IEDUC)
+# =============================================================================
+
+def render_questao_1_1_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.1.2 (Manutenção das Creches)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_1_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.1.2 • Manutenção das Creches ({ano_sel})", expanded=True):
+            st.subheader("1.1.2 • Manutenção das Creches")
+            st.write("**Informe os dados para o cálculo de manutenção das creches:**")
+            st.markdown("""
+            *Fórmulas de cálculo:*
+            * $P1 = (NMANU / TOTAL) \times Pmáx1$ *(Pmáx1 = -2 pontos)*
+            * $P2 = (NCRON / TOTAL) \times Pmáx2$ *(Pmáx2 = 1 ponto)*
+            * $P3 = (CRON / TOTAL) \times Pmáx3$ *(Pmáx3 = 3 pontos)*
+            * $P = P1 + P2 + P3$
+            """)
+            st.caption("ℹ️ *Preencha os dados abaixo e clique no botão 'Salvar Questão 1.1.2' para registrar.*")
+
+            d112 = res_data.get("1.1.2") or {
+                "valor": "CRON:0,NCRON:0,SOLIC:0,NMANU:0,TOTAL:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_112 = d112.get("valor", "CRON:0,NCRON:0,SOLIC:0,NMANU:0,TOTAL:0")
+            evidencia_112_salva = d112.get("link", "")
+
+            # Parse seguro dos campos numéricos do banco de dados
+            try:
+                parts_m = v_banco_112.split(",")
+                v_cron = int(parts_m[0].split(":")[1])
+                v_ncron = int(parts_m[1].split(":")[1])
+                v_solic = int(parts_m[2].split(":")[1])
+                v_nmanu = int(parts_m[3].split(":")[1])
+            except Exception:
+                v_cron, v_ncron, v_solic, v_nmanu = 0, 0, 0, 0
+
+            # Chaves únicas para os inputs
+            k_cron = f"q112_cron_{ano_sel}"
+            k_ncron = f"q112_ncron_{ano_sel}"
+            k_solic = f"q112_solic_{ano_sel}"
+            k_nmanu = f"q112_nmanu_{ano_sel}"
+            chave_link_112 = f"l_112_txt_{ano_sel}"
+
+            c112_1, c112_2 = st.columns([1, 1])
+
+            with c112_1:
+                cron_val = st.number_input(
+                    "Quantas creches possuem e CUMPRIRAM o cronograma de manutenção preventiva (CRON):",
+                    min_value=0, step=1, value=v_cron, key=k_cron
+                )
+                ncron_val = st.number_input(
+                    "Quantas creches possuem e NÃO CUMPRIRAM o cronograma de manutenção preventiva (NCRON):",
+                    min_value=0, step=1, value=v_ncron, key=k_ncron
+                )
+                solic_val = st.number_input(
+                    "Quantas creches realizam manutenção/troca SOMENTE por solicitação (SOLIC):",
+                    min_value=0, step=1, value=v_solic, key=k_solic
+                )
+                nmanu_val = st.number_input(
+                    "Quantas creches NÃO realizam manutenção/troca dos brinquedos (NMANU):",
+                    min_value=0, step=1, value=v_nmanu, key=k_nmanu
+                )
+
+                total_calculado = cron_val + ncron_val + solic_val + nmanu_val
+                st.markdown('<label style="font-size: 13px; font-weight: 600; color: #1E3A8A;">Total de Creches (Somatório Automático):</label>', unsafe_allow_html=True)
+                st.number_input("", value=int(total_calculado), disabled=True, key=f"disabled_total_112_{ano_sel}", label_visibility="collapsed")
+
+            with c112_2:
+                link_112 = st.text_area(
+                    "Link de Evidência (Relatórios, Contratos, Ordens de Serviço, etc.):",
+                    value=evidencia_112_salva,
+                    key=chave_link_112,
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.1.2...",
+                    height=280,
+                )
+
+                placeholder_links_112 = st.empty()
+                links_112_visuais = re.findall(regex_url, link_112 or "")
+
+                if links_112_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_112_visuais
+                    ]
+                    placeholder_links_112.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de pontuação prévia na tela
+            pts_112 = 0.0
+            if total_calculado > 0:
+                p1 = (nmanu_val / total_calculado) * (-2.0)
+                p2 = (ncron_val / total_calculado) * 1.0
+                p3 = (cron_val / total_calculado) * 3.0
+                pts_112 = float(max(0.0, p1 + p2 + p3))
+                st.code(f"📊 Pontuação Calculada no Quesito 1.1.2: {pts_112:.2f} pontos / 3.0 pontos máximos.", language="text")
+            else:
+                st.code("💡 Insira os quantitativos para realizar o cálculo dinâmico ponderado da nota.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.1.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.1.2", key=f"btn_salvar_1_1_2_{ano_sel}", type="primary"):
+                str_valor_salvar = f"CRON:{cron_val},NCRON:{ncron_val},SOLIC:{solic_val},NMANU:{nmanu_val},TOTAL:{total_calculado}"
+                lnk_val = link_112.strip()
+
+                comentarios_historico = d112.get("comentarios", [])
+                comentario_simples = d112.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.1.2",
+                        valor=str_valor_salvar,
+                        pontos=pts_112,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_112_salva or "")]
+
+                if lnk_val != evidencia_112_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_1_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_1_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.1.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_1_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.1.2", st.session_state.get(f"links_pendentes_1_1_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.2 • DISPONIBILIZAÇÃO DE BRINQUEDOS E MATERIAIS (IEDUC)
+# =============================================================================
+
+def render_questao_1_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.2 (Disponibilização de Brinquedos/Materiais Pedagógicos)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.2 • Disponibilização de Brinquedos/Materiais Pedagógicos ({ano_sel})", expanded=True):
+            st.subheader("1.2 • Materiais Pedagógicos e Brinquedos")
+            st.write("**A Prefeitura disponibiliza brinquedos/materiais pedagógicos para as crianças em todos os estabelecimentos de Creche do município?**")
+            st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.2' para registrar.*")
+
+            opcoes_12 = {
+                "Selecione...": 0.0,
+                "Sim": 0.0,
+                "Não": 0.0
+            }
+
+            d12 = res_data.get("1.2") or {
+                "valor": "Selecione...",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_salvo_12 = d12.get("valor", "Selecione...")
+
+            if v_salvo_12 not in opcoes_12:
+                v_salvo_12 = "Selecione..."
+
+            evidencia_12_salva = d12.get("link", "")
+
+            chave_radio_12 = f"r_12_{ano_sel}"
+            chave_link_12 = f"l_12_txt_{ano_sel}"
+
+            c12_1, c12_2 = st.columns([1, 1])
+            
+            with c12_1:
+                lista_opcoes_12 = list(opcoes_12.keys())
+                idx_12 = lista_opcoes_12.index(v_salvo_12) if v_salvo_12 in lista_opcoes_12 else 0
+
+                val_radio_12 = st.radio(
+                    "Selecione a situação da disponibilização:",
+                    options=lista_opcoes_12,
+                    index=idx_12,
+                    key=chave_radio_12,
+                )
+
+            with c12_2:
+                link_12 = st.text_area(
+                    "Link de Evidência (Notas Fiscais, Fotos, Inventário, etc.):",
+                    value=evidencia_12_salva,
+                    key=chave_link_12,
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.2...",
+                    height=100,
+                )
+                
+                placeholder_links_12 = st.empty()
+                links_12_visuais = re.findall(regex_url, link_12 or "")
+                
+                if links_12_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_12_visuais
+                    ]
+                    placeholder_links_12.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.2", key=f"btn_salvar_1_2_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_12, v_salvo_12)
+                pts_12 = 0.0
+                lnk_val = link_12.strip()
+
+                comentarios_historico = d12.get("comentarios", [])
+                comentario_simples = d12.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.2",
+                        valor=val_salvar,
+                        pontos=pts_12,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_12_salva or "")]
+
+                if lnk_val != evidencia_12_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "ℹ️ Status: Questão Informativa (Sem impacto na pontuação global)</span>",
+                unsafe_allow_html=True,
+            )
+
+    if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []), ano_sel)
