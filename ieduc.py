@@ -9799,3 +9799,363 @@ def render_questao_3_5_2_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.5.2", st.session_state.get(f"links_pendentes_3_5_2_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.6 • Rotatividade Docente - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_6_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.6 (Rotatividade de Professores)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_6_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.6 • Rotatividade Docente ({ano_sel})", expanded=True):
+            st.subheader("3.6 • Rotatividade Docente")
+            st.write(f"**Quanto à regularidade do corpo docente, informe o número de escolas dos Anos Iniciais em cada faixa de rotatividade de professores em {ano_sel}:**")
+            st.caption("ℹ️ *Fórmula: NF = (3×Q1 + 2×Q2 + 1×Q3 + 0×Q4) | Onde Qi é a proporção de escolas na faixa e Pmáx = 3.0.*")
+
+            d36 = res_data.get("3.6") or {
+                "valor": "E1:0,E2:0,E3:0,E4:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_36_salva = d36.get("link", "")
+
+            # Parsing seguro
+            try:
+                parts_36 = {p.split(":")[0]: int(p.split(":")[1]) for p in str(d36.get("valor", "")).split(",")}
+            except Exception:
+                parts_36 = {"E1": 0, "E2": 0, "E3": 0, "E4": 0}
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Escolas com rotatividade Menor que 20% (Q1):</label>', unsafe_allow_html=True)
+                e1 = st.number_input("", min_value=0, value=int(parts_36.get("E1", 0)), step=1, key=f"num_q36_e1_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Escolas com rotatividade entre 20% e 30% (Q2):</label>', unsafe_allow_html=True)
+                e2 = st.number_input("", min_value=0, value=int(parts_36.get("E2", 0)), step=1, key=f"num_q36_e2_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Escolas com rotatividade entre 30% e 40% (Q3):</label>', unsafe_allow_html=True)
+                e3 = st.number_input("", min_value=0, value=int(parts_36.get("E3", 0)), step=1, key=f"num_q36_e3_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Escolas com rotatividade Maior ou igual a 40% (Q4):</label>', unsafe_allow_html=True)
+                e4 = st.number_input("", min_value=0, value=int(parts_36.get("E4", 0)), step=1, key=f"num_q36_e4_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_36 = st.text_area(
+                    f"Link/Evidência (3.6) - {ano_sel}:",
+                    value=evidencia_36_salva,
+                    key=f"link_q36_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=245
+                )
+
+                placeholder_links_36 = st.empty()
+                links_36_visuais = re.findall(regex_url, link_36 or "")
+
+                if links_36_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_36_visuais
+                    ]
+                    placeholder_links_36.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de Pontuação
+            total_escolas = e1 + e2 + e3 + e4
+            pts36 = 0.0
+
+            if total_escolas > 0:
+                q1 = e1 / total_escolas
+                q2 = e2 / total_escolas
+                q3 = e3 / total_escolas
+                pts36 = round((3.0 * q1) + (2.0 * q2) + (1.0 * q3), 2)
+                texto_painel = f"📊 Regularidade: {total_escolas} escola(s) monitorada(s) | Nota Calculada: {pts36:.2f} / 3.00 pontos"
+            else:
+                texto_painel = "⚠️ Status: Aguardando o preenchimento do número de escolas para cálculo de rotatividade."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.6", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.6", key=f"btn_salvar_3_6_{ano_sel}", type="primary"):
+                str_valor_36 = f"E1:{e1},E2:{e2},E3:{e3},E4:{e4}"
+                lnk_val = link_36.strip()
+
+                comentarios_historico = d36.get("comentarios", [])
+                comentario_simples = d36.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.6",
+                        valor=str_valor_36,
+                        pontos=float(pts36),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_36_salva or "")]
+
+                if lnk_val != evidencia_36_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_6_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_6_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.6 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_6_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.6", st.session_state.get(f"links_pendentes_3_6_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.7 • Regularidade de Gestores - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_7_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.7 (Permanência/Regularidade do Gestor Escolar)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_7_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.7 • Regularidade de Gestores ({ano_sel})", expanded=True):
+            st.subheader("3.7 • Regularidade de Gestores")
+            st.write(f"**Indique a quantidade de escolas municipais cujo diretor/gestor dos Anos Iniciais, ao final de {ano_sel}, permanecia à frente da mesma unidade por:**")
+            st.caption("ℹ️ *Fórmula: NF = (0×Q1) + (0.5×Q2) + (1×Q3) + (1.5×Q4) + (1.75×Q5) + (2×Q6) | Pmáx = 2.0 pontos.*")
+
+            d37 = res_data.get("3.7") or {
+                "valor": "G1:0,G2:0,G3:0,G4:0,G5:0,G6:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_37_salva = d37.get("link", "")
+
+            # Parsing seguro
+            try:
+                parts_37 = {p.split(":")[0]: int(p.split(":")[1]) for p in str(d37.get("valor", "")).split(",")}
+            except Exception:
+                parts_37 = {"G1": 0, "G2": 0, "G3": 0, "G4": 0, "G5": 0, "G6": 0}
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Menor que 1 ano (Q1):</label>', unsafe_allow_html=True)
+                g1 = st.number_input("", min_value=0, value=int(parts_37.get("G1", 0)), step=1, key=f"num_q37_g1_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 1 ano e menor que 3 anos (Q2):</label>', unsafe_allow_html=True)
+                g2 = st.number_input("", min_value=0, value=int(parts_37.get("G2", 0)), step=1, key=f"num_q37_g2_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 3 anos e menor que 5 anos (Q3):</label>', unsafe_allow_html=True)
+                g3 = st.number_input("", min_value=0, value=int(parts_37.get("G3", 0)), step=1, key=f"num_q37_g3_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 5 anos e menor que 10 anos (Q4):</label>', unsafe_allow_html=True)
+                g4 = st.number_input("", min_value=0, value=int(parts_37.get("G4", 0)), step=1, key=f"num_q37_g4_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 10 anos e menor que 15 anos (Q5):</label>', unsafe_allow_html=True)
+                g5 = st.number_input("", min_value=0, value=int(parts_37.get("G5", 0)), step=1, key=f"num_q37_g5_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior ou igual a 15 anos (Q6):</label>', unsafe_allow_html=True)
+                g6 = st.number_input("", min_value=0, value=int(parts_37.get("G6", 0)), step=1, key=f"num_q37_g6_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_37 = st.text_area(
+                    f"Link/Evidência (3.7) - {ano_sel}:",
+                    value=evidencia_37_salva,
+                    key=f"link_q37_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=390
+                )
+
+                placeholder_links_37 = st.empty()
+                links_37_visuais = re.findall(regex_url, link_37 or "")
+
+                if links_37_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_37_visuais
+                    ]
+                    placeholder_links_37.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de Pontuação
+            total_gestores = g1 + g2 + g3 + g4 + g5 + g6
+            pts37 = 0.0
+
+            if total_gestores > 0:
+                q2 = g2 / total_gestores
+                q3 = g3 / total_gestores
+                q4 = g4 / total_gestores
+                q5 = g5 / total_gestores
+                q6 = g6 / total_gestores
+
+                pts37 = round((0.5 * q2) + (1.0 * q3) + (1.5 * q4) + (1.75 * q5) + (2.0 * q6), 2)
+                texto_painel = f"📊 Métrica de Regularidade: {total_gestores} diretor(es) mapeado(s) | Nota Calculada: {pts37:.2f} / 2.00 pontos"
+            else:
+                texto_painel = "⚠️ Status: Aguardando preenchimento do quadro de diretores para computar a nota."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.7", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.7", key=f"btn_salvar_3_7_{ano_sel}", type="primary"):
+                str_valor_37 = f"G1:{g1},G2:{g2},G3:{g3},G4:{g4},G5:{g5},G6:{g6}"
+                lnk_val = link_37.strip()
+
+                comentarios_historico = d37.get("comentarios", [])
+                comentario_simples = d37.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.7",
+                        valor=str_valor_37,
+                        pontos=float(pts37),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_37_salva or "")]
+
+                if lnk_val != evidencia_37_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_7_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_7_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.7 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_7_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.7", st.session_state.get(f"links_pendentes_3_7_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.8 • Reuniões Periódicas com Pais - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_8_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.8 (Reuniões Periódicas com os Pais)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_8_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.8 • Reuniões Periódicas com Pais ({ano_sel})", expanded=True):
+            st.subheader("3.8 • Reuniões Periódicas com Pais")
+            st.write(f"**Os professores realizam reuniões periódicas com os pais dos alunos dos Anos Iniciais sobre planejamento/projeto escolar e desempenho/desenvolvimento da criança?**")
+
+            d38 = res_data.get("3.8") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_38_salva = d38.get("link", "")
+            v_banco_38 = str(d38.get("valor", ""))
+
+            opc38 = [
+                "Selecione...",
+                "Sobre planejamento e desempenho da criança – 02",
+                "Apenas sobre o projeto político-pedagógico – 1,5",
+                "Apenas sobre o desempenho da criança – 01",
+                "Não realiza reuniões periódicas – 00"
+            ]
+            idx_38 = opc38.index(v_banco_38) if v_banco_38 in opc38 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione a opção:</label>', unsafe_allow_html=True)
+                r38 = st.radio(
+                    "",
+                    options=opc38,
+                    index=idx_38,
+                    key=f"radio_q38_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                def calcula_pontos_38(opcao: str) -> float:
+                    if opcao == "Sobre planejamento e desempenho da criança – 02":
+                        return 2.0
+                    elif opcao == "Apenas sobre o projeto político-pedagógico – 1,5":
+                        return 1.5
+                    elif opcao == "Apenas sobre o desempenho da criança – 01":
+                        return 1.0
+                    return 0.0
+
+                pts38 = calcula_pontos_38(r38)
+
+                if r38 != "Selecione...":
+                    st.code(f"🎯 Pontuação do Quesito 3.8: {pts38:.1f} / 2.0 pontos", language="text")
+                else:
+                    st.info("💡 Por favor, selecione uma opção válida.")
+
+            with col_evidencia:
+                link_38 = st.text_area(
+                    f"Link/Evidência (3.8) - {ano_sel}:",
+                    value=evidencia_38_salva,
+                    key=f"link_q38_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=165
+                )
+
+                placeholder_links_38 = st.empty()
+                links_38_visuais = re.findall(regex_url, link_38 or "")
+
+                if links_38_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_38_visuais
+                    ]
+                    placeholder_links_38.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.8", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.8", key=f"btn_salvar_3_8_{ano_sel}", type="primary"):
+                str_valor_38 = r38 if r38 != "Selecione..." else ""
+                lnk_val = link_38.strip()
+
+                comentarios_historico = d38.get("comentarios", [])
+                comentario_simples = d38.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.8",
+                        valor=str_valor_38,
+                        pontos=float(pts38),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_38_salva or "")]
+
+                if lnk_val != evidencia_38_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_8_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_8_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.8 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_8_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.8", st.session_state.get(f"links_pendentes_3_8_{ano_sel}", []), ano_sel)
