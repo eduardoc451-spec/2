@@ -7005,9 +7005,6 @@ def render_questao_2_7_ieduc(res_data: dict, ano_sel: str):
         if modal_aviso_func:
             modal_aviso_func("2.7", st.session_state.get(f"links_pendentes_2_7_{ano_sel}", []), ano_sel)
 
-import re
-import streamlit as st
-
 # =============================================================================
 # QUESITO 2.7.1 • Capacitação de Profissionais da Educação Infantil (Pré-escola)
 # =============================================================================
