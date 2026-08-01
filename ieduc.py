@@ -7365,3 +7365,345 @@ def render_questao_2_8_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("2.8", st.session_state.get(f"links_pendentes_2_8_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 2.9 • Permanência de Diretores/Gestores (Ensino Fundamental)
+# =============================================================================
+def render_questao_2_9_ef_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.9 (Permanência de Diretores/Gestores - Ensino Fundamental)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_9_ef_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.9 • Permanência de Diretores/Gestores ({ano_sel})", expanded=True):
+            st.subheader("2.9 • Permanência de Diretores/Gestores - Ensino Fundamental")
+            st.write(f"**Indique a quantidade de escolas municipais cujo diretor/gestor de Ensino Fundamental, ao final de {ano_sel}, permanecia à frente da mesma unidade por:**")
+            
+            # 📐 Fórmula de cálculo oficial baseada no manual do IEGM
+            st.latex(r"NF = (0 \times Q_1) + (0.5 \times Q_2) + (1 \times Q_3) + (1.5 \times Q_4) + (1.75 \times Q_5) + (2 \times Q_6)")
+            st.caption("ℹ️ *Onde $Q_i$ é a proporção de escolas na faixa. Pontuação máxima = 2.0 pontos.*")
+
+            d29 = res_data.get("2.9") or {
+                "valor": "G1:0,G2:0,G3:0,G4:0,G5:0,G6:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_29_salva = d29.get("link", "")
+
+            # Recuperação segura dos dados numéricos armazenados no banco local
+            try:
+                parts_29 = d29.get("valor", "").split(",")
+                v_g1 = int(parts_29[0].split(":")[1])
+                v_g2 = int(parts_29[1].split(":")[1])
+                v_g3 = int(parts_29[2].split(":")[1])
+                v_g4 = int(parts_29[3].split(":")[1])
+                v_g5 = int(parts_29[4].split(":")[1])
+                v_g6 = int(parts_29[5].split(":")[1])
+            except Exception:
+                v_g1, v_g2, v_g3, v_g4, v_g5, v_g6 = 0, 0, 0, 0, 0, 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Menor que 1 ano (Q1):</label>', unsafe_allow_html=True)
+                g1 = st.number_input("", min_value=0, step=1, value=v_g1, key=f"input_q29_g1_ef_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 1 ano e menor que 3 anos (Q2):</label>', unsafe_allow_html=True)
+                g2 = st.number_input("", min_value=0, step=1, value=v_g2, key=f"input_q29_g2_ef_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 3 anos e menor que 5 anos (Q3):</label>', unsafe_allow_html=True)
+                g3 = st.number_input("", min_value=0, step=1, value=v_g3, key=f"input_q29_g3_ef_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 5 anos e menor que 10 anos (Q4):</label>', unsafe_allow_html=True)
+                g4 = st.number_input("", min_value=0, step=1, value=v_g4, key=f"input_q29_g4_ef_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior/igual a 10 anos e menor que 15 anos (Q5):</label>', unsafe_allow_html=True)
+                g5 = st.number_input("", min_value=0, step=1, value=v_g5, key=f"input_q29_g5_ef_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Maior ou igual a 15 anos (Q6):</label>', unsafe_allow_html=True)
+                g6 = st.number_input("", min_value=0, step=1, value=v_g6, key=f"input_q29_g6_ef_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_29 = st.text_area(
+                    f"Link/Evidência (2.9) - {ano_sel}:",
+                    value=evidencia_29_salva,
+                    key=f"link_q29_ef_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=450
+                )
+
+                placeholder_links_29 = st.empty()
+                links_29_visuais = re.findall(regex_url, link_29 or "")
+
+                if links_29_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_29_visuais
+                    ]
+                    placeholder_links_29.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de Pontuação do IEGM
+            total_escolas_29 = g1 + g2 + g3 + g4 + g5 + g6
+            pts29 = 0.0
+
+            if total_escolas_29 > 0:
+                q1 = g1 / total_escolas_29
+                q2 = g2 / total_escolas_29
+                q3 = g3 / total_escolas_29
+                q4 = g4 / total_escolas_29
+                q5 = g5 / total_escolas_29
+                q6 = g6 / total_escolas_29
+
+                n1 = 0.0 * q1
+                n2 = 0.5 * q2
+                n3 = 1.0 * q3
+                n4 = 1.5 * q4
+                n5 = 1.75 * q5
+                n6 = 2.0 * q6
+
+                pts29 = round(float(n1 + n2 + n3 + n4 + n5 + n6), 2)
+                st.info(f"📊 **Métrica de Regularidade de Gestores:** {total_escolas_29} diretores mapeados | **Pontuação:** {pts29:.2f} / 2.00 pts")
+            else:
+                st.markdown("⚠️ **Status:** `Aguardando preenchimento das quantidades de escolas`")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.9", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.9", key=f"btn_salvar_2_9_{ano_sel}", type="primary"):
+                str_valor_29 = f"G1:{g1},G2:{g2},G3:{g3},G4:{g4},G5:{g5},G6:{g6}"
+                lnk_val = link_29.strip()
+
+                comentarios_historico = d29.get("comentarios", [])
+                comentario_simples = d29.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.9",
+                        valor=str_valor_29,
+                        pontos=pts29,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_29_salva or "")]
+
+                if lnk_val != evidencia_29_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_9_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_9_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.9 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_9_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.9", st.session_state.get(f"links_pendentes_2_9_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.10 • Reuniões Periódicas com os Pais (Ensino Fundamental)
+# =============================================================================
+def render_questao_2_10_ef_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.10 (Reuniões Periódicas com os Pais - Ensino Fundamental)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_10_ef_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.10 • Reuniões Periódicas com os Pais ({ano_sel})", expanded=True):
+            st.subheader("2.10 • Reuniões Periódicas com os Pais - Ensino Fundamental")
+            st.write(f"**Os professores realizam reuniões periódicas com os pais dos alunos de Ensino Fundamental em {ano_sel}?**")
+
+            d210 = res_data.get("2.10") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_210_salva = d210.get("link", "")
+
+            mapeamento_210 = {
+                "Sobre planejamento e desempenho da criança - 2,0": 2.0,
+                "Apenas sobre o projeto político-pedagógico - 1,5": 1.5,
+                "Apenas sobre o desempenho da criança - 1,0": 1.0,
+                "Não realiza reuniões periódicas - 0,0": 0.0
+            }
+
+            opc210 = ["Selecione..."] + list(mapeamento_210.keys())
+            val_salvo = d210.get("valor", "")
+            idx210 = opc210.index(val_salvo) if val_salvo in opc210 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r210 = st.radio(
+                    f"Selecione 2.10 ({ano_sel}):",
+                    opc210,
+                    index=idx210,
+                    key=f"radio_q210_ef_{ano_sel}"
+                )
+
+            with col_evidencia:
+                link_210 = st.text_area(
+                    f"Link/Evidência (2.10) - {ano_sel}:",
+                    value=evidencia_210_salva,
+                    key=f"link_q210_ef_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_210 = st.empty()
+                links_210_visuais = re.findall(regex_url, link_210 or "")
+
+                if links_210_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_210_visuais
+                    ]
+                    placeholder_links_210.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            pts210 = mapeamento_210.get(r210, 0.0) if r210 in mapeamento_210 else 0.0
+
+            if r210 and r210 != "Selecione...":
+                st.info(f"📊 **Acompanhamento Familiar:** Opção selecionada pontua **{pts210:.2f} / 2.00** pontos.")
+            else:
+                st.markdown("⚠️ **Status:** `Aguardando seleção da resposta`")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.10", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.10", key=f"btn_salvar_2_10_{ano_sel}", type="primary"):
+                val_salvar = r210 if r210 != "Selecione..." else ""
+                lnk_val = link_210.strip()
+
+                comentarios_historico = d210.get("comentarios", [])
+                comentario_simples = d210.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.10",
+                        valor=val_salvar,
+                        pontos=pts210,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_210_salva or "")]
+
+                if lnk_val != evidencia_210_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_10_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_10_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.10 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_10_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.10", st.session_state.get(f"links_pendentes_2_10_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.10.1 • Periodicidade das Reuniões (Ensino Fundamental)
+# =============================================================================
+def render_questao_2_10_1_ef_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.10.1 (Periodicidade das Reuniões - Ensino Fundamental)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_10_1_ef_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.10.1 • Periodicidade das Reuniões ({ano_sel})", expanded=True):
+            st.subheader("2.10.1 • Periodicidade das Reuniões - Ensino Fundamental")
+            st.write("**Qual a periodicidade das reuniões?**")
+
+            d2101 = res_data.get("2.10.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_2101_salva = d2101.get("link", "")
+
+            opc2101 = ["Selecione...", "Mensal", "Bimestral", "Trimestral", "Quadrimestral", "Semestral", "Anual"]
+            val_salvo = d2101.get("valor", "")
+            idx2101 = opc2101.index(val_salvo) if val_salvo in opc2101 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r2101 = st.radio(
+                    f"Selecione a periodicidade ({ano_sel}):",
+                    opc2101,
+                    index=idx2101,
+                    key=f"radio_q2101_ef_{ano_sel}"
+                )
+
+            with col_evidencia:
+                link_2101 = st.text_area(
+                    f"Link/Evidência (2.10.1) - {ano_sel}:",
+                    value=evidencia_2101_salva,
+                    key=f"link_q2101_ef_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=250
+                )
+
+                placeholder_links_2101 = st.empty()
+                links_2101_visuais = re.findall(regex_url, link_2101 or "")
+
+                if links_2101_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_2101_visuais
+                    ]
+                    placeholder_links_2101.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.10.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.10.1", key=f"btn_salvar_2_10_1_{ano_sel}", type="primary"):
+                val_salvar = r2101 if r2101 != "Selecione..." else ""
+                lnk_val = link_2101.strip()
+
+                comentarios_historico = d2101.get("comentarios", [])
+                comentario_simples = d2101.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.10.1",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_2101_salva or "")]
+
+                if lnk_val != evidencia_2101_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_10_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_10_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.10.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_10_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.10.1", st.session_state.get(f"links_pendentes_2_10_1_{ano_sel}", []), ano_sel)
