@@ -8724,3 +8724,356 @@ def render_questao_2_14_pre_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("2.14", st.session_state.get(f"links_pendentes_2_14_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 2.15 • Faixa de Alunos por Turma - Pré-escola (IEDUC)
+# =============================================================================
+def render_questao_2_15_pre_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.15 (Quantidade de turmas de Pré-escola por faixa de alunos)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_15_pre_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.15 • Faixa de Alunos por Turma - Pré-escola ({ano_sel})", expanded=True):
+            st.subheader("2.15 • Quantidade de turmas de Pré-escola por faixa de alunos")
+            st.write(f"**Informe a quantidade de turmas de Pré-escola por faixa de alunos em {ano_sel}:**")
+            
+            st.markdown("""
+            *Fórmula de cálculo:*
+            $$NF = 10 \times (1.0 \times P_1 + 0.5 \times P_2 + 0.25 \times P_3 + 0 \times P_4)$$
+            """)
+
+            d215 = res_data.get("2.15") or {
+                "valor": "F1:0,F2:0,F3:0,F4:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_215_salva = d215.get("link", "")
+
+            # Parsing seguro
+            try:
+                parts_215 = str(d215.get("valor", "")).split(",")
+                v_f1 = int(parts_215[0].split(":")[1])
+                v_f2 = int(parts_215[1].split(":")[1])
+                v_f3 = int(parts_215[2].split(":")[1])
+                v_f4 = int(parts_215[3].split(":")[1])
+            except Exception:
+                v_f1 = v_f2 = v_f3 = v_f4 = 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown(f'<label style="font-size: 13px; font-weight: 500;">Até 22 alunos (Peso 1.0):</label>', unsafe_allow_html=True)
+                f1 = st.number_input("", min_value=0, value=v_f1, step=1, key=f"num_q215_f1_pre_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">De 23 a 25 alunos (Peso 0.5):</label>', unsafe_allow_html=True)
+                f2 = st.number_input("", min_value=0, value=v_f2, step=1, key=f"num_q215_f2_pre_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">De 26 a 30 alunos (Peso 0.25):</label>', unsafe_allow_html=True)
+                f3 = st.number_input("", min_value=0, value=v_f3, step=1, key=f"num_q215_f3_pre_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Acima de 30 alunos (Peso 0.0):</label>', unsafe_allow_html=True)
+                f4 = st.number_input("", min_value=0, value=v_f4, step=1, key=f"num_q215_f4_pre_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_215 = st.text_area(
+                    f"Link/Evidência (2.15) - {ano_sel}:",
+                    value=evidencia_215_salva,
+                    key=f"link_q215_pre_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=265
+                )
+
+                placeholder_links_215 = st.empty()
+                links_215_visuais = re.findall(regex_url, link_215 or "")
+
+                if links_215_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_215_visuais
+                    ]
+                    placeholder_links_215.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo Matemático
+            total_turmas = f1 + f2 + f3 + f4
+            
+            if total_turmas > 0:
+                p1, p2, p3, p4 = f1 / total_turmas, f2 / total_turmas, f3 / total_turmas, f4 / total_turmas
+                pts_215 = round(10.0 * ((1.0 * p1) + (0.5 * p2) + (0.25 * p3) + (0.0 * p4)), 2)
+                texto_painel = f"📊 Análise de Adensamento: Total de {total_turmas} turmas | Nota Calculada: {pts_215:.2f} / 10.00 pontos"
+            else:
+                pts_215 = 0.0
+                texto_painel = "⚠️ Status: Aguardando preenchimento das faixas de turmas para cálculo."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.15", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.15", key=f"btn_salvar_2_15_{ano_sel}", type="primary"):
+                str_valor_215 = f"F1:{f1},F2:{f2},F3:{f3},F4:{f4}"
+                lnk_val = link_215.strip()
+
+                comentarios_historico = d215.get("comentarios", [])
+                comentario_simples = d215.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.15",
+                        valor=str_valor_215,
+                        pontos=float(pts_215),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_215_salva or "")]
+
+                if lnk_val != evidencia_215_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_15_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_15_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.15 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_15_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.15", st.session_state.get(f"links_pendentes_2_15_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.0 • Oferta de Anos Iniciais do Ensino Fundamental (IEDUC)
+# =============================================================================
+def render_questao_3_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.0 (Oferta de Anos Iniciais do EF)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_0_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.0 • Oferta de Anos Iniciais ({ano_sel})", expanded=True):
+            st.subheader("3.0 • Oferta de Anos Iniciais")
+            st.write(f"**A Prefeitura Municipal oferece os Anos Iniciais do Ensino Fundamental (1º ao 5º ano) em {ano_sel}?**")
+
+            d30 = res_data.get("3.0") or {
+                "valor": "Selecione...",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_30_salva = d30.get("link", "")
+            
+            opcoes_30 = [
+                "Selecione...",
+                "Sim",
+                "Não"
+            ]
+            v_30_salvo = d30.get("valor", "Selecione...")
+            idx_30 = opcoes_30.index(v_30_salvo) if v_30_salvo in opcoes_30 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown(f'<label style="font-size: 13px; font-weight: 500;">Selecione a alternativa correspondente para {ano_sel}:</label>', unsafe_allow_html=True)
+                op_30 = st.radio(
+                    "",
+                    opcoes_30,
+                    index=idx_30,
+                    key=f"rad_ieduc_30_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+            with col_evidencia:
+                link_30 = st.text_area(
+                    f"Link/Evidência (3.0) - {ano_sel}:",
+                    value=evidencia_30_salva,
+                    key=f"link_q30_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_30 = st.empty()
+                links_30_visuais = re.findall(regex_url, link_30 or "")
+
+                if links_30_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_30_visuais
+                    ]
+                    placeholder_links_30.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            if op_30 != "Selecione...":
+                texto_painel = f"📊 Pontuação Obtida: 0.0 pontos | Opção: {op_30}"
+            else:
+                texto_painel = "⚠️ Status: Aguardando seleção da resposta"
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.0", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.0", key=f"btn_salvar_3_0_{ano_sel}", type="primary"):
+                val_salvar = op_30
+                lnk_val = link_30.strip()
+
+                comentarios_historico = d30.get("comentarios", [])
+                comentario_simples = d30.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.0",
+                        valor=val_salvar,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_30_salva or "")]
+
+                if lnk_val != evidencia_30_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.1 • Espaço por Aluno em Sala de Aula - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.1 (Espaço por aluno em sala de aula - Anos Iniciais)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.1 • Espaço por Aluno - Anos Iniciais ({ano_sel})", expanded=True):
+            st.subheader("3.1 • Espaço por aluno em sala de aula")
+            st.write(f"**Informe a quantidade de turmas dos Anos Iniciais em que o espaço por aluno em sala de aula era:**")
+            st.caption("ℹ️ *Considere como sala de aula o local principal ocupado pelos alunos para seu ensino e aprendizagem.*")
+
+            d31 = res_data.get("3.1") or {
+                "valor": "F1:0,F2:0,F3:0,F4:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_31_salva = d31.get("link", "")
+            valor_salvo = d31.get("valor", "F1:0,F2:0,F3:0,F4:0")
+
+            # Parsing tolerante caso os dados ainda estejam no formato de dicionário de legados
+            if isinstance(valor_salvo, dict):
+                v_f1 = int(valor_salvo.get("t1", 0))
+                v_f2 = int(valor_salvo.get("t2", 0))
+                v_f3 = int(valor_salvo.get("t3", 0))
+                v_f4 = int(valor_salvo.get("t4", 0))
+            else:
+                try:
+                    parts_31 = str(valor_salvo).split(",")
+                    v_f1 = int(parts_31[0].split(":")[1])
+                    v_f2 = int(parts_31[1].split(":")[1])
+                    v_f3 = int(parts_31[2].split(":")[1])
+                    v_f4 = int(parts_31[3].split(":")[1])
+                except Exception:
+                    v_f1 = v_f2 = v_f3 = v_f4 = 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Superior ou igual a 1,875 m²:</label>', unsafe_allow_html=True)
+                f1 = st.number_input("", min_value=0, value=v_f1, step=1, key=f"num_q31_f1_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Superior ou igual a 1,20 e inferior a 1,875 m²:</label>', unsafe_allow_html=True)
+                f2 = st.number_input("", min_value=0, value=v_f2, step=1, key=f"num_q31_f2_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Superior ou igual a 1,00 e inferior a 1,20 m²:</label>', unsafe_allow_html=True)
+                f3 = st.number_input("", min_value=0, value=v_f3, step=1, key=f"num_q31_f3_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Inferior a 1,00 m²:</label>', unsafe_allow_html=True)
+                f4 = st.number_input("", min_value=0, value=v_f4, step=1, key=f"num_q31_f4_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_31 = st.text_area(
+                    f"Link/Evidência (3.1) - {ano_sel}:",
+                    value=evidencia_31_salva,
+                    key=f"link_q31_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=265
+                )
+
+                placeholder_links_31 = st.empty()
+                links_31_visuais = re.findall(regex_url, link_31 or "")
+
+                if links_31_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_31_visuais
+                    ]
+                    placeholder_links_31.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo Matemático
+            total_turmas = f1 + f2 + f3 + f4
+            
+            if total_turmas > 0:
+                pts_31 = round((10.0 * (f1 / total_turmas)) + (5.0 * (f2 / total_turmas)) + (2.5 * (f3 / total_turmas)), 2)
+                texto_painel = f"📊 Total: {total_turmas} turmas apuradas | Nota Ponderada Calculada: {pts_31:.2f} / 10.00 pontos"
+            else:
+                pts_31 = 0.0
+                texto_painel = "💡 Status: Insira a quantidade de turmas nas faixas correspondentes para calcular a pontuação."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.1", key=f"btn_salvar_3_1_{ano_sel}", type="primary"):
+                str_valor_31 = f"F1:{f1},F2:{f2},F3:{f3},F4:{f4}"
+                lnk_val = link_31.strip()
+
+                comentarios_historico = d31.get("comentarios", [])
+                comentario_simples = d31.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.1",
+                        valor=str_valor_31,
+                        pontos=float(pts_31),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_31_salva or "")]
+
+                if lnk_val != evidencia_31_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []), ano_sel)
