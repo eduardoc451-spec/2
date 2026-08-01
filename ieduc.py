@@ -3294,3 +3294,284 @@ def render_questao_1_8_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.8", st.session_state.get(f"links_pendentes_1_8_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.9 • REGULARIDADE DE GESTORES (CRECHE)
+# =============================================================================
+
+def render_questao_1_9_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.9 (Regularidade de Gestores de Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_9_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.9 • Regularidade de Gestores ({ano_sel})", expanded=True):
+            st.subheader("1.9 • Regularidade de Gestores (Creche)")
+            st.write(f"**Quanto à regularidade de gestores, indique a quantidade de escolas municipais cujo diretor/gestor de Creche, ao final de {ano_sel}, permanecia à frente da mesma unidade por:**")
+            
+            st.markdown("""
+            **Regras de Cálculo ($P_{máx} = 2,0$ pontos):**
+            * **$N_1$ ($< 1$ ano):** $0,00 \\times Q_1$
+            * **$N_2$ ($\ge 1$ e $< 3$ anos):** $0,50 \\times Q_2$
+            * **$N_3$ ($\ge 3$ e $< 5$ anos):** $1,00 \\times Q_3$
+            * **$N_4$ ($\ge 5$ e $< 10$ anos):** $1,50 \\times Q_4$
+            * **$N_5$ ($\ge 10$ e $< 15$ anos):** $1,75 \\times Q_5$
+            * **$N_6$ ($\ge 15$ anos):** $2,00 \\times Q_6$
+            * *Onde $Q_i$ é a proporção de escolas na faixa em relação ao total de escolas avaliadas.*
+            """)
+            st.caption("ℹ️ *Preencha os quantitativos abaixo e clique no botão 'Salvar Questão 1.9' para registrar.*")
+
+            d19 = res_data.get("1.9") or {
+                "valor": "F1:0,F2:0,F3:0,F4:0,F5:0,F6:0,TOTAL:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_19 = d19.get("valor", "F1:0,F2:0,F3:0,F4:0,F5:0,F6:0,TOTAL:0")
+            evidencia_19_salva = d19.get("link", "")
+
+            # Parsing seguro das 6 faixas
+            try:
+                parts_19 = v_banco_19.split(",")
+                v_f1 = int(parts_19[0].split(":")[1])
+                v_f2 = int(parts_19[1].split(":")[1])
+                v_f3 = int(parts_19[2].split(":")[1])
+                v_f4 = int(parts_19[3].split(":")[1])
+                v_f5 = int(parts_19[4].split(":")[1])
+                v_f6 = int(parts_19[5].split(":")[1])
+            except Exception:
+                v_f1, v_f2, v_f3, v_f4, v_f5, v_f6 = 0, 0, 0, 0, 0, 0
+
+            chave_f1_19 = f"key_q19_fx1_{ano_sel}"
+            chave_f2_19 = f"key_q19_fx2_{ano_sel}"
+            chave_f3_19 = f"key_q19_fx3_{ano_sel}"
+            chave_f4_19 = f"key_q19_fx4_{ano_sel}"
+            chave_f5_19 = f"key_q19_fx5_{ano_sel}"
+            chave_f6_19 = f"key_q19_fx6_{ano_sel}"
+            chave_link_19 = f"l_19_txt_{ano_sel}"
+
+            c19_1, c19_2 = st.columns([1, 2])
+
+            with c19_1:
+                st.markdown("##### 🏫 Quantitativo por Tempo de Gestão")
+                f1 = st.number_input("Menor que 1 ano (F1):", min_value=0, step=1, value=v_f1, key=chave_f1_19)
+                f2 = st.number_input("≥ 1 ano e < 3 anos (F2):", min_value=0, step=1, value=v_f2, key=chave_f2_19)
+                f3 = st.number_input("≥ 3 anos e < 5 anos (F3):", min_value=0, step=1, value=v_f3, key=chave_f3_19)
+                f4 = st.number_input("≥ 5 anos e < 10 anos (F4):", min_value=0, step=1, value=v_f4, key=chave_f4_19)
+                f5 = st.number_input("≥ 10 anos e < 15 anos (F5):", min_value=0, step=1, value=v_f5, key=chave_f5_19)
+                f6 = st.number_input("≥ 15 anos (F6):", min_value=0, step=1, value=v_f6, key=chave_f6_19)
+
+                total_escolas = f1 + f2 + f3 + f4 + f5 + f6
+                st.metric("Total de Escolas Avaliadas:", f"{total_escolas}")
+
+            with c19_2:
+                link_19 = st.text_area(
+                    f"Link/Evidência de comprovação (1.9) - {ano_sel}:",
+                    value=evidencia_19_salva,
+                    key=chave_link_19,
+                    placeholder="Insira os links oficiais comprovando o tempo de permanência dos gestores...",
+                    height=410,
+                )
+
+                placeholder_links_19 = st.empty()
+                links_19_visuais = re.findall(regex_url, link_19 or "")
+
+                if links_19_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_19_visuais
+                    ]
+                    placeholder_links_19.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo da nota ponderada
+            pts_19 = 0.0
+            if total_escolas > 0:
+                q1 = f1 / total_escolas
+                q2 = f2 / total_escolas
+                q3 = f3 / total_escolas
+                q4 = f4 / total_escolas
+                q5 = f5 / total_escolas
+                q6 = f6 / total_escolas
+
+                n1 = 0.0 * q1
+                n2 = 0.5 * q2
+                n3 = 1.0 * q3
+                n4 = 1.5 * q4
+                n5 = 1.75 * q5
+                n6 = 2.0 * q6
+
+                pts_19 = min(2.0, float(n1 + n2 + n3 + n4 + n5 + n6))
+
+                st.code(
+                    f"📊 Proporções Calculadas (Q1 a Q6):\n"
+                    f"• <1a: {q1*100:.1f}% | 1-3a: {q2*100:.1f}% | 3-5a: {q3*100:.1f}%\n"
+                    f"• 5-10a: {q4*100:.1f}% | 10-15a: {q5*100:.1f}% | ≥15a: {q6*100:.1f}%\n"
+                    f"✨ Pontuação Resultante: {pts_19:.2f} pontos (Máx: 2.0 pontos)",
+                    language="text"
+                )
+            else:
+                st.code("⚠️ Status: Insira o quantitativo de escolas para calcular a Nota Final.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.9", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.9", key=f"btn_salvar_1_9_{ano_sel}", type="primary"):
+                str_valor_19 = f"F1:{f1},F2:{f2},F3:{f3},F4:{f4},F5:{f5},F6:{f6},TOTAL:{total_escolas}"
+                lnk_val = link_19.strip()
+
+                comentarios_historico = d19.get("comentarios", [])
+                comentario_simples = d19.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.9",
+                        valor=str_valor_19,
+                        pontos=float(pts_19),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_19_salva or "")]
+
+                if lnk_val != evidencia_19_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_9_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_9_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.9 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_9_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.9", st.session_state.get(f"links_pendentes_1_9_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.10 • REUNIÕES PERIÓDICAS COM OS PAIS (CRECHE)
+# =============================================================================
+
+def render_questao_1_10_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.10 (Reuniões Periódicas com os Pais - Creche)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_10_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.10 • Reuniões com os Pais ({ano_sel})", expanded=True):
+            st.subheader("1.10 • Reuniões Periódicas com os Pais (Creche)")
+            st.write(f"**Os professores realizam reuniões periódicas com os pais dos alunos de Creche sobre planejamento/projeto escolar e desempenho/desenvolvimento da criança?**")
+            st.caption("ℹ️ *Selecione a opção desejada, insira os links e clique no botão 'Salvar Questão 1.10' para registrar.*")
+
+            d110 = res_data.get("1.10") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_110 = d110.get("valor", "")
+            evidencia_110_salva = d110.get("link", "")
+
+            mapa_pontos_110 = {
+                "Sobre planejamento e desempenho da criança": 2.0,
+                "Apenas sobre o projeto político-pedagógico": 1.5,
+                "Apenas sobre o desempenho da criança": 1.0,
+                "Não realiza reuniões periódicas": 0.0
+            }
+
+            opcoes_110 = list(mapa_pontos_110.keys())
+            
+            # Ajuste defensivo para recuperar opção vinda do banco (tratando legado com sufixo)
+            idx110 = None
+            if v_banco_110 in opcoes_110:
+                idx110 = opcoes_110.index(v_banco_110)
+            else:
+                for idx, op in enumerate(opcoes_110):
+                    if op in v_banco_110:
+                        idx110 = idx
+                        break
+
+            chave_radio_110 = f"rad_ieduc_110_{ano_sel}"
+            chave_link_110 = f"l_110_txt_{ano_sel}"
+
+            c110_1, c110_2 = st.columns([1, 2])
+
+            with c110_1:
+                st.markdown(f"##### 📝 Frequência e Pauta das Reuniões ({ano_sel})")
+                r110 = st.radio(
+                    f"Selecione a pauta das reuniões em {ano_sel}:",
+                    opcoes_110,
+                    index=idx110,
+                    key=chave_radio_110,
+                    help="Escolha o escopo temático abordado durante as reuniões de pais no ano base."
+                )
+
+            with c110_2:
+                link_110 = st.text_area(
+                    f"Link/Evidência de comprovação (1.10) - {ano_sel}:",
+                    value=evidencia_110_salva,
+                    key=chave_link_110,
+                    placeholder="Insira os links das atas de reunião, calendários escolares ou convocações...",
+                    height=180,
+                )
+
+                placeholder_links_110 = st.empty()
+                links_110_visuais = re.findall(regex_url, link_110 or "")
+
+                if links_110_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_110_visuais
+                    ]
+                    placeholder_links_110.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Atribuição de pontos e exibição
+            pts_110 = mapa_pontos_110.get(r110, 0.0) if r110 else 0.0
+
+            if r110:
+                st.code(f"📊 Opção Selecionada: {r110} | Pontuação: {pts_110:.1f} pontos (Máx: 2.0 pontos).", language="text")
+            else:
+                st.code("⚠️ Status: Nenhuma opção selecionada.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.10", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.10", key=f"btn_salvar_1_10_{ano_sel}", type="primary"):
+                v_sel = r110 if r110 else ""
+                lnk_val = link_110.strip()
+
+                comentarios_historico = d110.get("comentarios", [])
+                comentario_simples = d110.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.10",
+                        valor=v_sel,
+                        pontos=float(pts_110),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_110_salva or "")]
+
+                if lnk_val != evidencia_110_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_10_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_10_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.10 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_10_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.10", st.session_state.get(f"links_pendentes_1_10_{ano_sel}", []), ano_sel)
