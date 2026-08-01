@@ -391,26 +391,28 @@ PONTUACOES_MAX = PONTUACOES_MAX_IEDUC
 CATEGORIAS_MAP = CATEGORIAS_MAP_IEDUC
 
 # =============================================================================
-# DECORADOR / FUNÇÃO DO MODAL DE AVISO DE LINK
+# MODAL DE AVISO AUTOMÁTICO
 # =============================================================================
 @st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid: str = "", links: list = None, *args, **kwargs):
-    """Exibe um aviso dialog quando links externos de evidência são detectados/salvos."""
-    if links is None:
-        links = []
+def modal_aviso_link(qid: str = "", links_encontrados: list = None):
+    # Proteção para garantir que links_encontrados seja sempre uma lista válida
+    if links_encontrados is None:
+        links_encontrados = []
+
+    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
+    
+    for lk in links_encontrados:
+        # Trata o link caso o re.findall tenha retornado uma tupla de regex
+        url_limpa = lk[0] if isinstance(lk, tuple) else str(lk)
+        st.markdown(f"🔗 **Endereço:** [{url_limpa}]({url_limpa})")
         
-    st.warning("Detectamos o cadastro/alteração de links de evidência externa.")
-    st.write(f"**Quesito:** `{qid}`")
+    st.markdown("""
+    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
     
-    if links:
-        st.write("**Links informados:**")
-        for link in links:
-            url = link[0] if isinstance(link, tuple) else str(link)
-            st.markdown(f"- 🔗 [{url}]({url})")
-            
-    st.info("Certifique-se de que o link informado está público e acessível para auditoria.")
+    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
+    """)
     
-    if st.button("Entendido", key=f"btn_modal_entendido_{qid}", type="primary"):
+    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}", type="primary"):
         st.rerun()
 
 # =============================================================================
