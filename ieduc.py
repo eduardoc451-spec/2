@@ -1057,8 +1057,132 @@ def render_modulo_ieduc(questoes_ieduc: list):
 
 
 # =============================================================================
-# 7. FUNÇÃO PRINCIPAL / WRAPPER PARA O MAIN.PY
+# 7. FUNÇÃO PRINCIPAL / WRAPPER PARA O MAIN.PY E RENDERIZAÇÃO DO MÓDULO
 # =============================================================================
+
+def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.0 (Oferta de Creche) dentro do padrão iGov / i-Educ."""
+    
+    with st.container(key=f"container_bloco_ieduc_1_0_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.0 • Oferta de Creche ({ano_sel})", expanded=True):
+            st.subheader("1.0 • Infraestrutura da Educação Infantil")
+            st.write("**A Prefeitura municipal oferece Creche?**")
+            st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.0' para registrar.*")
+
+            # Dicionário com Mapeamento de Opções e Pontuações do IEDUC
+            opcoes_10 = {
+                "Selecione...": 0.0,
+                "Sim": 0.0,  # Ajuste a pontuação aqui se esta questão pontuar
+                "Não": 0.0
+            }
+
+            # Estado inicial / persistente
+            d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_10 = d10.get("valor", "Selecione...")
+
+            # Trata migração de legado caso necessário
+            if v_salvo_10 not in opcoes_10:
+                v_salvo_10 = "Selecione..."
+
+            evidencia_10_salva = d10.get("link", "")
+
+            # Chaves fixas por componente e ano
+            chave_radio_10 = f"rb_ieduc_10_{ano_sel}"
+            chave_link_10 = f"txt_ieduc_10_{ano_sel}"
+            chave_coment_10 = f"coment_1.0_{ano_sel}"  # Chave padrão do bloco_comentarios
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                lista_opcoes_10 = list(opcoes_10.keys())
+                idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
+
+                val_radio_10 = st.radio(
+                    "Selecione a situação da Oferta de Creche:",
+                    options=lista_opcoes_10,
+                    index=idx_10,
+                    key=chave_radio_10
+                )
+
+            with col2:
+                link_10 = st.text_area(
+                    "Link / Evidência (1.0):",
+                    value=evidencia_10_salva,
+                    key=chave_link_10,
+                    placeholder="Insira o link oficial das evidências da oferta de creche...",
+                    height=100
+                )
+                placeholder_links_10 = st.empty()
+                links_10_visuais = re.findall(REGEX_PURE_URL, link_10 or "")
+                if links_10_visuais:
+                    placeholder_links_10.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(
+                            [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10_visuais]
+                        )
+                    )
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.0", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Questão 1.0", key=f"btn_salvar_ieduc_1_0_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
+                pts_10 = float(opcoes_10.get(val_salvar, 0.0))
+                lnk_val = link_10.strip()
+
+                # Captura o comentário do session_state
+                comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+
+                # Salva no banco de dados Neon
+                save_resp(
+                    qid="1.0",
+                    valor=val_salvar,
+                    pontos=pts_10,
+                    link=lnk_val,
+                    comentario=comentario_para_salvar
+                )
+
+                # Atualiza o dicionário local res_data
+                res_data["1.0"] = {
+                    "valor": val_salvar,
+                    "pontos": pts_10,
+                    "link": lnk_val,
+                    "comentario": comentario_para_salvar
+                }
+
+                # Validação de novos links para acionar o modal
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
+
+                if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_ieduc_1_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_ieduc_1_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e comentário da Questão 1.0 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            # Resumo dinâmico / status da questão
+            pts_atuais_10 = d10.get("pontos", 0.0)
+            v_atual_10 = d10.get("valor", "Selecione...")
+            
+            if v_atual_10 == "Selecione...":
+                st.markdown("⚠️ **Status:** <span style='color:#6c757d; font-weight:bold;'>Aguardando preenchimento</span>", unsafe_allow_html=True)
+            else:
+                cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#17a2b8"
+                st.markdown(
+                    f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                    f"📊 Pontuação Aplicada na Questão 1.0: +{pts_atuais_10:.1f} pontos (Dados Informativos)</span>",
+                    unsafe_allow_html=True
+                )
+
+    # GATILHO DO MODAL 1.0 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_ieduc_1_0_{ano_sel}", False):
+        if "modal_aviso_link" in globals():
+            modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_ieduc_1_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_ieduc_1_0_{ano_sel}"] = False
+
 
 def mostrar_formulario_educ(questoes: list = None):
     """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
@@ -1082,12 +1206,9 @@ def mostrar_formulario_educ(questoes: list = None):
     )
 
     with aba_quest:
-        render_modulo_ieduc(questoes)
-
-    with aba_dados_ext:
-        st.subheader("🌐 Fontes e Dados Externos da Educação")
-        st.info("Integração com bases públicas como Censo Escolar, IDEB e SIOPE.")
-
-    with aba_graf:
-        render_graficos_ieduc(res_data, ano_sel)
-
+        # Renderiza a Questão 1.0 padronizada
+        render_questao_1_0_ieduc(res_data, ano_sel)
+        
+        # Renderização dinâmica para as demais questões
+        if "render_modulo_ieduc" in globals():
+            render_modulo_ieduc(questoes)
