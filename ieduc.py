@@ -5789,3 +5789,230 @@ def render_questao_2_1_2_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("2.1.2", st.session_state.get(f"links_pendentes_2_1_2_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 2.2 - DISPONIBILIDADE DE BRINQUEDOS/MATERIAIS PEDAGÓGICOS (PRÉ-ESCOLA)
+# =============================================================================
+def render_questao_2_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.2 (Disponibilidade de Brinquedos e Materiais Pedagógicos - Pré-Escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.2 • Brinquedos e Materiais Pedagógicos ({ano_sel})", expanded=True):
+            st.subheader("2.2 • Disponibilidade de Brinquedos e Materiais Pedagógicos")
+            st.write(f"**A Prefeitura disponibiliza brinquedos/materiais pedagógicos para as crianças em todos os estabelecimentos de Pré-escola do município em {ano_sel}?**")
+            st.caption("ℹ️ *Selecione a opção, insira o link de evidência e clique no botão 'Salvar Questão 2.2' para registrar.*")
+
+            d22 = res_data.get("2.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_22 = d22.get("valor", "")
+            evidencia_22_salva = d22.get("link", "")
+
+            opcoes_22 = ["Selecione...", "Sim", "Não"]
+            idx_22 = opcoes_22.index(v_banco_22) if v_banco_22 in opcoes_22 else 0
+
+            chave_radio_22 = f"radio_q22_{ano_sel}"
+            chave_link_22 = f"l22_txt_pre_{ano_sel}"
+
+            col_inputs, col_evidencia = st.columns([1, 2])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione uma opção:</label>', unsafe_allow_html=True)
+                op_22 = st.radio(
+                    "Opções 2.2",
+                    options=opcoes_22,
+                    index=idx_22,
+                    key=chave_radio_22,
+                    label_visibility="collapsed"
+                )
+
+            with col_evidencia:
+                link_22 = st.text_area(
+                    f"Link/Evidência (2.2) - {ano_sel}:",
+                    value=evidencia_22_salva,
+                    key=chave_link_22,
+                    placeholder="Insira os links...",
+                    height=145
+                )
+
+                placeholder_links_22 = st.empty()
+                links_22_visuais = re.findall(regex_url, link_22 or "")
+
+                if links_22_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_22_visuais
+                    ]
+                    placeholder_links_22.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Atribuição da Pontuação e Regras de Negócio
+            pts_22 = 0.0
+            if op_22 == "Sim":
+                pts_22 = 0.0
+                texto_painel = f"📊 Selecionado: {op_22} | O município disponibiliza os materiais pedagógicos em 100% das pré-escolas."
+            elif op_22 == "Não":
+                pts_22 = 0.0
+                texto_painel = f"📊 Selecionado: {op_22} | Atenção: Há estabelecimentos que não recebem brinquedos/materiais pedagógicos suficientes."
+            else:
+                pts_22 = 0.0
+                texto_painel = "⚠️ Status: Nenhuma opção válida selecionada (Campo Vazio)."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.2", key=f"btn_salvar_2_2_{ano_sel}", type="primary"):
+                valor_salvar = "" if op_22 == "Selecione..." else op_22
+                lnk_val = link_22.strip()
+
+                comentarios_historico = d22.get("comentarios", [])
+                comentario_simples = d22.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.2",
+                        valor=valor_salvar,
+                        pontos=float(pts_22),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_22_salva or "")]
+
+                if lnk_val != evidencia_22_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 2.2 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.2", st.session_state.get(f"links_pendentes_2_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.2.1 - HIGIENIZAÇÃO DE BRINQUEDOS/MATERIAIS (PRÉ-ESCOLA)
+# =============================================================================
+def render_questao_2_2_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.2.1 (Higienização de Brinquedos e Materiais Pedagógicos - Pré-Escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_2_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.2.1 • Higienização de Brinquedos e Materiais ({ano_sel})", expanded=True):
+            st.subheader("2.2.1 • Higienização de Brinquedos e Materiais Pedagógicos")
+            st.write(f"**Realiza higienização dos brinquedos/materiais pedagógicos em {ano_sel}?**")
+            st.caption("ℹ️ *Selecione a opção, insira o link de evidência e clique no botão 'Salvar Questão 2.2.1' para registrar.*")
+
+            d221 = res_data.get("2.2.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_221 = d221.get("valor", "")
+            evidencia_221_salva = d221.get("link", "")
+
+            opcoes_221 = ["Selecione...", "Sim", "Não"]
+            idx_221 = opcoes_221.index(v_banco_221) if v_banco_221 in opcoes_221 else 0
+
+            chave_radio_221 = f"radio_q221_{ano_sel}"
+            chave_link_221 = f"l221_txt_pre_{ano_sel}"
+
+            col_inputs, col_evidencia = st.columns([1, 2])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione uma opção:</label>', unsafe_allow_html=True)
+                op_221 = st.radio(
+                    "Opções 2.2.1",
+                    options=opcoes_221,
+                    index=idx_221,
+                    key=chave_radio_221,
+                    label_visibility="collapsed"
+                )
+
+            with col_evidencia:
+                link_221 = st.text_area(
+                    f"Link/Evidência (2.2.1) - {ano_sel}:",
+                    value=evidencia_221_salva,
+                    key=chave_link_221,
+                    placeholder="Insira os links...",
+                    height=145
+                )
+
+                placeholder_links_221 = st.empty()
+                links_221_visuais = re.findall(regex_url, link_221 or "")
+
+                if links_221_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_221_visuais
+                    ]
+                    placeholder_links_221.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Atribuição da Pontuação e Regras de Negócio
+            pts_221 = 0.0
+            if op_221 == "Sim":
+                pts_221 = 0.0
+                texto_painel = f"📊 Selecionado: {op_221} | O município realiza protocolos de higienização dos brinquedos e materiais."
+            elif op_221 == "Não":
+                pts_221 = 0.0
+                texto_painel = f"📊 Selecionado: {op_221} | Atenção: Não são realizados protocolos formais de higienização."
+            else:
+                pts_221 = 0.0
+                texto_painel = "⚠️ Status: Nenhuma opção válida selecionada (Campo Vazio)."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.2.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.2.1", key=f"btn_salvar_2_2_1_{ano_sel}", type="primary"):
+                valor_salvar = "" if op_221 == "Selecione..." else op_221
+                lnk_val = link_221.strip()
+
+                comentarios_historico = d221.get("comentarios", [])
+                comentario_simples = d221.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.2.1",
+                        valor=valor_salvar,
+                        pontos=float(pts_221),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_221_salva or "")]
+
+                if lnk_val != evidencia_221_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_2_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_2_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 2.2.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_2_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.2.1", st.session_state.get(f"links_pendentes_2_2_1_{ano_sel}", []), ano_sel)
