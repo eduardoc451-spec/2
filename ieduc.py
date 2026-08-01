@@ -12603,7 +12603,6 @@ def render_questao_3_15_3_1_ieduc(res_data: dict, ano_sel: str):
 
                 save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
                 if save_resp_func:
-                    # Salva Quesito Pai (3.15) atualizando pontos
                     save_resp_func(
                         qid="3.15",
                         valor="Sim",
@@ -12612,7 +12611,6 @@ def render_questao_3_15_3_1_ieduc(res_data: dict, ano_sel: str):
                         comentario=d315_pai.get("comentario", ""),
                         comentarios=d315_pai.get("comentarios", [])
                     )
-                    # Salva Quesito Filho (3.15.3.1)
                     save_resp_func(
                         qid="3.15.3.1",
                         valor=str_valor_novo,
@@ -12705,7 +12703,7 @@ def render_questao_3_15_4_ieduc(res_data: dict, ano_sel: str):
                 if links_3154_visuais:
                     links_formatados = [
                         f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
-                        for u in links_3153_visuais if 'links_3153_visuais' in locals() else [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_3154_visuais]
+                        for u in links_3154_visuais
                     ]
                     placeholder_links_3154.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
