@@ -1052,7 +1052,7 @@ def mostrar_formulario_educ(questoes: list = None):
     """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
 
     Gerencia a barra lateral, abas de navegação, carregamento de dados
-    e renderização automática dos quesitos de avaliação.
+    e renderização sequencial dos quesitos exatamente na ordem do arquivo.
     """
     # Carregamento do estado e da barra lateral
     total_pts, res_data, ano_sel = render_sidebar_ieduc()
@@ -1066,13 +1066,12 @@ def mostrar_formulario_educ(questoes: list = None):
     )
 
     with aba_quest:
-        # Busca dinamicamente todas as funções que começam com 'render_questao_'
-        funcoes_questoes = sorted([
+        # Pega as funções exatamente na ordem de declaração no arquivo (sem sort)
+        funcoes_questoes = [
             nome for nome in globals()
             if nome.startswith("render_questao_") and callable(globals()[nome])
-        ])
+        ]
 
-        # Executa todas na sequência sem precisar cadastrar manualmente
         if funcoes_questoes:
             for nome_func in funcoes_questoes:
                 globals()[nome_func](res_data, ano_sel)
