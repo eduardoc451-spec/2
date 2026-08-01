@@ -17,6 +17,7 @@ from psycopg2.extras import RealDictCursor
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.shapes import Drawing, String
 from reportlab.lib import colors
+from datetime import datetime, date, timedelta
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -360,7 +361,7 @@ def save_resp_ieduc(qid, valor, pontos, link="", comentarios=None, comentario=""
         "comentarios": comentarios,
         "comentario": str(comentario or ""),
         "detalhes": dados_detalhes,
-        "atualizado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "atualizado_em": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
     try:
