@@ -1044,43 +1044,41 @@ def render_modulo_ieduc(questoes_ieduc: list):
 
 import re
 import streamlit as st
-
 # =============================================================================
-# 7. FUNÇÃO PRINCIPAL / WRAPPER PARA O MAIN.PY
+# 6. FORMULÁRIO PRINCIPAL - iEduc
 # =============================================================================
 
 def mostrar_formulario_educ(questoes: list = None):
-    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional)."""
-    
-    render_sidebar = globals().get("render_sidebar_ieduc")
-    
-    if render_sidebar:
-        total_pts, res_data, ano_sel = render_sidebar()
-    else:
-        get_ano_func = globals().get("get_ano_atual_ieduc", lambda: "2024")
-        ano_sel = st.session_state.get("ano_selecionado", get_ano_func())
-        
-        load_func = globals().get("load_respostas_ieduc")
-        if load_func:
-            res_data = load_func(ano_sel)
-        else:
-            res_data = st.session_state.get(f"respostas_ieduc_{ano_sel}", {})
+    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
 
+    Gerencia a barra lateral, abas de navegação, carregamento de dados
+    e renderização automática dos quesitos de avaliação.
+    """
+    # Carregamento do estado e da barra lateral
+    total_pts, res_data, ano_sel = render_sidebar_ieduc()
+
+    # Título principal da página
     st.title(f"🎓 Educação (i-Educ) - Exercício {ano_sel}")
 
+    # Estrutura de abas principal
     aba_quest, aba_dados_ext, aba_graf = st.tabs(
         ["📋 Questionário i-Educ", "🌐 Dados Externos", "📊 Gráficos"]
     )
 
     with aba_quest:
-        # Chamada dos quesitos sequenciais
-        render_questao_1_0_ieduc(res_data, ano_sel)
-        render_questao_1_1_ieduc(res_data, ano_sel)
-        
-        # Insira os próximos quesitos aqui:
-        # render_questao_1_2_ieduc(res_data, ano_sel)
+        # Busca dinamicamente todas as funções que começam com 'render_questao_'
+        funcoes_questoes = sorted([
+            nome for nome in globals()
+            if nome.startswith("render_questao_") and callable(globals()[nome])
+        ])
 
-
+        # Executa todas na sequência sem precisar cadastrar manualmente
+        if funcoes_questoes:
+            for nome_func in funcoes_questoes:
+                globals()[nome_func](res_data, ano_sel)
+        else:
+            st.info("Nenhum quesito cadastrado até o momento.")
+            
 # =============================================================================
 # QUESITO 1.0 • OFERTA DE CRECHE (INFORMATIVO)
 # =============================================================================
