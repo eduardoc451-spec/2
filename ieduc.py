@@ -16971,3 +16971,329 @@ def render_questao_12_0_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("12.0", st.session_state.get(f"links_pendentes_12_0_{ano_sel}", []), ano_sel)
+
+# ==============================================================================
+# --- QUESITO 12.1 (Tipos de Controles - Múltipla Escolha) ---
+# ==============================================================================
+def render_questao_12_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 12.1 (Tipos de Controles de Acondicionamento)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_12_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 12.1 - Tipos de Controles de Acondicionamento ({ano_sel})", expanded=True):
+            st.subheader("12.1 • Tipos de Controles de Acondicionamento")
+            st.write("**Assinale os tipos de controles:**")
+
+            d121 = res_data.get("12.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_121 = d121.get("valor", "")
+            v_link_121 = d121.get("link", "")
+
+            # Mapeamento completo das opções e pesos
+            itens_121 = {
+                "Controle de Estoque com sistema PVPS - o primeiro que vence é o primeiro que sai": 0.375,
+                "Telas nas janelas e frestas": 0.35,
+                "Possui sistema de ventilação": 0.35,
+                "As luminárias são protegidas": 0.35,
+                "Possui ralos sifonados, dotados de dispositivos que permitam o seu fechamento": 0.35,
+                "O estoque não possui sinais de goteiras, vazamentos, umidade, trincas, rachaduras, bolores, infiltrações ou descascamento": 0.35,
+                "Há adequada distância no armazenamento de produtos alimentícios do piso, parede, forro": 0.35,
+                "As geladeiras/câmaras frias são higienizadas periodicamente": 0.35,
+                "Ventilação do estoque": 0.35,
+                "Temperatura": 0.35,
+                "Umidade do ar": 0.35,
+                "Prazo de validade": 0.35,
+                "Tipo de alimento": 0.35,
+                "Os alimentos abertos são etiquetados com data de abertura e validade": 0.35,
+                "Desinsetização a cada 6 meses": 0.35,
+                "Desratização a cada 6 meses": 0.35,
+                "Limpeza da caixa d'água a cada 6 meses": 0.375,
+                "Outro": 0.0
+            }
+
+            valores_salvos_121 = [x.strip() for x in v_banco_121.split(";")] if v_banco_121 else []
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                selecionados = []
+                pts_finais_exibir = 0.0
+
+                for item, peso in itens_121.items():
+                    chk_key = f"chk_121_{item.replace(' ', '_')[:30]}_{ano_sel}"
+                    default_val = item in valores_salvos_121
+                    
+                    is_checked = st.checkbox(
+                        f"{item} " + (f"(+ {peso} pts)" if peso > 0 else "(00 pts)"),
+                        value=default_val,
+                        key=chk_key
+                    )
+                    
+                    if is_checked:
+                        selecionados.append(item)
+                        pts_finais_exibir += peso
+
+                pts_finais_exibir = round(pts_finais_exibir, 3)
+                st.code(f"📊 Pontuação Acumulada no Quesito 12.1: {pts_finais_exibir:.3f} pontos", language="text")
+
+            with col_evidencia:
+                link_121 = st.text_area(
+                    f"Link/Evidência (12.1) - {ano_sel}:",
+                    value=v_link_121,
+                    key=f"link_q121_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_121 = st.empty()
+                links_121_visuais = re.findall(regex_url, link_121 or "")
+
+                if links_121_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_121_visuais
+                    ]
+                    placeholder_links_121.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("12.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 12.1", key=f"btn_salvar_12_1_{ano_sel}", type="primary"):
+                str_valor_121 = "; ".join(selecionados)
+                lnk_val = link_121.strip()
+
+                comentarios_historico = d121.get("comentarios", [])
+                comentario_simples = d121.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="12.1",
+                        valor=str_valor_121,
+                        pontos=pts_finais_exibir,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_121 or "")]
+
+                if lnk_val != v_link_121 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_12_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_12_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 12.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_12_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("12.1", st.session_state.get(f"links_pendentes_12_1_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 13.0 (Oferta de Transporte Escolar) ---
+# ==============================================================================
+def render_questao_13_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 13.0 (Oferta de Transporte Escolar)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    st.markdown("## EIXO 9: TRANSPORTE ESCOLAR")
+    with st.container(key=f"container_bloco_ieduc_13_0_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 13.0 - Oferta de Transporte Escolar ({ano_sel})", expanded=True):
+            st.subheader("13.0 • Oferta de Transporte Escolar")
+            st.write("**O município oferece transporte escolar?**")
+
+            d130 = res_data.get("13.0") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_130 = d130.get("valor", "")
+            v_link_130 = d130.get("link", "")
+
+            opc130 = ["Selecione...", "Sim", "Não"]
+            idx_130 = opc130.index(v_banco_130) if v_banco_130 in opc130 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                radio_130 = st.radio(
+                    "Selecione a opção para o Quesito 13.0:",
+                    options=opc130,
+                    index=idx_130,
+                    key=f"radio_q130_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if radio_130 != "Selecione...":
+                    st.code("✨ Resposta registrada com sucesso (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_130 = st.text_area(
+                    f"Link/Evidência (13.0) - {ano_sel}:",
+                    value=v_link_130,
+                    key=f"link_q130_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_130 = st.empty()
+                links_130_visuais = re.findall(regex_url, link_130 or "")
+
+                if links_130_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_130_visuais
+                    ]
+                    placeholder_links_130.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("13.0", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 13.0", key=f"btn_salvar_13_0_{ano_sel}", type="primary"):
+                str_valor_130 = radio_130 if radio_130 != "Selecione..." else ""
+                lnk_val = link_130.strip()
+
+                comentarios_historico = d130.get("comentarios", [])
+                comentario_simples = d130.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="13.0",
+                        valor=str_valor_130,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_130 or "")]
+
+                if lnk_val != v_link_130 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 13.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_13_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("13.0", st.session_state.get(f"links_pendentes_13_0_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 13.1 (Frota Própria ou Terceirizada) ---
+# ==============================================================================
+def render_questao_13_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 13.1 (Frota Própria ou Alugada/Terceirizada)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_13_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 13.1 - Frota Própria ou Alugada/Terceirizada ({ano_sel})", expanded=True):
+            st.subheader("13.1 • Frota Própria ou Alugada/Terceirizada")
+            st.write("**O transporte escolar é realizado por meio de frota própria ou frota alugada / terceirizada?**")
+            st.caption("⚠️ *Responder NÃO caso forneça APENAS vale transporte.*")
+
+            d131 = res_data.get("13.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_131 = d131.get("valor", "")
+            v_link_131 = d131.get("link", "")
+
+            opc131 = ["Selecione...", "Sim", "Não"]
+            idx_131 = opc131.index(v_banco_131) if v_banco_131 in opc131 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                radio_131 = st.radio(
+                    "Selecione a opção para o Quesito 13.1:",
+                    options=opc131,
+                    index=idx_131,
+                    key=f"radio_q131_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if radio_131 != "Selecione...":
+                    st.code("✨ Resposta registrada com sucesso (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_131 = st.text_area(
+                    f"Link/Evidência (13.1) - {ano_sel}:",
+                    value=v_link_131,
+                    key=f"link_q131_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_131 = st.empty()
+                links_131_visuais = re.findall(regex_url, link_131 or "")
+
+                if links_131_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_131_visuais
+                    ]
+                    placeholder_links_131.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("13.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 13.1", key=f"btn_salvar_13_1_{ano_sel}", type="primary"):
+                str_valor_131 = radio_131 if radio_131 != "Selecione..." else ""
+                lnk_val = link_131.strip()
+
+                comentarios_historico = d131.get("comentarios", [])
+                comentario_simples = d131.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="13.1",
+                        valor=str_valor_131,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_131 or "")]
+
+                if lnk_val != v_link_131 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_13_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_13_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 13.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_13_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("13.1", st.session_state.get(f"links_pendentes_13_1_{ano_sel}", []), ano_sel)
