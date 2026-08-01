@@ -21522,3 +21522,620 @@ def render_questao_17_2_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_17_2_{ano_sel}", []),
                 ano_sel,
             )
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 17.3 (Disponibilização de Informações do CACS FUNDEB) ---
+# ------------------------------------------------------------------------------
+def render_questao_17_3_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.3 (Disponibilização de Informações do CACS FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_3_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.3 - Disponibilização de Informações do CACS FUNDEB ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader(
+                "17.3 • Disponibilização de Informações do CACS FUNDEB"
+            )
+            st.write(
+                "**A Prefeitura Municipal disponibilizou, em sítio na internet,"
+                " informações atualizadas sobre a composição e o funcionamento"
+                " do CACS FUNDEB?**"
+            )
+
+            d173 = res_data.get("17.3") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_173 = d173.get("valor", "")
+            v_link_173 = d173.get("link", "")
+
+            opc173 = ["Selecione...", "Sim", "Não"]
+            idx_173 = (
+                opc173.index(v_banco_173) if v_banco_173 in opc173 else 0
+            )
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r173 = st.radio(
+                    "Selecione a opção para o Quesito 17.3:",
+                    opc173,
+                    index=idx_173,
+                    key=f"rad_q173_{ano_sel}",
+                    label_visibility="collapsed",
+                )
+
+                if r173 == "Selecione...":
+                    st.code(
+                        "💡 Por favor, selecione uma opção válida.",
+                        language="text",
+                    )
+                else:
+                    st.code(
+                        "✨ Opção registrada (Quesito Informativo).",
+                        language="text",
+                    )
+
+            with col_evidencia:
+                link_173 = st.text_area(
+                    f"Link/Evidência (17.3) - {ano_sel}:",
+                    value=v_link_173,
+                    key=f"link_q173_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=135,
+                )
+
+                placeholder_links_173 = st.empty()
+                links_173_visuais = re.findall(regex_url, link_173 or "")
+
+                if links_173_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_173_visuais
+                    ]
+                    placeholder_links_173.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.3", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.3",
+                key=f"btn_salvar_17_3_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = r173 if r173 != "Selecione..." else ""
+                pts_salvar = 0.0
+                lnk_val = link_173.strip()
+
+                comentarios_historico = d173.get("comentarios", [])
+                comentario_simples = d173.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.3",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_173 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_173
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_3_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.3 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_3_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.3",
+                st.session_state.get(f"links_pendentes_17_3_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 17.3.1 (Checklist de Informações Disponibilizadas) ---
+# ------------------------------------------------------------------------------
+def render_questao_17_3_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.3.1 (Checklist de Informações Disponibilizadas)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(
+        key=f"container_bloco_ieduc_17_3_1_{ano_sel}", border=True
+    ):
+        with st.expander(
+            f"🔍 QUESITO 17.3.1 - Checklist de Informações Disponibilizadas ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.3.1 • Checklist de Informações Disponibilizadas")
+            st.write(
+                "**Assinale quais informações foram disponibilizadas em sítio"
+                " na internet:**"
+            )
+
+            d1731 = res_data.get("17.3.1") or {
+                "valor": "[]",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_1731 = d1731.get("valor", "[]")
+            v_link_1731 = d1731.get("link", "")
+
+            try:
+                val_banco_limpo = v_banco_1731.replace("'", '"')
+                sel1731_inicial = json.loads(val_banco_limpo)
+                if not isinstance(sel1731_inicial, list):
+                    sel1731_inicial = []
+            except Exception:
+                sel1731_inicial = []
+
+            opcoes_1731 = [
+                (
+                    "Nomes dos conselheiros e das entidades ou segmentos que"
+                    " representam; – 0,4"
+                ),
+                (
+                    "Correio eletrônico ou outro canal de contato direto com o"
+                    " conselho – 0,4"
+                ),
+                "Atas de reuniões – 0,4",
+                "Relatórios e pareceres – 0,4",
+                "Outros documentos produtos pelo conselho – 0,4",
+            ]
+
+            c_check1, c_check2 = st.columns([1, 1])
+            selecionados_atuais = []
+
+            for idx, opcao in enumerate(opcoes_1731):
+                target_col = c_check1 if idx % 2 == 0 else c_check2
+                with target_col:
+                    checked = st.checkbox(
+                        opcao,
+                        value=(opcao in sel1731_inicial),
+                        key=f"chk_1731_{idx}_{ano_sel}",
+                    )
+                    if checked:
+                        selecionados_atuais.append(opcao)
+
+            pts_exibir = round(len(selecionados_atuais) * 0.4, 2)
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.code(
+                    f"✨ Pontuação Obtida: {pts_exibir:.1f} / 2.0 pontos.",
+                    language="text",
+                )
+
+            with col_evidencia:
+                link_1731 = st.text_area(
+                    f"Link/Evidência (17.3.1) - {ano_sel}:",
+                    value=v_link_1731,
+                    key=f"link_q1731_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_1731 = st.empty()
+                links_1731_visuais = re.findall(regex_url, link_1731 or "")
+
+                if links_1731_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1731_visuais
+                    ]
+                    placeholder_links_1731.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.3.1", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.3.1",
+                key=f"btn_salvar_17_3_1_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = json.dumps(
+                    selecionados_atuais, ensure_ascii=False
+                )
+                pts_salvar = pts_exibir
+                lnk_val = link_1731.strip()
+
+                comentarios_historico = d1731.get("comentarios", [])
+                comentario_simples = d1731.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.3.1",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_1731 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_1731
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_3_1_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_3_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.3.1 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_3_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.3.1",
+                st.session_state.get(f"links_pendentes_17_3_1_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 17.3.2 (Link da Página de Composição) ---
+# ------------------------------------------------------------------------------
+def render_questao_17_3_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.3.2 (Link da Página de Composição)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(
+        key=f"container_bloco_ieduc_17_3_2_{ano_sel}", border=True
+    ):
+        with st.expander(
+            f"🔍 QUESITO 17.3.2 - Link da Página de Composição ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.3.2 • Link da Página de Composição")
+            st.write(
+                "**Informe a página eletrônica (link na internet) sobre a"
+                " composição e funcionamento dos conselhos:**"
+            )
+            st.caption(
+                "ℹ️ *Se não estiver disponível na internet, inserir no campo o"
+                " texto **XY***"
+            )
+
+            d1732 = res_data.get("17.3.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_1732 = d1732.get("valor", "")
+            v_link_1732 = d1732.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_1732 = st.text_input(
+                    "Página eletrônica (link na internet) - 17.3.2:",
+                    value=v_banco_1732,
+                    key=f"txt_q1732_{ano_sel}",
+                    placeholder="https://... ou XY",
+                    label_visibility="collapsed",
+                )
+
+                val_atual_verif = txt_1732.strip()
+                if val_atual_verif.upper() == "XY":
+                    st.code(
+                        "⚠️ Declarado indisponível na internet (XY).",
+                        language="text",
+                    )
+                elif val_atual_verif:
+                    st.code(
+                        "✨ Página eletrônica registrada com sucesso.",
+                        language="text",
+                    )
+                else:
+                    st.code(
+                        "💡 Informe o link completo ou 'XY' se indisponível.",
+                        language="text",
+                    )
+
+            with col_evidencia:
+                link_1732 = st.text_area(
+                    f"Link/Evidência (17.3.2) - {ano_sel}:",
+                    value=v_link_1732 if v_link_1732 else v_banco_1732,
+                    key=f"link_q1732_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_1732 = st.empty()
+                links_1732_visuais = re.findall(regex_url, link_1732 or "")
+
+                if links_1732_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_1732_visuais
+                    ]
+                    placeholder_links_1732.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.3.2", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.3.2",
+                key=f"btn_salvar_17_3_2_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = txt_1732.strip()
+                pts_salvar = 0.0
+                lnk_val = link_1732.strip() if link_1732.strip() else valor_salvar
+
+                comentarios_historico = d1732.get("comentarios", [])
+                comentario_simples = d1732.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.3.2",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_1732 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_1732
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_3_2_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_3_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.3.2 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_3_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.3.2",
+                st.session_state.get(f"links_pendentes_17_3_2_{ano_sel}", []),
+                ano_sel,
+            )
+
+
+# ------------------------------------------------------------------------------
+# --- QUESITO 17.4 (Recursos Fornecidos ao CACS FUNDEB) ---
+# ------------------------------------------------------------------------------
+def render_questao_17_4_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 17.4 (Recursos Fornecidos ao CACS FUNDEB)."""
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_17_4_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 17.4 - Recursos Fornecidos ao CACS FUNDEB ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("17.4 • Recursos Fornecidos ao CACS FUNDEB")
+            st.write(
+                "**Assinale os recursos fornecidos pela Prefeitura Municipal ao"
+                " CACS FUNDEB a fim de garantir infraestrutura e condições"
+                " materiais adequadas à execução plena de suas competências:**"
+            )
+
+            d174 = res_data.get("17.4") or {
+                "valor": "[]",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_174 = d174.get("valor", "[]")
+            v_link_174 = d174.get("link", "")
+
+            try:
+                val_banco_limpo = v_banco_174.replace("'", '"')
+                sel174_inicial = json.loads(val_banco_limpo)
+                if not isinstance(sel174_inicial, list):
+                    sel174_inicial = []
+            except Exception:
+                sel174_inicial = []
+
+            opcoes_174 = [
+                "Recursos Humanos – 0,5",
+                "Recursos Tecnológicos – 0,5",
+                "Estrutura Física – 0,5",
+                "Recursos Orçamentários – 0,5",
+                "Recursos Materiais – 0,5",
+                "Outros – 0,5",
+            ]
+
+            c_check1, c_check2 = st.columns([1, 1])
+            selecionados_atuais = []
+
+            for idx, opcao in enumerate(opcoes_174):
+                target_col = c_check1 if idx % 2 == 0 else c_check2
+                with target_col:
+                    checked = st.checkbox(
+                        opcao,
+                        value=(opcao in sel174_inicial),
+                        key=f"chk_174_{idx}_{ano_sel}",
+                    )
+                    if checked:
+                        selecionados_atuais.append(opcao)
+
+            pts_exibir = round(len(selecionados_atuais) * 0.5, 2)
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.code(
+                    f"✨ Pontuação Obtida: {pts_exibir:.1f} / 3.0 pontos.",
+                    language="text",
+                )
+
+            with col_evidencia:
+                link_174 = st.text_area(
+                    f"Link/Evidência (17.4) - {ano_sel}:",
+                    value=v_link_174,
+                    key=f"link_q174_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_174 = st.empty()
+                links_174_visuais = re.findall(regex_url, link_174 or "")
+
+                if links_174_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_174_visuais
+                    ]
+                    placeholder_links_174.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("17.4", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 17.4",
+                key=f"btn_salvar_17_4_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = json.dumps(
+                    selecionados_atuais, ensure_ascii=False
+                )
+                pts_salvar = pts_exibir
+                lnk_val = link_174.strip()
+
+                comentarios_historico = d174.get("comentarios", [])
+                comentario_simples = d174.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="17.4",
+                        valor=valor_salvar,
+                        pontos=pts_salvar,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_174 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_174
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_17_4_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_17_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 17.4 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_17_4_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "17.4",
+                st.session_state.get(f"links_pendentes_17_4_{ano_sel}", []),
+                ano_sel,
+            )
