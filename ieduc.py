@@ -1042,44 +1042,51 @@ def render_modulo_ieduc(questoes_ieduc: list):
                     st.warning("Selecione uma opção válida antes de salvar.")
 
 
+import re
+import streamlit as st
+
 # =============================================================================
 # 7. FUNÇÃO PRINCIPAL / WRAPPER PARA O MAIN.PY
 # =============================================================================
 
 def mostrar_formulario_educ(questoes: list = None):
     """Renderiza a interface principal do módulo i-Educ (Gestão Educacional)."""
+    
     render_sidebar = globals().get("render_sidebar_ieduc")
-    render_modulo = globals().get("render_modulo_ieduc")
     
     if render_sidebar:
         total_pts, res_data, ano_sel = render_sidebar()
     else:
-        # Fallback de teste se a sidebar não estiver definida no escopo
-        ano_sel = st.session_state.get("ano_selecionado", "2024")
-        res_data = st.session_state.get(f"respostas_ieduc_{ano_sel}", {})
+        get_ano_func = globals().get("get_ano_atual_ieduc", lambda: "2024")
+        ano_sel = st.session_state.get("ano_selecionado", get_ano_func())
+        
+        load_func = globals().get("load_respostas_ieduc")
+        if load_func:
+            res_data = load_func(ano_sel)
+        else:
+            res_data = st.session_state.get(f"respostas_ieduc_{ano_sel}", {})
 
     st.title(f"🎓 Educação (i-Educ) - Exercício {ano_sel}")
-
-    if questoes is None:
-        questoes = globals().get("QUESTOES_IEDUC", globals().get("QUESTOES_IEDUC_PADRAO", []))
 
     aba_quest, aba_dados_ext, aba_graf = st.tabs(
         ["📋 Questionário i-Educ", "🌐 Dados Externos", "📊 Gráficos"]
     )
 
     with aba_quest:
-        if render_modulo:
-            render_modulo(questoes)
-        else:
-            st.info("Renderizador de módulo não carregado.")
+        # Chamada dos quesitos sequenciais
+        render_questao_1_0_ieduc(res_data, ano_sel)
+        render_questao_1_1_ieduc(res_data, ano_sel)
+        
+        # Insira os próximos quesitos aqui:
+        # render_questao_1_2_ieduc(res_data, ano_sel)
 
 
 # =============================================================================
-# QUESITO 1.0 • PLANO MUNICIPAL DE EDUCAÇÃO / OFERTA DE CRECHE (MODELO iEduc)
+# QUESITO 1.0 • OFERTA DE CRECHE (INFORMATIVO)
 # =============================================================================
 
 def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza a Questão 1.0 (Oferta de Creche) no modelo padrão iGov / iEduc."""
+    """Renderiza a Questão 1.0 (Oferta de Creche) - Quesito Informativo."""
     
     regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
 
@@ -1150,7 +1157,7 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
 
             if st.button("💾 Salvar Questão 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                 val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
-                pts_10 = float(opcoes_10.get(val_salvar, 0.0))
+                pts_10 = 0.0
                 lnk_val = link_10.strip()
 
                 comentarios_historico = d10.get("comentarios", [])
@@ -1178,12 +1185,9 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                 st.toast("Resposta e histórico do Quesito 1.0 salvos com sucesso!", icon="✅")
                 st.rerun()
 
-            pts_atuais_10 = d10.get("pontos", 0.0)
-            cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
-
             st.markdown(
-                f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
-                f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "ℹ️ Status: Questão Informativa (Sem impacto na pontuação global)</span>",
                 unsafe_allow_html=True,
             )
 
@@ -1192,12 +1196,13 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
         if modal_aviso_func:
             modal_aviso_func("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []), ano_sel)
 
+
 # =============================================================================
-# QUESITO 1.1 • BRINQUEDOS NO PÁTIO INFANTIL (MODELO iEduc / iGov)
+# QUESITO 1.1 • BRINQUEDOS NO PÁTIO INFANTIL (INFORMATIVO)
 # =============================================================================
 
 def render_questao_1_1_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza a Questão 1.1 (Brinquedos no Pátio Infantil) no modelo padrão iGov / iEduc."""
+    """Renderiza a Questão 1.1 (Brinquedos no Pátio) - Quesito Informativo."""
     
     regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
 
@@ -1207,14 +1212,12 @@ def render_questao_1_1_ieduc(res_data: dict, ano_sel: str):
             st.write("**Algum estabelecimento que oferece Creche possui brinquedos no Pátio Infantil?**")
             st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.1' para registrar.*")
 
-            # Mapeamento de Opções e Pontuações do iEduc
             opcoes_11 = {
                 "Selecione...": 0.0,
-                "Sim": 1.0,  # Ajuste a pontuação de acordo com a regra de negócio
+                "Sim": 0.0,
                 "Não": 0.0
             }
 
-            # Estado inicial / persistente
             d11 = res_data.get("1.1") or {
                 "valor": "Selecione...",
                 "pontos": 0.0,
@@ -1229,7 +1232,6 @@ def render_questao_1_1_ieduc(res_data: dict, ano_sel: str):
 
             evidencia_11_salva = d11.get("link", "")
 
-            # Chaves fixas por componente e ano
             chave_radio_11 = f"r_11_{ano_sel}"
             chave_link_11 = f"l_11_txt_{ano_sel}"
 
@@ -1265,15 +1267,13 @@ def render_questao_1_1_ieduc(res_data: dict, ano_sel: str):
                     ]
                     placeholder_links_11.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
-            # Renderização do chat de comentários / histórico
             bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
             if bloco_comentarios_func:
                 bloco_comentarios_func("1.1", res_data, ano_sel)
 
-            # Botão de salvamento
             if st.button("💾 Salvar Questão 1.1", key=f"btn_salvar_1_1_{ano_sel}", type="primary"):
                 val_salvar = st.session_state.get(chave_radio_11, v_salvo_11)
-                pts_11 = float(opcoes_11.get(val_salvar, 0.0))
+                pts_11 = 0.0
                 lnk_val = link_11.strip()
 
                 comentarios_historico = d11.get("comentarios", [])
@@ -1293,7 +1293,6 @@ def render_questao_1_1_ieduc(res_data: dict, ano_sel: str):
                 links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
                 links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_11_salva or "")]
 
-                # Se detectou novo link, ativa o modal antes de recarregar a tela
                 if lnk_val != evidencia_11_salva and links_atuais and links_atuais != links_antigos:
                     st.session_state[f"links_pendentes_1_1_{ano_sel}"] = links_atuais
                     st.session_state[f"gatilho_modal_1_1_{ano_sel}"] = True
@@ -1302,17 +1301,12 @@ def render_questao_1_1_ieduc(res_data: dict, ano_sel: str):
                 st.toast("Resposta e histórico do Quesito 1.1 salvos com sucesso!", icon="✅")
                 st.rerun()
 
-            # Impacto de pontuação
-            pts_atuais_11 = d11.get("pontos", 0.0)
-            cor_txt_11 = "#28a745" if pts_atuais_11 > 0.0 else "#6c757d"
-
             st.markdown(
-                f"<span style='color:{cor_txt_11}; font-weight:bold;'>"
-                f"📊 Impacto de Pontuação no Quesito 1.1: +{pts_atuais_11:.1f} pontos</span>",
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "ℹ️ Status: Questão Informativa (Sem impacto na pontuação global)</span>",
                 unsafe_allow_html=True,
             )
 
-    # GATILHO DO MODAL 1.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_1_1_{ano_sel}", False):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
