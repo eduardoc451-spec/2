@@ -14989,3 +14989,446 @@ def render_questao_4_0_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# EIXO 5: INFRAESTRUTURA E SEGURANÇA ESCOLAR
+# =============================================================================
+
+# --- QUESITO 5.0 (Diagnóstico de AVCB, Reparos e Primeiros Socorros) ---
+def render_questao_5_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 5.0 (Infraestrutura e Segurança Escolar)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_5_0_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 5.0 - Infraestrutura e Segurança Escolar ({ano_sel})", expanded=True):
+            st.subheader("5.0 • Infraestrutura e Segurança Escolar")
+            st.write(f"**Informe a quantidade de estabelecimentos de ensino da rede municipal que oferecem Creche, Pré-escola e Anos Iniciais do Ensino Fundamental em {ano_sel}:**")
+            st.caption(f"⚠️ *Considerar estritamente os estabelecimentos sob gestão municipal com base na database do CENSO {ano_sel}.*")
+
+            d50 = res_data.get("5.0") or {
+                "valor": "TOTAL:-,AVCB:-,REPARO:-,SOCORRO:-",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_50 = d50.get("valor", "TOTAL:-,AVCB:-,REPARO:-,SOCORRO:-")
+            v_link_50 = d50.get("link", "")
+
+            try:
+                parts_50 = v_banco_50.split(",")
+                v_total = parts_50[0].split(":")[1] if "TOTAL" in parts_50[0] else "-"
+                v_avcb = parts_50[1].split(":")[1] if "TOTAL" in parts_50[0] else parts_50[0].split(":")[1]
+                v_reparo = parts_50[2].split(":")[1] if "TOTAL" in parts_50[0] else parts_50[1].split(":")[1]
+                v_socorro = parts_50[3].split(":")[1] if "TOTAL" in parts_50[0] else parts_50[2].split(":")[1]
+            except Exception:
+                v_total, v_avcb, v_reparo, v_socorro = "-", "-", "-", "-"
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                tot_val = st.text_input(f"Total de estabelecimentos sob gestão municipal em {ano_sel}:", value=v_total if v_total != "-" else "", placeholder="Ex: 20", key=f"txt_q50_tot_{ano_sel}")
+                avc_val = st.text_input(f"Estabelecimentos com AVCB vigente em {ano_sel}:", value=v_avcb if v_avcb != "-" else "", placeholder="Ex: 14", key=f"txt_q50_avc_{ano_sel}")
+                rep_val = st.text_input(f"Estabelecimentos que necessitavam de reparos estruturais em dez/{ano_sel}:", value=v_reparo if v_reparo != "-" else "", placeholder="Ex: 3", key=f"txt_q50_rep_{ano_sel}")
+                soc_val = st.text_input(f"Estabelecimentos com capacitação em primeiros socorros em {ano_sel}:", value=v_socorro if v_socorro != "-" else "", placeholder="Ex: 17", key=f"txt_q50_soc_{ano_sel}")
+
+            with col_evidencia:
+                link_50 = st.text_area(
+                    f"Link/Evidência (5.0) - {ano_sel}:",
+                    value=v_link_50,
+                    key=f"link_q50_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=310
+                )
+
+                placeholder_links_50 = st.empty()
+                links_50_visuais = re.findall(regex_url, link_50 or "")
+
+                if links_50_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_50_visuais
+                    ]
+                    placeholder_links_50.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de exibição em tempo real na interface gráfica
+            pts_avcb = 0.0
+            pts_reparo = 0.0
+            pontos_totais_50 = 0.0
+
+            try:
+                tot_escolas = int(tot_val.strip())
+                if tot_escolas > 0:
+                    val_avcb_num = int(avc_val.strip()) if avc_val.strip() else 0
+                    val_rep_num = int(rep_val.strip()) if rep_val.strip() else 0
+
+                    p_avcb = min(val_avcb_num / tot_escolas, 1.0)
+                    p_reparo = min(val_rep_num / tot_escolas, 1.0)
+
+                    pts_avcb = round(p_avcb * 50.0, 2)
+                    pts_reparo = round((1.0 - p_reparo) * 25.0, 2)
+                    pontos_totais_50 = round(pts_avcb + pts_reparo, 2)
+            except Exception:
+                pass
+
+            if tot_val.strip() and avc_val.strip() and rep_val.strip():
+                st.markdown(f"##### 📊 Extrato de Pontuação do Quesito ({ano_sel})")
+                m_col1, m_col2, m_col3 = st.columns(3)
+                with m_col1:
+                    st.metric("Nota AVCB (Máx 50)", f"{pts_avcb} pts")
+                with m_col2:
+                    st.metric("Nota Reparos (Máx 25)", f"{pts_reparo} pts")
+                with m_col3:
+                    st.metric(f"Soma Nota Geral ({ano_sel})", f"{pontos_totais_50} pts", delta=f"{pontos_totais_50}/75.0")
+
+            with st.expander("📝 Fórmulas de Cálculo Aplicadas"):
+                st.markdown("""
+                * **AVCB Vigente:** $\\text{Proporção (P)} \\times 50$
+                * **Necessidade de Reparos:** $(1 - \\text{Proporção (P)}) \\times 25$
+                * **Nota Geral Salva:** $\\text{Nota AVCB} + \\text{Nota Reparos}$
+                * *Nota:* O campo de Primeiros Socorros é um indicador coletado para diagnóstico e não gera pontuação direta.
+                """)
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("5.0", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 5.0", key=f"btn_salvar_5_0_{ano_sel}", type="primary"):
+                s_total = tot_val.strip().replace(",", ".").replace(":", "-") or "-"
+                s_avcb = avc_val.strip().replace(",", ".").replace(":", "-") or "-"
+                s_reparo = rep_val.strip().replace(",", ".").replace(":", "-") or "-"
+                s_socorro = soc_val.strip().replace(",", ".").replace(":", "-") or "-"
+                lnk_val = link_50.strip()
+
+                str_valor_50 = f"TOTAL:{s_total},AVCB:{s_avcb},REPARO:{s_reparo},SOCORRO:{s_socorro}"
+
+                comentarios_historico = d50.get("comentarios", [])
+                comentario_simples = d50.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="5.0",
+                        valor=str_valor_50,
+                        pontos=pontos_totais_50,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_50 or "")]
+
+                if lnk_val != v_link_50 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_5_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_5_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 5.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_5_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("5.0", st.session_state.get(f"links_pendentes_5_0_{ano_sel}", []), ano_sel)
+
+
+# --- QUESITO 5.1 (Detalhamento por Estabelecimento) ---
+def render_questao_5_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 5.1 (Detalhamento por Estabelecimento)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_5_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 5.1 - Detalhamento por Estabelecimento ({ano_sel})", expanded=True):
+            st.subheader("5.1 • Detalhamento por Estabelecimento")
+            st.write(f"**Detalhe os dados dos estabelecimentos informados sobre as unidades com AVCB e as com necessidade de reparos:**")
+            st.caption("ℹ️ *Considerar somente os estabelecimentos sob gestão municipal.*")
+
+            d51 = res_data.get("5.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_51 = d51.get("valor", "")
+            v_link_51 = d51.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_detalhe = st.text_area(
+                    "Detalhamento dos dados por estabelecimento:",
+                    value=v_banco_51,
+                    placeholder="Ex:\n- EMEB Maria de Lourdes: AVCB vigente até 11/2026. Sem necessidade de reparos.\n- EMEI Jardim das Flores: AVCB inexistente. Apresenta infiltrações na cobertura...",
+                    key=f"txt_q51_detalhe_{ano_sel}",
+                    height=310
+                )
+
+            with col_evidencia:
+                link_51 = st.text_area(
+                    f"Link/Evidência (5.1) - {ano_sel}:",
+                    value=v_link_51,
+                    key=f"link_q51_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=310
+                )
+
+                placeholder_links_51 = st.empty()
+                links_51_visuais = re.findall(regex_url, link_51 or "")
+
+                if links_51_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_51_visuais
+                    ]
+                    placeholder_links_51.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("5.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 5.1", key=f"btn_salvar_5_1_{ano_sel}", type="primary"):
+                str_valor_51 = txt_detalhe.strip()
+                lnk_val = link_51.strip()
+
+                comentarios_historico = d51.get("comentarios", [])
+                comentario_simples = d51.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="5.1",
+                        valor=str_valor_51,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_51 or "")]
+
+                if lnk_val != v_link_51 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_5_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_5_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 5.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_5_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("5.1", st.session_state.get(f"links_pendentes_5_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# EIXO 6: VALORIZAÇÃO DOS PROFISSIONAIS DA EDUCAÇÃO
+# =============================================================================
+
+# --- QUESITO 6.0 (Existência de PCCS Específico) ---
+def render_questao_6_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 6.0 (Existência de PCCS Específico)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_6_0_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 6.0 - Existência de PCCS Específico ({ano_sel})", expanded=True):
+            st.subheader("6.0 • Existência de PCCS Específico")
+            st.write(f"**A Prefeitura/Secretaria da Educação Municipal possui Plano de Cargos e Salários específico para seus professores em {ano_sel}?**")
+            st.caption("⚠️ *Atenção: PCCS geral dos servidores públicos do município não é aceito como PCCS específico para os professores.*")
+
+            d60 = res_data.get("6.0") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_60 = d60.get("valor", "")
+            v_link_60 = d60.get("link", "")
+
+            opc60 = [
+                "Selecione...",
+                "Sim – 00",
+                "Não – -10"
+            ]
+
+            def calcular_pontos_60(valor_opcao):
+                if valor_opcao == "Não – -10":
+                    return -10.0
+                return 0.0
+
+            idx_sel = opc60.index(v_banco_60) if v_banco_60 in opc60 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r60 = st.radio(
+                    f"Selecione a opção para o Quesito 6.0:",
+                    opc60,
+                    index=idx_sel,
+                    key=f"radio_q60_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r60 != "Selecione...":
+                    pts_exibir = calcular_pontos_60(r60)
+                    if pts_exibir < 0:
+                        st.code(f"📉 Penalidade Aplicada no Quesito 6.0: {pts_exibir:.1f} pontos na nota geral.", language="text")
+                    else:
+                        st.code("✨ Pontuação do Quesito 6.0: 0.0 pontos (Sem penalidades)", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_60 = st.text_area(
+                    f"Link/Evidência (6.0) - {ano_sel}:",
+                    value=v_link_60,
+                    key=f"link_q60_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_60 = st.empty()
+                links_60_visuais = re.findall(regex_url, link_60 or "")
+
+                if links_60_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_60_visuais
+                    ]
+                    placeholder_links_60.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("6.0", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 6.0", key=f"btn_salvar_6_0_{ano_sel}", type="primary"):
+                str_valor_60 = r60 if r60 != "Selecione..." else ""
+                pts_calculados = calcular_pontos_60(str_valor_60)
+                lnk_val = link_60.strip()
+
+                comentarios_historico = d60.get("comentarios", [])
+                comentario_simples = d60.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="6.0",
+                        valor=str_valor_60,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_60 or "")]
+
+                if lnk_val != v_link_60 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_6_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_6_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 6.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_6_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("6.0", st.session_state.get(f"links_pendentes_6_0_{ano_sel}", []), ano_sel)
+
+
+# --- QUESITO 6.1 (Instrumento Normativo) ---
+def render_questao_6_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 6.1 (Instrumento Normativo)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_6_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 6.1 - Instrumento Normativo ({ano_sel})", expanded=True):
+            st.subheader("6.1 • Instrumento Normativo")
+            st.write(f"**Informe o Instrumento Normativo, Número e Data da publicação do PCCS em {ano_sel}:**")
+            st.caption("ℹ️ *Lembre-se de anexar o documento em PDF por meio do botão de anexos geral.*")
+
+            d61 = res_data.get("6.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_61 = d61.get("valor", "")
+            v_link_61 = d61.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_61 = st.text_input(
+                    "Instrumento, Nº e Data:",
+                    value=v_banco_61,
+                    key=f"txt_q61_{ano_sel}",
+                    placeholder="Ex: Lei Complementar nº 123, de 15/05/2018"
+                )
+
+                if txt_61.strip():
+                    st.code("✨ Informação registrada com sucesso (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, preencha os dados do instrumento normativo.", language="text")
+
+            with col_evidencia:
+                link_61 = st.text_area(
+                    f"Link/Evidência (6.1) - {ano_sel}:",
+                    value=v_link_61,
+                    key=f"link_q61_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_61 = st.empty()
+                links_61_visuais = re.findall(regex_url, link_61 or "")
+
+                if links_61_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_61_visuais
+                    ]
+                    placeholder_links_61.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("6.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 6.1", key=f"btn_salvar_6_1_{ano_sel}", type="primary"):
+                str_valor_61 = txt_61.strip()
+                lnk_val = link_61.strip()
+
+                comentarios_historico = d61.get("comentarios", [])
+                comentario_simples = d61.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="6.1",
+                        valor=str_valor_61,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_61 or "")]
+
+                if lnk_val != v_link_61 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_6_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 6.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_6_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []), ano_sel)
