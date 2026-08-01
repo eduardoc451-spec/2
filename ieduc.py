@@ -3616,7 +3616,8 @@ def render_questao_1_10_1_ieduc(res_data: dict, ano_sel: str):
             chave_radio_1101 = f"rad_ieduc_1101_{ano_sel}"
             chave_link_1101 = f"txt_ieduc_1101_{ano_sel}"
 
-            c1101_1, c1101_2 = st.columns([1, 2])
+            # Alterado de [1, 2] para [3, 2] para reduzir a largura da coluna de links
+            c1101_1, c1101_2 = st.columns([3, 2])
 
             with c1101_1:
                 st.markdown(f"##### 🗓️ Intervalo de Realização ({ano_sel})")
@@ -3630,11 +3631,11 @@ def render_questao_1_10_1_ieduc(res_data: dict, ano_sel: str):
 
             with c1101_2:
                 link_1101 = st.text_area(
-                    f"Link/Evidência de comprovação (1.10.1) - {ano_sel}:",
+                    f"Link/Evidência (1.10.1) - {ano_sel}:",
                     value=evidencia_1101_salva,
                     key=chave_link_1101,
-                    placeholder="Insira os links dos calendários escolares, regimentos ou cronogramas...",
-                    height=110,
+                    placeholder="Insira os links...",
+                    height=80,
                 )
 
                 placeholder_links_1101 = st.empty()
@@ -3647,7 +3648,7 @@ def render_questao_1_10_1_ieduc(res_data: dict, ano_sel: str):
                     ]
                     placeholder_links_1101.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
-            # Dados estritamente informativos (atrelados ao detalhamento do quesito 1.10)
+            # Dados estritamente informativos
             pts_1101 = 0.0
 
             if r1101:
@@ -3739,7 +3740,8 @@ def render_questao_1_11_ieduc(res_data: dict, ano_sel: str):
             chave_radio_111 = f"rad_ieduc_111_{ano_sel}"
             chave_link_111 = f"txt_ieduc_111_{ano_sel}"
 
-            c111_1, c111_2 = st.columns([1, 2])
+            # Alterado de [1, 2] para [3, 2]
+            c111_1, c111_2 = st.columns([3, 2])
 
             with c111_1:
                 st.markdown(f"##### 📦 Modalidade de Fornecimento ({ano_sel})")
@@ -3753,11 +3755,11 @@ def render_questao_1_11_ieduc(res_data: dict, ano_sel: str):
 
             with c111_2:
                 link_111 = st.text_area(
-                    f"Link/Evidência de comprovação (1.11) - {ano_sel}:",
+                    f"Link/Evidência (1.11) - {ano_sel}:",
                     value=evidencia_111_salva,
                     key=chave_link_111,
-                    placeholder="Insira os links dos comprovantes de entrega, termos de recebimento ou notas...",
-                    height=110,
+                    placeholder="Insira os links...",
+                    height=80,
                 )
 
                 placeholder_links_111 = st.empty()
@@ -3859,7 +3861,8 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
 
             chave_link_1111 = f"l111_txt_creche_{ano_sel}"
 
-            col_inputs, col_evidencia = st.columns([1, 2])
+            # Alterado de [1, 2] para [3, 2]
+            col_inputs, col_evidencia = st.columns([3, 2])
 
             with col_inputs:
                 st.markdown("##### 📅 Datas de Auditoria")
@@ -3893,11 +3896,11 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
 
             with col_evidencia:
                 link_1111 = st.text_area(
-                    f"Link/Evidência de comprovação (1.11.1) - {ano_sel}:",
+                    f"Link/Evidência (1.11.1) - {ano_sel}:",
                     value=evidencia_1111_salva,
                     key=chave_link_1111,
-                    placeholder="Insira os links dos guias de remessa, relatórios de entrega ou fotos...",
-                    height=110,
+                    placeholder="Insira os links...",
+                    height=80,
                 )
 
                 placeholder_links_1111 = st.empty()
