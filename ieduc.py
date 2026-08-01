@@ -3850,9 +3850,16 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
             v_banco_1111 = d1111.get("valor", f"01/02/{ano_sel}")
             evidencia_1111_salva = d1111.get("link", "")
 
-            key_ini_aulas = f"data_inicio_aulas_creche_{ano_sel}"
-            if key_ini_aulas not in st.session_state:
-                st.session_state[key_ini_aulas] = datetime.date(int(ano_sel), 2, 5)
+            # Converte e trata o ano recebido
+            try:
+                ano_int = int(ano_sel)
+            except (ValueError, TypeError):
+                ano_int = datetime.date.today().year
+
+            # 1. Ajuste seguro do session_state (executado apenas se não existir)
+            key_dt_inicio_input = f"q111_dt_inicio_{ano_sel}"
+            if key_dt_inicio_input not in st.session_state:
+                st.session_state[key_dt_inicio_input] = datetime.date(ano_int, 2, 5)
 
             key_chk = f"chk_ativar_auditoria_{ano_sel}"
             padrao_check = bool(v_banco_1111 and v_banco_1111 != f"01/02/{ano_sel}")
@@ -3861,7 +3868,6 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
 
             chave_link_1111 = f"l111_txt_creche_{ano_sel}"
 
-            # Alterado de [1, 2] para [3, 2]
             col_inputs, col_evidencia = st.columns([3, 2])
 
             with col_inputs:
@@ -3870,19 +3876,19 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
 
                 if ativou_datas:
                     st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
+                    
+                    # date_input gerenciado nativamente pelo Streamlit através da sua própria key
                     dt_inicio = st.date_input(
                         "Data de início das aulas:",
-                        value=st.session_state[key_ini_aulas],
                         format="DD/MM/YYYY",
-                        key=f"q111_dt_inicio_{ano_sel}"
+                        key=key_dt_inicio_input
                     )
-                    st.session_state[key_ini_aulas] = dt_inicio
 
                     try:
                         dia_s, mes_s, ano_s = v_banco_1111.split("/")
                         data_inicial_entrega = datetime.date(int(ano_s), int(mes_s), int(dia_s))
                     except Exception:
-                        data_inicial_entrega = st.session_state[key_ini_aulas]
+                        data_inicial_entrega = dt_inicio
 
                     dt_entrega = st.date_input(
                         "Data da última entrega na escola:",
@@ -3891,7 +3897,7 @@ def render_questao_1_11_1_ieduc(res_data: dict, ano_sel: str):
                         key=f"q111_dt_entrega_{ano_sel}"
                     )
                 else:
-                    dt_inicio = st.session_state[key_ini_aulas]
+                    dt_inicio = st.session_state[key_dt_inicio_input]
                     dt_entrega = None
 
             with col_evidencia:
