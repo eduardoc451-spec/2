@@ -14878,3 +14878,114 @@ def render_questao_3_23_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.23", st.session_state.get(f"links_pendentes_3_23_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 4.0 • Oferta de Anos Finais (IEDUC)
+# =============================================================================
+def render_questao_4_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 4.0 (Oferta de Anos Finais)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_4_0_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 4.0 - Oferta de Anos Finais ({ano_sel})", expanded=True):
+            st.subheader("4.0 • Oferta de Anos Finais")
+            st.write(f"**A Prefeitura Municipal oferece os Anos Finais do Ensino Fundamental (6º ao 9º ano) em {ano_sel}?**")
+
+            d40 = res_data.get("4.0") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_40 = d40.get("valor", "")
+            v_link_40 = d40.get("link", "")
+
+            opc40 = [
+                "Selecione...",
+                "Sim",
+                "Não"
+            ]
+
+            def calcular_pontos_40(valor_opcao):
+                # Quesito estrutural/direcionador (0.0 pontos diretos)
+                return 0.0
+
+            idx_sel = opc40.index(v_banco_40) if v_banco_40 in opc40 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r40 = st.radio(
+                    f"Selecione a opção para o Quesito 4.0:",
+                    opc40,
+                    index=idx_sel,
+                    key=f"radio_q40_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r40 != "Selecione...":
+                    if r40 == "Sim":
+                        st.code("📝 Habilita o preenchimento dos sub-quesitos de detalhamento do Eixo 4.", language="text")
+                    else:
+                        st.code("ℹ️ Registrado: O município não oferece esta etapa de ensino diretamente.", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_40 = st.text_area(
+                    f"Link/Evidência (4.0) - {ano_sel}:",
+                    value=v_link_40,
+                    key=f"link_q40_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_40 = st.empty()
+                links_40_visuais = re.findall(regex_url, link_40 or "")
+
+                if links_40_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_40_visuais
+                    ]
+                    placeholder_links_40.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("4.0", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 4.0", key=f"btn_salvar_4_0_{ano_sel}", type="primary"):
+                str_valor_40 = r40 if r40 != "Selecione..." else ""
+                pts_calculados = calcular_pontos_40(str_valor_40)
+                lnk_val = link_40.strip()
+
+                comentarios_historico = d40.get("comentarios", [])
+                comentario_simples = d40.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="4.0",
+                        valor=str_valor_40,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_40 or "")]
+
+                if lnk_val != v_link_40 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_4_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 4.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_4_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []), ano_sel)
