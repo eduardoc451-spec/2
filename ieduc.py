@@ -394,15 +394,13 @@ CATEGORIAS_MAP = CATEGORIAS_MAP_IEDUC
 # MODAL DE AVISO AUTOMÁTICO
 # =============================================================================
 @st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid: str = "", links_encontrados: list = None):
-    # Proteção para garantir que links_encontrados seja sempre uma lista válida
+def modal_aviso_link(qid: str = "", links_encontrados: list = None, ano_sel: str = ""):
     if links_encontrados is None:
         links_encontrados = []
 
     st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
     
     for lk in links_encontrados:
-        # Trata o link caso o re.findall tenha retornado uma tupla de regex
         url_limpa = lk[0] if isinstance(lk, tuple) else str(lk)
         st.markdown(f"🔗 **Endereço:** [{url_limpa}]({url_limpa})")
         
@@ -413,6 +411,8 @@ def modal_aviso_link(qid: str = "", links_encontrados: list = None):
     """)
     
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}", type="primary"):
+        # Limpa o gatilho para o modal não reabrir após fechar
+        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
         st.rerun()
 
 # =============================================================================
