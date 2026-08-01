@@ -14099,3 +14099,320 @@ def render_questao_3_20_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.20.1", st.session_state.get(f"links_pendentes_3_20_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.21 • Controle de Aulas Vagas (IEDUC)
+# =============================================================================
+def render_questao_3_21_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.21 (Controle de Aulas Vagas)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_21_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.21 • Controle de Aulas Vagas ({ano_sel})", expanded=True):
+            st.subheader("3.21 • Controle de Aulas Vagas")
+            st.write(f"**Qual foi o número de aulas vagas nos Anos Iniciais durante o ano de {ano_sel}?**")
+
+            d321 = res_data.get("3.21") or {
+                "valor": "0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_321_salva = d321.get("link", "")
+            v_banco_321 = str(d321.get("valor", "0"))
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                input_vagas = st.text_input(
+                    f"Quantidade de aulas vagas em {ano_sel}:",
+                    value=v_banco_321,
+                    key=f"txt_q321_vagas_{ano_sel}",
+                    placeholder="Ex: 12"
+                )
+
+                # Feedback reativo em tempo de exibição
+                try:
+                    c_aulas = int(input_vagas.strip())
+                except ValueError:
+                    c_aulas = 0
+
+                if c_aulas > 0:
+                    st.code(f"⚠️ Registro de Déficit Letivo: Foram contabilizadas {c_aulas} aulas vagas na rede municipal dos Anos Iniciais.", language="text")
+                else:
+                    st.code("✅ Plenitude Carga Horária: Nenhuma aula vaga foi registrada no período letivo.", language="text")
+
+            with col_evidencia:
+                link_321 = st.text_area(
+                    f"Link/Evidência (3.21) - {ano_sel}:",
+                    value=evidencia_321_salva,
+                    key=f"link_q321_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_321 = st.empty()
+                links_321_visuais = re.findall(regex_url, link_321 or "")
+
+                if links_321_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_321_visuais
+                    ]
+                    placeholder_links_321.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.21", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.21", key=f"btn_salvar_3_21_{ano_sel}", type="primary"):
+                try:
+                    int_aulas_val = int(input_vagas.strip())
+                except ValueError:
+                    int_aulas_val = 0
+
+                str_valor_321 = str(int_aulas_val)
+                lnk_val = link_321.strip()
+
+                comentarios_historico = d321.get("comentarios", [])
+                comentario_simples = d321.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.21",
+                        valor=str_valor_321,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_321_salva or "")]
+
+                if lnk_val != evidencia_321_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_21_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_21_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.21 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_21_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.21", st.session_state.get(f"links_pendentes_3_21_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.22 • Projetos de Recuperação ou Reforço Escolar (IEDUC)
+# =============================================================================
+def render_questao_3_22_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.22 (Projetos de Recuperação ou Reforço Escolar)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_22_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.22 • Projetos de Recuperação ou Reforço Escolar ({ano_sel})", expanded=True):
+            st.subheader("3.22 • Projetos de Recuperação ou Reforço Escolar")
+            st.write(f"**Há alunos dos Anos Iniciais, matriculados em escolas municipais, que participaram, durante o ano de {ano_sel}, de projetos de recuperação ou reforço escolar?**")
+
+            d322 = res_data.get("3.22") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_322_salva = d322.get("link", "")
+            v_banco_322 = str(d322.get("valor", ""))
+
+            opc322 = ["Selecione...", "Sim", "Não"]
+            val_inicial_322 = v_banco_322 if v_banco_322 in opc322 else "Selecione..."
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r322 = st.radio(
+                    f"Selecione a opção para o Quesito 3.22 ({ano_sel}):",
+                    options=opc322,
+                    index=opc322.index(val_inicial_322),
+                    key=f"radio_q322_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r322 != "Selecione...":
+                    if r322 == "Sim":
+                        st.code("📝 Habilita o preenchimento dos sub-quesitos de detalhamento do reforço.", language="text")
+                    else:
+                        st.code("ℹ️ Registrado: Não houve projetos de recuperação/reforço neste período.", language="text")
+                else:
+                    st.info("💡 Por favor, selecione uma opção válida.")
+
+            with col_evidencia:
+                link_322 = st.text_area(
+                    f"Link/Evidência (3.22) - {ano_sel}:",
+                    value=evidencia_322_salva,
+                    key=f"link_q322_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_322 = st.empty()
+                links_322_visuais = re.findall(regex_url, link_322 or "")
+
+                if links_322_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_322_visuais
+                    ]
+                    placeholder_links_322.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.22", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.22", key=f"btn_salvar_3_22_{ano_sel}", type="primary"):
+                str_valor_322 = r322 if r322 != "Selecione..." else ""
+                lnk_val = link_322.strip()
+
+                comentarios_historico = d322.get("comentarios", [])
+                comentario_simples = d322.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.22",
+                        valor=str_valor_322,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_322_salva or "")]
+
+                if lnk_val != evidencia_322_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_22_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_22_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.22 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_22_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.22", st.session_state.get(f"links_pendentes_3_22_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.22.1 • Quantidade de Alunos Participantes (IEDUC)
+# =============================================================================
+def render_questao_3_22_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.22.1 (Quantidade de Alunos Participantes)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_22_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.22.1 • Alunos em Recuperação/Reforço ({ano_sel})", expanded=True):
+            st.subheader("3.22.1 • Alunos em Recuperação/Reforço")
+            st.write("**Informe o número de alunos dos Anos Iniciais que participaram de projetos de recuperação ou reforço escolar:**")
+            st.caption("ℹ️ *Sub-quesito de caráter puramente informativo/descritivo (Não soma pontos adicionais).*")
+
+            d3221 = res_data.get("3.22.1") or {
+                "valor": "0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_3221_salva = d3221.get("link", "")
+            v_banco_3221 = str(d3221.get("valor", "0"))
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                input_qtd = st.text_input(
+                    f"Quantidade de alunos participantes em {ano_sel}:",
+                    value=v_banco_3221,
+                    key=f"txt_q3221_qtd_{ano_sel}",
+                    placeholder="Ex: 150"
+                )
+
+                # Feedback reativo estático
+                try:
+                    c_alunos = int(input_qtd.strip())
+                except ValueError:
+                    c_alunos = 0
+
+                if c_alunos > 0:
+                    st.code(f"📊 Registrado: {c_alunos} alunos incluídos em programas pedagógicos de reforço.", language="text")
+                else:
+                    st.info("💡 Insira a volumetria de alunos participantes se houver assistência ativa.")
+
+            with col_evidencia:
+                link_3221 = st.text_area(
+                    f"Link/Evidência (3.22.1) - {ano_sel}:",
+                    value=evidencia_3221_salva,
+                    key=f"link_q3221_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_3221 = st.empty()
+                links_3221_visuais = re.findall(regex_url, link_3221 or "")
+
+                if links_3221_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_3221_visuais
+                    ]
+                    placeholder_links_3221.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.22.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.22.1", key=f"btn_salvar_3_22_1_{ano_sel}", type="primary"):
+                try:
+                    int_qtd_val = int(input_qtd.strip())
+                except ValueError:
+                    int_qtd_val = 0
+
+                str_valor_3221 = str(int_qtd_val)
+                lnk_val = link_3221.strip()
+
+                comentarios_historico = d3221.get("comentarios", [])
+                comentario_simples = d3221.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.22.1",
+                        valor=str_valor_3221,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_3221_salva or "")]
+
+                if lnk_val != evidencia_3221_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_22_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_22_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.22.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_22_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.22.1", st.session_state.get(f"links_pendentes_3_22_1_{ano_sel}", []), ano_sel)
