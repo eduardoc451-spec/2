@@ -12399,3 +12399,350 @@ def render_questao_3_15_2_1_ieduc(res_data: dict, ano_sel: str):
                 ),
                 ano_sel,
             )
+
+# =============================================================================
+# QUESITO 3.15.3 • Metas Específicas do Indicador (IEDUC)
+# =============================================================================
+def render_questao_3_15_3_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.15.3 (Metas Específicas do Indicador)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_15_3_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.15.3 • Metas Específicas do Indicador ({ano_sel})", expanded=True):
+            st.subheader("3.15.3 • Metas Específicas do Indicador")
+            st.write(f"**O indicador próprio de qualidade de ensino do Município possui metas específicas em {ano_sel}?**")
+            st.caption("ℹ️ *Meta específica = nota numérica representativa.*")
+
+            d3153 = res_data.get("3.15.3") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_3153_salva = d3153.get("link", "")
+            v_banco_3153 = str(d3153.get("valor", ""))
+
+            opc3153 = [
+                "Selecione...",
+                "Sim",
+                "Não"
+            ]
+            idx_3153 = opc3153.index(v_banco_3153) if v_banco_3153 in opc3153 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione a opção para o Quesito 3.15.3:</label>', unsafe_allow_html=True)
+                r3153 = st.radio(
+                    "",
+                    opc3153,
+                    index=idx_3153,
+                    key=f"q3153_meta_radio_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r3153 != "Selecione...":
+                    if r3153 == "Sim":
+                        st.code("📅 Opção 'Sim' selecionada. Insira e valide as metas numéricas abaixo.", language="text")
+                    else:
+                        st.code("❌ Opção 'Não' selecionada. Ramificação de metas zerada.", language="text")
+                else:
+                    st.info("⚠️ Selecione uma opção válida.")
+
+            with col_evidencia:
+                link_3153 = st.text_area(
+                    f"Link/Evidência (3.15.3) - {ano_sel}:",
+                    value=evidencia_3153_salva,
+                    key=f"link_q3153_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=150
+                )
+
+                placeholder_links_3153 = st.empty()
+                links_3153_visuais = re.findall(regex_url, link_3153 or "")
+
+                if links_3153_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_3153_visuais
+                    ]
+                    placeholder_links_3153.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.15.3", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.15.3", key=f"btn_salvar_3_15_3_{ano_sel}", type="primary"):
+                str_valor_3153 = r3153 if r3153 != "Selecione..." else ""
+                lnk_val = link_3153.strip()
+
+                comentarios_historico = d3153.get("comentarios", [])
+                comentario_simples = d3153.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.15.3",
+                        valor=str_valor_3153,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_3153_salva or "")]
+
+                if lnk_val != evidencia_3153_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_15_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_15_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.15.3 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_15_3_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.15.3", st.session_state.get(f"links_pendentes_3_15_3_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.15.3.1 • Avaliação de Metas e Resultados (IEDUC)
+# =============================================================================
+def render_questao_3_15_3_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.15.3.1 (Avaliação de Metas e Resultados)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_15_3_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.15.3.1 • Avaliação de Metas e Resultados ({ano_sel})", expanded=True):
+            st.subheader("3.15.3.1 • Avaliação de Metas e Resultados")
+            st.write(f"**Informe as metas e os resultados da última edição do indicador próprio para o 4º ou 5º Ano do Ensino Fundamental ({ano_sel}):**")
+            st.caption("ℹ️ *Fórmula: Se Resultado >= Meta = 18.0 pontos | Se Resultado < Meta = 0.0 pontos*")
+
+            d31531 = res_data.get("3.15.3.1") or {
+                "valor": f"META:0.0,RESULTADO:0.0,ANO:{ano_sel}",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_31531_salva = d31531.get("link", "")
+            v_banco_31531 = str(d31531.get("valor", f"META:0.0,RESULTADO:0.0,ANO:{ano_sel}"))
+
+            try:
+                parts_31531 = v_banco_31531.split(",")
+                init_meta = parts_31531[0].split(":")[1]
+                init_res = parts_31531[1].split(":")[1]
+                init_ano = parts_31531[2].split(":")[1]
+            except Exception:
+                init_meta, init_res, init_ano = "0.0", "0.0", str(ano_sel)
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                input_meta = st.text_input("4º ou 5º Ano - Meta:", value=init_meta, key=f"txt_q31531_meta_{ano_sel}", placeholder="Ex: 6.5")
+                input_res = st.text_input("4º ou 5º Ano - Resultado:", value=init_res, key=f"txt_q31531_res_{ano_sel}", placeholder="Ex: 6.8")
+                input_ano = st.text_input("Ano da última edição:", value=init_ano, key=f"txt_q31531_ano_{ano_sel}", placeholder="Ex: 2025")
+
+                try:
+                    c_meta = float(input_meta.strip().replace(',', '.'))
+                    c_res = float(input_res.strip().replace(',', '.'))
+                except Exception:
+                    c_meta, c_res = 0.0, 0.0
+
+                if c_meta > 0 or c_res > 0:
+                    if c_res >= c_meta:
+                        st.code(f"📈 Objetivo Alcançado: O resultado ({c_res}) atingiu ou superou a meta ({c_meta}). Nota ao quesito principal: 18.0 pontos.", language="text")
+                    else:
+                        st.code(f"📉 Meta Não Atingida: O resultado ({c_res}) ficou abaixo da meta ({c_meta}). Nota ao quesito principal: 0.0 pontos.", language="text")
+                else:
+                    st.info("💡 Insira valores numéricos para ativar o painel de apuração de metas.")
+
+            with col_evidencia:
+                link_31531 = st.text_area(
+                    f"Link/Evidência (3.15.3.1) - {ano_sel}:",
+                    value=evidencia_31531_salva,
+                    key=f"link_q31531_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=210
+                )
+
+                placeholder_links_31531 = st.empty()
+                links_31531_visuais = re.findall(regex_url, link_31531 or "")
+
+                if links_31531_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_31531_visuais
+                    ]
+                    placeholder_links_31531.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.15.3.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.15.3.1", key=f"btn_salvar_3_15_3_1_{ano_sel}", type="primary"):
+                try:
+                    f_meta = float(input_meta.strip().replace(',', '.'))
+                    f_res = float(input_res.strip().replace(',', '.'))
+                    s_ano = input_ano.strip()
+                except Exception:
+                    f_meta, f_res, s_ano = 0.0, 0.0, str(ano_sel)
+
+                pts_calculados = 18.0 if (f_meta > 0 or f_res > 0) and (f_res >= f_meta) else 0.0
+                str_valor_novo = f"META:{f_meta},RESULTADO:{f_res},ANO:{s_ano}"
+                lnk_val = link_31531.strip()
+
+                d315_pai = res_data.get("3.15") or {}
+                comentarios_historico = d31531.get("comentarios", [])
+                comentario_simples = d31531.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    # Salva Quesito Pai (3.15) atualizando pontos
+                    save_resp_func(
+                        qid="3.15",
+                        valor="Sim",
+                        pontos=pts_calculados,
+                        link=d315_pai.get("link", ""),
+                        comentario=d315_pai.get("comentario", ""),
+                        comentarios=d315_pai.get("comentarios", [])
+                    )
+                    # Salva Quesito Filho (3.15.3.1)
+                    save_resp_func(
+                        qid="3.15.3.1",
+                        valor=str_valor_novo,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_31531_salva or "")]
+
+                if lnk_val != evidencia_31531_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_15_3_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_15_3_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.15.3.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_15_3_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.15.3.1", st.session_state.get(f"links_pendentes_3_15_3_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.15.4 • Quantidade de Participantes da Avaliação (IEDUC)
+# =============================================================================
+def render_questao_3_15_4_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.15.4 (Quantidade de Participantes da Avaliação)."""
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_15_4_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.15.4 • Quantidade de Participantes da Avaliação ({ano_sel})", expanded=True):
+            st.subheader("3.15.4 • Quantidade de Participantes da Avaliação")
+            st.write(f"**É possível avaliar a quantidade de participantes da última edição da avaliação municipal própria em {ano_sel}?**")
+            st.caption("ℹ️ *Quesito descritivo avaliativo (Não soma pontos adicionais diretamente).*")
+
+            d3154 = res_data.get("3.15.4") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_3154_salva = d3154.get("link", "")
+            v_banco_3154 = str(d3154.get("valor", ""))
+
+            opc3154 = [
+                "Selecione...",
+                "Sim",
+                "Não"
+            ]
+            idx_3154 = opc3154.index(v_banco_3154) if v_banco_3154 in opc3154 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Selecione a opção para o Quesito 3.15.4:</label>', unsafe_allow_html=True)
+                r3154 = st.radio(
+                    "",
+                    opc3154,
+                    index=idx_3154,
+                    key=f"q3154_part_radio_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r3154 != "Selecione...":
+                    if r3154 == "Sim":
+                        st.code("🎯 Opção 'Sim' selecionada. Proceda com as métricas de participação no sub-quesito correspondente.", language="text")
+                    else:
+                        st.code("❌ Opção 'Não' selecionada. Dados de participação indisponíveis.", language="text")
+                else:
+                    st.info("⚠️ Selecione uma opção válida.")
+
+            with col_evidencia:
+                link_3154 = st.text_area(
+                    f"Link/Evidência (3.15.4) - {ano_sel}:",
+                    value=evidencia_3154_salva,
+                    key=f"link_q3154_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=150
+                )
+
+                placeholder_links_3154 = st.empty()
+                links_3154_visuais = re.findall(regex_url, link_3154 or "")
+
+                if links_3154_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_3153_visuais if 'links_3153_visuais' in locals() else [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_3154_visuais]
+                    ]
+                    placeholder_links_3154.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.15.4", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.15.4", key=f"btn_salvar_3_15_4_{ano_sel}", type="primary"):
+                str_valor_3154 = r3154 if r3154 != "Selecione..." else ""
+                lnk_val = link_3154.strip()
+
+                comentarios_historico = d3154.get("comentarios", [])
+                comentario_simples = d3154.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.15.4",
+                        valor=str_valor_3154,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_3154_salva or "")]
+
+                if lnk_val != evidencia_3154_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_15_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_15_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.15.4 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_15_4_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.15.4", st.session_state.get(f"links_pendentes_3_15_4_{ano_sel}", []), ano_sel)
