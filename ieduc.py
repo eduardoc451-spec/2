@@ -1061,7 +1061,7 @@ def render_modulo_ieduc(questoes_ieduc: list):
 # =============================================================================
 
 def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza a Questão 1.0 (Oferta de Creche) dentro do padrão iGov / i-Educ."""
+    """Renderiza a Questão 1.0 (Oferta de Creche) no modelo padrão iGov."""
     
     with st.container(key=f"container_bloco_ieduc_1_0_{ano_sel}", border=True):
         with st.expander(f"📌 Questão 1.0 • Oferta de Creche ({ano_sel})", expanded=True):
@@ -1086,9 +1086,9 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
 
             evidencia_10_salva = d10.get("link", "")
 
-            # Chaves fixas por componente e ano
-            chave_radio_10 = f"rb_ieduc_10_{ano_sel}"
-            chave_link_10 = f"txt_ieduc_10_{ano_sel}"
+            # Chaves fixas por componente e ano (Modelo idêntico ao seu iAMB)
+            chave_radio_10 = f"r_10_{ano_sel}"
+            chave_link_10 = f"l_10_txt_{ano_sel}"
             chave_coment_10 = f"coment_1.0_{ano_sel}"  # Chave padrão do bloco_comentarios
 
             col1, col2 = st.columns([1, 1])
@@ -1120,18 +1120,18 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                         )
                     )
 
-            # Renderiza o bloco de comentários dentro do expander
+            # Renderiza o bloco de comentários EXATAMENTE igual ao seu modelo
             bloco_comentarios("1.0", res_data, ano_sel)
 
             # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
+            # BOTÃO DE SALVAMENTO MANUAL (Modelo idêntico ao iAMB)
             # -----------------------------------------------------------------
-            if st.button("💾 Salvar Questão 1.0", key=f"btn_salvar_ieduc_1_0_{ano_sel}", type="primary"):
+            if st.button("💾 Salvar Questão 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                 val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
                 pts_10 = float(opcoes_10.get(val_salvar, 0.0))
                 lnk_val = link_10.strip()
 
-                # Captura o comentário do session_state
+                # Captura o comentário do session_state (Exatamente como o seu modelo do iAMB)
                 comentario_para_salvar = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
 
                 # Salva no banco de dados Neon
@@ -1156,40 +1156,32 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                 links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(REGEX_PURE_URL, evidencia_10_salva or "")]
 
                 if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_ieduc_1_0_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_ieduc_1_0_{ano_sel}"] = True
+                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
 
                 st.cache_data.clear()
-                st.toast("Resposta e comentário da Questão 1.0 salvos com sucesso!", icon="✅")
+                st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
                 st.rerun()
 
-            # Resumo dinâmico / status da questão
+            # Resumo dinâmico e impacto de pontuação
             pts_atuais_10 = d10.get("pontos", 0.0)
-            v_atual_10 = d10.get("valor", "Selecione...")
-            
-            if v_atual_10 == "Selecione...":
-                st.markdown("⚠️ **Status:** <span style='color:#6c757d; font-weight:bold;'>Aguardando preenchimento</span>", unsafe_allow_html=True)
-            else:
-                cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#17a2b8"
-                st.markdown(
-                    f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
-                    f"📊 Pontuação Aplicada na Questão 1.0: +{pts_atuais_10:.1f} pontos (Dados Informativos)</span>",
-                    unsafe_allow_html=True
-                )
+            cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
+
+            st.markdown(
+                f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.0: +{pts_atuais_10:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
     # GATILHO DO MODAL 1.0 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_ieduc_1_0_{ano_sel}", False):
+    if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
         if "modal_aviso_link" in globals():
-            modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_ieduc_1_0_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_ieduc_1_0_{ano_sel}"] = False
+            modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
 
 def mostrar_formulario_educ(questoes: list = None):
-    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
-    
-    Gerencia a barra lateral, abas de navegação, carregamento de dados
-    e renderização dos quesitos de avaliação. Compatível com a chamada do main.py.
-    """
+    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional)."""
     # Carregamento do estado e da barra lateral
     total_pts, res_data, ano_sel = render_sidebar_ieduc()
 
