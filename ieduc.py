@@ -1311,3 +1311,130 @@ def render_questao_1_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.1", st.session_state.get(f"links_pendentes_1_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.1.1 • BRINQUEDOS NO PÁTIO INFANTIL - CÁLCULO BPI (IEDUC)
+# =============================================================================
+
+def render_questao_1_1_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.1.1 (Cálculo de Brinquedos no Pátio Infantil - BPI)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_1_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.1.1 • Dados de Brinquedos no Pátio Infantil (BPI) ({ano_sel})", expanded=True):
+            st.subheader("1.1.1 • Infraestrutura da Educação Infantil")
+            st.write("**Informe os dados para o cálculo de brinquedos no Pátio Infantil (BPI):**")
+            st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.1.1' para registrar.*")
+
+            # Recupera os dados salvos ou define o padrão
+            d111 = res_data.get("1.1.1") or {
+                "valor": "BPI:0,TOTAL:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+
+            # Faz o split seguro para carregar os dois campos
+            try:
+                parts_111 = str(d111.get("valor", "")).split(",")
+                v_bpi_input = int(parts_111[0].split(":")[1])
+                v_total_input = int(parts_111[1].split(":")[1])
+            except Exception:
+                v_bpi_input, v_total_input = 0, 0
+
+            evidencia_111_salva = d111.get("link", "")
+
+            chave_bpi_111 = f"q111_bpi_val_{ano_sel}"
+            chave_total_111 = f"q111_total_val_{ano_sel}"
+            chave_link_111 = f"l_111_txt_{ano_sel}"
+
+            c111_1, c111_2 = st.columns([1, 1])
+
+            with c111_1:
+                bpi_input = st.number_input(
+                    "Nº de creches com brinquedos no pátio infantil:",
+                    min_value=0,
+                    step=1,
+                    value=v_bpi_input,
+                    key=chave_bpi_111,
+                )
+
+                total_input = st.number_input(
+                    "Nº TOTAL de creches no município:",
+                    min_value=0,
+                    step=1,
+                    value=v_total_input,
+                    key=chave_total_111,
+                )
+
+                # Cálculo proporcional da Pontuação (Máximo: 2.0 pts)
+                pts_111 = 0.0
+                if total_input > 0:
+                    proporcao_p = bpi_input / total_input
+                    pts_111 = float(min(2.0, proporcao_p * 2.0))
+
+            with c111_2:
+                link_111 = st.text_area(
+                    "Link de Evidência (Fotos, Vistorias, Inventário, etc.):",
+                    value=evidencia_111_salva,
+                    key=chave_link_111,
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.1.1...",
+                    height=140,
+                )
+
+                placeholder_links_111 = st.empty()
+                links_111_visuais = re.findall(regex_url, link_111 or "")
+
+                if links_111_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_111_visuais
+                    ]
+                    placeholder_links_111.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Exibição do resultado do cálculo
+            st.markdown(
+                f"📊 **Pontuação Calculada na Questão 1.1.1:** `{pts_111:.2f} pontos` *(Máximo: 2.0 pontos)*"
+            )
+
+            # Bloco de Comentários
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.1.1", res_data, ano_sel)
+
+            # Botão de Salvamento
+            if st.button("💾 Salvar Questão 1.1.1", key=f"btn_salvar_1_1_1_{ano_sel}", type="primary"):
+                str_valor_111 = f"BPI:{bpi_input},TOTAL:{total_input}"
+                lnk_val = link_111.strip()
+
+                comentarios_historico = d111.get("comentarios", [])
+                comentario_simples = d111.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.1.1",
+                        valor=str_valor_111,
+                        pontos=pts_111,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_111_salva or "")]
+
+                if lnk_val != evidencia_111_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_1_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.1.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_1_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.1.1", st.session_state.get(f"links_pendentes_1_1_1_{ano_sel}", []), ano_sel)
