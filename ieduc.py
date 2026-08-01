@@ -15541,78 +15541,287 @@ def render_questao_6_2_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("6.2", st.session_state.get(f"links_pendentes_6_2_{ano_sel}", []), ano_sel)
+# ==============================================================================
+# --- FUNÇÃO AUXILIAR DE CÁLCULO (QUESITO 7.0) ---
+# ==============================================================================
+def calcular_descontos_e_pontos_70(r_val, q1, q2, q3, qta_a, prof_a, qta_b, prof_b, qta_c, prof_c):
+    """Calcula as taxas de absenteísmo, deduções e pontuação final para o Quesito 7.0."""
+    if r_val != "Sim – 05":
+        return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-# --- QUESITO 6.1 (Instrumento Normativo) ---
-def render_questao_6_1_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza a Questão 6.1 (Instrumento Normativo)."""
+    taxa_a = ((qta_a / prof_a) * 100) if prof_a > 0 else 0.0
+    taxa_b = ((qta_b / prof_b) * 100) if prof_b > 0 else 0.0
+    taxa_c = ((qta_c / prof_c) * 100) if prof_c > 0 else 0.0
+
+    na, nb, nc = 0.0, 0.0, 0.0
+
+    # Aplicação das regras de penalidade conforme os segmentos atendidos
+    if q1 == "SIM" and q2 == "SIM" and q3 == "SIM":
+        na = -1.5 if taxa_a > 10 else 0.0
+        nb = -1.5 if taxa_b > 10 else 0.0
+        nc = -2.0 if taxa_c > 10 else 0.0
+    elif q1 == "NÃO" and q2 == "SIM" and q3 == "SIM":
+        nb = -2.5 if taxa_b > 10 else 0.0
+        nc = -2.5 if taxa_c > 10 else 0.0
+    elif q1 == "SIM" and q2 == "NÃO" and q3 == "SIM":
+        na = -2.5 if taxa_a > 10 else 0.0
+        nc = -2.5 if taxa_c > 10 else 0.0
+    elif q1 == "SIM" and q2 == "SIM" and q3 == "NÃO":
+        na = -2.5 if taxa_a > 10 else 0.0
+        nb = -2.5 if taxa_b > 10 else 0.0
+    elif q1 == "NÃO" and q2 == "NÃO" and q3 == "SIM":
+        nc = -5.0 if taxa_c > 10 else 0.0
+    elif q1 == "NÃO" and q2 == "SIM" and q3 == "NÃO":
+        nb = -5.0 if taxa_b > 10 else 0.0
+    elif q1 == "SIM" and q2 == "NÃO" and q3 == "NÃO":
+        na = -5.0 if taxa_a > 10 else 0.0
+
+    pontos_finais = max(0.0, round(5.0 + na + nb + nc, 2))
+    return pontos_finais, taxa_a, taxa_b, taxa_c, na, nb, nc
+
+
+# ==============================================================================
+# --- QUESITO 7.0 (Programa de Inibição ao Absenteísmo) ---
+# ==============================================================================
+def render_questao_7_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 7.0 (Programa de Inibição ao Absenteísmo) com Painel de Auditoria."""
     regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
 
-    with st.container(key=f"container_bloco_ieduc_6_1_{ano_sel}", border=True):
-        with st.expander(f"🔍 QUESITO 6.1 - Instrumento Normativo ({ano_sel})", expanded=True):
-            st.subheader("6.1 • Instrumento Normativo")
-            st.write(f"**Informe o Instrumento Normativo, Número e Data da publicação do PCCS em {ano_sel}:**")
-            st.caption("ℹ️ *Lembre-se de anexar o documento em PDF por meio do botão de anexos geral.*")
+    with st.container(key=f"container_bloco_ieduc_7_0_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 7.0 - Programa de Inibição ao Absenteísmo ({ano_sel})", expanded=True):
+            st.subheader("7.0 • Programa de Inibição ao Absenteísmo")
+            st.write("**Existe um programa de inibição ao absenteísmo de professores em sala de aula (incluindo os afastamentos legais)?**")
 
-            d61 = res_data.get("6.1") or {
+            d70 = res_data.get("7.0") or {
                 "valor": "",
                 "pontos": 0.0,
                 "link": "",
                 "comentarios": [],
                 "comentario": ""
             }
-            v_banco_61 = d61.get("valor", "")
-            v_link_61 = d61.get("link", "")
+            v_banco_70 = d70.get("valor", "")
+            v_link_70 = d70.get("link", "")
+
+            opc70 = ["Selecione...", "Sim – 05", "Não – 00"]
+            idx_70 = opc70.index(v_banco_70) if v_banco_70 in opc70 else 0
+
+            # Resgate do estado da string de auditoria compilada
+            v_calc_70 = st.session_state.get(
+                f"v_calc_70_{ano_sel}", 
+                "Q1:NÃO,Q2:NÃO,Q3:NÃO,QTA_A:0,PROF_A:1,QTA_B:0,PROF_B:1,QTA_C:0,PROF_C:1"
+            )
+            try:
+                p_c = dict(item.split(":") for item in v_calc_70.split(","))
+            except Exception:
+                p_c = {"Q1": "NÃO", "Q2": "NÃO", "Q3": "NÃO", "QTA_A": "0", "PROF_A": "1", "QTA_B": "0", "PROF_B": "1", "QTA_C": "0", "PROF_C": "1"}
 
             col_inputs, col_evidencia = st.columns([1, 1])
 
             with col_inputs:
-                txt_61 = st.text_input(
-                    "Instrumento, Nº e Data:",
-                    value=v_banco_61,
-                    key=f"txt_q61_{ano_sel}",
-                    placeholder="Ex: Lei Complementar nº 123, de 15/05/2018"
+                radio_70 = st.radio(
+                    "Selecione a opção para o Quesito 7.0:",
+                    options=opc70,
+                    index=idx_70,
+                    key=f"radio_q70_{ano_sel}",
+                    label_visibility="collapsed"
                 )
 
-                if txt_61.strip():
-                    st.code("✨ Informação registrada com sucesso (Quesito Declaratório).", language="text")
-                else:
-                    st.code("💡 Por favor, preencha os dados do instrumento normativo.", language="text")
-
             with col_evidencia:
-                link_61 = st.text_area(
-                    f"Link/Evidência (6.1) - {ano_sel}:",
-                    value=v_link_61,
-                    key=f"link_q61_{ano_sel}",
+                link_70 = st.text_area(
+                    f"Link/Evidência (7.0) - {ano_sel}:",
+                    value=v_link_70,
+                    key=f"link_q70_{ano_sel}",
                     placeholder="Insira os links...",
                     height=130
                 )
 
-                placeholder_links_61 = st.empty()
-                links_61_visuais = re.findall(regex_url, link_61 or "")
+                placeholder_links_70 = st.empty()
+                links_70_visuais = re.findall(regex_url, link_70 or "")
 
-                if links_61_visuais:
+                if links_70_visuais:
                     links_formatados = [
                         f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
-                        for u in links_61_visuais
+                        for u in links_70_visuais
                     ]
-                    placeholder_links_61.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+                    placeholder_links_70.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Subformulário de Auditoria de Absenteísmo (Exibido apenas se "Sim – 05")
+            q1_val, q2_val, q3_val = p_c.get("Q1", "NÃO"), p_c.get("Q2", "NÃO"), p_c.get("Q3", "NÃO")
+            qta_a_val, prof_a_val = int(p_c.get("QTA_A", 0)), max(1, int(p_c.get("PROF_A", 1)))
+            qta_b_val, prof_b_val = int(p_c.get("QTA_B", 0)), max(1, int(p_c.get("PROF_B", 1)))
+            qta_c_val, prof_c_val = int(p_c.get("QTA_C", 0)), max(1, int(p_c.get("PROF_C", 1)))
+
+            if radio_70 == "Sim – 05":
+                st.markdown("---")
+                st.markdown("##### 🧮 Painel de Auditoria de Absenteísmo (Fórmulas)")
+                st.caption("Preencha as informações para calcular automaticamente as taxas A, B, C e as penalidades NA, NB, NC.")
+
+                aud_c1, aud_c2, aud_c3 = st.columns(3)
+
+                with aud_c1:
+                    st.write("**👶 Creche**")
+                    q1_val = st.selectbox("Q1 - Atende Creche?", ["SIM", "NÃO"], index=0 if p_c.get("Q1") == "SIM" else 1, key=f"q1_aud_70_{ano_sel}")
+                    qta_a_val = st.number_input("QTA Creche (Total Ausências):", min_value=0, value=qta_a_val, step=1, key=f"qta_a_aud_70_{ano_sel}")
+                    prof_a_val = st.number_input("Total Professores Creche:", min_value=1, value=prof_a_val, step=1, key=f"prof_a_aud_70_{ano_sel}")
+
+                with aud_c2:
+                    st.write("**👦 Pré-escola**")
+                    q2_val = st.selectbox("Q2 - Atende Pré-escola?", ["SIM", "NÃO"], index=0 if p_c.get("Q2") == "SIM" else 1, key=f"q2_aud_70_{ano_sel}")
+                    qta_b_val = st.number_input("QTA Pré-escola (Total Ausências):", min_value=0, value=qta_b_val, step=1, key=f"qta_b_aud_70_{ano_sel}")
+                    prof_b_val = st.number_input("Total Professores Pré-escola:", min_value=1, value=prof_b_val, step=1, key=f"prof_b_aud_70_{ano_sel}")
+
+                with aud_c3:
+                    st.write("**📚 Anos Iniciais**")
+                    q3_val = st.selectbox("Q3 - Atende Anos Iniciais?", ["SIM", "NÃO"], index=0 if p_c.get("Q3") == "SIM" else 1, key=f"q3_aud_70_{ano_sel}")
+                    qta_c_val = st.number_input("QTA Anos Iniciais (Total Ausências):", min_value=0, value=qta_c_val, step=1, key=f"qta_c_aud_70_{ano_sel}")
+                    prof_c_val = st.number_input("Total Professores Anos Iniciais:", min_value=1, value=prof_c_val, step=1, key=f"prof_c_aud_70_{ano_sel}")
+
+                # Atualiza a string no session_state
+                st.session_state[f"v_calc_70_{ano_sel}"] = (
+                    f"Q1:{q1_val},Q2:{q2_val},Q3:{q3_val},"
+                    f"QTA_A:{qta_a_val},PROF_A:{prof_a_val},"
+                    f"QTA_B:{qta_b_val},PROF_B:{prof_b_val},"
+                    f"QTA_C:{qta_c_val},PROF_C:{prof_c_val}"
+                )
+
+            # Cálculo de pontuação e diagnóstico
+            pts_finais, taxa_a, taxa_b, taxa_c, na, nb, nc = calcular_descontos_e_pontos_70(
+                radio_70, q1_val, q2_val, q3_val, qta_a_val, prof_a_val, qta_b_val, prof_b_val, qta_c_val, prof_c_val
+            )
+
+            # Exibição do feedback de pontuação no col_inputs
+            with col_inputs:
+                if radio_70 != "Selecione...":
+                    if radio_70 == "Sim – 05":
+                        st.code(f"✨ Pontuação do Quesito 7.0: {pts_finais:.2f} / 5.0 pontos obtidos.", language="text")
+                    else:
+                        st.code("❌ Pontuação do Quesito 7.0: 0.0 / 5.0 pontos obtidos.", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            if radio_70 == "Sim – 05":
+                st.markdown("---")
+                st.markdown("##### 📈 Diagnóstico do Absenteísmo Calculado")
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Percentual Creche (A)", f"{taxa_a:.1f}%", delta=f"Desconto: {na:.1f} pts" if na < 0 else "Dentro da Meta")
+                m2.metric("Percentual Pré-Escola (B)", f"{taxa_b:.1f}%", delta=f"Desconto: {nb:.1f} pts" if nb < 0 else "Dentro da Meta")
+                m3.metric("Percentual Anos Iniciais (C)", f"{taxa_c:.1f}%", delta=f"Desconto: {nc:.1f} pts" if nc < 0 else "Dentro da Meta")
+
+                soma_descontos = na + nb + nc
+                m4.metric("Nota Final Real", f"{pts_finais:.2f} pts", delta=f"{soma_descontos:.1f} em descontos" if soma_descontos < 0 else "Sem Deduções")
 
             bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
             if bloco_comentarios_func:
-                bloco_comentarios_func("6.1", res_data, ano_sel)
+                bloco_comentarios_func("7.0", res_data, ano_sel)
 
-            if st.button("💾 Salvar Questão 6.1", key=f"btn_salvar_6_1_{ano_sel}", type="primary"):
-                str_valor_61 = txt_61.strip()
-                lnk_val = link_61.strip()
+            if st.button("💾 Salvar Questão 7.0", key=f"btn_salvar_7_0_{ano_sel}", type="primary"):
+                str_valor_70 = radio_70 if radio_70 != "Selecione..." else ""
+                lnk_val = link_70.strip()
 
-                comentarios_historico = d61.get("comentarios", [])
-                comentario_simples = d61.get("comentario", "")
+                comentarios_historico = d70.get("comentarios", [])
+                comentario_simples = d70.get("comentario", "")
 
                 save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
                 if save_resp_func:
                     save_resp_func(
-                        qid="6.1",
-                        valor=str_valor_61,
+                        qid="7.0",
+                        valor=str_valor_70,
+                        pontos=pts_finais,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_70 or "")]
+
+                if lnk_val != v_link_70 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 7.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_7_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("7.0", st.session_state.get(f"links_pendentes_7_0_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 7.1 (Especificação do Programa) ---
+# ==============================================================================
+def render_questao_7_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 7.1 (Especificação do Programa de Absenteísmo)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_7_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 7.1 - Especificação do Programa ({ano_sel})", expanded=True):
+            st.subheader("7.1 • Especificação do Programa")
+            st.write("**Especifique qual o programa de inibição ao absenteísmo de professores:**")
+
+            d71 = res_data.get("7.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_71 = d71.get("valor", "")
+            v_link_71 = d71.get("link", "")
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                txt_71 = st.text_area(
+                    "Especificação do Programa:",
+                    value=v_banco_71,
+                    key=f"txt_q71_{ano_sel}",
+                    placeholder="Digite aqui o nome e a descrição do programa adotado pelo município...",
+                    height=130
+                )
+
+                if txt_71.strip():
+                    st.code("✨ Informação registrada com sucesso (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, preencha a descrição do programa.", language="text")
+
+            with col_evidencia:
+                link_71 = st.text_area(
+                    f"Link/Evidência (7.1) - {ano_sel}:",
+                    value=v_link_71,
+                    key=f"link_q71_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_71 = st.empty()
+                links_71_visuais = re.findall(regex_url, link_71 or "")
+
+                if links_71_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_71_visuais
+                    ]
+                    placeholder_links_71.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("7.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 7.1", key=f"btn_salvar_7_1_{ano_sel}", type="primary"):
+                str_valor_71 = txt_71.strip()
+                lnk_val = link_71.strip()
+
+                comentarios_historico = d71.get("comentarios", [])
+                comentario_simples = d71.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="7.1",
+                        valor=str_valor_71,
                         pontos=0.0,
                         link=lnk_val,
                         comentario=comentario_simples,
@@ -15620,17 +15829,17 @@ def render_questao_6_1_ieduc(res_data: dict, ano_sel: str):
                     )
 
                 links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
-                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_61 or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_71 or "")]
 
-                if lnk_val != v_link_61 and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_6_1_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_6_1_{ano_sel}"] = True
+                if lnk_val != v_link_71 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_7_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_7_1_{ano_sel}"] = True
 
                 st.cache_data.clear()
-                st.toast("Resposta do Quesito 6.1 salva com sucesso!", icon="✅")
+                st.toast("Resposta do Quesito 7.1 salva com sucesso!", icon="✅")
                 st.rerun()
 
-    if st.session_state.get(f"gatilho_modal_6_1_{ano_sel}", False):
+    if st.session_state.get(f"gatilho_modal_7_1_{ano_sel}", False):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
-            modal_aviso_func("6.1", st.session_state.get(f"links_pendentes_6_1_{ano_sel}", []), ano_sel)
+            modal_aviso_func("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []), ano_sel)
