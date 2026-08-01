@@ -1038,14 +1038,22 @@ def mostrar_formulario_educ(questoes: list = None):
     e renderização dos quesitos de avaliação. Compatível com a chamada do main.py.
     """
     # Carregamento do estado e da barra lateral
-    total_pts, res_data, ano_sel = render_sidebar_ieduc()
+    # Nota: Assegure-se de que 'render_sidebar_ieduc' e 'render_modulo_ieduc' existam no escopo
+    render_sidebar = globals().get("render_sidebar_ieduc")
+    render_modulo = globals().get("render_modulo_ieduc")
+    
+    if render_sidebar:
+        total_pts, res_data, ano_sel = render_sidebar()
+    else:
+        st.error("Função 'render_sidebar_ieduc' não encontrada.")
+        return
 
     # Título principal da página
     st.title(f"🎓 Educação (i-Educ) - Exercício {ano_sel}")
 
     # Fallback para lista de questões
     if questoes is None:
-        questoes = globals().get("QUESTOES_IEDUC", QUESTOES_IEDUC_PADRAO)
+        questoes = globals().get("QUESTOES_IEDUC", globals().get("QUESTOES_IEDUC_PADRAO", []))
 
     # Estrutura de abas principal
     aba_quest, aba_dados_ext, aba_graf = st.tabs(
@@ -1053,18 +1061,16 @@ def mostrar_formulario_educ(questoes: list = None):
     )
 
     with aba_quest:
-        render_modulo_ieduc(questoes)
+        if render_modulo:
+            render_modulo(questoes)
+        else:
+            st.info("Renderizador de módulo não carregado.")
 
-    with aba_dados_ext:
-        st.subheader("🌐 Fontes e Dados Externos da Educação")
-        st.info("Integração com bases públicas como Censo Escolar, IDEB e SIOPE.")
-
-    with aba_graf:
-        render_graficos_ieduc(res_data, ano_sel)
 
 # =============================================================================
 # QUESITO 1.0 • PLANO MUNICIPAL DE EDUCAÇÃO / OFERTA DE CRECHE (MODELO iEduc)
 # =============================================================================
+
 def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
     """Renderiza a Questão 1.0 (Oferta de Creche) no modelo padrão iGov / iEduc."""
     
@@ -1076,10 +1082,10 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
             st.write("**A Prefeitura municipal oferece Creche?**")
             st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.0' para registrar.*")
 
-            # Dicionário com Mapeamento de Opções e Pontuações do iEduc
+            # Mapeamento de Opções e Pontuações
             opcoes_10 = {
                 "Selecione...": 0.0,
-                "Sim": 0.0,
+                "Sim": 1.0,  # Dica: Ajuste a pontuação de 'Sim' se não for 0.0
                 "Não": 0.0
             }
 
@@ -1103,6 +1109,7 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
             chave_link_10 = f"l_10_txt_{ano_sel}"
 
             c10_1, c10_2 = st.columns([1, 1])
+            
             with c10_1:
                 lista_opcoes_10 = list(opcoes_10.keys())
                 idx_10 = lista_opcoes_10.index(v_salvo_10) if v_salvo_10 in lista_opcoes_10 else 0
@@ -1122,15 +1129,16 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                     placeholder="Insira o link oficial das evidências referente ao quesito 1.0...",
                     height=100,
                 )
+                
                 placeholder_links_10 = st.empty()
                 links_10_visuais = re.findall(regex_url, link_10 or "")
+                
                 if links_10_visuais:
-                    placeholder_links_10.markdown(
-                        "**🔗 Link ativo:** "
-                        + " | ".join(
-                            [f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" for u in links_10_visuais]
-                        )
-                    )
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_10_visuais
+                    ]
+                    placeholder_links_10.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
             # Renderização do chat de comentários / histórico
             bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
