@@ -940,8 +940,11 @@ def render_graficos_ieduc(res_data_atual=None, ano_sel=None):
 
 def render_modulo_ieduc(questoes_ieduc: list):
     """Interface principal dos quesitos do módulo i-Educ."""
-    ano = get_ano_atual_ieduc()
+    # Recupera a função de ano de forma segura
+    get_ano_func = globals().get("get_ano_atual_ieduc", lambda: "2024")
+    ano = get_ano_func()
     
+    # Carregamento das respostas
     if "load_respostas_ieduc" in globals():
         respostas = load_respostas_ieduc(ano)
     else:
@@ -949,8 +952,21 @@ def render_modulo_ieduc(questoes_ieduc: list):
 
     st.subheader("Formulário de Avaliação")
 
+    # -------------------------------------------------------------------------
+    # 📌 CALL/RENDER DO QUESITO 1.0 CUSTOMIZADO (Destaque/Layout Padrão iGov)
+    # -------------------------------------------------------------------------
+    render_questao_1_0_ieduc(respostas, ano)
+
+    # -------------------------------------------------------------------------
+    # 📋 RENDERIZADOR GENÉRICO PARA OS DEMAIS QUESITOS (2.0, 3.0, ETC.)
+    # -------------------------------------------------------------------------
     for questao in questoes_ieduc:
-        qid = str(questao["id"])
+        qid = str(questao.get("id", ""))
+        
+        # Ignora o ID "1.0" ou "1" no loop genérico para não duplicar o Quesito 1.0 na tela
+        if qid in ["1.0", "1"]:
+            continue
+
         titulo = questao.get("titulo", f"Quesito {qid}")
         opcoes = questao.get("opcoes", ["Sim", "Não"])
         pontos_map = questao.get("pontos_map", {})
@@ -1003,7 +1019,6 @@ def render_modulo_ieduc(questoes_ieduc: list):
                             comentario=obs_input,
                         )
                     else:
-                        # Salva no Session State como fallback
                         key_ano = f"respostas_ieduc_{ano}"
                         if key_ano not in st.session_state:
                             st.session_state[key_ano] = {}
@@ -1032,30 +1047,22 @@ def render_modulo_ieduc(questoes_ieduc: list):
 # =============================================================================
 
 def mostrar_formulario_educ(questoes: list = None):
-    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional).
-    
-    Gerencia a barra lateral, abas de navegação, carregamento de dados
-    e renderização dos quesitos de avaliação. Compatível com a chamada do main.py.
-    """
-    # Carregamento do estado e da barra lateral
-    # Nota: Assegure-se de que 'render_sidebar_ieduc' e 'render_modulo_ieduc' existam no escopo
+    """Renderiza a interface principal do módulo i-Educ (Gestão Educacional)."""
     render_sidebar = globals().get("render_sidebar_ieduc")
     render_modulo = globals().get("render_modulo_ieduc")
     
     if render_sidebar:
         total_pts, res_data, ano_sel = render_sidebar()
     else:
-        st.error("Função 'render_sidebar_ieduc' não encontrada.")
-        return
+        # Fallback de teste se a sidebar não estiver definida no escopo
+        ano_sel = st.session_state.get("ano_selecionado", "2024")
+        res_data = st.session_state.get(f"respostas_ieduc_{ano_sel}", {})
 
-    # Título principal da página
     st.title(f"🎓 Educação (i-Educ) - Exercício {ano_sel}")
 
-    # Fallback para lista de questões
     if questoes is None:
         questoes = globals().get("QUESTOES_IEDUC", globals().get("QUESTOES_IEDUC_PADRAO", []))
 
-    # Estrutura de abas principal
     aba_quest, aba_dados_ext, aba_graf = st.tabs(
         ["📋 Questionário i-Educ", "🌐 Dados Externos", "📊 Gráficos"]
     )
@@ -1082,14 +1089,12 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
             st.write("**A Prefeitura municipal oferece Creche?**")
             st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.0' para registrar.*")
 
-            # Mapeamento de Opções e Pontuações
             opcoes_10 = {
                 "Selecione...": 0.0,
-                "Sim": 1.0,  # Dica: Ajuste a pontuação de 'Sim' se não for 0.0
+                "Sim": 1.0,
                 "Não": 0.0
             }
 
-            # Estado inicial / persistente
             d10 = res_data.get("1.0") or {
                 "valor": "Selecione...",
                 "pontos": 0.0,
@@ -1104,7 +1109,6 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
 
             evidencia_10_salva = d10.get("link", "")
 
-            # Chaves fixas por componente e ano
             chave_radio_10 = f"r_10_{ano_sel}"
             chave_link_10 = f"l_10_txt_{ano_sel}"
 
@@ -1140,12 +1144,10 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                     ]
                     placeholder_links_10.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
 
-            # Renderização do chat de comentários / histórico
             bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
             if bloco_comentarios_func:
                 bloco_comentarios_func("1.0", res_data, ano_sel)
 
-            # Botão de salvamento
             if st.button("💾 Salvar Questão 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                 val_salvar = st.session_state.get(chave_radio_10, v_salvo_10)
                 pts_10 = float(opcoes_10.get(val_salvar, 0.0))
@@ -1168,7 +1170,6 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                 links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
                 links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_10_salva or "")]
 
-                # Se detectou novo link, ativa o modal antes de recarregar a tela
                 if lnk_val != evidencia_10_salva and links_atuais and links_atuais != links_antigos:
                     st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais
                     st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
@@ -1177,7 +1178,6 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                 st.toast("Resposta e histórico do Quesito 1.0 salvos com sucesso!", icon="✅")
                 st.rerun()
 
-            # Impacto de pontuação
             pts_atuais_10 = d10.get("pontos", 0.0)
             cor_txt_10 = "#28a745" if pts_atuais_10 > 0.0 else "#6c757d"
 
@@ -1187,7 +1187,6 @@ def render_questao_1_0_ieduc(res_data: dict, ano_sel: str):
                 unsafe_allow_html=True,
             )
 
-    # GATILHO DO MODAL 1.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
