@@ -15843,3 +15843,387 @@ def render_questao_7_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("7.1", st.session_state.get(f"links_pendentes_7_1_{ano_sel}", []), ano_sel)
+
+# ==============================================================================
+# --- FUNÇÃO AUXILIAR DE CÁLCULO (QUESITO 8.1) ---
+# ==============================================================================
+def calcular_quadro_nutricionistas_81(total_alunos: int, servidores: int, terceirizados: int):
+    """Calcula a exigência do quadro técnico de nutricionistas com base no porte do município."""
+    qi_total = servidores + terceirizados
+
+    if total_alunos <= 0:
+        nutri_exigido = 0
+    elif total_alunos <= 500:
+        nutri_exigido = 1
+    elif total_alunos <= 1000:
+        nutri_exigido = 2
+    elif total_alunos <= 2500:
+        nutri_exigido = 3
+    elif total_alunos <= 5000:
+        nutri_exigido = 4
+    else:
+        excedente = total_alunos - 5000
+        qt_adicional = (excedente + 2499) // 2500
+        nutri_exigido = 4 + qt_adicional
+
+    pontos = 12.0 if (total_alunos > 0 and qi_total >= nutri_exigido) else 0.0
+    return qi_total, nutri_exigido, pontos
+
+
+# ==============================================================================
+# --- QUESITO 8.0 (Atuação de Nutricionista) ---
+# ==============================================================================
+def render_questao_8_0_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 8.0 (Existência de Nutricionista na Rede)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_8_0_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 8.0 - Atuação de Nutricionista ({ano_sel})", expanded=True):
+            st.subheader("8.0 • Atuação de Nutricionista")
+            st.write(f"**Houve nutricionista atuando na rede municipal de ensino no ano de {ano_sel}?**")
+
+            d80 = res_data.get("8.0") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_80 = d80.get("valor", "")
+            v_link_80 = d80.get("link", "")
+
+            opc80 = ["Selecione...", "Sim", "Não"]
+            idx_80 = opc80.index(v_banco_80) if v_banco_80 in opc80 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                radio_80 = st.radio(
+                    "Selecione a opção para o Quesito 8.0:",
+                    options=opc80,
+                    index=idx_80,
+                    key=f"radio_q80_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if radio_80 != "Selecione...":
+                    st.code("✨ Resposta registrada com sucesso (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_80 = st.text_area(
+                    f"Link/Evidência (8.0) - {ano_sel}:",
+                    value=v_link_80,
+                    key=f"link_q80_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_80 = st.empty()
+                links_80_visuais = re.findall(regex_url, link_80 or "")
+
+                if links_80_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_80_visuais
+                    ]
+                    placeholder_links_80.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("8.0", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 8.0", key=f"btn_salvar_8_0_{ano_sel}", type="primary"):
+                str_valor_80 = radio_80 if radio_80 != "Selecione..." else ""
+                lnk_val = link_80.strip()
+
+                comentarios_historico = d80.get("comentarios", [])
+                comentario_simples = d80.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="8.0",
+                        valor=str_valor_80,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_80 or "")]
+
+                if lnk_val != v_link_80 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_0_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_0_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 8.0 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_8_0_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("8.0", st.session_state.get(f"links_pendentes_8_0_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 8.1 (Quadro Técnico de Nutricionistas) ---
+# ==============================================================================
+def render_questao_8_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 8.1 (Quadro Técnico de Nutricionistas e Auditoria)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_8_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 8.1 - Quadro Técnico de Nutricionistas ({ano_sel})", expanded=True):
+            st.subheader("8.1 • Quadro Técnico de Nutricionistas")
+            st.write(f"**Quantos nutricionistas atuavam no município em {ano_sel}?**")
+
+            d81 = res_data.get("8.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_link_81 = d81.get("link", "")
+
+            # Resgate do estado da string de auditoria compilada
+            v_calc_81 = st.session_state.get(
+                f"v_calc_81_{ano_sel}",
+                "ALUNOS:0,SERV:0,TERC:0"
+            )
+            try:
+                p_c = dict(item.split(":") for item in v_calc_81.split(","))
+            except Exception:
+                p_c = {"ALUNOS": "0", "SERV": "0", "TERC": "0"}
+
+            alunos_val = int(p_c.get("ALUNOS", 0))
+            serv_val = int(p_c.get("SERV", 0))
+            terc_val = int(p_c.get("TERC", 0))
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown("##### 🧮 Painel de Auditoria - Quadro Técnico")
+                st.caption("Insira os dados para calcular a conformidade técnica com o porte da rede.")
+
+                aud_c1, aud_c2, aud_c3 = st.columns(3)
+                with aud_c1:
+                    total_alunos = st.number_input(
+                        "Total de Alunos:",
+                        min_value=0,
+                        value=alunos_val,
+                        step=1,
+                        key=f"q81_alunos_{ano_sel}"
+                    )
+                with aud_c2:
+                    nutri_servidores = st.number_input(
+                        "Servidores (Qi):",
+                        min_value=0,
+                        value=serv_val,
+                        step=1,
+                        key=f"q81_serv_{ano_sel}"
+                    )
+                with aud_c3:
+                    nutri_terceirizados = st.number_input(
+                        "Terceirizados:",
+                        min_value=0,
+                        value=terc_val,
+                        step=1,
+                        key=f"q81_terc_{ano_sel}"
+                    )
+
+                # Atualiza a string no session_state
+                st.session_state[f"v_calc_81_{ano_sel}"] = f"ALUNOS:{total_alunos},SERV:{nutri_servidores},TERC:{nutri_terceirizados}"
+
+            with col_evidencia:
+                link_81 = st.text_area(
+                    f"Link/Evidência (8.1) - {ano_sel}:",
+                    value=v_link_81,
+                    key=f"link_q81_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_81 = st.empty()
+                links_81_visuais = re.findall(regex_url, link_81 or "")
+
+                if links_81_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_81_visuais
+                    ]
+                    placeholder_links_81.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculos de conformidade e pontuação
+            qi_total, nutri_exigido, pontos_81 = calcular_quadro_nutricionistas_81(
+                total_alunos, nutri_servidores, nutri_terceirizados
+            )
+
+            # Exibição do feedback de pontuação
+            with col_inputs:
+                if pontos_81 == 12.0:
+                    st.code(f"✨ Pontuação do Quesito 8.1: {pontos_81:.1f} / 12.0 pontos obtidos.", language="text")
+                else:
+                    st.code(f"❌ Pontuação do Quesito 8.1: {pontos_81:.1f} / 12.0 pontos obtidos.", language="text")
+
+            st.markdown("---")
+            st.markdown("##### 📈 Diagnóstico do Quadro Técnico Calculado")
+            m1, m2, m3 = st.columns(3)
+            m1.metric(
+                "Profissionais Encontrados (Qi)",
+                f"{qi_total} RT/QT",
+                delta=f"Servidores: {nutri_servidores} | Terceiros: {nutri_terceirizados}",
+                delta_color="off"
+            )
+            m2.metric(
+                "Mínimo Exigido p/ Porte",
+                f"{nutri_exigido} RT/QT",
+                delta=f"Faltam: {max(0, nutri_exigido - qi_total)}" if qi_total < nutri_exigido else "Meta Atingida!"
+            )
+            m3.metric(
+                "Nota do Quesito 8.1",
+                f"{pontos_81:.1f} pts",
+                delta="Aprovado (12 pts)" if pontos_81 == 12.0 else "Insuficiente (0 pts)",
+                delta_color="normal" if pontos_81 == 12.0 else "inverse"
+            )
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("8.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 8.1", key=f"btn_salvar_8_1_{ano_sel}", type="primary"):
+                str_valor_81 = f"Alunos: {total_alunos} | Servidores: {nutri_servidores} | Terceirizados: {nutri_terceirizados} | Total: {qi_total}"
+                lnk_val = link_81.strip()
+
+                comentarios_historico = d81.get("comentarios", [])
+                comentario_simples = d81.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="8.1",
+                        valor=str_valor_81,
+                        pontos=pontos_81,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_81 or "")]
+
+                if lnk_val != v_link_81 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 8.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_8_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("8.1", st.session_state.get(f"links_pendentes_8_1_{ano_sel}", []), ano_sel)
+
+
+# ==============================================================================
+# --- QUESITO 8.2 (Atuação em Escolas Estaduais) ---
+# ==============================================================================
+def render_questao_8_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 8.2 (Atuação em Escolas Estaduais)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_8_2_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 8.2 - Atuação em Escolas Estaduais ({ano_sel})", expanded=True):
+            st.subheader("8.2 • Atuação em Escolas Estaduais")
+            st.write("**Os nutricionistas atuaram nas escolas estaduais?**")
+
+            d82 = res_data.get("8.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_82 = d82.get("valor", "")
+            v_link_82 = d82.get("link", "")
+
+            opc82 = ["Selecione...", "Sim", "Não"]
+            idx_82 = opc82.index(v_banco_82) if v_banco_82 in opc82 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                radio_82 = st.radio(
+                    "Selecione a opção para o Quesito 8.2:",
+                    options=opc82,
+                    index=idx_82,
+                    key=f"radio_q82_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if radio_82 != "Selecione...":
+                    st.code("✨ Resposta registrada com sucesso (Quesito Declaratório).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_82 = st.text_area(
+                    f"Link/Evidência (8.2) - {ano_sel}:",
+                    value=v_link_82,
+                    key=f"link_q82_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_82 = st.empty()
+                links_82_visuais = re.findall(regex_url, link_82 or "")
+
+                if links_82_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_82_visuais
+                    ]
+                    placeholder_links_82.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("8.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 8.2", key=f"btn_salvar_8_2_{ano_sel}", type="primary"):
+                str_valor_82 = radio_82 if radio_82 != "Selecione..." else ""
+                lnk_val = link_82.strip()
+
+                comentarios_historico = d82.get("comentarios", [])
+                comentario_simples = d82.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="8.2",
+                        valor=str_valor_82,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_82 or "")]
+
+                if lnk_val != v_link_82 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_8_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 8.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_8_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []), ano_sel)
