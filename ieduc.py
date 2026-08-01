@@ -24383,3 +24383,225 @@ def render_questao_20_0_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_20_0_{ano_sel}", []),
                 ano_sel,
             )
+
+# =========================================================================
+# --- ABA DADOS EXTERNOS ---
+# =========================================================================
+with aba_dados_externos:
+    st.title("📊 Indicadores e Dados Externos")
+    st.write(
+        "Insira abaixo as informações e dados consolidados das fontes externas:"
+    )
+
+    # -------------------------------------------------------------------------
+    # INDICADOR E1.1 (Infraestrutura de Creches - Pátio Infantil)
+    # -------------------------------------------------------------------------
+    with st.container(key=f"container_bloco_ieduc_e1_1_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 INDICADOR E1.1 - Infraestrutura de Creches - Pátio Infantil ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E1.1")
+            st.write(
+                "**Informe a quantidade de estabelecimentos de Creche para cálculo da infraestrutura (Dados Censo Escolar 2025):**"
+            )
+
+            d_e11 = res_data.get("E1.1") or {
+                "valor": '{"com_patio": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+
+            try:
+                val_banco_e11 = json.loads(d_e11["valor"].replace("'", '"'))
+                init_patio = int(val_banco_e11.get("com_patio", 0))
+                init_total = int(val_banco_e11.get("total", 0))
+            except Exception:
+                init_patio = 0
+                init_total = 0
+
+            val_patio_ref = st.session_state.get(
+                f"v_num_e11_patio_{ano_sel}", init_patio
+            )
+            val_total_ref = st.session_state.get(
+                f"v_num_e11_total_{ano_sel}", init_total
+            )
+
+            q_patio = st.number_input(
+                "Nº de creches com pátio infantil:",
+                min_value=0,
+                step=1,
+                value=val_patio_ref,
+                key=f"num_e11_patio_{ano_sel}",
+            )
+            st.session_state[f"v_num_e11_patio_{ano_sel}"] = q_patio
+
+            q_total = st.number_input(
+                "Nº total de creches no município:",
+                min_value=0,
+                step=1,
+                value=val_total_ref,
+                key=f"num_e11_total_{ano_sel}",
+            )
+            st.session_state[f"v_num_e11_total_{ano_sel}"] = q_total
+
+            pts_e11 = 0.0
+            prop_pi = 0.0
+
+            if q_total > 0:
+                if q_patio > q_total:
+                    st.error(
+                        "⚠️ Atenção: O número de creches com pátio não pode ser maior do que o total de creches."
+                    )
+                else:
+                    prop_pi = q_patio / q_total
+                    pts_e11 = round(prop_pi * 2.0, 2)
+
+            st.code(
+                f"📊 Resultado do Indicador E1.1:\n"
+                f"• Proporção Alcançada (PI): {prop_pi:.2%}\n"
+                f"✨ Pontuação Obtida: {pts_e11:.2f} / 2.00 pontos.",
+                language="text",
+            )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("E1.1", res_data, ano_sel)
+
+            if q_patio != init_patio or q_total != init_total:
+                dict_salvar_e11 = {"com_patio": q_patio, "total": q_total}
+                str_salvar_e11 = json.dumps(dict_salvar_e11)
+
+                comentarios_historico = d_e11.get("comentarios", [])
+                comentario_simples = d_e11.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="E1.1",
+                        valor=str_salvar_e11,
+                        pontos=pts_e11,
+                        link="",
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                st.cache_data.clear()
+                st.toast(
+                    "Indicador E1.1 atualizado e salvo com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    # -------------------------------------------------------------------------
+    # INDICADOR E1.2 (Materiais Pedagógicos e Brinquedos na Creche)
+    # -------------------------------------------------------------------------
+    with st.container(key=f"container_bloco_ieduc_e1_2_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 INDICADOR E1.2 - Materiais Pedagógicos e Brinquedos na Creche ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E1.2")
+            st.write(
+                "**Informe a quantidade de estabelecimentos de Creche que disponibilizam brinquedos e materiais pedagógicos (Dados Censo Escolar 2025):**"
+            )
+
+            d_e12 = res_data.get("E1.2") or {
+                "valor": '{"com_brinquedo": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+
+            try:
+                val_banco_e12 = json.loads(d_e12["valor"].replace("'", '"'))
+                init_brinquedo = int(val_banco_e12.get("com_brinquedo", 0))
+                init_total_e12 = int(val_banco_e12.get("total", 0))
+            except Exception:
+                init_brinquedo = 0
+                init_total_e12 = 0
+
+            val_brinquedo_ref = st.session_state.get(
+                f"v_num_e12_brinq_{ano_sel}", init_brinquedo
+            )
+            val_total_e12_ref = st.session_state.get(
+                f"v_num_e12_total_{ano_sel}", init_total_e12
+            )
+
+            q_brinquedo = st.number_input(
+                "Nº de creches que disponibilizam brinquedos/materiais pedagógicos (BP):",
+                min_value=0,
+                step=1,
+                value=val_brinquedo_ref,
+                key=f"num_e12_brinq_{ano_sel}",
+            )
+            st.session_state[f"v_num_e12_brinq_{ano_sel}"] = q_brinquedo
+
+            q_total_e12 = st.number_input(
+                "Total de estabelecimentos que oferecem creche (TE):",
+                min_value=0,
+                step=1,
+                value=val_total_e12_ref,
+                key=f"num_e12_total_{ano_sel}",
+            )
+            st.session_state[f"v_num_e12_total_{ano_sel}"] = q_total_e12
+
+            pts_e12 = 0.0
+            prop_p = 0.0
+
+            if q_total_e12 > 0:
+                if q_brinquedo > q_total_e12:
+                    st.error(
+                        "⚠️ Atenção: O número de creches com brinquedos (BP) não pode ser maior do que o total de creches (TE)."
+                    )
+                else:
+                    prop_p = q_brinquedo / q_total_e12
+                    pts_e12 = round(prop_p * 4.0, 2)
+
+            st.code(
+                f"📊 Resultado do Indicador E1.2:\n"
+                f"• Proporção Alcançada (P): {prop_p:.2%}\n"
+                f"✨ Pontuação Obtida: {pts_e12:.2f} / 4.00 pontos.",
+                language="text",
+            )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("E1.2", res_data, ano_sel)
+
+            if q_brinquedo != init_brinquedo or q_total_e12 != init_total_e12:
+                dict_salvar_e12 = {
+                    "com_brinquedo": q_brinquedo,
+                    "total": q_total_e12,
+                }
+                str_salvar_e12 = json.dumps(dict_salvar_e12)
+
+                comentarios_historico = d_e12.get("comentarios", [])
+                comentario_simples = d_e12.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="E1.2",
+                        valor=str_salvar_e12,
+                        pontos=pts_e12,
+                        link="",
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                st.cache_data.clear()
+                st.toast(
+                    "Indicador E1.2 atualizado e salvo com sucesso!", icon="✅"
+                )
+                st.rerun()
