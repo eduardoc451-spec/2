@@ -14416,3 +14416,351 @@ def render_questao_3_22_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.22.1", st.session_state.get(f"links_pendentes_3_22_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.22.2 • Metas do Projeto de Recuperação (IEDUC)
+# =============================================================================
+def render_questao_3_22_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.22.2 (Metas do Projeto de Recuperação - Penalidade)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_22_2_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 3.22.2 - Metas do Projeto de Recuperação ({ano_sel})", expanded=True):
+            st.subheader("3.22.2 • Metas do Projeto de Recuperação")
+            st.write("**Existem metas traçadas que visem à melhoria dos resultados dos projetos de recuperação ou reforço escolar?**")
+
+            d3222 = res_data.get("3.22.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_3222 = d3222.get("valor", "")
+            v_link_3222 = d3222.get("link", "")
+
+            opc3222 = [
+                "Selecione...",
+                "Sim – 00",
+                "Não – -10 (perde 10 pontos)"
+            ]
+
+            def calcular_pontos_3222(valor_opcao):
+                if valor_opcao == "Não – -10 (perde 10 pontos)":
+                    return -10.0
+                return 0.0
+
+            idx_sel = opc3222.index(v_banco_3222) if v_banco_3222 in opc3222 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r3222 = st.radio(
+                    f"Selecione a opção para o Quesito 3.22.2:",
+                    opc3222,
+                    index=idx_sel,
+                    key=f"radio_q3222_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r3222 != "Selecione...":
+                    pts_exibir = calcular_pontos_3222(r3222)
+                    if pts_exibir < 0:
+                        st.code(f"🚨 Penalidade Aplicada: A ausência de metas estruturadas resulta em uma perda de {pts_exibir:.1f} pontos.", language="text")
+                    else:
+                        st.code("✅ Metas identificadas: Alinhamento regulamentar preservado (Impacto: 0.0 pontos).", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_3222 = st.text_area(
+                    f"Link/Evidência (3.22.2) - {ano_sel}:",
+                    value=v_link_3222,
+                    key=f"link_q3222_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_3222 = st.empty()
+                links_3222_visuais = re.findall(regex_url, link_3222 or "")
+
+                if links_3222_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_3222_visuais
+                    ]
+                    placeholder_links_3222.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.22.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.22.2", key=f"btn_salvar_3_22_2_{ano_sel}", type="primary"):
+                str_valor_3222 = r3222 if r3222 != "Selecione..." else ""
+                pts_calculados = calcular_pontos_3222(str_valor_3222)
+                lnk_val = link_3222.strip()
+
+                comentarios_historico = d3222.get("comentarios", [])
+                comentario_simples = d3222.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.22.2",
+                        valor=str_valor_3222,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_3222 or "")]
+
+                if lnk_val != v_link_3222 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_22_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_22_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.22.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_22_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.22.2", st.session_state.get(f"links_pendentes_3_22_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.22.2.1 • Nível de Atingimento de Metas (IEDUC)
+# =============================================================================
+def render_questao_3_22_2_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.22.2.1 (Nível de Atingimento de Metas - Penalidade)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_22_2_1_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 3.22.2.1 - Nível de Atingimento de Metas ({ano_sel})", expanded=True):
+            st.subheader("3.22.2.1 • Nível de Atingimento de Metas")
+            st.write("**As metas estão sendo atingidas?**")
+
+            d32221 = res_data.get("3.22.2.1") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_32221 = d32221.get("valor", "")
+            v_link_32221 = d32221.get("link", "")
+
+            opc32221 = [
+                "Selecione...",
+                "Todas as metas foram atingidas – 00",
+                "A maior parte das metas foram atingidas – -05 (perde 05 pontos)",
+                "A menor parte das metas foram atingidas – -07 (perde 07 pontos)",
+                "Nenhuma meta foi atingida – -10 (perde 10 pontos)"
+            ]
+
+            def calcular_pontos_32221(valor_opcao):
+                if valor_opcao == "A maior parte das metas foram atingidas – -05 (perde 05 pontos)":
+                    return -5.0
+                elif valor_opcao == "A menor parte das metas foram atingidas – -07 (perde 07 pontos)":
+                    return -7.0
+                elif valor_opcao == "Nenhuma meta foi atingida – -10 (perde 10 pontos)":
+                    return -10.0
+                return 0.0
+
+            idx_sel = opc32221.index(v_banco_32221) if v_banco_32221 in opc32221 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r32221 = st.radio(
+                    f"Selecione o nível de atingimento:",
+                    opc32221,
+                    index=idx_sel,
+                    key=f"radio_q32221_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r32221 != "Selecione...":
+                    pts_exibir = calcular_pontos_32221(r32221)
+                    if pts_exibir == 0.0:
+                        st.code("✅ Desempenho Excelente: Todas as metas estipuladas para a recuperação foram alcançadas. Impacto: 0.0 pontos.", language="text")
+                    else:
+                        st.code(f"⚠️ Aviso de Penalidade: Metas incompletas ou não atingidas geraram uma redução de {pts_exibir:.1f} pontos.", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_32221 = st.text_area(
+                    f"Link/Evidência (3.22.2.1) - {ano_sel}:",
+                    value=v_link_32221,
+                    key=f"link_q32221_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=180
+                )
+
+                placeholder_links_32221 = st.empty()
+                links_32221_visuais = re.findall(regex_url, link_32221 or "")
+
+                if links_32221_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_32221_visuais
+                    ]
+                    placeholder_links_32221.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.22.2.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.22.2.1", key=f"btn_salvar_3_22_2_1_{ano_sel}", type="primary"):
+                str_valor_32221 = r32221 if r32221 != "Selecione..." else ""
+                pts_calculados = calcular_pontos_32221(str_valor_32221)
+                lnk_val = link_32221.strip()
+
+                comentarios_historico = d32221.get("comentarios", [])
+                comentario_simples = d32221.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.22.2.1",
+                        valor=str_valor_32221,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_32221 or "")]
+
+                if lnk_val != v_link_32221 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_22_2_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_22_2_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.22.2.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_22_2_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.22.2.1", st.session_state.get(f"links_pendentes_3_22_2_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.23 • Monitoramento da Taxa de Abandono (IEDUC)
+# =============================================================================
+def render_questao_3_23_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.23 (Monitoramento da Taxa de Abandono)."""
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_23_{ano_sel}", border=True):
+        with st.expander(f"🔍 QUESITO 3.23 - Monitoramento da Taxa de Abandono ({ano_sel})", expanded=True):
+            st.subheader("3.23 • Monitoramento da Taxa de Abandono")
+            st.write(f"**A Prefeitura municipal realizou ações e medidas para monitoramento da taxa de abandono das crianças na idade escolar (Anos Iniciais) em {ano_sel}?**")
+            st.caption("⚠️ *Obs: Apenas ligação para telefone cadastrado do aluno não caracteriza medida para reduzir a taxa de abandono.*")
+
+            d323 = res_data.get("3.23") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_banco_323 = d323.get("valor", "")
+            v_link_323 = d323.get("link", "")
+
+            opc323 = [
+                "Selecione...",
+                "Sim – 25",
+                "Não – 00"
+            ]
+
+            def calcular_pontos_323(valor_opcao):
+                if valor_opcao == "Sim – 25":
+                    return 25.0
+                return 0.0
+
+            idx_sel = opc323.index(v_banco_323) if v_banco_323 in opc323 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                r323 = st.radio(
+                    f"Selecione a opção para o Quesito 3.23:",
+                    opc323,
+                    index=idx_sel,
+                    key=f"radio_q323_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                if r323 != "Selecione...":
+                    pts_exibir = calcular_pontos_323(r323)
+                    if pts_exibir > 0:
+                        st.code(f"✨ Pontuação do Quesito 3.23: {pts_exibir:.1f} / 25.0 pontos obtidos.", language="text")
+                    else:
+                        st.code("❌ Pontuação do Quesito 3.23: 0.0 / 25.0 pontos obtidos.", language="text")
+                else:
+                    st.code("💡 Por favor, selecione uma opção válida.", language="text")
+
+            with col_evidencia:
+                link_323 = st.text_area(
+                    f"Link/Evidência (3.23) - {ano_sel}:",
+                    value=v_link_323,
+                    key=f"link_q323_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_323 = st.empty()
+                links_323_visuais = re.findall(regex_url, link_323 or "")
+
+                if links_323_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_323_visuais
+                    ]
+                    placeholder_links_323.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.23", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.23", key=f"btn_salvar_3_23_{ano_sel}", type="primary"):
+                str_valor_323 = r323 if r323 != "Selecione..." else ""
+                pts_calculados = calcular_pontos_323(str_valor_323)
+                lnk_val = link_323.strip()
+
+                comentarios_historico = d323.get("comentarios", [])
+                comentario_simples = d323.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.23",
+                        valor=str_valor_323,
+                        pontos=pts_calculados,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, v_link_323 or "")]
+
+                if lnk_val != v_link_323 and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_23_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_23_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.23 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_23_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.23", st.session_state.get(f"links_pendentes_3_23_{ano_sel}", []), ano_sel)
