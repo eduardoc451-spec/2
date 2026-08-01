@@ -2053,6 +2053,7 @@ def render_questao_1_2_2_ieduc(res_data: dict, ano_sel: str):
 
 def render_questao_1_2_3_ieduc(res_data: dict, ano_sel: str):
     """Renderiza a Questão 1.2.3 (Data da Última Entrega de Brinquedos)."""
+    from datetime import date, datetime  # <--- Importação explícita e segura
     
     regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
 
@@ -2073,17 +2074,17 @@ def render_questao_1_2_3_ieduc(res_data: dict, ano_sel: str):
             evidencia_123_salva = d123.get("link", "")
 
             # Parsing seguro da data inicial vinda do banco de dados
-            data_inicial = datetime.date.today()
+            data_inicial = date.today()
             if v_salvo_123:
                 try:
                     # Tenta formato DD/MM/YYYY
-                    data_inicial = datetime.datetime.strptime(v_salvo_123, "%d/%m/%Y").date()
+                    data_inicial = datetime.strptime(v_salvo_123, "%d/%m/%Y").date()
                 except ValueError:
                     try:
                         # Fallback tenta formato YYYY-MM-DD
-                        data_inicial = datetime.datetime.strptime(v_salvo_123, "%Y-%m-%d").date()
+                        data_inicial = datetime.strptime(v_salvo_123, "%Y-%m-%d").date()
                     except ValueError:
-                        data_inicial = datetime.date.today()
+                        data_inicial = date.today()
 
             chave_date_123 = f"dt_ieduc_123_{ano_sel}"
             chave_link_123 = f"l_123_txt_{ano_sel}"
