@@ -23056,3 +23056,144 @@ def render_questao_18_1_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_18_1_{ano_sel}", []),
                 ano_sel,
             )
+
+# ==============================================================================
+# --- QUESITO 18.2 (Oferecimento de Formação aos Conselheiros) ---
+# ==============================================================================
+def render_questao_18_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 18.2 (Oferecimento de Formação aos Conselheiros)."""
+    import re
+
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+
+    with st.container(key=f"container_bloco_ieduc_18_2_{ano_sel}", border=True):
+        with st.expander(
+            f"🔍 QUESITO 18.2 - Oferecimento de Formação aos Conselheiros ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("18.2 • Oferecimento de Formação aos Conselheiros")
+            st.write(
+                "**A Prefeitura ofereceu formação aos conselheiros sobre a execução do PNAE e temas que possuam interfaces com este Programa?**"
+            )
+
+            d182 = res_data.get("18.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": "",
+            }
+            v_banco_182 = d182.get("valor", "")
+            v_link_182 = d182.get("link", "")
+
+            opc182 = ["Selecione...", "Sim – 06", "Não – 00"]
+            idx_182 = opc182.index(v_banco_182) if v_banco_182 in opc182 else 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                sel_182 = st.radio(
+                    "Selecione a opção para o Quesito 18.2:",
+                    opc182,
+                    index=idx_182,
+                    key=f"rad_q182_pnae_{ano_sel}",
+                    label_visibility="collapsed",
+                )
+
+                if sel_182 == "Selecione...":
+                    st.code(
+                        "💡 Por favor, selecione uma opção válida.",
+                        language="text",
+                    )
+                    pts_182 = 0.0
+                else:
+                    pts_182 = 6.0 if "Sim" in sel_182 else 0.0
+                    st.code(
+                        f"✨ Pontuação Obtida: {pts_182:.1f} / 6.0 pontos.",
+                        language="text",
+                    )
+
+            with col_evidencia:
+                link_182 = st.text_area(
+                    f"Link/Evidência (18.2) - {ano_sel}:",
+                    value=v_link_182,
+                    key=f"link_q182_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=105,
+                )
+
+                placeholder_links_182 = st.empty()
+                links_182_visuais = re.findall(regex_url, link_182 or "")
+
+                if links_182_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_182_visuais
+                    ]
+                    placeholder_links_182.markdown(
+                        "**🔗 Link ativo:** " + " | ".join(links_formatados)
+                    )
+
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("18.2", res_data, ano_sel)
+
+            if st.button(
+                "💾 Salvar Questão 18.2",
+                key=f"btn_salvar_18_2_{ano_sel}",
+                type="primary",
+            ):
+                valor_salvar = sel_182 if sel_182 != "Selecione..." else ""
+                lnk_val = link_182.strip()
+
+                comentarios_historico = d182.get("comentarios", [])
+                comentario_simples = d182.get("comentario", "")
+
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="18.2",
+                        valor=valor_salvar,
+                        pontos=pts_182,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico,
+                    )
+
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, v_link_182 or "")
+                ]
+
+                if (
+                    lnk_val != v_link_182
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_18_2_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_18_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Resposta do Quesito 18.2 salva com sucesso!", icon="✅"
+                )
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_18_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "18.2",
+                st.session_state.get(f"links_pendentes_18_2_{ano_sel}", []),
+                ano_sel,
+            )
