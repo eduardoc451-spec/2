@@ -9077,3 +9077,391 @@ def render_questao_3_1_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 3.2 • Titulação de Professores - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.2 (Titulação de Professores nos Anos Iniciais)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.2 • Titulação de Professores - Anos Iniciais ({ano_sel})", expanded=True):
+            st.subheader("3.2 • Titulação de Professores")
+            st.write(f"**Informe a quantidade de professores dos Anos Iniciais (efetivos e temporários) em {ano_sel}:**")
+            st.caption("ℹ️ *Os cálculos de titulação (N1 e N2) seguem os limites escalonados do Censo Escolar. Teto máximo = 19,00 pontos.*")
+
+            d32 = res_data.get("3.2") or {
+                "valor": "TOT:0,GRAD:0,PGRAD:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_32_salva = d32.get("link", "")
+
+            # Parsing seguro
+            try:
+                parts_32 = str(d32.get("valor", "")).split(",")
+                v_tot_p = int(parts_32[0].split(":")[1])
+                v_grad = int(parts_32[1].split(":")[1])
+                v_pgrad = int(parts_32[2].split(":")[1])
+            except Exception:
+                v_tot_p = v_grad = v_pgrad = 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">N° total de professores regentes nos Anos Iniciais:</label>', unsafe_allow_html=True)
+                tot_prof = st.number_input("", min_value=0, value=v_tot_p, step=1, key=f"num_q32_tot_prof_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Possuem Licenciatura Superior (GRAD):</label>', unsafe_allow_html=True)
+                grad = st.number_input("", min_value=0, value=v_grad, step=1, key=f"num_q32_grad_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Possuem Pós-graduação (PGRAD):</label>', unsafe_allow_html=True)
+                pgrad = st.number_input("", min_value=0, value=v_pgrad, step=1, key=f"num_q32_pgrad_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_32 = st.text_area(
+                    f"Link/Evidência (3.2) - {ano_sel}:",
+                    value=evidencia_32_salva,
+                    key=f"link_q32_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=200
+                )
+
+                placeholder_links_32 = st.empty()
+                links_32_visuais = re.findall(regex_url, link_32 or "")
+
+                if links_32_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_32_visuais
+                    ]
+                    placeholder_links_32.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de Pontuação
+            nf_32, n1, n2, g_pct, p_pct = 0.0, 0.0, 0.0, 0.0, 0.0
+
+            if tot_prof > 0:
+                # 1. Graduação (N1)
+                g_pct = (grad / tot_prof) * 100.0
+                if g_pct >= 100.0: n1 = 12.0
+                elif g_pct >= 90.0: n1 = 7.0
+                elif g_pct >= 80.0: n1 = 3.0
+                elif g_pct >= 70.0: n1 = 1.0
+                else: n1 = 0.0
+
+                # 2. Pós-Graduação (N2)
+                p_pct = (pgrad / tot_prof) * 100.0
+                if p_pct >= 50.0: n2 = 7.0
+                elif p_pct >= 40.0: n2 = 5.0
+                elif p_pct >= 20.0: n2 = 3.0
+                else: n2 = 0.0
+
+                nf_32 = round(float(n1 + n2), 2)
+                texto_painel = (
+                    f"📊 Formação: Graduação {g_pct:.1f}% ({n1:.1f} pts) | "
+                    f"Pós {p_pct:.1f}% ({n2:.1f} pts) | "
+                    f"Nota Geral: {nf_32:.2f} / 19.00 pontos"
+                )
+            else:
+                texto_painel = "⚠️ Status: Aguardando preenchimento do total de professores regentes."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.2", key=f"btn_salvar_3_2_{ano_sel}", type="primary"):
+                str_valor_32 = f"TOT:{tot_prof},GRAD:{grad},PGRAD:{pgrad}"
+                lnk_val = link_32.strip()
+
+                comentarios_historico = d32.get("comentarios", [])
+                comentario_simples = d32.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.2",
+                        valor=str_valor_32,
+                        pontos=float(nf_32),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_32_salva or "")]
+
+                if lnk_val != evidencia_32_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.2", st.session_state.get(f"links_pendentes_3_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.3 • Piso Salarial dos Professores - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_3_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.3 (Piso Salarial dos Professores nos Anos Iniciais)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    def limpa_conversao_monetaria(texto):
+        if not texto or str(texto).strip() == "":
+            return None
+        num_limpo = str(texto).replace("R$", "").replace(" ", "")
+        if "." in num_limpo and "," in num_limpo:
+            num_limpo = num_limpo.replace(".", "").replace(",", ".")
+        elif "," in num_limpo:
+            num_limpo = num_limpo.replace(",", ".")
+        try:
+            return float(num_limpo)
+        except Exception:
+            return None
+
+    with st.container(key=f"container_bloco_ieduc_3_3_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.3 • Piso Salarial dos Professores - Anos Iniciais ({ano_sel})", expanded=True):
+            st.subheader("3.3 • Piso Salarial dos Professores")
+            st.write(f"**Qual o piso salarial mensal dos professores dos Anos Iniciais no município em {ano_sel}?**")
+            st.caption("ℹ️ *Considerar o piso base proporcional para a jornada de 40 horas semanais.*")
+
+            d33 = res_data.get("3.3") or {
+                "valor": "/",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_33_salva = d33.get("link", "")
+            v_banco_33 = str(d33.get("valor", "/"))
+
+            try:
+                val_salvo_piso, val_salvo_minimo = v_banco_33.split("/")
+                float_piso = float(val_salvo_piso) if val_salvo_piso != "" else None
+                float_minimo = float(val_salvo_minimo) if val_salvo_minimo != "" else None
+            except Exception:
+                float_piso, float_minimo = None, None
+
+            str_inicial_piso = f"R$ {float_piso:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if float_piso is not None else ""
+            str_inicial_minimo = f"R$ {float_minimo:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if float_minimo is not None else ""
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Salário Mínimo Vigente (R$):</label>', unsafe_allow_html=True)
+                txt_minimo = st.text_input(
+                    "",
+                    value=str_inicial_minimo,
+                    placeholder="Ex: 1.512,00",
+                    key=f"txt_q33_minimo_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Piso Salarial Base (R$):</label>', unsafe_allow_html=True)
+                txt_piso = st.text_input(
+                    "",
+                    value=str_inicial_piso,
+                    placeholder="Ex: 4.580,57",
+                    key=f"txt_q33_piso_{ano_sel}",
+                    label_visibility="collapsed"
+                )
+
+            with col_evidencia:
+                link_33 = st.text_area(
+                    f"Link/Evidência (3.3) - {ano_sel}:",
+                    value=evidencia_33_salva,
+                    key=f"link_q33_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=130
+                )
+
+                placeholder_links_33 = st.empty()
+                links_33_visuais = re.findall(regex_url, link_33 or "")
+
+                if links_33_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_33_visuais
+                    ]
+                    placeholder_links_33.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de Conformidade
+            v_piso_ver = limpa_conversao_monetaria(txt_piso)
+            v_minimo_ver = limpa_conversao_monetaria(txt_minimo)
+
+            if v_piso_ver is None or v_minimo_ver is None:
+                pts_33 = 0.0
+                texto_painel = "⚠️ Status: Aguardando o preenchimento dos valores salariais."
+            elif v_piso_ver < v_minimo_ver:
+                pts_33 = -20.0
+                texto_painel = f"🔴 Atenção: Piso informado (R$ {v_piso_ver:,.2f}) está abaixo do salário mínimo (R$ {v_minimo_ver:,.2f}). Penalidade: -20.0 pontos."
+            else:
+                pts_33 = 0.0
+                texto_painel = f"🟢 Piso salarial (R$ {v_piso_ver:,.2f}) em conformidade com o salário mínimo (R$ {v_minimo_ver:,.2f}). Pontuação: 0.0 pontos."
+
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.3", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.3", key=f"btn_salvar_3_3_{ano_sel}", type="primary"):
+                str_piso_banco = f"{v_piso_ver:.2f}" if v_piso_ver is not None else ""
+                str_minimo_banco = f"{v_minimo_ver:.2f}" if v_minimo_ver is not None else ""
+                str_valor_33 = f"{str_piso_banco}/{str_minimo_banco}"
+                lnk_val = link_33.strip()
+
+                comentarios_historico = d33.get("comentarios", [])
+                comentario_simples = d33.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.3",
+                        valor=str_valor_33,
+                        pontos=float(pts_33),
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_33_salva or "")]
+
+                if lnk_val != evidencia_33_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.3 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_3_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.3", st.session_state.get(f"links_pendentes_3_3_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 3.4 • Ausências de Professores - Anos Iniciais (IEDUC)
+# =============================================================================
+def render_questao_3_4_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.4 (Ausências de Professores nos Anos Iniciais)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_3_4_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 3.4 • Ausências de Professores - Anos Iniciais ({ano_sel})", expanded=True):
+            st.subheader("3.4 • Ausências de Professores")
+            st.write(f"**Informe a quantidade total (dias) de ausência dos professores por faltas (incluindo os afastamentos legais) para os Anos Iniciais em {ano_sel}:**")
+            st.caption("ℹ️ *Considere todos os dias de ausência de professores (justificadas ou injustificadas).*")
+
+            d34 = res_data.get("3.4") or {
+                "valor": "FI:0,FJ:0,LM:0,LMP:0,AB:0,OU:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_34_salva = d34.get("link", "")
+
+            # Parsing seguro
+            try:
+                parts_34 = {p.split(":")[0]: int(p.split(":")[1]) for p in str(d34.get("valor", "")).split(",")}
+            except Exception:
+                parts_34 = {"FI": 0, "FJ": 0, "LM": 0, "LMP": 0, "AB": 0, "OU": 0}
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Faltas injustificadas:</label>', unsafe_allow_html=True)
+                fi = st.number_input("", min_value=0, value=int(parts_34.get("FI", 0)), step=1, key=f"num_q34_fi_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Faltas justificadas:</label>', unsafe_allow_html=True)
+                fj = st.number_input("", min_value=0, value=int(parts_34.get("FJ", 0)), step=1, key=f"num_q34_fj_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Licença médica:</label>', unsafe_allow_html=True)
+                lm = st.number_input("", min_value=0, value=int(parts_34.get("LM", 0)), step=1, key=f"num_q34_lm_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Licença maternidade/paternidade:</label>', unsafe_allow_html=True)
+                lmp = st.number_input("", min_value=0, value=int(parts_34.get("LMP", 0)), step=1, key=f"num_q34_lmp_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Abonos:</label>', unsafe_allow_html=True)
+                ab = st.number_input("", min_value=0, value=int(parts_34.get("AB", 0)), step=1, key=f"num_q34_ab_{ano_sel}", label_visibility="collapsed")
+                
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Outros (ausências amparadas por lei):</label>', unsafe_allow_html=True)
+                ou = st.number_input("", min_value=0, value=int(parts_34.get("OU", 0)), step=1, key=f"num_q34_ou_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_34 = st.text_area(
+                    f"Link/Evidência (3.4) - {ano_sel}:",
+                    value=evidencia_34_salva,
+                    key=f"link_q34_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=400
+                )
+
+                placeholder_links_34 = st.empty()
+                links_34_visuais = re.findall(regex_url, link_34 or "")
+
+                if links_34_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_34_visuais
+                    ]
+                    placeholder_links_34.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Totalizador
+            total_dias = fi + fj + lm + lmp + ab + ou
+            texto_painel = f"📅 Total Geral de Ausências Acumuladas nos Anos Iniciais: {total_dias} dias"
+            st.code(texto_painel, language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("3.4", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 3.4", key=f"btn_salvar_3_4_{ano_sel}", type="primary"):
+                str_valor_34 = f"FI:{fi},FJ:{fj},LM:{lm},LMP:{lmp},AB:{ab},OU:{ou}"
+                lnk_val = link_34.strip()
+
+                comentarios_historico = d34.get("comentarios", [])
+                comentario_simples = d34.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="3.4",
+                        valor=str_valor_34,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_34_salva or "")]
+
+                if lnk_val != evidencia_34_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_3_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_3_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 3.4 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_3_4_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("3.4", st.session_state.get(f"links_pendentes_3_4_{ano_sel}", []), ano_sel)
