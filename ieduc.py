@@ -7011,11 +7011,6 @@ def render_questao_2_7_ieduc(res_data: dict, ano_sel: str):
 def render_questao_2_7_1_ieduc(res_data: dict, ano_sel: str):
     """Renderiza a Questão 2.7.1 (Quantidade de Profissionais Capacitados - Pré-escola)."""
     
-    # Condição do Quesito Pai (2.7)
-    r27 = (res_data.get("2.7") or {}).get("valor", "Não")
-    if r27 != "Sim":
-        return
-
     regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
 
     with st.container(key=f"container_bloco_ieduc_2_7_1_{ano_sel}", border=True):
