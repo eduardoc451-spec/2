@@ -11945,8 +11945,8 @@ def render_questao_3_15_ieduc(res_data: dict, ano_sel: str):
 # =============================================================================
 # QUESITO 3.15.1 • Composição do Indicador Próprio - Anos Iniciais (IEDUC)
 # =============================================================================
-def render_quesito_3_15_1_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza o Quesito 3.15.1 (Composição e forma de avaliação do indicador próprio)."""
+def render_questao_3_15_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.15.1 (Composição do Indicador Próprio)."""
 
     regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
 
@@ -11954,11 +11954,10 @@ def render_quesito_3_15_1_ieduc(res_data: dict, ano_sel: str):
         key=f"container_bloco_ieduc_3_15_1_{ano_sel}", border=True
     ):
         with st.expander(
-            f"🔍 QUESITO 3.15.1 - Descrição da Composição do Indicador ({ano_sel})",
+            f"📌 Questão 3.15.1 • Composição do Indicador ({ano_sel})",
             expanded=True,
         ):
-            st.markdown('<div class="quesito-card">', unsafe_allow_html=True)
-            st.markdown("#### QUESITO 3.15.1")
+            st.subheader("3.15.1 • Composição do Indicador Próprio")
             st.write(
                 "**Especifique, descrevendo sua composição e forma de avaliação:**"
             )
@@ -12031,7 +12030,7 @@ def render_quesito_3_15_1_ieduc(res_data: dict, ano_sel: str):
                 bloco_comentarios_func("3.15.1", res_data, ano_sel)
 
             if st.button(
-                "💾 Salvar Quesito 3.15.1",
+                "💾 Salvar Questão 3.15.1",
                 key=f"btn_salvar_3_15_1_{ano_sel}",
                 type="primary",
             ):
@@ -12083,8 +12082,6 @@ def render_quesito_3_15_1_ieduc(res_data: dict, ano_sel: str):
                 )
                 st.rerun()
 
-            st.markdown("</div>", unsafe_allow_html=True)
-
     if st.session_state.get(f"gatilho_modal_3_15_1_{ano_sel}", False):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
@@ -12093,11 +12090,13 @@ def render_quesito_3_15_1_ieduc(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_3_15_1_{ano_sel}", []),
                 ano_sel,
             )
+
+
 # =============================================================================
 # QUESITO 3.15.2 • Classificação por Nível de Desempenho - Anos Iniciais (IEDUC)
 # =============================================================================
-def render_quesito_3_15_2_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza o Quesito 3.15.2 (Classificação dos alunos por nível de desempenho)."""
+def render_questao_3_15_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.15.2 (Classificação por Nível de Desempenho)."""
 
     regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
 
@@ -12105,11 +12104,10 @@ def render_quesito_3_15_2_ieduc(res_data: dict, ano_sel: str):
         key=f"container_bloco_ieduc_3_15_2_{ano_sel}", border=True
     ):
         with st.expander(
-            f"🔍 QUESITO 3.15.2 - Classificação por Nível de Desempenho ({ano_sel})",
+            f"📌 Questão 3.15.2 • Classificação por Nível de Desempenho ({ano_sel})",
             expanded=True,
         ):
-            st.markdown('<div class="quesito-card">', unsafe_allow_html=True)
-            st.markdown("#### QUESITO 3.15.2")
+            st.subheader("3.15.2 • Classificação por Nível de Desempenho")
             st.write(
                 "**O indicador próprio de qualidade de ensino do Município classifica os alunos por nível de desempenho?**"
             )
@@ -12167,7 +12165,7 @@ def render_quesito_3_15_2_ieduc(res_data: dict, ano_sel: str):
                     value=evidencia_3152_salva,
                     key=f"link_q3152_{ano_sel}",
                     placeholder="Insira os links...",
-                    height=105,
+                    height=150,
                 )
 
                 placeholder_links_3152 = st.empty()
@@ -12189,7 +12187,7 @@ def render_quesito_3_15_2_ieduc(res_data: dict, ano_sel: str):
                 bloco_comentarios_func("3.15.2", res_data, ano_sel)
 
             if st.button(
-                "💾 Salvar Quesito 3.15.2",
+                "💾 Salvar Questão 3.15.2",
                 key=f"btn_salvar_3_15_2_{ano_sel}",
                 type="primary",
             ):
@@ -12241,8 +12239,6 @@ def render_quesito_3_15_2_ieduc(res_data: dict, ano_sel: str):
                 )
                 st.rerun()
 
-            st.markdown("</div>", unsafe_allow_html=True)
-
     if st.session_state.get(f"gatilho_modal_3_15_2_{ano_sel}", False):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
@@ -12252,11 +12248,12 @@ def render_quesito_3_15_2_ieduc(res_data: dict, ano_sel: str):
                 ano_sel,
             )
 
+
 # =============================================================================
 # QUESITO 3.15.2.1 • Especificação dos Níveis de Desempenho - Anos Iniciais (IEDUC)
 # =============================================================================
-def render_quesito_3_15_2_1_ieduc(res_data: dict, ano_sel: str):
-    """Renderiza o Quesito 3.15.2.1 (Especificação de como são classificados os alunos por nível)."""
+def render_questao_3_15_2_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 3.15.2.1 (Especificação dos Níveis de Desempenho)."""
 
     regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
 
@@ -12264,11 +12261,10 @@ def render_quesito_3_15_2_1_ieduc(res_data: dict, ano_sel: str):
         key=f"container_bloco_ieduc_3_15_2_1_{ano_sel}", border=True
     ):
         with st.expander(
-            f"🔍 QUESITO 3.15.2.1 - Especificação dos Níveis de Desempenho ({ano_sel})",
+            f"📌 Questão 3.15.2.1 • Especificação dos Níveis de Desempenho ({ano_sel})",
             expanded=True,
         ):
-            st.markdown('<div class="quesito-card">', unsafe_allow_html=True)
-            st.markdown("###### QUESITO 3.15.2.1")
+            st.subheader("3.15.2.1 • Especificação dos Níveis de Desempenho")
             st.write(
                 "**Especifique como são classificados os alunos por nível de desempenho:**"
             )
@@ -12341,7 +12337,7 @@ def render_quesito_3_15_2_1_ieduc(res_data: dict, ano_sel: str):
                 bloco_comentarios_func("3.15.2.1", res_data, ano_sel)
 
             if st.button(
-                "💾 Salvar Quesito 3.15.2.1",
+                "💾 Salvar Questão 3.15.2.1",
                 key=f"btn_salvar_3_15_2_1_{ano_sel}",
                 type="primary",
             ):
@@ -12392,8 +12388,6 @@ def render_quesito_3_15_2_1_ieduc(res_data: dict, ano_sel: str):
                     "Resposta do Quesito 3.15.2.1 salva com sucesso!", icon="✅"
                 )
                 st.rerun()
-
-            st.markdown("</div>", unsafe_allow_html=True)
 
     if st.session_state.get(f"gatilho_modal_3_15_2_1_{ano_sel}", False):
         modal_aviso_func = globals().get("modal_aviso_link")
