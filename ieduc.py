@@ -1692,3 +1692,239 @@ def render_questao_1_2_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []), ano_sel)
+
+# =============================================================================
+# QUESITO 1.2.1 • HIGIENIZAÇÃO DOS BRINQUEDOS/MATERIAIS PEDAGÓGICOS (IEDUC)
+# =============================================================================
+
+def render_questao_1_2_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.2.1 (Higienização dos Brinquedos/Materiais Pedagógicos)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_2_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.2.1 • Higienização dos Brinquedos/Materiais ({ano_sel})", expanded=True):
+            st.subheader("1.2.1 • Higienização dos Brinquedos/Materiais")
+            st.write("**Realiza higienização dos brinquedos/materiais pedagógicos?**")
+            st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.2.1' para registrar.*")
+
+            opcoes_121 = {
+                "Selecione...": 0.0,
+                "Sim": 0.0,
+                "Não": 0.0
+            }
+
+            d121 = res_data.get("1.2.1") or {
+                "valor": "Selecione...",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_salvo_121 = d121.get("valor", "Selecione...")
+
+            if v_salvo_121 not in opcoes_121:
+                v_salvo_121 = "Selecione..."
+
+            evidencia_121_salva = d121.get("link", "")
+
+            chave_radio_121 = f"r_121_{ano_sel}"
+            chave_link_121 = f"l_121_txt_{ano_sel}"
+
+            c121_1, c121_2 = st.columns([1, 1])
+            
+            with c121_1:
+                lista_opcoes_121 = list(opcoes_121.keys())
+                idx_121 = lista_opcoes_121.index(v_salvo_121) if v_salvo_121 in lista_opcoes_121 else 0
+
+                val_radio_121 = st.radio(
+                    "Selecione a situação da higienização:",
+                    options=lista_opcoes_121,
+                    index=idx_121,
+                    key=chave_radio_121,
+                )
+
+            with c121_2:
+                link_121 = st.text_area(
+                    "Link de Evidência (Protocolos, Relatórios, Checklists, etc.):",
+                    value=evidencia_121_salva,
+                    key=chave_link_121,
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.2.1...",
+                    height=100,
+                )
+                
+                placeholder_links_121 = st.empty()
+                links_121_visuais = re.findall(regex_url, link_121 or "")
+                
+                if links_121_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_121_visuais
+                    ]
+                    placeholder_links_121.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.2.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.2.1", key=f"btn_salvar_1_2_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_121, v_salvo_121)
+                pts_121 = 0.0
+                lnk_val = link_121.strip()
+
+                comentarios_historico = d121.get("comentarios", [])
+                comentario_simples = d121.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.2.1",
+                        valor=val_salvar,
+                        pontos=pts_121,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_121_salva or "")]
+
+                if lnk_val != evidencia_121_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_2_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_2_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.2.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "ℹ️ Status: Questão Informativa (Sem impacto na pontuação global)</span>",
+                unsafe_allow_html=True,
+            )
+
+    if st.session_state.get(f"gatilho_modal_1_2_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.2.1", st.session_state.get(f"links_pendentes_1_2_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 1.2.1.1 • FREQUÊNCIA DE HIGIENIZAÇÃO (IEDUC)
+# =============================================================================
+
+def render_questao_1_2_1_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 1.2.1.1 (Frequência de Higienização)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_1_2_1_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 1.2.1.1 • Frequência de Higienização ({ano_sel})", expanded=True):
+            st.subheader("1.2.1.1 • Frequência de Higienização")
+            st.write("**Qual a frequência de higienização aplicada na maior parte dos estabelecimentos que oferecem creche?**")
+            st.caption("ℹ️ *Preencha os campos abaixo e clique no botão 'Salvar Questão 1.2.1.1' para registrar.*")
+
+            opcoes_1211 = {
+                "Selecione...": 0.0,
+                "Diária – 05": 5.0,
+                "A cada 2 dias – 04": 4.0,
+                "A cada 3 dias – 03": 3.0,
+                "Semanal – 02": 2.0,
+                "Mensal – 01": 1.0,
+                "> 30 dias – 00": 0.0
+            }
+
+            d1211 = res_data.get("1.2.1.1") or {
+                "valor": "Selecione...",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            v_salvo_1211 = d1211.get("valor", "Selecione...")
+
+            if v_salvo_1211 not in opcoes_1211:
+                v_salvo_1211 = "Selecione..."
+
+            evidencia_1211_salva = d1211.get("link", "")
+
+            chave_radio_1211 = f"r_1211_{ano_sel}"
+            chave_link_1211 = f"l_1211_txt_{ano_sel}"
+
+            c1211_1, c1211_2 = st.columns([1, 1])
+            
+            with c1211_1:
+                lista_opcoes_1211 = list(opcoes_1211.keys())
+                idx_1211 = lista_opcoes_1211.index(v_salvo_1211) if v_salvo_1211 in lista_opcoes_1211 else 0
+
+                val_radio_1211 = st.radio(
+                    "Selecione a frequência de higienização:",
+                    options=lista_opcoes_1211,
+                    index=idx_1211,
+                    key=chave_radio_1211,
+                )
+
+            with c1211_2:
+                link_1211 = st.text_area(
+                    "Link de Evidência (Escala de Limpeza, Rotinas, Regulamento Interno, etc.):",
+                    value=evidencia_1211_salva,
+                    key=chave_link_1211,
+                    placeholder="Insira o link oficial das evidências referente ao quesito 1.2.1.1...",
+                    height=200,
+                )
+                
+                placeholder_links_1211 = st.empty()
+                links_1211_visuais = re.findall(regex_url, link_1211 or "")
+                
+                if links_1211_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})" 
+                        for u in links_1211_visuais
+                    ]
+                    placeholder_links_1211.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Exibição dinâmica de pontos calculados
+            pts_previstos_1211 = opcoes_1211.get(val_radio_1211, 0.0)
+            if val_radio_1211 != "Selecione...":
+                st.code(f"📊 Pontuação Selecionada na Questão 1.2.1.1: {pts_previstos_1211:.1f} pontos / 5.0 pontos máximos.", language="text")
+            else:
+                st.code("💡 Selecione uma opção para visualizar a pontuação da questão.", language="text")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("1.2.1.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 1.2.1.1", key=f"btn_salvar_1_2_1_1_{ano_sel}", type="primary"):
+                val_salvar = st.session_state.get(chave_radio_1211, v_salvo_1211)
+                pts_1211 = float(opcoes_1211.get(val_salvar, 0.0))
+                lnk_val = link_1211.strip()
+
+                comentarios_historico = d1211.get("comentarios", [])
+                comentario_simples = d1211.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="1.2.1.1",
+                        valor=val_salvar,
+                        pontos=pts_1211,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_1211_salva or "")]
+
+                if lnk_val != evidencia_1211_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_2_1_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_2_1_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta e histórico do Quesito 1.2.1.1 salvos com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_1_2_1_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("1.2.1.1", st.session_state.get(f"links_pendentes_1_2_1_1_{ano_sel}", []), ano_sel)
