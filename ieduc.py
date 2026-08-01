@@ -7004,3 +7004,372 @@ def render_questao_2_7_ieduc(res_data: dict, ano_sel: str):
         modal_aviso_func = globals().get("modal_aviso_link")
         if modal_aviso_func:
             modal_aviso_func("2.7", st.session_state.get(f"links_pendentes_2_7_{ano_sel}", []), ano_sel)
+
+import re
+import streamlit as st
+
+# =============================================================================
+# QUESITO 2.7.1 • Capacitação de Profissionais da Educação Infantil (Pré-escola)
+# =============================================================================
+def render_questao_2_7_1_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.7.1 (Quantidade de Profissionais Capacitados - Pré-escola)."""
+    
+    # Condição do Quesito Pai (2.7)
+    r27 = (res_data.get("2.7") or {}).get("valor", "Não")
+    if r27 != "Sim":
+        return
+
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_7_1_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.7.1 • Capacitação de Profissionais - Pré-escola ({ano_sel})", expanded=True):
+            st.subheader("2.7.1 • Capacitação de Profissionais da Educação Infantil")
+            st.write(f"**Informe a quantidade de profissionais de Pré-escola capacitados em {ano_sel}:**")
+            st.caption("⚠️ *Nota: Não contar o mesmo profissional mais de uma vez, mesmo que tenha participado de vários cursos.*")
+            
+            # Fórmula de cálculo oficial baseada no i-Educa / IEGM
+            st.latex(r"PC = \frac{\text{Prof.Capacitados} + \text{Apoio.Capacitados} + \text{Gestores.Capacitados}}{\text{Total.Prof} + \text{Total.Apoio} + \text{Total.Gestores}}")
+
+            d271 = res_data.get("2.7.1") or {
+                "valor": "PCAP:0,ACAP:0,GCAP:0,TGEST:0,TPROF:0,TAPOI:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_271_salva = d271.get("link", "")
+
+            # Parsing do campo composto 'valor'
+            try:
+                parts_271 = d271.get("valor", "").split(",")
+                v_pcap = int(parts_271[0].split(":")[1])
+                v_acap = int(parts_271[1].split(":")[1])
+                v_gcap = int(parts_271[2].split(":")[1])
+                v_tgest = int(parts_271[3].split(":")[1])
+                v_tprof = int(parts_271[4].split(":")[1]) if len(parts_271) > 4 else 0
+                v_tapoi = int(parts_271[5].split(":")[1]) if len(parts_271) > 5 else 0
+            except Exception:
+                v_pcap, v_acap, v_gcap, v_tgest, v_tprof, v_tapoi = 0, 0, 0, 0, 0, 0
+
+            # Atalho inteligente para o total de professores vindo do quesito 2.4
+            if v_tprof == 0 and f"q24_total_{ano_sel}" in st.session_state:
+                v_tprof = st.session_state[f"q24_total_{ano_sel}"]
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown("##### 📝 Profissionais Capacitados")
+                pcap = st.number_input("Professores regentes capacitados:", min_value=0, step=1, value=v_pcap, key=f"q271_pcap_{ano_sel}")
+                acap = st.number_input("Profissionais de apoio/supervisão capacitados:", min_value=0, step=1, value=v_acap, key=f"q271_acap_{ano_sel}")
+                gcap = st.number_input("Gestores escolares capacitados:", min_value=0, step=1, value=v_gcap, key=f"q271_gcap_{ano_sel}")
+                
+                st.markdown("##### 📊 Total do Quadro de Funcionários")
+                tprof = st.number_input("Total de professores regentes da etapa:", min_value=0, step=1, value=v_tprof, key=f"q271_tprof_{ano_sel}")
+                tapoi = st.number_input("Total de profissionais de apoio e supervisão:", min_value=0, step=1, value=v_tapoi, key=f"q271_tapoi_{ano_sel}")
+                tgest = st.number_input("Total de gestores escolares:", min_value=0, step=1, value=v_tgest, key=f"q271_tgest_{ano_sel}")
+
+            with col_evidencia:
+                link_271 = st.text_area(
+                    f"Link/Evidência de comprovação (2.7.1) - {ano_sel}:",
+                    value=evidencia_271_salva,
+                    key=f"l271_txt_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=410
+                )
+
+                placeholder_links_271 = st.empty()
+                links_271_visuais = re.findall(regex_url, link_271 or "")
+
+                if links_271_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_271_visuais
+                    ]
+                    placeholder_links_271.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Regras de Negócio e Cálculo do Indicador
+            total_capacitados = pcap + acap + gcap
+            total_geral_quadro = tprof + tapoi + tgest
+            calculo_bruto = 0.0
+            pc_pct = 0.0
+            pts271 = 0.0
+
+            if total_geral_quadro > 0:
+                calculo_bruto = (total_capacitados / total_geral_quadro) * 100
+                pc_pct = min(calculo_bruto, 100.0)
+
+                if calculo_bruto >= 100.0:
+                    pts271 = 7.0
+                    status_desc = "🥇 EXCELÊNCIA: Capacitação universal ou acima do quadro permanente"
+                elif 70.0 <= pc_pct < 100.0:
+                    pts271 = 5.0
+                    status_desc = "🟢 ALTO ÍNDICE: Ótimo aproveitamento de formação continuada"
+                elif 50.0 <= pc_pct < 70.0:
+                    pts271 = 3.0
+                    status_desc = "🟡 REGULAR: Índice intermediário de capacitação pedagógica"
+                else:
+                    pts271 = 0.0
+                    status_desc = "❌ CRÍTICO: Baixo envolvimento em programas de formação continuada"
+            else:
+                status_desc = "⏳ Aguardando preenchimento do quadro de funcionários."
+
+            pct_exibicao = f"{calculo_bruto:.1f}%" if total_geral_quadro > 0 else "0.0%"
+            st.info(f"📊 **Métrica Consolidada:** Cobertura de {pct_exibicao} ({total_capacitados} capacitados de {total_geral_quadro} no quadro) | **Status:** {status_desc} | **Pontuação:** {pts271:.1f} pts")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.7.1", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.7.1", key=f"btn_salvar_2_7_1_{ano_sel}", type="primary"):
+                str_valor_271 = f"PCAP:{pcap},ACAP:{acap},GCAP:{gcap},TGEST:{tgest},TPROF:{tprof},TAPOI:{tapoi}"
+                lnk_val = link_271.strip()
+
+                comentarios_historico = d271.get("comentarios", [])
+                comentario_simples = d271.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.7.1",
+                        valor=str_valor_271,
+                        pontos=pts271,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_271_salva or "")]
+
+                if lnk_val != evidencia_271_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_7_1_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_7_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.7.1 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_7_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.7.1", st.session_state.get(f"links_pendentes_2_7_1_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.7.2 • Formas de Capacitação (Pré-escola)
+# =============================================================================
+def render_questao_2_7_2_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.7.2 (Formas de Capacitação - Pré-escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_7_2_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.7.2 • Formas de Capacitação ({ano_sel})", expanded=True):
+            st.subheader("2.7.2 • Formas de Capacitação")
+            st.write("**Assinale as formas de capacitação utilizadas:**")
+
+            d272 = res_data.get("2.7.2") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_272_salva = d272.get("link", "")
+            formas_salvas = d272.get("valor", "").split("|") if d272.get("valor") else []
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                c_pres = st.checkbox("Presencialmente", value="Presencialmente" in formas_salvas, key=f"q272_pres_{ano_sel}")
+                c_dist = st.checkbox("À distância/remotamente", value="À distância/remotamente" in formas_salvas, key=f"q272_dist_{ano_sel}")
+                c_mult = st.checkbox("Por meio de multiplicadores", value="Por meio de multiplicadores" in formas_salvas, key=f"q272_mult_{ano_sel}")
+                c_outr = st.checkbox("Outros", value="Outros" in formas_salvas, key=f"q272_outr_{ano_sel}")
+
+            with col_evidencia:
+                link_272 = st.text_area(
+                    f"Link/Evidência (2.7.2) - {ano_sel}:",
+                    value=evidencia_272_salva,
+                    key=f"l272_txt_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=180
+                )
+
+                placeholder_links_272 = st.empty()
+                links_272_visuais = re.findall(regex_url, link_272 or "")
+
+                if links_272_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_272_visuais
+                    ]
+                    placeholder_links_272.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.7.2", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.7.2", key=f"btn_salvar_2_7_2_{ano_sel}", type="primary"):
+                lista_formas = []
+                if c_pres: lista_formas.append("Presencialmente")
+                if c_dist: lista_formas.append("À distância/remotamente")
+                if c_mult: lista_formas.append("Por meio de multiplicadores")
+                if c_outr: lista_formas.append("Outros")
+
+                str_valor_272 = "|".join(lista_formas)
+                lnk_val = link_272.strip()
+
+                comentarios_historico = d272.get("comentarios", [])
+                comentario_simples = d272.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.7.2",
+                        valor=str_valor_272,
+                        pontos=0.0,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_272_salva or "")]
+
+                if lnk_val != evidencia_272_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_7_2_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_7_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.7.2 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_7_2_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.7.2", st.session_state.get(f"links_pendentes_2_7_2_{ano_sel}", []), ano_sel)
+
+
+# =============================================================================
+# QUESITO 2.8 • Rotatividade do Corpo Docente (Pré-escola)
+# =============================================================================
+def render_questao_2_8_ieduc(res_data: dict, ano_sel: str):
+    """Renderiza a Questão 2.8 (Rotatividade do Corpo Docente - Pré-escola)."""
+    
+    regex_url = globals().get("REGEX_PURE_URL", r'https?://[^\s]+')
+
+    with st.container(key=f"container_bloco_ieduc_2_8_{ano_sel}", border=True):
+        with st.expander(f"📌 Questão 2.8 • Rotatividade do Corpo Docente ({ano_sel})", expanded=True):
+            st.subheader("2.8 • Rotatividade do Corpo Docente - Pré-escola")
+            st.write(f"**Informe o número de escolas de Pré-escola de acordo com o percentual de rotatividade do corpo docente em {ano_sel}:**")
+            
+            st.latex(r"NF = (3 \times Q_1) + (2 \times Q_2) + (1 \times Q_3) + (0 \times Q_4)")
+            st.caption("ℹ️ *Onde $Q_i$ é a proporção de escolas na faixa. Pontuação máxima = 3.0 pontos.*")
+
+            d28 = res_data.get("2.8") or {
+                "valor": "R1:0,R2:0,R3:0,R4:0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": [],
+                "comentario": ""
+            }
+            evidencia_28_salva = d28.get("link", "")
+
+            try:
+                parts_28 = d28.get("valor", "").split(",")
+                v_r1 = int(parts_28[0].split(":")[1])
+                v_r2 = int(parts_28[1].split(":")[1])
+                v_r3 = int(parts_28[2].split(":")[1])
+                v_r4 = int(parts_28[3].split(":")[1])
+            except Exception:
+                v_r1, v_r2, v_r3, v_r4 = 0, 0, 0, 0
+
+            col_inputs, col_evidencia = st.columns([1, 1])
+
+            with col_inputs:
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Rotatividade MENOR que 20% das escolas (Q1):</label>', unsafe_allow_html=True)
+                r1 = st.number_input("", min_value=0, step=1, value=v_r1, key=f"input_q28_r1_pre_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Entre 20% e 29,9% de rotatividade (Q2):</label>', unsafe_allow_html=True)
+                r2 = st.number_input("", min_value=0, step=1, value=v_r2, key=f"input_q28_r2_pre_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Entre 30% e 39,9% de rotatividade (Q3):</label>', unsafe_allow_html=True)
+                r3 = st.number_input("", min_value=0, step=1, value=v_r3, key=f"input_q28_r3_pre_{ano_sel}", label_visibility="collapsed")
+
+                st.markdown('<label style="font-size: 13px; font-weight: 500;">Rotatividade MAIOR ou igual a 40% (Q4):</label>', unsafe_allow_html=True)
+                r4 = st.number_input("", min_value=0, step=1, value=v_r4, key=f"input_q28_r4_pre_{ano_sel}", label_visibility="collapsed")
+
+            with col_evidencia:
+                link_28 = st.text_area(
+                    f"Link/Evidência (2.8) - {ano_sel}:",
+                    value=evidencia_28_salva,
+                    key=f"link_q28_pre_{ano_sel}",
+                    placeholder="Insira os links...",
+                    height=320
+                )
+
+                placeholder_links_28 = st.empty()
+                links_28_visuais = re.findall(regex_url, link_28 or "")
+
+                if links_28_visuais:
+                    links_formatados = [
+                        f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                        for u in links_28_visuais
+                    ]
+                    placeholder_links_28.markdown("**🔗 Link ativo:** " + " | ".join(links_formatados))
+
+            # Cálculo de Pontuação do IEGM
+            total_escolas_28 = r1 + r2 + r3 + r4
+            pts28 = 0.0
+
+            if total_escolas_28 > 0:
+                q1 = r1 / total_escolas_28
+                q2 = r2 / total_escolas_28
+                q3 = r3 / total_escolas_28
+
+                n1 = 3.0 * q1
+                n2 = 2.0 * q2
+                n3 = 1.0 * q3
+
+                pts28 = round(float(n1 + n2 + n3), 2)
+                st.info(f"📊 **Métrica de Regularidade Docente:** {total_escolas_28} escolas analisadas | **Pontuação:** {pts28:.2f} / 3.00 pts")
+            else:
+                st.markdown("⚠️ **Status:** `Aguardando preenchimento das quantidades de escolas`")
+
+            bloco_comentarios_func = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_comentarios_func:
+                bloco_comentarios_func("2.8", res_data, ano_sel)
+
+            if st.button("💾 Salvar Questão 2.8", key=f"btn_salvar_2_8_{ano_sel}", type="primary"):
+                str_valor_28 = f"R1:{r1},R2:{r2},R3:{r3},R4:{r4}"
+                lnk_val = link_28.strip()
+
+                comentarios_historico = d28.get("comentarios", [])
+                comentario_simples = d28.get("comentario", "")
+
+                save_resp_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_resp_func:
+                    save_resp_func(
+                        qid="2.8",
+                        valor=str_valor_28,
+                        pontos=pts28,
+                        link=lnk_val,
+                        comentario=comentario_simples,
+                        comentarios=comentarios_historico
+                    )
+
+                links_atuais = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val or "")]
+                links_antigos = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_28_salva or "")]
+
+                if lnk_val != evidencia_28_salva and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_2_8_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_2_8_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Resposta do Quesito 2.8 salva com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_2_8_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func("2.8", st.session_state.get(f"links_pendentes_2_8_{ano_sel}", []), ano_sel)
