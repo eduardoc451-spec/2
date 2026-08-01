@@ -391,28 +391,27 @@ PONTUACOES_MAX = PONTUACOES_MAX_IEDUC
 CATEGORIAS_MAP = CATEGORIAS_MAP_IEDUC
 
 # =============================================================================
-# MODAL DE AVISO AUTOMÁTICO
+# DECORADOR / FUNÇÃO DO MODAL DE AVISO DE LINK
 # =============================================================================
 @st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados, ano_sel):
-    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    
-    for lk in links_encontrados:
-        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
+def modal_aviso_link(qid: str = "", links: list = None, *args, **kwargs):
+    """Exibe um aviso dialog quando links externos de evidência são detectados/salvos."""
+    if links is None:
+        links = []
         
-    st.markdown("""
-    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
+    st.warning("Detectamos o cadastro/alteração de links de evidência externa.")
+    st.write(f"**Quesito:** `{qid}`")
     
-    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
-    """)
+    if links:
+        st.write("**Links informados:**")
+        for link in links:
+            url = link[0] if isinstance(link, tuple) else str(link)
+            st.markdown(f"- 🔗 [{url}]({url})")
+            
+    st.info("Certifique-se de que o link informado está público e acessível para auditoria.")
     
-    qid_key = str(qid).replace('.', '_')
-    chave_gatilho = f"gatilho_modal_{qid_key}_{ano_sel}"
-    
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid_key}_{ano_sel}", type="primary"):
-        st.session_state[chave_gatilho] = False
+    if st.button("Entendido", key=f"btn_modal_entendido_{qid}", type="primary"):
         st.rerun()
-
 
 # =============================================================================
 # 1. GESTÃO DE ESTADO E PERSISTÊNCIA NEON POSTGRES - iEduc
