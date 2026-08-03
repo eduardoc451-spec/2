@@ -31902,4 +31902,744 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
             )
         st.session_state[f"gatilho_modal_e6_{ano_sel}"] = False
 
+# =============================================================================
+    # INDICADOR E7 (Utilização de Espaços e Equipamentos do Entorno)
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e7_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E7 - Utilização de Espaços do Entorno ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E7 • Espaços do Entorno Escolar")
+            st.write(
+                "**As escolas utilizam espaços e equipamentos do entorno escolar? (Dados Censo Escolar 2025):**"
+            )
+
+            opcoes_e7 = [
+                "Todas as escolas utilizam – 05",
+                "A maior parte das escolas utilizam – 03",
+                "A menor parte das escolas utilizam – 01",
+                "As escolas não utilizam – 00",
+            ]
+            pontos_e7_map = {
+                "Todas as escolas utilizam – 05": 5.0,
+                "A maior parte das escolas utilizam – 03": 3.0,
+                "A menor parte das escolas utilizam – 01": 1.0,
+                "As escolas não utilizam – 00": 0.0,
+            }
+
+            d_e7 = res_data.get("E7") or {
+                "valor": "As escolas não utilizam – 00",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            valor_banco_e7 = d_e7.get("valor", "As escolas não utilizam – 00")
+            if valor_banco_e7 == "Todas as escolas utilizam":
+                valor_banco_e7 = "Todas as escolas utilizam – 05"
+            elif valor_banco_e7 == "A maior parte das escolas utilizam":
+                valor_banco_e7 = "A maior parte das escolas utilizam – 03"
+            elif valor_banco_e7 == "A menor parte das escolas utilizam":
+                valor_banco_e7 = "A menor parte das escolas utilizam – 01"
+            elif valor_banco_e7 == "As escolas não utilizam":
+                valor_banco_e7 = "As escolas não utilizam – 00"
+
+            idx_e7 = opcoes_e7.index(valor_banco_e7) if valor_banco_e7 in opcoes_e7 else 3
+
+            chave_rad_e7 = f"rad_e7_{ano_sel}"
+            chave_link_e7 = f"l_e7_in_{ano_sel}_educ"
+            chave_coment_e7 = f"coment_E7_{ano_sel}_educ"
+
+            evidencia_e7_salva = d_e7.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                resp_e7 = st.radio(
+                    "Selecione o nível de utilização:",
+                    opcoes_e7,
+                    index=idx_e7,
+                    key=chave_rad_e7,
+                )
+
+                pts_e7 = pontos_e7_map[resp_e7]
+
+                st.info(
+                    f"📊 **Nível Selecionado:** {resp_e7}\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e7:.2f}** / 5.00 pontos"
+                )
+
+            with c2:
+                link_e7 = st.text_area(
+                    "Link/Evidência (E7):",
+                    value=evidencia_e7_salva,
+                    key=chave_link_e7,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e7 = st.empty()
+                links_visuais_e7 = re.findall(regex_url, link_e7 or "")
+                if links_visuais_e7:
+                    placeholder_links_e7.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e7
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E7", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Indicador E7",
+                key=f"btn_salvar_e7_{ano_sel}",
+                type="primary",
+            ):
+                lnk_val_e7 = link_e7.strip()
+                coment_salvar_e7 = st.session_state.get(
+                    chave_coment_e7, d_e7.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E7",
+                        valor=resp_e7,
+                        pontos=pts_e7,
+                        link=lnk_val_e7,
+                        comentarios=coment_salvar_e7,
+                    )
+
+                res_data["E7"] = {
+                    "valor": resp_e7,
+                    "pontos": pts_e7,
+                    "link": lnk_val_e7,
+                    "comentarios": coment_salvar_e7,
+                }
+
+                links_atuais_e7 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e7 or "")
+                ]
+                links_antigos_e7 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e7_salva or "")
+                ]
+
+                if (
+                    lnk_val_e7 != evidencia_e7_salva
+                    and links_atuais_e7
+                    and links_atuais_e7 != links_antigos_e7
+                ):
+                    st.session_state[f"links_pendentes_e7_{ano_sel}"] = links_atuais_e7
+                    st.session_state[f"gatilho_modal_e7_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E7 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e7_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E7",
+                st.session_state.get(f"links_pendentes_e7_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e7_{ano_sel}"] = False
+
+
+    # =============================================================================
+    # INDICADOR E8 (Exame de Seleção para Ingresso Escolar)
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e8_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E8 - Exame de Seleção para Ingresso Escolar ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E8 • Exame de Seleção")
+            st.write(
+                "**A Prefeitura realiza Exame de Seleção para ingresso de alunos nas escolas municipais? (Dados Censo Escolar 2025):**"
+            )
+
+            opcoes_e8 = ["Sim – -10 (perde 10 pontos)", "Não – 00"]
+
+            d_e8 = res_data.get("E8") or {
+                "valor": "Não – 00",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            valor_banco_e8 = d_e8.get("valor", "Não – 00")
+            if valor_banco_e8 == "Sim":
+                valor_banco_e8 = "Sim – -10 (perde 10 pontos)"
+            elif valor_banco_e8 == "Não":
+                valor_banco_e8 = "Não – 00"
+
+            idx_e8 = opcoes_e8.index(valor_banco_e8) if valor_banco_e8 in opcoes_e8 else 1
+
+            chave_rad_e8 = f"rad_e8_{ano_sel}"
+            chave_link_e8 = f"l_e8_in_{ano_sel}_educ"
+            chave_coment_e8 = f"coment_E8_{ano_sel}_educ"
+
+            evidencia_e8_salva = d_e8.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                resp_e8 = st.radio(
+                    "Selecione uma opção:",
+                    opcoes_e8,
+                    index=idx_e8,
+                    key=chave_rad_e8,
+                )
+
+                pts_e8 = -10.0 if "Sim" in resp_e8 else 0.0
+
+                if pts_e8 < 0:
+                    st.error("📉 **Penalidade Aplicada:** A realização de exames/processos seletivos acarreta na perda de 10 pontos.")
+                else:
+                    st.success("🟢 **Critério Regular:** Acesso universal garantido sem exames de seleção (0 pontos).")
+
+            with c2:
+                link_e8 = st.text_area(
+                    "Link/Evidência (E8):",
+                    value=evidencia_e8_salva,
+                    key=chave_link_e8,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e8 = st.empty()
+                links_visuais_e8 = re.findall(regex_url, link_e8 or "")
+                if links_visuais_e8:
+                    placeholder_links_e8.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e8
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E8", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Indicador E8",
+                key=f"btn_salvar_e8_{ano_sel}",
+                type="primary",
+            ):
+                lnk_val_e8 = link_e8.strip()
+                coment_salvar_e8 = st.session_state.get(
+                    chave_coment_e8, d_e8.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E8",
+                        valor=resp_e8,
+                        pontos=pts_e8,
+                        link=lnk_val_e8,
+                        comentarios=coment_salvar_e8,
+                    )
+
+                res_data["E8"] = {
+                    "valor": resp_e8,
+                    "pontos": pts_e8,
+                    "link": lnk_val_e8,
+                    "comentarios": coment_salvar_e8,
+                }
+
+                links_atuais_e8 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e8 or "")
+                ]
+                links_antigos_e8 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e8_salva or "")
+                ]
+
+                if (
+                    lnk_val_e8 != evidencia_e8_salva
+                    and links_atuais_e8
+                    and links_atuais_e8 != links_antigos_e8
+                ):
+                    st.session_state[f"links_pendentes_e8_{ano_sel}"] = links_atuais_e8
+                    st.session_state[f"gatilho_modal_e8_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E8 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e8_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E8",
+                st.session_state.get(f"links_pendentes_e8_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e8_{ano_sel}"] = False
+
+
+    # =============================================================================
+    # INDICADOR E9 (Aplicação dos Recursos do FUNDEB - AUDESP)
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e9_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E9 - Aplicação de Recursos do FUNDEB ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E9 • Aplicação do FUNDEB")
+            st.write(
+                "**Percentual de aplicação total dos recursos do FUNDEB (Dados AUDESP):**"
+            )
+
+            d_e9 = res_data.get("E9") or {
+                "valor": "0.0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            val_init_e9 = d_e9.get("valor", "0.0")
+            try:
+                init_e9 = float(val_init_e9)
+            except (ValueError, TypeError):
+                init_e9 = 0.0
+
+            chave_num_e9 = f"num_e9_{ano_sel}"
+            chave_link_e9 = f"l_e9_in_{ano_sel}_educ"
+            chave_coment_e9 = f"coment_E9_{ano_sel}_educ"
+
+            evidencia_e9_salva = d_e9.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e9_pf = st.number_input(
+                    "Informe o percentual final de aplicação do FUNDEB (%):",
+                    min_value=0.0,
+                    max_value=200.0,
+                    step=0.01,
+                    value=init_e9,
+                    format="%.2f",
+                    key=chave_num_e9,
+                )
+
+                pts_e9 = 0.0
+                if q_e9_pf >= 90.0:
+                    st.success(
+                        f"🟢 **Regular ({q_e9_pf:.2f}%):** Atende ao limite mínimo de 90% de aplicação. Nenhuma penalidade."
+                    )
+                else:
+                    st.error(
+                        f"🚨 **ALERTA DE REBAIXAMENTO:** Aplicação de {q_e9_pf:.2f}% está abaixo de 90%. Sofrerá REBAIXAMENTO DE 1 FAIXA no i-Educ!"
+                    )
+
+            with c2:
+                link_e9 = st.text_area(
+                    "Link/Evidência (E9):",
+                    value=evidencia_e9_salva,
+                    key=chave_link_e9,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e9 = st.empty()
+                links_visuais_e9 = re.findall(regex_url, link_e9 or "")
+                if links_visuais_e9:
+                    placeholder_links_e9.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e9
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E9", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Indicador E9",
+                key=f"btn_salvar_e9_{ano_sel}",
+                type="primary",
+            ):
+                str_val_e9 = str(q_e9_pf)
+                lnk_val_e9 = link_e9.strip()
+                coment_salvar_e9 = st.session_state.get(
+                    chave_coment_e9, d_e9.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E9",
+                        valor=str_val_e9,
+                        pontos=pts_e9,
+                        link=lnk_val_e9,
+                        comentarios=coment_salvar_e9,
+                    )
+
+                res_data["E9"] = {
+                    "valor": str_val_e9,
+                    "pontos": pts_e9,
+                    "link": lnk_val_e9,
+                    "comentarios": coment_salvar_e9,
+                }
+
+                links_atuais_e9 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e9 or "")
+                ]
+                links_antigos_e9 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e9_salva or "")
+                ]
+
+                if (
+                    lnk_val_e9 != evidencia_e9_salva
+                    and links_atuais_e9
+                    and links_atuais_e9 != links_antigos_e9
+                ):
+                    st.session_state[f"links_pendentes_e9_{ano_sel}"] = links_atuais_e9
+                    st.session_state[f"gatilho_modal_e9_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E9 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e9_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E9",
+                st.session_state.get(f"links_pendentes_e9_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e9_{ano_sel}"] = False
+
+
+    # =============================================================================
+    # INDICADOR E10 (FUNDEB - Valorização dos Profissionais da Educação)
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e10_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E10 - Valorização dos Profissionais da Educação ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E10 • Valorização dos Profissionais")
+            st.write(
+                "**Percentual do FUNDEB destinado ao pagamento dos Profissionais da Educação (Dados AUDESP):**"
+            )
+
+            d_e10 = res_data.get("E10") or {
+                "valor": "0.0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            val_init_e10 = d_e10.get("valor", "0.0")
+            try:
+                init_e10 = float(val_init_e10)
+            except (ValueError, TypeError):
+                init_e10 = 0.0
+
+            chave_num_e10 = f"num_e10_{ano_sel}"
+            chave_link_e10 = f"l_e10_in_{ano_sel}_educ"
+            chave_coment_e10 = f"coment_E10_{ano_sel}_educ"
+
+            evidencia_e10_salva = d_e10.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e10_ppe = st.number_input(
+                    "Informe o percentual applied na valorização dos profissionais (%):",
+                    min_value=0.0,
+                    max_value=100.0,
+                    step=0.01,
+                    value=init_e10,
+                    format="%.2f",
+                    key=chave_num_e10,
+                )
+
+                pts_e10 = 0.0
+                if q_e10_ppe >= 70.0:
+                    st.success(
+                        f"🟢 **Regular ({q_e10_ppe:.2f}%):** Cumpre o limite mínimo de 70%. Nenhuma penalidade."
+                    )
+                else:
+                    st.error(
+                        f"🚨 **ALERTA DE REBAIXAMENTO:** Aplicação de {q_e10_ppe:.2f}% está abaixo de 70%. Sofrerá REBAIXAMENTO DE 1 FAIXA no i-Educ!"
+                    )
+
+            with c2:
+                link_e10 = st.text_area(
+                    "Link/Evidência (E10):",
+                    value=evidencia_e10_salva,
+                    key=chave_link_e10,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e10 = st.empty()
+                links_visuais_e10 = re.findall(regex_url, link_e10 or "")
+                if links_visuais_e10:
+                    placeholder_links_e10.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e10
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E10", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Indicador E10",
+                key=f"btn_salvar_e10_{ano_sel}",
+                type="primary",
+            ):
+                str_val_e10 = str(q_e10_ppe)
+                lnk_val_e10 = link_e10.strip()
+                coment_salvar_e10 = st.session_state.get(
+                    chave_coment_e10, d_e10.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E10",
+                        valor=str_val_e10,
+                        pontos=pts_e10,
+                        link=lnk_val_e10,
+                        comentarios=coment_salvar_e10,
+                    )
+
+                res_data["E10"] = {
+                    "valor": str_val_e10,
+                    "pontos": pts_e10,
+                    "link": lnk_val_e10,
+                    "comentarios": coment_salvar_e10,
+                }
+
+                links_atuais_e10 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e10 or "")
+                ]
+                links_antigos_e10 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e10_salva or "")
+                ]
+
+                if (
+                    lnk_val_e10 != evidencia_e10_salva
+                    and links_atuais_e10
+                    and links_atuais_e10 != links_antigos_e10
+                ):
+                    st.session_state[f"links_pendentes_e10_{ano_sel}"] = links_atuais_e10
+                    st.session_state[f"gatilho_modal_e10_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E10 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e10_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E10",
+                st.session_state.get(f"links_pendentes_e10_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e10_{ano_sel}"] = False
+
+
+    # =============================================================================
+    # INDICADOR E11 (Mínimo Constitucional em Educação - AUDESP)
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e11_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E11 - Mínimo Constitucional em Educação ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E11 • Mínimo Constitucional")
+            st.write(
+                "**Mede a aplicação do limite mínimo constitucional de 25% em educação (Ensino com recursos próprios sobre receita de impostos):**"
+            )
+
+            st.markdown(r"""
+| Resultado do Índice $PE$ | Impacto / Pontuação do Indicador |
+| :--- | :--- |
+| Maior ou igual a 25% ($PE \ge 25\%$) | ✅ 0,00 ponto (Cumpre o Mínimo Constitucional / Sem Penalidade) |
+| Menor que 25% ($PE < 25\%$) | 🚨 REBAIXAR 1 faixa do i-Educ (Descumprimento do Art. 212 da CF) |
+            """)
+            st.caption("ℹ️ *Variáveis parametrizadas e calculadas extraídas diretamente do Sistema AUDESP.*")
+
+            def tratar_string_monetaria_para_float(texto):
+                if not texto:
+                    return 0.0
+                apenas_numeros = "".join(c for c in str(texto) if c.isdigit() or c == ",")
+                if "," in apenas_numeros:
+                    apenas_numeros = apenas_numeros.replace(",", ".")
+                try:
+                    return float(apenas_numeros)
+                except ValueError:
+                    return 0.0
+
+            def formatar_para_moeda_br(valor_float):
+                return f"R$ {valor_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            d_e11 = res_data.get("E11") or {
+                "valor": "0.00/1.00",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_salvo_desp, val_salvo_rec = d_e11.get("valor", "0.00/1.00").split("/")
+                float_desp = float(val_salvo_desp)
+                float_rec = float(val_salvo_rec)
+            except Exception:
+                float_desp, float_rec = 0.0, 1.0
+
+            chave_txt_desp = f"txt_e11_desp_{ano_sel}"
+            chave_txt_rec = f"txt_e11_rec_{ano_sel}"
+            chave_link_e11 = f"l_e11_in_{ano_sel}_educ"
+            chave_coment_e11 = f"coment_E11_{ano_sel}_educ"
+
+            evidencia_e11_salva = d_e11.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                input_desp_str = st.text_input(
+                    "Despesa em Ensino (DESP) - R$:",
+                    value=formatar_para_moeda_br(float_desp),
+                    placeholder="Ex: 10.000,00",
+                    key=chave_txt_desp,
+                )
+
+                input_rec_str = st.text_input(
+                    "Receita de Impostos (REC) - R$:",
+                    value=formatar_para_moeda_br(float_rec),
+                    placeholder="Ex: 2.500,00",
+                    key=chave_txt_rec,
+                )
+
+                v_desp = tratar_string_monetaria_para_float(input_desp_str)
+                v_rec = tratar_string_monetaria_para_float(input_rec_str)
+
+                base_calculo = max(v_rec, 0.01)
+                PE = round((v_desp / base_calculo) * 100.0, 2)
+                pe_br = f"{PE:.2f}".replace(".", ",")
+
+                pts_e11 = 0.0
+                if v_desp == 0.0 and v_rec == 0.0:
+                    st.info("⏳ **Aguardando preenchimento dos valores...**")
+                elif PE >= 25.00:
+                    st.success(
+                        f"🟢 **REGULAR ({pe_br}%):** Atende ao limite mínimo constitucional de 25% de aplicação."
+                    )
+                else:
+                    st.error(
+                        f"🚨 **DESCUMPRIMENTO ({pe_br}%):** Abaixo do mínimo de 25%. O município sofrerá REBAIXAMENTO DE 1 FAIXA no i-Educ!"
+                    )
+
+            with c2:
+                link_e11 = st.text_area(
+                    "Link/Evidência (E11):",
+                    value=evidencia_e11_salva,
+                    key=chave_link_e11,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e11 = st.empty()
+                links_visuais_e11 = re.findall(regex_url, link_e11 or "")
+                if links_visuais_e11:
+                    placeholder_links_e11.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e11
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E11", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Indicador E11",
+                key=f"btn_salvar_e11_{ano_sel}",
+                type="primary",
+            ):
+                str_val_e11 = f"{v_desp:.2f}/{v_rec:.2f}"
+                lnk_val_e11 = link_e11.strip()
+                coment_salvar_e11 = st.session_state.get(
+                    chave_coment_e11, d_e11.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E11",
+                        valor=str_val_e11,
+                        pontos=pts_e11,
+                        link=lnk_val_e11,
+                        comentarios=coment_salvar_e11,
+                    )
+
+                res_data["E11"] = {
+                    "valor": str_val_e11,
+                    "pontos": pts_e11,
+                    "link": lnk_val_e11,
+                    "comentarios": coment_salvar_e11,
+                }
+
+                links_atuais_e11 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e11 or "")
+                ]
+                links_antigos_e11 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e11_salva or "")
+                ]
+
+                if (
+                    lnk_val_e11 != evidencia_e11_salva
+                    and links_atuais_e11
+                    and links_atuais_e11 != links_antigos_e11
+                ):
+                    st.session_state[f"links_pendentes_e11_{ano_sel}"] = links_atuais_e11
+                    st.session_state[f"gatilho_modal_e11_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E11 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e11_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E11",
+                st.session_state.get(f"links_pendentes_e11_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e11_{ano_sel}"] = False
+
    
