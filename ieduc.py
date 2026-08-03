@@ -26084,3 +26084,757 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_e1_9_{ano_sel}", []),
             )
         st.session_state[f"gatilho_modal_e1_9_{ano_sel}"] = False
+
+# =============================================================================
+    # INDICADOR E1.10 • KEY ÚNICA GARANTIDA
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e1_10_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E1.10 - Alunos de Creche com Deficiência ou Altas Habilidades ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E1.10 • Alunos de Creche com Deficiência ou Altas Habilidades")
+            st.write(
+                "**Há alunos de Creche que possuem deficiência, transtornos globais do desenvolvimento ou altas habilidades/superdotação? (Dados Censo Escolar 2025)**"
+            )
+
+            d_e110 = res_data.get("E1.10") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            chave_rad_e110 = f"rad_e110_{ano_sel}_educ"
+            chave_link_e110 = f"l_e110_in_{ano_sel}_educ"
+            chave_coment_e110 = f"coment_E1.10_{ano_sel}_educ"
+
+            opc_sim_nao = globals().get("opc_sim_nao", ["Sim", "Não"])
+            v_salvo_e110 = d_e110.get("valor", "")
+            idx_e110 = opc_sim_nao.index(v_salvo_e110) if v_salvo_e110 in opc_sim_nao else None
+            evidencia_e110_salva = d_e110.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                r_e110 = st.radio(
+                    f"Selecione a opção para E1.10 ({ano_sel}):",
+                    opc_sim_nao,
+                    index=idx_e110,
+                    key=chave_rad_e110,
+                )
+
+            with c2:
+                link_e110 = st.text_area(
+                    "Link/Evidência (E1.10):",
+                    value=evidencia_e110_salva,
+                    key=chave_link_e110,
+                    placeholder="Insira os links e evidências do Censo Escolar...",
+                    height=120,
+                )
+
+                placeholder_links_e110 = st.empty()
+                links_visuais_e110 = re.findall(
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
+                    link_e110 or "",
+                )
+                if links_visuais_e110:
+                    placeholder_links_e110.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e110
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            bloco_coment = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_coment:
+                bloco_coment("E1.10", res_data, sufixo="educ")
+
+            if st.button("💾 Salvar Indicador E1.10", key=f"btn_salvar_e1_10_{ano_sel}", type="primary"):
+                lnk_val_e110 = link_e110.strip()
+                coment_salvar_e110 = st.session_state.get(chave_coment_e110, d_e110.get("comentarios", ""))
+
+                save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_func:
+                    save_func(
+                        qid="E1.10",
+                        valor=r_e110 or "",
+                        pontos=0.0,
+                        link=lnk_val_e110,
+                        comentarios=coment_salvar_e110,
+                    )
+
+                res_data["E1.10"] = {
+                    "valor": r_e110 or "",
+                    "pontos": 0.0,
+                    "link": lnk_val_e110,
+                    "comentarios": coment_salvar_e110,
+                }
+
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+                links_atuais_e110 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val_e110 or "")]
+                links_antigos_e110 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_e110_salva or "")]
+
+                if lnk_val_e110 != evidencia_e110_salva and links_atuais_e110 and links_atuais_e110 != links_antigos_e110:
+                    st.session_state[f"links_pendentes_e1_10_{ano_sel}"] = links_atuais_e110
+                    st.session_state[f"gatilho_modal_e1_10_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E1.10 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e1_10_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func("E1.10", st.session_state.get(f"links_pendentes_e1_10_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_e1_10_{ano_sel}"] = False
+
+    # =============================================================================
+    # BLOCO CONDICIONAL: SUBQUESITO E1.10.1 (Se houver alunos PCD na Creche)
+    # =============================================================================
+    if r_e110 == "Sim":
+        with st.container(key=f"cnt_bloco_ieduc_e1_10_1_{ano_sel}", border=True):
+            with st.expander(
+                f"📌 INDICADOR E1.10.1 - Atendimento Educacional Especializado na Creche ({ano_sel})",
+                expanded=True,
+            ):
+                st.subheader("INDICADOR E1.10.1 • Atendimento Educacional Especializado (AEE)")
+                st.write(
+                    "**Houve Atendimento Educacional Especializado (AEE) na Rede Municipal de Ensino para essa etapa? (Dados Censo Escolar 2025)**"
+                )
+
+                d_e1101 = res_data.get("E1.10.1") or {
+                    "valor": "",
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": "",
+                }
+
+                chave_rad_e1101 = f"rad_e1101_{ano_sel}_educ"
+                chave_link_e1101 = f"l_e1101_in_{ano_sel}_educ"
+                chave_coment_e1101 = f"coment_E1.10.1_{ano_sel}_educ"
+
+                opc_e1101 = ["Sim – 00", "Não – -10 (perde 10 pontos)"]
+                v_salvo_e1101 = d_e1101.get("valor", "")
+                idx_e1101 = opc_e1101.index(v_salvo_e1101) if v_salvo_e1101 in opc_e1101 else None
+                evidencia_e1101_salva = d_e1101.get("link", "")
+
+                c1, c2 = st.columns([1, 1])
+
+                with c1:
+                    r_e1101 = st.radio(
+                        f"Selecione a opção para E1.10.1 ({ano_sel}):",
+                        opc_e1101,
+                        index=idx_e1101,
+                        key=chave_rad_e1101,
+                    )
+
+                    pts_e1101 = 0.0
+                    if r_e1101 and "Não" in r_e1101:
+                        pts_e1101 = -10.0
+
+                    if pts_e1101 < 0:
+                        st.error(f"📉 **Pontuação Obtida no Indicador E1.10.1:** **{pts_e1101}** pontos (Penalidade Aplicada)")
+                    else:
+                        st.info(f"✨ **Pontuação Obtida no Indicador E1.10.1:** **{pts_e1101}** pontos")
+
+                with c2:
+                    link_e1101 = st.text_area(
+                        "Link/Evidência (E1.10.1):",
+                        value=evidencia_e1101_salva,
+                        key=chave_link_e1101,
+                        placeholder="Insira os links e evidências do AEE...",
+                        height=160,
+                    )
+
+                    placeholder_links_e1101 = st.empty()
+                    links_visuais_e1101 = re.findall(
+                        globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
+                        link_e1101 or "",
+                    )
+                    if links_visuais_e1101:
+                        placeholder_links_e1101.markdown(
+                            "**🔗 Links Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_visuais_e1101
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                bloco_coment = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+                if bloco_coment:
+                    bloco_coment("E1.10.1", res_data, sufixo="educ")
+
+                if st.button("💾 Salvar Indicador E1.10.1", key=f"btn_salvar_e1_10_1_{ano_sel}", type="primary"):
+                    lnk_val_e1101 = link_e1101.strip()
+                    coment_salvar_e1101 = st.session_state.get(chave_coment_e1101, d_e1101.get("comentarios", ""))
+
+                    save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                    if save_func:
+                        save_func(
+                            qid="E1.10.1",
+                            valor=r_e1101 or "",
+                            pontos=pts_e1101,
+                            link=lnk_val_e1101,
+                            comentarios=coment_salvar_e1101,
+                        )
+
+                    res_data["E1.10.1"] = {
+                        "valor": r_e1101 or "",
+                        "pontos": pts_e1101,
+                        "link": lnk_val_e1101,
+                        "comentarios": coment_salvar_e1101,
+                    }
+
+                    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+                    links_atuais_e1101 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val_e1101 or "")]
+                    links_antigos_e1101 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_e1101_salva or "")]
+
+                    if lnk_val_e1101 != evidencia_e1101_salva and links_atuais_e1101 and links_atuais_e1101 != links_antigos_e1101:
+                        st.session_state[f"links_pendentes_e1_10_1_{ano_sel}"] = links_atuais_e1101
+                        st.session_state[f"gatilho_modal_e1_10_1_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Indicador E1.10.1 salvo com sucesso!", icon="✅")
+                    st.rerun()
+
+        if st.session_state.get(f"gatilho_modal_e1_10_1_{ano_sel}", False):
+            modal_func = globals().get("modal_aviso_link")
+            if modal_func:
+                modal_func("E1.10.1", st.session_state.get(f"links_pendentes_e1_10_1_{ano_sel}", []))
+            st.session_state[f"gatilho_modal_e1_10_1_{ano_sel}"] = False
+
+    # =============================================================================
+    # INDICADOR E2.1 • KEY ÚNICA GARANTIDA
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e2_1_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E2.1 - Infraestrutura de Pré-escola (Pátio Infantil) ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E2.1 • Infraestrutura de Pré-escola (Pátio Infantil)")
+            st.write(
+                "**Informe a quantidade de estabelecimentos de Pré-escola para cálculo da infraestrutura (Dados Censo Escolar 2025):**"
+            )
+
+            d_e21 = res_data.get("E2.1") or {
+                "valor": '{"com_patio": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_banco_e21 = json.loads(str(d_e21.get("valor", "{}")).replace("'", '"'))
+                init_patio_e21 = int(val_banco_e21.get("com_patio", 0))
+                init_total_e21 = int(val_banco_e21.get("total", 0))
+            except Exception:
+                init_patio_e21 = 0
+                init_total_e21 = 0
+
+            chave_pat_e21 = f"v_num_e21_pat_{ano_sel}"
+            chave_tot_e21 = f"v_num_e21_tot_{ano_sel}"
+            chave_link_e21 = f"l_e21_in_{ano_sel}_educ"
+            chave_coment_e21 = f"coment_E2.1_{ano_sel}_educ"
+
+            evidencia_e21_salva = d_e21.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                val_patio_e21_ref = st.session_state.get(chave_pat_e21, init_patio_e21)
+                q_patio_e21 = st.number_input(
+                    "Nº de estabelecimentos de pré-escola com pátio infantil:",
+                    min_value=0,
+                    step=1,
+                    value=val_patio_e21_ref,
+                    key=f"input_num_e21_pat_{ano_sel}",
+                )
+                st.session_state[chave_pat_e21] = q_patio_e21
+
+                val_total_e21_ref = st.session_state.get(chave_tot_e21, init_total_e21)
+                q_total_e21 = st.number_input(
+                    "Nº total de estabelecimentos de pré-escola no município:",
+                    min_value=0,
+                    step=1,
+                    value=val_total_e21_ref,
+                    key=f"input_num_e21_tot_{ano_sel}",
+                )
+                st.session_state[chave_tot_e21] = q_total_e21
+
+                pts_e21 = 0.0
+                prop_pi_e21 = 0.0
+
+                if q_total_e21 > 0:
+                    if q_patio_e21 > q_total_e21:
+                        st.error("⚠️ Atenção: O número de pré-escolas com pátio não pode ser maior do que o total de estabelecimentos.")
+                    else:
+                        prop_pi_e21 = q_patio_e21 / q_total_e21
+                        pts_e21 = round(prop_pi_e21 * 2.0, 2)
+
+                st.info(
+                    f"📊 **Resultado do Indicador E2.1:**\n"
+                    f"* Proporção Alcançada ($PI$): **{prop_pi_e21:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e21} / 2.00** pontos"
+                )
+
+            with c2:
+                link_e21 = st.text_area(
+                    "Link/Evidência (E2.1):",
+                    value=evidencia_e21_salva,
+                    key=chave_link_e21,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e21 = st.empty()
+                links_visuais_e21 = re.findall(
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
+                    link_e21 or "",
+                )
+                if links_visuais_e21:
+                    placeholder_links_e21.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e21
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            bloco_coment = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_coment:
+                bloco_coment("E2.1", res_data, sufixo="educ")
+
+            if st.button("💾 Salvar Indicador E2.1", key=f"btn_salvar_e2_1_{ano_sel}", type="primary"):
+                dict_salvar_e21 = {"com_patio": q_patio_e21, "total": q_total_e21}
+                str_salvar_e21 = json.dumps(dict_salvar_e21)
+                lnk_val_e21 = link_e21.strip()
+                coment_salvar_e21 = st.session_state.get(chave_coment_e21, d_e21.get("comentarios", ""))
+
+                save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_func:
+                    save_func(
+                        qid="E2.1",
+                        valor=str_salvar_e21,
+                        pontos=pts_e21,
+                        link=lnk_val_e21,
+                        comentarios=coment_salvar_e21,
+                    )
+
+                res_data["E2.1"] = {
+                    "valor": str_salvar_e21,
+                    "pontos": pts_e21,
+                    "link": lnk_val_e21,
+                    "comentarios": coment_salvar_e21,
+                }
+
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+                links_atuais_e21 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val_e21 or "")]
+                links_antigos_e21 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_e21_salva or "")]
+
+                if lnk_val_e21 != evidencia_e21_salva and links_atuais_e21 and links_atuais_e21 != links_antigos_e21:
+                    st.session_state[f"links_pendentes_e2_1_{ano_sel}"] = links_atuais_e21
+                    st.session_state[f"gatilho_modal_e2_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E2.1 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e2_1_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func("E2.1", st.session_state.get(f"links_pendentes_e2_1_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_e2_1_{ano_sel}"] = False
+
+    # =============================================================================
+    # INDICADOR E2.2 • KEY ÚNICA GARANTIDA
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e2_2_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E2.2 - Materiais Pedagógicos e Brinquedos na Pré-escola ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E2.2 • Materiais Pedagógicos e Brinquedos na Pré-escola")
+            st.write(
+                "**Informe a quantidade de estabelecimentos de Pré-escola que disponibilizam brinquedos e materiais pedagógicos (Dados Censo Escolar 2025):**"
+            )
+
+            d_e22 = res_data.get("E2.2") or {
+                "valor": '{"com_brinquedo": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_banco_e22 = json.loads(str(d_e22.get("valor", "{}")).replace("'", '"'))
+                init_brinquedo_e22 = int(val_banco_e22.get("com_brinquedo", 0))
+                init_total_e22 = int(val_banco_e22.get("total", 0))
+            except Exception:
+                init_brinquedo_e22 = 0
+                init_total_e22 = 0
+
+            chave_brinq_e22 = f"v_num_e22_brinq_{ano_sel}"
+            chave_tot_e22 = f"v_num_e22_tot_{ano_sel}"
+            chave_link_e22 = f"l_e22_in_{ano_sel}_educ"
+            chave_coment_e22 = f"coment_E2.2_{ano_sel}_educ"
+
+            evidencia_e22_salva = d_e22.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                val_brinquedo_e22_ref = st.session_state.get(chave_brinq_e22, init_brinquedo_e22)
+                q_brinquedo_e22 = st.number_input(
+                    "Nº de pré-escolas com brinquedos/materiais pedagógicos (BP):",
+                    min_value=0,
+                    step=1,
+                    value=val_brinquedo_e22_ref,
+                    key=f"input_num_e22_brinq_{ano_sel}",
+                )
+                st.session_state[chave_brinq_e22] = q_brinquedo_e22
+
+                val_total_e22_ref = st.session_state.get(chave_tot_e22, init_total_e22)
+                q_total_e22 = st.number_input(
+                    "Total de estabelecimentos que oferecem pré-escola (TE):",
+                    min_value=0,
+                    step=1,
+                    value=val_total_e22_ref,
+                    key=f"input_num_e22_tot_{ano_sel}",
+                )
+                st.session_state[chave_tot_e22] = q_total_e22
+
+                pts_e22 = 0.0
+                prop_p_e22 = 0.0
+
+                if q_total_e22 > 0:
+                    if q_brinquedo_e22 > q_total_e22:
+                        st.error("⚠️ Atenção: O número de pré-escolas com brinquedos (BP) não pode ser maior do que o total de pré-escolas (TE).")
+                    else:
+                        prop_p_e22 = q_brinquedo_e22 / q_total_e22
+                        pts_e22 = round(prop_p_e22 * 4.0, 2)
+
+                st.info(
+                    f"📊 **Resultado do Indicador E2.2:**\n"
+                    f"* Proporção Alcançada ($P$): **{prop_p_e22:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e22} / 4.00** pontos"
+                )
+
+            with c2:
+                link_e22 = st.text_area(
+                    "Link/Evidência (E2.2):",
+                    value=evidencia_e22_salva,
+                    key=chave_link_e22,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e22 = st.empty()
+                links_visuais_e22 = re.findall(
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
+                    link_e22 or "",
+                )
+                if links_visuais_e22:
+                    placeholder_links_e22.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e22
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            bloco_coment = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_coment:
+                bloco_coment("E2.2", res_data, sufixo="educ")
+
+            if st.button("💾 Salvar Indicador E2.2", key=f"btn_salvar_e2_2_{ano_sel}", type="primary"):
+                dict_salvar_e22 = {"com_brinquedo": q_brinquedo_e22, "total": q_total_e22}
+                str_salvar_e22 = json.dumps(dict_salvar_e22)
+                lnk_val_e22 = link_e22.strip()
+                coment_salvar_e22 = st.session_state.get(chave_coment_e22, d_e22.get("comentarios", ""))
+
+                save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_func:
+                    save_func(
+                        qid="E2.2",
+                        valor=str_salvar_e22,
+                        pontos=pts_e22,
+                        link=lnk_val_e22,
+                        comentarios=coment_salvar_e22,
+                    )
+
+                res_data["E2.2"] = {
+                    "valor": str_salvar_e22,
+                    "pontos": pts_e22,
+                    "link": lnk_val_e22,
+                    "comentarios": coment_salvar_e22,
+                }
+
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+                links_atuais_e22 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val_e22 or "")]
+                links_antigos_e22 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_e22_salva or "")]
+
+                if lnk_val_e22 != evidencia_e22_salva and links_atuais_e22 and links_atuais_e22 != links_antigos_e22:
+                    st.session_state[f"links_pendentes_e2_2_{ano_sel}"] = links_atuais_e22
+                    st.session_state[f"gatilho_modal_e2_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E2.2 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e2_2_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func("E2.2", st.session_state.get(f"links_pendentes_e2_2_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_e2_2_{ano_sel}"] = False
+
+    # =============================================================================
+    # INDICADOR E2.3 • KEY ÚNICA GARANTIDA
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e2_3_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E2.3 - Número de Crianças Matriculadas na Pré-escola ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E2.3 • Matrículas na Pré-escola")
+            st.write(
+                "**Informe o número de crianças matriculadas na pré-escola: (Dados Censo Escolar 2025)**"
+            )
+
+            d_e23 = res_data.get("E2.3") or {
+                "valor": "0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            v_banco_e23 = str(d_e23.get("valor", "0"))
+            init_mat_e23 = int(v_banco_e23) if v_banco_e23.isdigit() else 0
+
+            chave_mat_e23 = f"v_num_e23_mat_{ano_sel}"
+            chave_link_e23 = f"l_e23_in_{ano_sel}_educ"
+            chave_coment_e23 = f"coment_E2.3_{ano_sel}_educ"
+
+            evidencia_e23_salva = d_e23.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                val_mat_e23_ref = st.session_state.get(chave_mat_e23, init_mat_e23)
+                q_matriculas_pre = st.number_input(
+                    "Quantidade de crianças matriculadas na pré-escola:",
+                    min_value=0,
+                    step=1,
+                    value=val_mat_e23_ref,
+                    key=f"input_num_e23_mat_{ano_sel}",
+                )
+                st.session_state[chave_mat_e23] = q_matriculas_pre
+
+                st.code("✨ Registro Informativo (não gera pontos diretos).", language="text")
+
+            with c2:
+                link_e23 = st.text_area(
+                    "Link/Evidência (E2.3):",
+                    value=evidencia_e23_salva,
+                    key=chave_link_e23,
+                    placeholder="Insira os links e evidências...",
+                    height=120,
+                )
+
+                placeholder_links_e23 = st.empty()
+                links_visuais_e23 = re.findall(
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
+                    link_e23 or "",
+                )
+                if links_visuais_e23:
+                    placeholder_links_e23.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e23
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            bloco_coment = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_coment:
+                bloco_coment("E2.3", res_data, sufixo="educ")
+
+            if st.button("💾 Salvar Indicador E2.3", key=f"btn_salvar_e2_3_{ano_sel}", type="primary"):
+                lnk_val_e23 = link_e23.strip()
+                coment_salvar_e23 = st.session_state.get(chave_coment_e23, d_e23.get("comentarios", ""))
+
+                save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_func:
+                    save_func(
+                        qid="E2.3",
+                        valor=str(q_matriculas_pre),
+                        pontos=0.0,
+                        link=lnk_val_e23,
+                        comentarios=coment_salvar_e23,
+                    )
+
+                res_data["E2.3"] = {
+                    "valor": str(q_matriculas_pre),
+                    "pontos": 0.0,
+                    "link": lnk_val_e23,
+                    "comentarios": coment_salvar_e23,
+                }
+
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+                links_atuais_e23 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val_e23 or "")]
+                links_antigos_e23 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_e23_salva or "")]
+
+                if lnk_val_e23 != evidencia_e23_salva and links_atuais_e23 and links_atuais_e23 != links_antigos_e23:
+                    st.session_state[f"links_pendentes_e2_3_{ano_sel}"] = links_atuais_e23
+                    st.session_state[f"gatilho_modal_e2_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E2.3 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e2_3_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func("E2.3", st.session_state.get(f"links_pendentes_e2_3_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_e2_3_{ano_sel}"] = False
+
+    # =============================================================================
+    # INDICADOR E2.4 • KEY ÚNICA GARANTIDA
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e2_4_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E2.4 - Data de Início do Ano Letivo para a Pré-escola ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E2.4 • Data de Início do Ano Letivo")
+            st.write(
+                "**Informe a data de início do ano letivo para a pré-escola: (Dados Censo Escolar 2025)**"
+            )
+
+            d_e24 = res_data.get("E2.4") or {
+                "valor": "",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            v_banco_e24 = d_e24.get("valor", "")
+            evidencia_e24_salva = d_e24.get("link", "")
+
+            try:
+                init_date_e24 = datetime.datetime.strptime(v_banco_e24, "%Y-%m-%d").date()
+            except Exception:
+                try:
+                    init_date_e24 = datetime.date(int(ano_sel), 1, 1)
+                except Exception:
+                    init_date_e24 = datetime.date(2025, 1, 1)
+
+            chave_dat_e24 = f"dat_e24_{ano_sel}_educ"
+            chave_link_e24 = f"l_e24_in_{ano_sel}_educ"
+            chave_coment_e24 = f"coment_E2.4_{ano_sel}_educ"
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                val_date_e24_ref = st.session_state.get(chave_dat_e24, init_date_e24)
+                dt_e24 = st.date_input(
+                    "Data de início das atividades letivas (Pré-escola):",
+                    value=val_date_e24_ref,
+                    format="DD/MM/YYYY",
+                    key=f"input_dat_e24_{ano_sel}",
+                )
+                st.session_state[chave_dat_e24] = dt_e24
+
+                st.code("✨ Registro Informativo (não gera pontos diretos).", language="text")
+
+            with c2:
+                link_e24 = st.text_area(
+                    "Link/Evidência (E2.4):",
+                    value=evidencia_e24_salva,
+                    key=chave_link_e24,
+                    placeholder="Insira os links e evidências do Calendário Letivo...",
+                    height=120,
+                )
+
+                placeholder_links_e24 = st.empty()
+                links_visuais_e24 = re.findall(
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
+                    link_e24 or "",
+                )
+                if links_visuais_e24:
+                    placeholder_links_e24.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e24
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            bloco_coment = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+            if bloco_coment:
+                bloco_coment("E2.4", res_data, sufixo="educ")
+
+            if st.button("💾 Salvar Indicador E2.4", key=f"btn_salvar_e2_4_{ano_sel}", type="primary"):
+                str_data_e24 = str(dt_e24)
+                lnk_val_e24 = link_e24.strip()
+                coment_salvar_e24 = st.session_state.get(chave_coment_e24, d_e24.get("comentarios", ""))
+
+                save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+                if save_func:
+                    save_func(
+                        qid="E2.4",
+                        valor=str_data_e24,
+                        pontos=0.0,
+                        link=lnk_val_e24,
+                        comentarios=coment_salvar_e24,
+                    )
+
+                res_data["E2.4"] = {
+                    "valor": str_data_e24,
+                    "pontos": 0.0,
+                    "link": lnk_val_e24,
+                    "comentarios": coment_salvar_e24,
+                }
+
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+                links_atuais_e24 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, lnk_val_e24 or "")]
+                links_antigos_e24 = [u[0] if isinstance(u, tuple) else u for u in re.findall(regex_url, evidencia_e24_salva or "")]
+
+                if lnk_val_e24 != evidencia_e24_salva and links_atuais_e24 and links_atuais_e24 != links_antigos_e24:
+                    st.session_state[f"links_pendentes_e2_4_{ano_sel}"] = links_atuais_e24
+                    st.session_state[f"gatilho_modal_e2_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E2.4 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e2_4_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func("E2.4", st.session_state.get(f"links_pendentes_e2_4_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_e2_4_{ano_sel}"] = False
