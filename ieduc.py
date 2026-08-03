@@ -24384,13 +24384,3 @@ def render_questao_20_0_ieduc(res_data: dict, ano_sel: str):
                 ano_sel,
             )
 
-# =========================================================================
-# --- ABA DADOS EXTERNOS ---
-# =========================================================================
-with aba_dados_externos:
-    st.title("📊 Indicadores e Dados Externos")
-    st.write(
-        "Insira abaixo as informações e dados consolidados das fontes externas:"
-    )
-
-    
