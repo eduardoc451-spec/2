@@ -25126,3 +25126,380 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_e1_4_{ano_sel}", []),
             )
         st.session_state[f"gatilho_modal_e1_4_{ano_sel}"] = False
+
+    # =============================================================================
+    # INDICADOR E1.5 • TOTALMENTE INDEPENDENTE
+    # =============================================================================
+    with st.container(key=f"container_bloco_ieduc_e1_5_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E1.5 - Proporção de Creches com PPP Atualizado ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E1.5 • Proporção de Creches com PPP Atualizado")
+            st.write(
+                "**Informe a quantidade de estabelecimentos que oferecem Creche para verificação do PPP (Dados Censo Escolar 2025):**"
+            )
+
+            # Estado inicial / persistente do banco (Armazenado como JSON)
+            d_e15 = res_data.get("E1.5") or {
+                "valor": '{"com_ppp": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            # Parsing seguro da string JSON do banco
+            try:
+                val_banco_e15 = json.loads(str(d_e15.get("valor", "{}")).replace("'", '"'))
+                init_ppp = int(val_banco_e15.get("com_ppp", 0))
+                init_total_e15 = int(val_banco_e15.get("total", 0))
+            except Exception:
+                init_ppp = 0
+                init_total_e15 = 0
+
+            # Chaves padronizadas
+            chave_ppp_e15 = f"v_num_e15_ppp_{ano_sel}"
+            chave_total_e15 = f"v_num_e15_total_{ano_sel}"
+            chave_link_e15 = f"l_e15_in_{ano_sel}_educ"
+            chave_coment_e15 = f"coment_E1.5_{ano_sel}_educ"
+
+            evidencia_e15_salva = d_e15.get("link", "")
+
+            # Layout em duas colunas
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                val_ppp_ref = st.session_state.get(chave_ppp_e15, init_ppp)
+                q_creches_ppp = st.number_input(
+                    "Creches com Projeto Político-Pedagógico (PPP) atualizado:",
+                    min_value=0,
+                    step=1,
+                    value=val_ppp_ref,
+                    key=f"num_e15_ppp_{ano_sel}",
+                )
+                st.session_state[chave_ppp_e15] = q_creches_ppp
+
+                val_total_e15_ref = st.session_state.get(chave_total_e15, init_total_e15)
+                q_total_creches = st.number_input(
+                    "Total de estabelecimentos que oferecem Creche:",
+                    min_value=0,
+                    step=1,
+                    value=val_total_e15_ref,
+                    key=f"num_e15_total_{ano_sel}",
+                )
+                st.session_state[chave_total_e15] = q_total_creches
+
+                # Cálculo de regras de negócio
+                pts_e15 = 0.0
+                prop_ppp = 0.0
+
+                if q_total_creches > 0:
+                    if q_creches_ppp > q_total_creches:
+                        st.error(
+                            "⚠️ Atenção: O número de creches com PPP não pode exceder o total de creches."
+                        )
+                    else:
+                        prop_ppp = q_creches_ppp / q_total_creches
+                        pts_e15 = round(prop_ppp * 6.0, 2)
+
+                # Card informativo de resultado
+                st.info(
+                    f"📊 **Resultado do Indicador E1.5:**\n"
+                    f"* Proporção de PPPs Atualizados ($P$): **{prop_ppp:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e15} / 6.00** pontos"
+                )
+
+            with c2:
+                link_e15 = st.text_area(
+                    "Link/Evidência (E1.5):",
+                    value=evidencia_e15_salva,
+                    key=chave_link_e15,
+                    placeholder="Insira os links e evidências do Censo Escolar/PPPs...",
+                    height=180,
+                )
+
+                # Detecção visual de links
+                placeholder_links_e15 = st.empty()
+                links_visuais_e15 = re.findall(
+                    globals().get("REGEX_PURE_URL", REGEX_PURE_URL),
+                    link_e15 or "",
+                )
+                if links_visuais_e15:
+                    placeholder_links_e15.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e15
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            # Bloco de comentários padronizado
+            bloco_coment = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_coment:
+                bloco_coment("E1.5", res_data, sufixo="educ")
+
+            # Botão de Salvamento Manual
+            if st.button(
+                "💾 Salvar Indicador E1.5",
+                key=f"btn_salvar_e1_5_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e15 = {"com_ppp": q_creches_ppp, "total": q_total_creches}
+                str_salvar_e15 = json.dumps(dict_salvar_e15)
+                lnk_val_e15 = link_e15.strip()
+                coment_salvar_e15 = st.session_state.get(
+                    chave_coment_e15, d_e15.get("comentarios", "")
+                )
+
+                save_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_func:
+                    save_func(
+                        qid="E1.5",
+                        valor=str_salvar_e15,
+                        pontos=pts_e15,
+                        link=lnk_val_e15,
+                        comentarios=coment_salvar_e15,
+                    )
+
+                res_data["E1.5"] = {
+                    "valor": str_salvar_e15,
+                    "pontos": pts_e15,
+                    "link": lnk_val_e15,
+                    "comentarios": coment_salvar_e15,
+                }
+
+                # Verificação de modal de auditoria de links
+                links_atuais_e15 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(REGEX_PURE_URL, lnk_val_e15 or "")
+                ]
+                links_antigos_e15 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(
+                        REGEX_PURE_URL, evidencia_e15_salva or ""
+                    )
+                ]
+
+                if (
+                    lnk_val_e15 != evidencia_e15_salva
+                    and links_atuais_e15
+                    and links_atuais_e15 != links_antigos_e15
+                ):
+                    st.session_state[f"links_pendentes_e1_5_{ano_sel}"] = (
+                        links_atuais_e15
+                    )
+                    st.session_state[f"gatilho_modal_e1_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Indicador E1.5 salvo com sucesso!",
+                    icon="✅",
+                )
+                st.rerun()
+
+    # Trigger do Modal E1.5
+    if st.session_state.get(f"gatilho_modal_e1_5_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func(
+                "E1.5",
+                st.session_state.get(f"links_pendentes_e1_5_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e1_5_{ano_sel}"] = False
+
+
+    # =============================================================================
+    # INDICADOR E1.6 • TOTALMENTE INDEPENDENTE
+    # =============================================================================
+    with st.container(key=f"container_bloco_ieduc_e1_6_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E1.6 - Proporção de Professores Temporários na Creche ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E1.6 • Proporção de Professores Temporários")
+            st.write(
+                "**Informe a quantidade de professores de Creche (Dados Censo Escolar 2025):**"
+            )
+            st.caption("ℹ️ *Considerar todos os professores efetivos e temporários.*")
+
+            # Estado inicial / persistente do banco (Armazenado como JSON)
+            d_e16 = res_data.get("E1.6") or {
+                "valor": '{"efetivos": 0, "temporarios": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            # Parsing seguro da string JSON do banco
+            try:
+                val_banco_e16 = json.loads(str(d_e16.get("valor", "{}")).replace("'", '"'))
+                init_efetivos = int(val_banco_e16.get("efetivos", 0))
+                init_temporarios = int(val_banco_e16.get("temporarios", 0))
+            except Exception:
+                init_efetivos = 0
+                init_temporarios = 0
+
+            # Chaves padronizadas
+            chave_efe_e16 = f"v_num_e16_efe_{ano_sel}"
+            chave_temp_e16 = f"v_num_e16_temp_{ano_sel}"
+            chave_link_e16 = f"l_e16_in_{ano_sel}_educ"
+            chave_coment_e16 = f"coment_E1.6_{ano_sel}_educ"
+
+            evidencia_e16_salva = d_e16.get("link", "")
+
+            # Layout em duas colunas
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                val_efetivos_ref = st.session_state.get(chave_efe_e16, init_efetivos)
+                q_efetivos = st.number_input(
+                    "Professores Efetivos (E):",
+                    min_value=0,
+                    step=1,
+                    value=val_efetivos_ref,
+                    key=f"num_e16_efe_{ano_sel}",
+                )
+                st.session_state[chave_efe_e16] = q_efetivos
+
+                val_temporarios_ref = st.session_state.get(chave_temp_e16, init_temporarios)
+                q_temporarios = st.number_input(
+                    "Professores Temporários (T):",
+                    min_value=0,
+                    step=1,
+                    value=val_temporarios_ref,
+                    key=f"num_e16_temp_{ano_sel}",
+                )
+                st.session_state[chave_temp_e16] = q_temporarios
+
+                # Cálculo de regras de negócio IEGM
+                pts_e16 = 0.0
+                porcentagem_p = 0.0
+                total_docentes = q_efetivos + q_temporarios
+
+                if total_docentes > 0:
+                    porcentagem_p = q_temporarios / total_docentes
+                    if porcentagem_p <= 0.10:
+                        pts_e16 = 2.0
+                    else:
+                        pts_e16 = 0.0
+
+                # Card informativo de resultado
+                st.info(
+                    f"📊 **Resultado do Indicador E1.6:**\n"
+                    f"* Percentual de Temporários ($P$): **{porcentagem_p:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e16} / 2.00** pontos"
+                )
+
+            with c2:
+                link_e16 = st.text_area(
+                    "Link/Evidência (E1.6):",
+                    value=evidencia_e16_salva,
+                    key=chave_link_e16,
+                    placeholder="Insira os links e evidências do Censo Escolar/Corpo Docente...",
+                    height=180,
+                )
+
+                # Detecção visual de links
+                placeholder_links_e16 = st.empty()
+                links_visuais_e16 = re.findall(
+                    globals().get("REGEX_PURE_URL", REGEX_PURE_URL),
+                    link_e16 or "",
+                )
+                if links_visuais_e16:
+                    placeholder_links_e16.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e16
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            # Bloco de comentários padronizado
+            bloco_coment = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_coment:
+                bloco_coment("E1.6", res_data, sufixo="educ")
+
+            # Botão de Salvamento Manual
+            if st.button(
+                "💾 Salvar Indicador E1.6",
+                key=f"btn_salvar_e1_6_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e16 = {"efetivos": q_efetivos, "temporarios": q_temporarios}
+                str_salvar_e16 = json.dumps(dict_salvar_e16)
+                lnk_val_e16 = link_e16.strip()
+                coment_salvar_e16 = st.session_state.get(
+                    chave_coment_e16, d_e16.get("comentarios", "")
+                )
+
+                save_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_func:
+                    save_func(
+                        qid="E1.6",
+                        valor=str_salvar_e16,
+                        pontos=pts_e16,
+                        link=lnk_val_e16,
+                        comentarios=coment_salvar_e16,
+                    )
+
+                res_data["E1.6"] = {
+                    "valor": str_salvar_e16,
+                    "pontos": pts_e16,
+                    "link": lnk_val_e16,
+                    "comentarios": coment_salvar_e16,
+                }
+
+                # Verificação de modal de auditoria de links
+                links_atuais_e16 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(REGEX_PURE_URL, lnk_val_e16 or "")
+                ]
+                links_antigos_e16 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(
+                        REGEX_PURE_URL, evidencia_e16_salva or ""
+                    )
+                ]
+
+                if (
+                    lnk_val_e16 != evidencia_e16_salva
+                    and links_atuais_e16
+                    and links_atuais_e16 != links_antigos_e16
+                ):
+                    st.session_state[f"links_pendentes_e1_6_{ano_sel}"] = (
+                        links_atuais_e16
+                    )
+                    st.session_state[f"gatilho_modal_e1_6_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Indicador E1.6 salvo com sucesso!",
+                    icon="✅",
+                )
+                st.rerun()
+
+    # Trigger do Modal E1.6
+    if st.session_state.get(f"gatilho_modal_e1_6_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func(
+                "E1.6",
+                st.session_state.get(f"links_pendentes_e1_6_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e1_6_{ano_sel}"] = False
