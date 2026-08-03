@@ -24385,12 +24385,12 @@ def render_questao_20_0_ieduc(res_data: dict, ano_sel: str):
             )
 
 def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
-    """Renderiza a aba 'Dados Externos' contendo o Indicador E1.1 (Infraestrutura de Creches)."""
+    """Renderiza o Indicador E1.1 dentro da Aba Dados Externos."""
 
     st.markdown("### 📊 Dados Externos e Indicadores")
 
     # =============================================================================
-    # SUB-ABA / CONTAINER: INDICADOR E1.1 (Infraestrutura de Creches - Pátio Infantil)
+    # INDICADOR E1.1 • TOTALMENTE INDEPENDENTE
     # =============================================================================
     with st.container(
         key=f"container_bloco_ieduc_e1_1_{ano_sel}", border=True
@@ -24404,7 +24404,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 "**Informe a quantidade de estabelecimentos de Creche para cálculo da infraestrutura (Dados Censo Escolar 2025):**"
             )
 
-            # --- Recuperação segura do Estado Inicial (Banco de Dados / Payload JSON) ---
+            # Estado inicial / persistente do banco
             d_e11 = res_data.get("E1.1") or {
                 "valor": '{"com_patio": 0, "total": 0}',
                 "pontos": 0.0,
@@ -24412,30 +24412,32 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 "comentarios": "",
             }
 
-            # Chaves padronizadas no Session State
+            # Chaves padronizadas
             chave_patio_e11 = f"v_num_e11_patio_{ano_sel}"
             chave_total_e11 = f"v_num_e11_total_{ano_sel}"
             chave_link_e11 = f"l_e11_in_{ano_sel}_educ"
-            chave_coment_e11 = f"coment_e1.1_{ano_sel}_educ"
+            chave_coment_e11 = f"coment_E1.1_{ano_sel}_educ"
 
-            # Parsing seguro do valor JSON armazenado
+            # Leitura do valor em JSON
             try:
-                val_banco_e11 = json.loads(
+                val_banco = json.loads(
                     str(d_e11.get("valor", "{}")).replace("'", '"')
                 )
-                init_patio = int(val_banco_e11.get("com_patio", 0))
-                init_total = int(val_banco_e11.get("total", 0))
+                init_patio = int(val_banco.get("com_patio", 0))
+                init_total = int(val_banco.get("total", 0))
             except Exception:
                 init_patio = 0
                 init_total = 0
 
             evidencia_e11_salva = d_e11.get("link", "")
 
-            # --- Layout em Duas Colunas (Inputs Numéricos à Esquerda, Links/Evidências à Direita) ---
-            col_inputs, col_evidencias = st.columns([1, 1])
+            # Layout em duas colunas
+            c1, c2 = st.columns([1, 1])
 
-            with col_inputs:
-                val_patio_ref = st.session_state.get(chave_patio_e11, init_patio)
+            with c1:
+                val_patio_ref = st.session_state.get(
+                    chave_patio_e11, init_patio
+                )
                 q_patio = st.number_input(
                     "Nº de creches com pátio infantil:",
                     min_value=0,
@@ -24445,7 +24447,9 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 )
                 st.session_state[chave_patio_e11] = q_patio
 
-                val_total_ref = st.session_state.get(chave_total_e11, init_total)
+                val_total_ref = st.session_state.get(
+                    chave_total_e11, init_total
+                )
                 q_total = st.number_input(
                     "Nº total de creches no município:",
                     min_value=0,
@@ -24455,33 +24459,33 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 )
                 st.session_state[chave_total_e11] = q_total
 
-            with col_evidencias:
+            with c2:
                 link_e11 = st.text_area(
                     "Link/Evidência (E1.1):",
                     value=evidencia_e11_salva,
                     key=chave_link_e11,
-                    placeholder="Insira os links e evidências dos dados do Censo Escolar...",
+                    placeholder="Insira os links e evidências do Censo Escolar...",
                     height=115,
                 )
 
-                # Detecção e Renderização Visual de Links Ativos
+                # Detecção visual de links
                 placeholder_links_e11 = st.empty()
-                regex_pattern = globals().get(
-                    "REGEX_PURE_URL", REGEX_PURE_URL
+                links_visuais = re.findall(
+                    globals().get("REGEX_PURE_URL", REGEX_PURE_URL),
+                    link_e11 or "",
                 )
-                links_e11_visuais = re.findall(regex_pattern, link_e11 or "")
-                if links_e11_visuais:
+                if links_visuais:
                     placeholder_links_e11.markdown(
                         "**🔗 Links Ativos:** "
                         + " | ".join(
                             [
                                 f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
-                                for u in links_e11_visuais
+                                for u in links_visuais
                             ]
                         )
                     )
 
-            # --- Regra de Negócio e Cálculo Matemático ---
+            # Regra de negócio
             pts_e11 = 0.0
             prop_pi = 0.0
 
@@ -24496,61 +24500,58 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
 
             st.markdown("---")
 
-            # --- Renderização do Bloco Padrão de Comentários ---
-            bloco_comentarios_func = globals().get(
+            # Bloco de comentários padronizado
+            bloco_coment = globals().get(
                 "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
             )
-            if bloco_comentarios_func:
-                bloco_comentarios_func("E1.1", res_data, sufixo="educ")
+            if bloco_coment:
+                bloco_coment("E1.1", res_data, sufixo="educ")
 
-            # --- Botão de Salvamento Manual ---
+            # Botão de Salvamento
             if st.button(
                 "💾 Salvar Indicador E1.1",
                 key=f"btn_salvar_e1_1_{ano_sel}",
                 type="primary",
             ):
-                dict_salvar_e11 = {"com_patio": q_patio, "total": q_total}
-                str_salvar_e11 = json.dumps(dict_salvar_e11)
-                lnk_val_e11 = link_e11.strip()
-
-                # Captura de comentário do Session State
-                comentario_para_salvar = st.session_state.get(
-                    chave_coment_e11, d80_coment if 'd80_coment' in locals() else d_e11.get("comentarios", "")
+                str_salvar = json.dumps({"com_patio": q_patio, "total": q_total})
+                lnk_val = link_e11.strip()
+                coment_salvar = st.session_state.get(
+                    chave_coment_e11, d_e11.get("comentarios", "")
                 )
 
-                # Persistência via função unificada de banco
-                save_resp_func = globals().get(
+                save_func = globals().get(
                     "save_resp_ieduc", globals().get("save_resp")
                 )
-                if save_resp_func:
-                    save_resp_func(
+                if save_func:
+                    save_func(
                         qid="E1.1",
-                        valor=str_salvar_e11,
+                        valor=str_salvar,
                         pontos=float(pts_e11),
-                        link=lnk_val_e11,
-                        comentarios=comentario_para_salvar,
+                        link=lnk_val,
+                        comentarios=coment_salvar,
                     )
 
-                # Atualiza estrutura em memória (res_data)
                 res_data["E1.1"] = {
-                    "valor": str_salvar_e11,
+                    "valor": str_salvar,
                     "pontos": float(pts_e11),
-                    "link": lnk_val_e11,
-                    "comentarios": comentario_para_salvar,
+                    "link": lnk_val,
+                    "comentarios": coment_salvar,
                 }
 
-                # Verificação de alteração em links para disparo do Modal de Auditoria
+                # Verificação de modal de auditoria de links
                 links_atuais = [
                     u[0] if isinstance(u, tuple) else u
-                    for u in re.findall(regex_pattern, lnk_val_e11 or "")
+                    for u in re.findall(REGEX_PURE_URL, lnk_val or "")
                 ]
                 links_antigos = [
                     u[0] if isinstance(u, tuple) else u
-                    for u in re.findall(regex_pattern, evidencia_e11_salva or "")
+                    for u in re.findall(
+                        REGEX_PURE_URL, evidencia_e11_salva or ""
+                    )
                 ]
 
                 if (
-                    lnk_val_e11 != evidencia_e11_salva
+                    lnk_val != evidencia_e11_salva
                     and links_atuais
                     and links_atuais != links_antigos
                 ):
@@ -24561,30 +24562,27 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
 
                 st.cache_data.clear()
                 st.toast(
-                    "Informações e dados do Indicador E1.1 salvos com sucesso!",
+                    "Indicador E1.1 salvo com sucesso!",
                     icon="✅",
                 )
                 st.rerun()
 
-            # --- Status e Impacto de Pontuação ---
-            pts_exibido_e11 = d_e11.get("pontos", 0.0)
-            cor_status_e11 = "#28a745" if pts_exibido_e11 > 0 else "#dc3545"
+            # Status de pontuação
+            pts_exibido = d_e11.get("pontos", 0.0)
+            cor_status = "#28a745" if pts_exibido > 0 else "#dc3545"
             st.markdown(
-                f"<span style='color:{cor_status_e11}; font-weight:bold;'>"
-                f"📊 Resultado do Indicador E1.1: {pts_exibido_e11:.2f} / 2.00 pontos obtidos "
+                f"<span style='color:{cor_status}; font-weight:bold;'>"
+                f"📊 Resultado do Indicador E1.1: {pts_exibido:.2f} / 2.00 pontos obtidos "
                 f"(Proporção Alcançada: {prop_pi:.2%})</span>",
                 unsafe_allow_html=True,
             )
 
-    # =============================================================================
-    # GATILHO DO MODAL AUDITORIA DE LINKS (Fora do container principal)
-    # =============================================================================
+    # Trigger do Modal (fora do container)
     if st.session_state.get(f"gatilho_modal_e1_1_{ano_sel}", False):
-        modal_aviso_func = globals().get("modal_aviso_link")
-        if modal_aviso_func:
-            modal_aviso_func(
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func(
                 "E1.1",
                 st.session_state.get(f"links_pendentes_e1_1_{ano_sel}", []),
             )
         st.session_state[f"gatilho_modal_e1_1_{ano_sel}"] = False
-
