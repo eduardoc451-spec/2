@@ -32643,20 +32643,19 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
         st.session_state[f"gatilho_modal_e11_{ano_sel}"] = False
 
     # =============================================================================
-    # ABA DE GRÁFICOS E DESEMPENHO HISTÓRICO (i-Saúde)
+    # ABA 3: GRÁFICOS E DESEMPENHO HISTÓRICO (i-Saúde / i-Educ)
     # =============================================================================
-    # Tratamento de fallback caso aba_graf ou ano_sel não estejam declarados no escopo
-    target_container = aba_graf if "aba_graf" in locals() or "aba_graf" in globals() else st.container()
-    ano_referencia = ano_sel if "ano_sel" in locals() or "ano_sel" in globals() else "hist"
-
-    with target_container:
-        st.header("📈 Evolução e Desempenho Histórico - i-Saúde")
+    with aba_graf:
+        st.header("📈 Evolução e Desempenho Histórico")
         st.caption("Acompanhamento do progresso das pontuações consolidadas ao longo dos anos.")
 
         import pandas as pd
         import plotly.express as px
 
-        # Busca os dados de todos os anos com verificações de segurança para evitar NameError
+        # Fallback de segurança para a variável ano_sel caso ela não exista no contexto
+        ano_ref = ano_sel if "ano_sel" in locals() or "ano_sel" in globals() else "hist"
+
+        # Busca os dados de todos os anos com verificações de segurança
         all_data = {}
         if "get_all_years_data" in globals():
             all_data = get_all_years_data()
@@ -32718,7 +32717,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 x=[str(a) for a in anos_lista],
                 y=totais,
                 labels={'x': 'Ano de Avaliação', 'y': 'Pontuação Total (pts)'},
-                title="Evolução da Pontuação Total por Ano (i-Saúde)",
+                title="Evolução da Pontuação Total por Ano",
                 text=[f"{v:.1f}" for v in totais],
                 color=totais,
                 color_continuous_scale="Blues"
@@ -32745,7 +32744,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
             st.plotly_chart(
                 fig, 
                 use_container_width=True, 
-                key=f"chart_evolucao_isaude_{ano_referencia}"
+                key=f"chart_evolucao_historica_{ano_ref}"
             )
 
             # -----------------------------------------------------------------
@@ -32759,8 +32758,8 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.dataframe(
                     dados_tabela, 
                     use_container_width=True,
-                    key=f"df_historico_isaude_{ano_referencia}"
+                    key=f"df_historico_tabela_{ano_ref}"
                 )
 
         else:
-            st.info("ℹ️ Ainda não há dados salvos suficientes para gerar o gráfico de evolução do i-Saúde.")
+            st.info("ℹ️ Ainda não há dados salvos suficientes para gerar o gráfico de evolução.")
