@@ -30672,4 +30672,1234 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 )
         st.info("ℹ️ **E3.13.3 Não aplicável:** O município não participou da última edição da Prova Brasil/SAEB.")
 
+                # =============================================================================
+    # EIXO E5 - INFRAESTRUTURA DOS ESTABELECIMENTOS DE ENSINO
+    # =============================================================================
+    with st.container(key=f"cnt_header_e5_{ano_sel}", border=True):
+        st.header("EIXO E5 - INFRAESTRUTURA ESCOLAR")
+        st.write(
+            "**Informe a quantidade de estabelecimentos de ensino da rede municipal que oferecem Creche, Pré-escola e Anos Iniciais do Ensino Fundamental:**"
+        )
+
+    # -------------------------------------------------------------------------
+    # E5.1 - Estabelecimentos Adaptados para PCD
+    # -------------------------------------------------------------------------
+    with st.container(key=f"cnt_bloco_ieduc_e5_1_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 QUESITO E5.1 - Estabelecimentos Adaptados para PCD ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("Quesito E5.1 • Estabelecimentos Adaptados para PCD")
+            st.write(
+                "*Rampas e vias de acesso à escola, adaptação de salas de aula, banheiros e áreas de esporte e recreação.*"
+            )
+
+            d_e5_1 = res_data.get("E5_ADAPT") or {
+                "valor": '{"qtd": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_e5_1 = (
+                    json.loads(str(d_e5_1.get("valor", "{}")).replace("'", '"'))
+                    if isinstance(d_e5_1.get("valor"), str)
+                    else d_e5_1.get("valor", {})
+                )
+                init_q1 = int(val_e5_1.get("qtd", 0))
+                init_t1 = int(val_e5_1.get("total", 0))
+            except Exception:
+                init_q1, init_t1 = 0, 0
+
+            chave_q_e5_1 = f"v_e5_1_q_{ano_sel}"
+            chave_t_e5_1 = f"v_e5_1_t_{ano_sel}"
+            chave_link_e5_1 = f"l_e5_1_in_{ano_sel}_educ"
+            chave_coment_e5_1 = f"coment_E5_ADAPT_{ano_sel}_educ"
+
+            evidencia_e5_1_salva = d_e5_1.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e5_1 = st.number_input(
+                    "Estabelecimentos adaptados para receber crianças com deficiência:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_q_e5_1, init_q1)),
+                    key=f"input_num_e5_1_q_{ano_sel}",
+                )
+                st.session_state[chave_q_e5_1] = q_e5_1
+
+                t_e5_1 = st.number_input(
+                    "Total de estabelecimentos de ensino (creche, pré-escola e anos iniciais) [PCD]:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_t_e5_1, init_t1)),
+                    key=f"input_num_e5_1_t_{ano_sel}",
+                )
+                st.session_state[chave_t_e5_1] = t_e5_1
+
+                prop_e5_1 = (q_e5_1 / t_e5_1) if t_e5_1 > 0 else 0.0
+                pts_e5_1 = round(prop_e5_1 * 20.0, 2)
+
+                st.info(
+                    f"📊 **Análise de Infraestrutura (PCD):**\n"
+                    f"* Proporção de Escolas Adaptadas: **{prop_e5_1:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e5_1:.2f}** / 20.00 pontos"
+                )
+
+            with c2:
+                link_e5_1 = st.text_area(
+                    "Link/Evidência (E5.1):",
+                    value=evidencia_e5_1_salva,
+                    key=chave_link_e5_1,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e5_1 = st.empty()
+                links_visuais_e5_1 = re.findall(regex_url, link_e5_1 or "")
+                if links_visuais_e5_1:
+                    placeholder_links_e5_1.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e5_1
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E5_ADAPT", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Quesito E5.1",
+                key=f"btn_salvar_e5_1_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e5_1 = {"qtd": q_e5_1, "total": t_e5_1}
+                str_salvar_e5_1 = json.dumps(dict_salvar_e5_1)
+                lnk_val_e5_1 = link_e5_1.strip()
+                coment_salvar_e5_1 = st.session_state.get(
+                    chave_coment_e5_1, d_e5_1.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E5_ADAPT",
+                        valor=str_salvar_e5_1,
+                        pontos=pts_e5_1,
+                        link=lnk_val_e5_1,
+                        comentarios=coment_salvar_e5_1,
+                    )
+
+                res_data["E5_ADAPT"] = {
+                    "valor": str_salvar_e5_1,
+                    "pontos": pts_e5_1,
+                    "link": lnk_val_e5_1,
+                    "comentarios": coment_salvar_e5_1,
+                }
+
+                links_atuais_e5_1 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e5_1 or "")
+                ]
+                links_antigos_e5_1 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e5_1_salva or "")
+                ]
+
+                if (
+                    lnk_val_e5_1 != evidencia_e5_1_salva
+                    and links_atuais_e5_1
+                    and links_atuais_e5_1 != links_antigos_e5_1
+                ):
+                    st.session_state[f"links_pendentes_e5_1_{ano_sel}"] = (
+                        links_atuais_e5_1
+                    )
+                    st.session_state[f"gatilho_modal_e5_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Quesito E5.1 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e5_1_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E5_ADAPT",
+                st.session_state.get(f"links_pendentes_e5_1_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e5_1_{ano_sel}"] = False
+
+
+    # -------------------------------------------------------------------------
+    # E5.2 - Quadra Poliesportiva Coberta
+    # -------------------------------------------------------------------------
+    with st.container(key=f"cnt_bloco_ieduc_e5_2_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 QUESITO E5.2 - Quadra Poliesportiva Coberta ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("Quesito E5.2 • Quadra Poliesportiva Coberta")
+            st.write(
+                "*Estabelecimentos dos Anos Iniciais que possuíam quadra poliesportiva coberta.*"
+            )
+
+            d_e5_2 = res_data.get("E5_QUADRA") or {
+                "valor": '{"qtd": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_e5_2 = (
+                    json.loads(str(d_e5_2.get("valor", "{}")).replace("'", '"'))
+                    if isinstance(d_e5_2.get("valor"), str)
+                    else d_e5_2.get("valor", {})
+                )
+                init_q2 = int(val_e5_2.get("qtd", 0))
+                init_t2 = int(val_e5_2.get("total", 0))
+            except Exception:
+                init_q2, init_t2 = 0, 0
+
+            chave_q_e5_2 = f"v_e5_2_q_{ano_sel}"
+            chave_t_e5_2 = f"v_e5_2_t_{ano_sel}"
+            chave_link_e5_2 = f"l_e5_2_in_{ano_sel}_educ"
+            chave_coment_e5_2 = f"coment_E5_QUADRA_{ano_sel}_educ"
+
+            evidencia_e5_2_salva = d_e5_2.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e5_2 = st.number_input(
+                    "Estabelecimentos dos Anos Iniciais com quadra poliesportiva coberta:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_q_e5_2, init_q2)),
+                    key=f"input_num_e5_2_q_{ano_sel}",
+                )
+                st.session_state[chave_q_e5_2] = q_e5_2
+
+                t_e5_2 = st.number_input(
+                    "Total de estabelecimentos de ensino (Anos Iniciais):",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_t_e5_2, init_t2)),
+                    key=f"input_num_e5_2_t_{ano_sel}",
+                )
+                st.session_state[chave_t_e5_2] = t_e5_2
+
+                prop_e5_2 = (q_e5_2 / t_e5_2) if t_e5_2 > 0 else 0.0
+                pts_e5_2 = round(prop_e5_2 * 15.0, 2)
+
+                st.info(
+                    f"📊 **Análise de Quadra Coberta:**\n"
+                    f"* Proporção de Escolas com Quadra Coberta: **{prop_e5_2:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e5_2:.2f}** / 15.00 pontos"
+                )
+
+            with c2:
+                link_e5_2 = st.text_area(
+                    "Link/Evidência (E5.2):",
+                    value=evidencia_e5_2_salva,
+                    key=chave_link_e5_2,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e5_2 = st.empty()
+                links_visuais_e5_2 = re.findall(regex_url, link_e5_2 or "")
+                if links_visuais_e5_2:
+                    placeholder_links_e5_2.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e5_2
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E5_QUADRA", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Quesito E5.2",
+                key=f"btn_salvar_e5_2_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e5_2 = {"qtd": q_e5_2, "total": t_e5_2}
+                str_salvar_e5_2 = json.dumps(dict_salvar_e5_2)
+                lnk_val_e5_2 = link_e5_2.strip()
+                coment_salvar_e5_2 = st.session_state.get(
+                    chave_coment_e5_2, d_e5_2.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E5_QUADRA",
+                        valor=str_salvar_e5_2,
+                        pontos=pts_e5_2,
+                        link=lnk_val_e5_2,
+                        comentarios=coment_salvar_e5_2,
+                    )
+
+                res_data["E5_QUADRA"] = {
+                    "valor": str_salvar_e5_2,
+                    "pontos": pts_e5_2,
+                    "link": lnk_val_e5_2,
+                    "comentarios": coment_salvar_e5_2,
+                }
+
+                links_atuais_e5_2 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e5_2 or "")
+                ]
+                links_antigos_e5_2 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e5_2_salva or "")
+                ]
+
+                if (
+                    lnk_val_e5_2 != evidencia_e5_2_salva
+                    and links_atuais_e5_2
+                    and links_atuais_e5_2 != links_antigos_e5_2
+                ):
+                    st.session_state[f"links_pendentes_e5_2_{ano_sel}"] = (
+                        links_atuais_e5_2
+                    )
+                    st.session_state[f"gatilho_modal_e5_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Quesito E5.2 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e5_2_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E5_QUADRA",
+                st.session_state.get(f"links_pendentes_e5_2_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e5_2_{ano_sel}"] = False
+
+
+    # -------------------------------------------------------------------------
+    # E5.3 - Bibliotecas Escolares
+    # -------------------------------------------------------------------------
+    with st.container(key=f"cnt_bloco_ieduc_e5_3_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 QUESITO E5.3 - Bibliotecas Escolares ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("Quesito E5.3 • Bibliotecas Escolares")
+            st.write(
+                "*Estabelecimentos que possuíam bibliotecas (não considerar sala de leitura).*"
+            )
+
+            d_e5_3 = res_data.get("E5_LEITURA") or {
+                "valor": '{"qtd": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_e5_3 = (
+                    json.loads(str(d_e5_3.get("valor", "{}")).replace("'", '"'))
+                    if isinstance(d_e5_3.get("valor"), str)
+                    else d_e5_3.get("valor", {})
+                )
+                init_q3 = int(val_e5_3.get("qtd", 0))
+                init_t3 = int(val_e5_3.get("total", 0))
+            except Exception:
+                init_q3, init_t3 = 0, 0
+
+            chave_q_e5_3 = f"v_e5_3_q_{ano_sel}"
+            chave_t_e5_3 = f"v_e5_3_t_{ano_sel}"
+            chave_link_e5_3 = f"l_e5_3_in_{ano_sel}_educ"
+            chave_coment_e5_3 = f"coment_E5_LEITURA_{ano_sel}_educ"
+
+            evidencia_e5_3_salva = d_e5_3.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e5_3 = st.number_input(
+                    "Estabelecimentos que possuíam bibliotecas:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_q_e5_3, init_q3)),
+                    key=f"input_num_e5_3_q_{ano_sel}",
+                )
+                st.session_state[chave_q_e5_3] = q_e5_3
+
+                t_e5_3 = st.number_input(
+                    "Total de estabelecimentos de ensino [Bibliotecas]:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_t_e5_3, init_t3)),
+                    key=f"input_num_e5_3_t_{ano_sel}",
+                )
+                st.session_state[chave_t_e5_3] = t_e5_3
+
+                prop_e5_3 = (q_e5_3 / t_e5_3) if t_e5_3 > 0 else 0.0
+                pts_e5_3 = round(prop_e5_3 * 35.0, 2)
+
+                st.info(
+                    f"📊 **Análise de Cobertura de Bibliotecas:**\n"
+                    f"* Proporção de Escolas com Biblioteca: **{prop_e5_3:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e5_3:.2f}** / 35.00 pontos"
+                )
+
+            with c2:
+                link_e5_3 = st.text_area(
+                    "Link/Evidência (E5.3):",
+                    value=evidencia_e5_3_salva,
+                    key=chave_link_e5_3,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e5_3 = st.empty()
+                links_visuais_e5_3 = re.findall(regex_url, link_e5_3 or "")
+                if links_visuais_e5_3:
+                    placeholder_links_e5_3.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e5_3
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E5_LEITURA", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Quesito E5.3",
+                key=f"btn_salvar_e5_3_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e5_3 = {"qtd": q_e5_3, "total": t_e5_3}
+                str_salvar_e5_3 = json.dumps(dict_salvar_e5_3)
+                lnk_val_e5_3 = link_e5_3.strip()
+                coment_salvar_e5_3 = st.session_state.get(
+                    chave_coment_e5_3, d_e5_3.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E5_LEITURA",
+                        valor=str_salvar_e5_3,
+                        pontos=pts_e5_3,
+                        link=lnk_val_e5_3,
+                        comentarios=coment_salvar_e5_3,
+                    )
+
+                res_data["E5_LEITURA"] = {
+                    "valor": str_salvar_e5_3,
+                    "pontos": pts_e5_3,
+                    "link": lnk_val_e5_3,
+                    "comentarios": coment_salvar_e5_3,
+                }
+
+                links_atuais_e5_3 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e5_3 or "")
+                ]
+                links_antigos_e5_3 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e5_3_salva or "")
+                ]
+
+                if (
+                    lnk_val_e5_3 != evidencia_e5_3_salva
+                    and links_atuais_e5_3
+                    and links_atuais_e5_3 != links_antigos_e5_3
+                ):
+                    st.session_state[f"links_pendentes_e5_3_{ano_sel}"] = (
+                        links_atuais_e5_3
+                    )
+                    st.session_state[f"gatilho_modal_e5_3_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Quesito E5.3 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e5_3_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E5_LEITURA",
+                st.session_state.get(f"links_pendentes_e5_3_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e5_3_{ano_sel}"] = False
+
+
+    # -------------------------------------------------------------------------
+    # E5.4 - Atividades Definitivamente Encerradas (Penalidade Fixa)
+    # -------------------------------------------------------------------------
+    with st.container(key=f"cnt_bloco_ieduc_e5_4_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 QUESITO E5.4 - Atividades Definitivamente Encerradas ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("Quesito E5.4 • Atividades Definitivamente Encerradas")
+            st.write(
+                "*Se o número de estabelecimentos definitivamente encerrados for maior ou igual a 1 -> Perde 5 pontos.*"
+            )
+
+            d_e5_4 = res_data.get("E5_ENCERRADAS") or {
+                "valor": "0",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_str_e5_4 = str(d_e5_4.get("valor", "0"))
+                init_q4 = int(val_str_e5_4) if val_str_e5_4.isdigit() else 0
+            except Exception:
+                init_q4 = 0
+
+            chave_q_e5_4 = f"v_num_e5_4_{ano_sel}"
+            chave_link_e5_4 = f"l_e5_4_in_{ano_sel}_educ"
+            chave_coment_e5_4 = f"coment_E5_ENCERRADAS_{ano_sel}_educ"
+
+            evidencia_e5_4_salva = d_e5_4.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e5_4 = st.number_input(
+                    "Estabelecimentos que tiveram suas atividades escolares definitivamente encerradas:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_q_e5_4, init_q4)),
+                    key=f"input_num_e5_4_{ano_sel}",
+                )
+                st.session_state[chave_q_e5_4] = q_e5_4
+
+                pts_e5_4 = -5.0 if q_e5_4 >= 1 else 0.0
+
+                if pts_e5_4 < 0:
+                    st.error(
+                        f"📉 **Penalidade Aplicada:** **{pts_e5_4:.2f}** pontos (perde 05 pontos devido ao encerramento definitivo)."
+                    )
+                else:
+                    st.success("🟢 **Nenhuma penalidade aplicada.**")
+
+            with c2:
+                link_e5_4 = st.text_area(
+                    "Link/Evidência (E5.4):",
+                    value=evidencia_e5_4_salva,
+                    key=chave_link_e5_4,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e5_4 = st.empty()
+                links_visuais_e5_4 = re.findall(regex_url, link_e5_4 or "")
+                if links_visuais_e5_4:
+                    placeholder_links_e5_4.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e5_4
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E5_ENCERRADAS", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Quesito E5.4",
+                key=f"btn_salvar_e5_4_{ano_sel}",
+                type="primary",
+            ):
+                str_salvar_e5_4 = str(q_e5_4)
+                lnk_val_e5_4 = link_e5_4.strip()
+                coment_salvar_e5_4 = st.session_state.get(
+                    chave_coment_e5_4, d_e5_4.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E5_ENCERRADAS",
+                        valor=str_salvar_e5_4,
+                        pontos=pts_e5_4,
+                        link=lnk_val_e5_4,
+                        comentarios=coment_salvar_e5_4,
+                    )
+
+                res_data["E5_ENCERRADAS"] = {
+                    "valor": str_salvar_e5_4,
+                    "pontos": pts_e5_4,
+                    "link": lnk_val_e5_4,
+                    "comentarios": coment_salvar_e5_4,
+                }
+
+                links_atuais_e5_4 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e5_4 or "")
+                ]
+                links_antigos_e5_4 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e5_4_salva or "")
+                ]
+
+                if (
+                    lnk_val_e5_4 != evidencia_e5_4_salva
+                    and links_atuais_e5_4
+                    and links_atuais_e5_4 != links_antigos_e5_4
+                ):
+                    st.session_state[f"links_pendentes_e5_4_{ano_sel}"] = (
+                        links_atuais_e5_4
+                    )
+                    st.session_state[f"gatilho_modal_e5_4_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Quesito E5.4 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e5_4_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E5_ENCERRADAS",
+                st.session_state.get(f"links_pendentes_e5_4_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e5_4_{ano_sel}"] = False
+
+
+    # -------------------------------------------------------------------------
+    # E5.5 - Atividades Temporariamente Suspensas (Penalidade Proporcional)
+    # -------------------------------------------------------------------------
+    with st.container(key=f"cnt_bloco_ieduc_e5_5_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 QUESITO E5.5 - Atividades Temporariamente Suspensas ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("Quesito E5.5 • Atividades Temporariamente Suspensas")
+            st.write(
+                "*Penalidade de até -25 pontos calculada proporcionalmente ao volume de paralisações.*"
+            )
+
+            d_e5_5 = res_data.get("E5_SUSP") or {
+                "valor": '{"qtd": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_e5_5 = (
+                    json.loads(str(d_e5_5.get("valor", "{}")).replace("'", '"'))
+                    if isinstance(d_e5_5.get("valor"), str)
+                    else d_e5_5.get("valor", {})
+                )
+                init_q5 = int(val_e5_5.get("qtd", 0))
+                init_t5 = int(val_e5_5.get("total", 0))
+            except Exception:
+                init_q5, init_t5 = 0, 0
+
+            chave_q_e5_5 = f"v_e5_5_q_{ano_sel}"
+            chave_t_e5_5 = f"v_e5_5_t_{ano_sel}"
+            chave_link_e5_5 = f"l_e5_5_in_{ano_sel}_educ"
+            chave_coment_e5_5 = f"coment_E5_SUSP_{ano_sel}_educ"
+
+            evidencia_e5_5_salva = d_e5_5.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e5_5 = st.number_input(
+                    "Estabelecimentos que tiveram suas atividades escolares temporariamente suspensas:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_q_e5_5, init_q5)),
+                    key=f"input_num_e5_5_q_{ano_sel}",
+                )
+                st.session_state[chave_q_e5_5] = q_e5_5
+
+                t_e5_5 = st.number_input(
+                    "Nº de escolas no município [Suspensão]:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_t_e5_5, init_t5)),
+                    key=f"input_num_e5_5_t_{ano_sel}",
+                )
+                st.session_state[chave_t_e5_5] = t_e5_5
+
+                prop_e5_5 = (q_e5_5 / t_e5_5) if t_e5_5 > 0 else 0.0
+                pts_e5_5 = round(-25.0 * prop_e5_5, 2)
+
+                if pts_e5_5 < 0:
+                    st.error(
+                        f"📉 **Penalidade Proporcional Aplicada:** **{pts_e5_5:.2f}** / -25.00 pts (com base em {prop_e5_5:.2%} de suspensão)."
+                    )
+                else:
+                    st.success("🟢 **Nenhuma penalidade aplicada.**")
+
+            with c2:
+                link_e5_5 = st.text_area(
+                    "Link/Evidência (E5.5):",
+                    value=evidencia_e5_5_salva,
+                    key=chave_link_e5_5,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e5_5 = st.empty()
+                links_visuais_e5_5 = re.findall(regex_url, link_e5_5 or "")
+                if links_visuais_e5_5:
+                    placeholder_links_e5_5.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e5_5
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E5_SUSP", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Quesito E5.5",
+                key=f"btn_salvar_e5_5_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e5_5 = {"qtd": q_e5_5, "total": t_e5_5}
+                str_salvar_e5_5 = json.dumps(dict_salvar_e5_5)
+                lnk_val_e5_5 = link_e5_5.strip()
+                coment_salvar_e5_5 = st.session_state.get(
+                    chave_coment_e5_5, d_e5_5.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E5_SUSP",
+                        valor=str_salvar_e5_5,
+                        pontos=pts_e5_5,
+                        link=lnk_val_e5_5,
+                        comentarios=coment_salvar_e5_5,
+                    )
+
+                res_data["E5_SUSP"] = {
+                    "valor": str_salvar_e5_5,
+                    "pontos": pts_e5_5,
+                    "link": lnk_val_e5_5,
+                    "comentarios": coment_salvar_e5_5,
+                }
+
+                links_atuais_e5_5 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e5_5 or "")
+                ]
+                links_antigos_e5_5 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e5_5_salva or "")
+                ]
+
+                if (
+                    lnk_val_e5_5 != evidencia_e5_5_salva
+                    and links_atuais_e5_5
+                    and links_atuais_e5_5 != links_antigos_e5_5
+                ):
+                    st.session_state[f"links_pendentes_e5_5_{ano_sel}"] = (
+                        links_atuais_e5_5
+                    )
+                    st.session_state[f"gatilho_modal_e5_5_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Quesito E5.5 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e5_5_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E5_SUSP",
+                st.session_state.get(f"links_pendentes_e5_5_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e5_5_{ano_sel}"] = False
+
+
+    # -------------------------------------------------------------------------
+    # E5.7 - Estabelecimentos sem Banheiros (Penalidade Proporcional)
+    # -------------------------------------------------------------------------
+    with st.container(key=f"cnt_bloco_ieduc_e5_7_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 QUESITO E5.7 - Estabelecimentos sem Banheiros ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("Quesito E5.7 • Estabelecimentos sem Banheiros")
+            st.write(
+                "*Penalidade de até -30 pontos calculada proporcionalmente ao volume de carência.*"
+            )
+
+            d_e5_7 = res_data.get("E5_BANHEIROS") or {
+                "valor": '{"qtd": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_e5_7 = (
+                    json.loads(str(d_e5_7.get("valor", "{}")).replace("'", '"'))
+                    if isinstance(d_e5_7.get("valor"), str)
+                    else d_e5_7.get("valor", {})
+                )
+                init_q7 = int(val_e5_7.get("qtd", 0))
+                init_t7 = int(val_e5_7.get("total", 0))
+            except Exception:
+                init_q7, init_t7 = 0, 0
+
+            chave_q_e5_7 = f"v_e5_7_q_{ano_sel}"
+            chave_t_e5_7 = f"v_e5_7_t_{ano_sel}"
+            chave_link_e5_7 = f"l_e5_7_in_{ano_sel}_educ"
+            chave_coment_e5_7 = f"coment_E5_BANHEIROS_{ano_sel}_educ"
+
+            evidencia_e5_7_salva = d_e5_7.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e5_7 = st.number_input(
+                    "Estabelecimentos que não possuem banheiros:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_q_e5_7, init_q7)),
+                    key=f"input_num_e5_7_q_{ano_sel}",
+                )
+                st.session_state[chave_q_e5_7] = q_e5_7
+
+                t_e5_7 = st.number_input(
+                    "Nº de escolas no município [Banheiros]:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_t_e5_7, init_t7)),
+                    key=f"input_num_e5_7_t_{ano_sel}",
+                )
+                st.session_state[chave_t_e5_7] = t_e5_7
+
+                prop_e5_7 = (q_e5_7 / t_e5_7) if t_e5_7 > 0 else 0.0
+                pts_e5_7 = round(-30.0 * prop_e5_7, 2)
+
+                if pts_e5_7 < 0:
+                    st.error(
+                        f"📉 **Penalidade Severa Aplicada:** **{pts_e5_7:.2f}** / -30.00 pts (com base em {prop_e5_7:.2%} de ausência de banheiros)."
+                    )
+                else:
+                    st.success("🟢 **Nenhuma penalidade applied.**")
+
+            with c2:
+                link_e5_7 = st.text_area(
+                    "Link/Evidência (E5.7):",
+                    value=evidencia_e5_7_salva,
+                    key=chave_link_e5_7,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e5_7 = st.empty()
+                links_visuais_e5_7 = re.findall(regex_url, link_e5_7 or "")
+                if links_visuais_e5_7:
+                    placeholder_links_e5_7.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e5_7
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E5_BANHEIROS", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Quesito E5.7",
+                key=f"btn_salvar_e5_7_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e5_7 = {"qtd": q_e5_7, "total": t_e5_7}
+                str_salvar_e5_7 = json.dumps(dict_salvar_e5_7)
+                lnk_val_e5_7 = link_e5_7.strip()
+                coment_salvar_e5_7 = st.session_state.get(
+                    chave_coment_e5_7, d_e5_7.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E5_BANHEIROS",
+                        valor=str_salvar_e5_7,
+                        pontos=pts_e5_7,
+                        link=lnk_val_e5_7,
+                        comentarios=coment_salvar_e5_7,
+                    )
+
+                res_data["E5_BANHEIROS"] = {
+                    "valor": str_salvar_e5_7,
+                    "pontos": pts_e5_7,
+                    "link": lnk_val_e5_7,
+                    "comentarios": coment_salvar_e5_7,
+                }
+
+                links_atuais_e5_7 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e5_7 or "")
+                ]
+                links_antigos_e5_7 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e5_7_salva or "")
+                ]
+
+                if (
+                    lnk_val_e5_7 != evidencia_e5_7_salva
+                    and links_atuais_e5_7
+                    and links_atuais_e5_7 != links_antigos_e5_7
+                ):
+                    st.session_state[f"links_pendentes_e5_7_{ano_sel}"] = (
+                        links_atuais_e5_7
+                    )
+                    st.session_state[f"gatilho_modal_e5_7_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Quesito E5.7 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e5_7_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E5_BANHEIROS",
+                st.session_state.get(f"links_pendentes_e5_7_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e5_7_{ano_sel}"] = False
+
+
+    # -------------------------------------------------------------------------
+    # E5.8 - Salas de Aula Climatizadas
+    # -------------------------------------------------------------------------
+    with st.container(key=f"cnt_bloco_ieduc_e5_8_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 QUESITO E5.8 - Salas de Aula Climatizadas ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("Quesito E5.8 • Salas de Aula Climatizadas")
+            st.write("*Ar condicionado, aquecedor ou climatizador.*")
+
+            d_e5_8 = res_data.get("E5_CLIMA") or {
+                "valor": '{"qtd": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            try:
+                val_e5_8 = (
+                    json.loads(str(d_e5_8.get("valor", "{}")).replace("'", '"'))
+                    if isinstance(d_e5_8.get("valor"), str)
+                    else d_e5_8.get("valor", {})
+                )
+                init_q8 = int(val_e5_8.get("qtd", 0))
+                init_t8 = int(val_e5_8.get("total", 0))
+            except Exception:
+                init_q8, init_t8 = 0, 0
+
+            chave_q_e5_8 = f"v_e5_8_q_{ano_sel}"
+            chave_t_e5_8 = f"v_e5_8_t_{ano_sel}"
+            chave_link_e5_8 = f"l_e5_8_in_{ano_sel}_educ"
+            chave_coment_e5_8 = f"coment_E5_CLIMA_{ano_sel}_educ"
+
+            evidencia_e5_8_salva = d_e5_8.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                q_e5_8 = st.number_input(
+                    "Estabelecimentos com salas de aula climatizadas:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_q_e5_8, init_q8)),
+                    key=f"input_num_e5_8_q_{ano_sel}",
+                )
+                st.session_state[chave_q_e5_8] = q_e5_8
+
+                t_e5_8 = st.number_input(
+                    "Nº de escolas no município [Climatização]:",
+                    min_value=0,
+                    step=1,
+                    value=int(st.session_state.get(chave_t_e5_8, init_t8)),
+                    key=f"input_num_e5_8_t_{ano_sel}",
+                )
+                st.session_state[chave_t_e5_8] = t_e5_8
+
+                prop_e5_8 = (q_e5_8 / t_e5_8) if t_e5_8 > 0 else 0.0
+                pts_e5_8 = round(prop_e5_8 * 5.0, 2)
+
+                st.info(
+                    f"📊 **Análise de Climatização:**\n"
+                    f"* Proporção de Escolas Climatizadas: **{prop_e5_8:.2%}**\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e5_8:.2f}** / 5.00 pontos"
+                )
+
+            with c2:
+                link_e5_8 = st.text_area(
+                    "Link/Evidência (E5.8):",
+                    value=evidencia_e5_8_salva,
+                    key=chave_link_e5_8,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e5_8 = st.empty()
+                links_visuais_e5_8 = re.findall(regex_url, link_e5_8 or "")
+                if links_visuais_e5_8:
+                    placeholder_links_e5_8.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e5_8
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E5_CLIMA", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Quesito E5.8",
+                key=f"btn_salvar_e5_8_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e5_8 = {"qtd": q_e5_8, "total": t_e5_8}
+                str_salvar_e5_8 = json.dumps(dict_salvar_e5_8)
+                lnk_val_e5_8 = link_e5_8.strip()
+                coment_salvar_e5_8 = st.session_state.get(
+                    chave_coment_e5_8, d_e5_8.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E5_CLIMA",
+                        valor=str_salvar_e5_8,
+                        pontos=pts_e5_8,
+                        link=lnk_val_e5_8,
+                        comentarios=coment_salvar_e5_8,
+                    )
+
+                res_data["E5_CLIMA"] = {
+                    "valor": str_salvar_e5_8,
+                    "pontos": pts_e5_8,
+                    "link": lnk_val_e5_8,
+                    "comentarios": coment_salvar_e5_8,
+                }
+
+                links_atuais_e5_8 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e5_8 or "")
+                ]
+                links_antigos_e5_8 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e5_8_salva or "")
+                ]
+
+                if (
+                    lnk_val_e5_8 != evidencia_e5_8_salva
+                    and links_atuais_e5_8
+                    and links_atuais_e5_8 != links_antigos_e5_8
+                ):
+                    st.session_state[f"links_pendentes_e5_8_{ano_sel}"] = (
+                        links_atuais_e5_8
+                    )
+                    st.session_state[f"gatilho_modal_e5_8_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Quesito E5.8 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e5_8_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E5_CLIMA",
+                st.session_state.get(f"links_pendentes_e5_8_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e5_8_{ano_sel}"] = False
+
+
+    # =============================================================================
+    # INDICADOR E6 (Compartilhamento de Espaços com a Comunidade)
+    # =============================================================================
+    with st.container(key=f"cnt_bloco_ieduc_e6_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E6 - Compartilhamento de Espaços com a Comunidade ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E6 • Compartilhamento de Espaços")
+            st.write(
+                "**As escolas compartilham espaços com a comunidade? (Dados Censo Escolar 2025):**"
+            )
+
+            opcoes_e6 = [
+                "Todas as escolas compartilham – 05",
+                "A maior parte das escolas compartilham – 03",
+                "A menor parte das escolas compartilham – 01",
+                "As escolas não compartilham – 00",
+            ]
+            pontos_e6_map = {
+                "Todas as escolas compartilham – 05": 5.0,
+                "A maior parte das escolas compartilham – 03": 3.0,
+                "A menor parte das escolas compartilham – 01": 1.0,
+                "As escolas não compartilham – 00": 0.0,
+            }
+
+            d_e6 = res_data.get("E6") or {
+                "valor": "As escolas não compartilham – 00",
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            valor_banco_e6 = d_e6.get("valor", "As escolas não compartilham – 00")
+            if valor_banco_e6 == "Todas as escolas compartilham":
+                valor_banco_e6 = "Todas as escolas compartilham – 05"
+            elif valor_banco_e6 == "A maior parte das escolas compartilham":
+                valor_banco_e6 = "A maior parte das escolas compartilham – 03"
+            elif valor_banco_e6 == "A menor parte das escolas compartilham":
+                valor_banco_e6 = "A menor parte das escolas compartilham – 01"
+            elif valor_banco_e6 == "As escolas não compartilham":
+                valor_banco_e6 = "As escolas não compartilham – 00"
+
+            idx_e6 = opcoes_e6.index(valor_banco_e6) if valor_banco_e6 in opcoes_e6 else 3
+
+            chave_rad_e6 = f"rad_e6_{ano_sel}"
+            chave_link_e6 = f"l_e6_in_{ano_sel}_educ"
+            chave_coment_e6 = f"coment_E6_{ano_sel}_educ"
+
+            evidencia_e6_salva = d_e6.get("link", "")
+
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                resp_e6 = st.radio(
+                    "Selecione o nível de compartilhamento:",
+                    opcoes_e6,
+                    index=idx_e6,
+                    key=chave_rad_e6,
+                )
+
+                pts_e6 = pontos_e6_map[resp_e6]
+
+                st.info(
+                    f"📊 **Nível Selecionado:** {resp_e6}\n"
+                    f"* ✨ **Pontuação Obtida:** **{pts_e6:.2f}** / 5.00 pontos"
+                )
+
+            with c2:
+                link_e6 = st.text_area(
+                    "Link/Evidência (E6):",
+                    value=evidencia_e6_salva,
+                    key=chave_link_e6,
+                    placeholder="Insira os links e evidências...",
+                    height=180,
+                )
+
+                placeholder_links_e6 = st.empty()
+                links_visuais_e6 = re.findall(regex_url, link_e6 or "")
+                if links_visuais_e6:
+                    placeholder_links_e6.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e6
+                            ]
+                        )
+                    )
+
+            st.markdown("---")
+
+            if bloco_coment:
+                bloco_coment("E6", res_data, sufixo="educ")
+
+            if st.button(
+                "💾 Salvar Indicador E6",
+                key=f"btn_salvar_e6_{ano_sel}",
+                type="primary",
+            ):
+                lnk_val_e6 = link_e6.strip()
+                coment_salvar_e6 = st.session_state.get(
+                    chave_coment_e6, d_e6.get("comentarios", "")
+                )
+
+                if save_func:
+                    save_func(
+                        qid="E6",
+                        valor=resp_e6,
+                        pontos=pts_e6,
+                        link=lnk_val_e6,
+                        comentarios=coment_salvar_e6,
+                    )
+
+                res_data["E6"] = {
+                    "valor": resp_e6,
+                    "pontos": pts_e6,
+                    "link": lnk_val_e6,
+                    "comentarios": coment_salvar_e6,
+                }
+
+                links_atuais_e6 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, lnk_val_e6 or "")
+                ]
+                links_antigos_e6 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_url, evidencia_e6_salva or "")
+                ]
+
+                if (
+                    lnk_val_e6 != evidencia_e6_salva
+                    and links_atuais_e6
+                    and links_atuais_e6 != links_antigos_e6
+                ):
+                    st.session_state[f"links_pendentes_e6_{ano_sel}"] = (
+                        links_atuais_e6
+                    )
+                    st.session_state[f"gatilho_modal_e6_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast("Indicador E6 salvo com sucesso!", icon="✅")
+                st.rerun()
+
+    if st.session_state.get(f"gatilho_modal_e6_{ano_sel}", False):
+        if modal_func:
+            modal_func(
+                "E6",
+                st.session_state.get(f"links_pendentes_e6_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e6_{ano_sel}"] = False
+
    
