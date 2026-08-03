@@ -29479,6 +29479,14 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
         st.session_state[f"gatilho_modal_e3_10_{ano_sel}"] = False
 
 # =============================================================================
+    # DECLARAÇÃO DE AUXILIARES GLOBAIS DO MÓDULO (Evita UnboundLocalError)
+    # =============================================================================
+    regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
+    bloco_coment = globals().get("bloco_comentarios_ieduc", globals().get("bloco_comentarios"))
+    save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
+    modal_func = globals().get("modal_aviso_link")
+
+    # =============================================================================
     # INDICADOR E3.11 • KEY ÚNICA GARANTIDA
     # =============================================================================
     with st.container(key=f"cnt_bloco_ieduc_e3_11_{ano_sel}", border=True):
@@ -29545,7 +29553,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 )
 
                 placeholder_links_e311 = st.empty()
-                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
                 links_visuais_e311 = re.findall(regex_url, link_e311 or "")
                 if links_visuais_e311:
                     placeholder_links_e311.markdown(
@@ -29560,9 +29567,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
 
             st.markdown("---")
 
-            bloco_coment = globals().get(
-                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
-            )
             if bloco_coment:
                 bloco_coment("E3.11", res_data, sufixo="educ")
 
@@ -29577,9 +29581,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     chave_coment_e311, d_e311.get("comentarios", "")
                 )
 
-                save_func = globals().get(
-                    "save_resp_ieduc", globals().get("save_resp")
-                )
                 if save_func:
                     save_func(
                         qid="E3.11",
@@ -29620,7 +29621,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.rerun()
 
     if st.session_state.get(f"gatilho_modal_e3_11_{ano_sel}", False):
-        modal_func = globals().get("modal_aviso_link")
         if modal_func:
             modal_func(
                 "E3.11",
@@ -29655,7 +29655,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 if d_e312.get("valor") in opcoes_e312
                 else "Não"
             )
-            idx_e312 = opcoes_e312.index(init_val_e312)
 
             chave_rad_e312 = f"v_rad_e312_{ano_sel}"
             chave_link_e312 = f"l_e312_in_{ano_sel}_educ"
@@ -29762,7 +29761,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.rerun()
 
     if st.session_state.get(f"gatilho_modal_e3_12_{ano_sel}", False):
-        modal_func = globals().get("modal_aviso_link")
         if modal_func:
             modal_func(
                 "E3.12",
@@ -29913,7 +29911,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     st.rerun()
 
         if st.session_state.get(f"gatilho_modal_e3_12_1_{ano_sel}", False):
-            modal_func = globals().get("modal_aviso_link")
             if modal_func:
                 modal_func(
                     "E3.12.1",
@@ -29921,11 +29918,15 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 )
             st.session_state[f"gatilho_modal_e3_12_1_{ano_sel}"] = False
     else:
-        # Limpeza caso a condição não seja atendida
         if "E3.12.1" in res_data:
-            save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
             if save_func:
-                save_func("E3.12.1", "Não se aplica", 0.0, "", "")
+                save_func(
+                    qid="E3.12.1",
+                    valor="Não se aplica",
+                    pontos=0.0,
+                    link="",
+                    comentarios="",
+                )
         st.info("ℹ️ **E3.12.1 Não aplicável:** O município não declarou alunos com deficiência ou altas habilidades nesta etapa de ensino.")
 
 
@@ -30061,7 +30062,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.rerun()
 
     if st.session_state.get(f"gatilho_modal_e3_13_{ano_sel}", False):
-        modal_func = globals().get("modal_aviso_link")
         if modal_func:
             modal_func(
                 "E3.13",
@@ -30257,7 +30257,6 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     st.rerun()
 
         if st.session_state.get(f"gatilho_modal_e3_13_1_{ano_sel}", False):
-            modal_func = globals().get("modal_aviso_link")
             if modal_func:
                 modal_func(
                     "E3.13.1",
@@ -30265,11 +30264,15 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 )
             st.session_state[f"gatilho_modal_e3_13_1_{ano_sel}"] = False
     else:
-        # Limpeza caso a condição não seja atendida
         if "E3.13.1" in res_data:
-            save_func = globals().get("save_resp_ieduc", globals().get("save_resp"))
             if save_func:
-                save_func("E3.13.1", "Não se aplica", 0.0, "", "")
+                save_func(
+                    qid="E3.13.1",
+                    valor="Não se aplica",
+                    pontos=0.0,
+                    link="",
+                    comentarios="",
+                )
         st.info("ℹ️ **E3.13.1 Não aplicável:** O município não participou da última edição da Prova Brasil/SAEB.")
 
    
