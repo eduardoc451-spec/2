@@ -24384,3 +24384,207 @@ def render_questao_20_0_ieduc(res_data: dict, ano_sel: str):
                 ano_sel,
             )
 
+def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
+    """Renderiza a aba 'Dados Externos' contendo o Indicador E1.1 (Infraestrutura de Creches)."""
+
+    st.markdown("### 📊 Dados Externos e Indicadores")
+
+    # =============================================================================
+    # SUB-ABA / CONTAINER: INDICADOR E1.1 (Infraestrutura de Creches - Pátio Infantil)
+    # =============================================================================
+    with st.container(
+        key=f"container_bloco_ieduc_e1_1_{ano_sel}", border=True
+    ):
+        with st.expander(
+            f"📌 INDICADOR E1.1 - Infraestrutura de Creches - Pátio Infantil ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E1.1 • Pátio Infantil em Creches")
+            st.write(
+                "**Informe a quantidade de estabelecimentos de Creche para cálculo da infraestrutura (Dados Censo Escolar 2025):**"
+            )
+
+            # --- Recuperação segura do Estado Inicial (Banco de Dados / Payload JSON) ---
+            d_e11 = res_data.get("E1.1") or {
+                "valor": '{"com_patio": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            # Chaves padronizadas no Session State
+            chave_patio_e11 = f"v_num_e11_patio_{ano_sel}"
+            chave_total_e11 = f"v_num_e11_total_{ano_sel}"
+            chave_link_e11 = f"l_e11_in_{ano_sel}_educ"
+            chave_coment_e11 = f"coment_e1.1_{ano_sel}_educ"
+
+            # Parsing seguro do valor JSON armazenado
+            try:
+                val_banco_e11 = json.loads(
+                    str(d_e11.get("valor", "{}")).replace("'", '"')
+                )
+                init_patio = int(val_banco_e11.get("com_patio", 0))
+                init_total = int(val_banco_e11.get("total", 0))
+            except Exception:
+                init_patio = 0
+                init_total = 0
+
+            evidencia_e11_salva = d_e11.get("link", "")
+
+            # --- Layout em Duas Colunas (Inputs Numéricos à Esquerda, Links/Evidências à Direita) ---
+            col_inputs, col_evidencias = st.columns([1, 1])
+
+            with col_inputs:
+                val_patio_ref = st.session_state.get(chave_patio_e11, init_patio)
+                q_patio = st.number_input(
+                    "Nº de creches com pátio infantil:",
+                    min_value=0,
+                    step=1,
+                    value=val_patio_ref,
+                    key=f"num_e11_patio_{ano_sel}",
+                )
+                st.session_state[chave_patio_e11] = q_patio
+
+                val_total_ref = st.session_state.get(chave_total_e11, init_total)
+                q_total = st.number_input(
+                    "Nº total de creches no município:",
+                    min_value=0,
+                    step=1,
+                    value=val_total_ref,
+                    key=f"num_e11_total_{ano_sel}",
+                )
+                st.session_state[chave_total_e11] = q_total
+
+            with col_evidencias:
+                link_e11 = st.text_area(
+                    "Link/Evidência (E1.1):",
+                    value=evidencia_e11_salva,
+                    key=chave_link_e11,
+                    placeholder="Insira os links e evidências dos dados do Censo Escolar...",
+                    height=115,
+                )
+
+                # Detecção e Renderização Visual de Links Ativos
+                placeholder_links_e11 = st.empty()
+                regex_pattern = globals().get(
+                    "REGEX_PURE_URL", REGEX_PURE_URL
+                )
+                links_e11_visuais = re.findall(regex_pattern, link_e11 or "")
+                if links_e11_visuais:
+                    placeholder_links_e11.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_e11_visuais
+                            ]
+                        )
+                    )
+
+            # --- Regra de Negócio e Cálculo Matemático ---
+            pts_e11 = 0.0
+            prop_pi = 0.0
+
+            if q_total > 0:
+                if q_patio > q_total:
+                    st.error(
+                        "⚠️ Atenção: O número de creches com pátio não pode ser maior do que o total de creches."
+                    )
+                else:
+                    prop_pi = q_patio / q_total
+                    pts_e11 = round(prop_pi * 2.0, 2)
+
+            st.markdown("---")
+
+            # --- Renderização do Bloco Padrão de Comentários ---
+            bloco_comentarios_func = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_comentarios_func:
+                bloco_comentarios_func("E1.1", res_data, sufixo="educ")
+
+            # --- Botão de Salvamento Manual ---
+            if st.button(
+                "💾 Salvar Indicador E1.1",
+                key=f"btn_salvar_e1_1_{ano_sel}",
+                type="primary",
+            ):
+                dict_salvar_e11 = {"com_patio": q_patio, "total": q_total}
+                str_salvar_e11 = json.dumps(dict_salvar_e11)
+                lnk_val_e11 = link_e11.strip()
+
+                # Captura de comentário do Session State
+                comentario_para_salvar = st.session_state.get(
+                    chave_coment_e11, d80_coment if 'd80_coment' in locals() else d_e11.get("comentarios", "")
+                )
+
+                # Persistência via função unificada de banco
+                save_resp_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_resp_func:
+                    save_resp_func(
+                        qid="E1.1",
+                        valor=str_salvar_e11,
+                        pontos=float(pts_e11),
+                        link=lnk_val_e11,
+                        comentarios=comentario_para_salvar,
+                    )
+
+                # Atualiza estrutura em memória (res_data)
+                res_data["E1.1"] = {
+                    "valor": str_salvar_e11,
+                    "pontos": float(pts_e11),
+                    "link": lnk_val_e11,
+                    "comentarios": comentario_para_salvar,
+                }
+
+                # Verificação de alteração em links para disparo do Modal de Auditoria
+                links_atuais = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_pattern, lnk_val_e11 or "")
+                ]
+                links_antigos = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(regex_pattern, evidencia_e11_salva or "")
+                ]
+
+                if (
+                    lnk_val_e11 != evidencia_e11_salva
+                    and links_atuais
+                    and links_atuais != links_antigos
+                ):
+                    st.session_state[f"links_pendentes_e1_1_{ano_sel}"] = (
+                        links_atuais
+                    )
+                    st.session_state[f"gatilho_modal_e1_1_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Informações e dados do Indicador E1.1 salvos com sucesso!",
+                    icon="✅",
+                )
+                st.rerun()
+
+            # --- Status e Impacto de Pontuação ---
+            pts_exibido_e11 = d_e11.get("pontos", 0.0)
+            cor_status_e11 = "#28a745" if pts_exibido_e11 > 0 else "#dc3545"
+            st.markdown(
+                f"<span style='color:{cor_status_e11}; font-weight:bold;'>"
+                f"📊 Resultado do Indicador E1.1: {pts_exibido_e11:.2f} / 2.00 pontos obtidos "
+                f"(Proporção Alcançada: {prop_pi:.2%})</span>",
+                unsafe_allow_html=True,
+            )
+
+    # =============================================================================
+    # GATILHO DO MODAL AUDITORIA DE LINKS (Fora do container principal)
+    # =============================================================================
+    if st.session_state.get(f"gatilho_modal_e1_1_{ano_sel}", False):
+        modal_aviso_func = globals().get("modal_aviso_link")
+        if modal_aviso_func:
+            modal_aviso_func(
+                "E1.1",
+                st.session_state.get(f"links_pendentes_e1_1_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e1_1_{ano_sel}"] = False
+
