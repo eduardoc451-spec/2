@@ -32645,7 +32645,11 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
     # =============================================================================
     # ABA DE GRÁFICOS E DESEMPENHO HISTÓRICO (i-Saúde)
     # =============================================================================
-    with aba_graf:
+    # Tratamento de fallback caso aba_graf ou ano_sel não estejam declarados no escopo
+    target_container = aba_graf if "aba_graf" in locals() or "aba_graf" in globals() else st.container()
+    ano_referencia = ano_sel if "ano_sel" in locals() or "ano_sel" in globals() else "hist"
+
+    with target_container:
         st.header("📈 Evolução e Desempenho Histórico - i-Saúde")
         st.caption("Acompanhamento do progresso das pontuações consolidadas ao longo dos anos.")
 
@@ -32741,7 +32745,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
             st.plotly_chart(
                 fig, 
                 use_container_width=True, 
-                key=f"chart_evolucao_isaude_{ano_sel if 'ano_sel' in locals() else 'hist'}"
+                key=f"chart_evolucao_isaude_{ano_referencia}"
             )
 
             # -----------------------------------------------------------------
@@ -32755,11 +32759,8 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.dataframe(
                     dados_tabela, 
                     use_container_width=True,
-                    key=f"df_historico_isaude_{ano_sel if 'ano_sel' in locals() else 'hist'}"
+                    key=f"df_historico_isaude_{ano_referencia}"
                 )
 
         else:
             st.info("ℹ️ Ainda não há dados salvos suficientes para gerar o gráfico de evolução do i-Saúde.")
-
-
-   
