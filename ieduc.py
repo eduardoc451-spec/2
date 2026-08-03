@@ -30275,4 +30275,401 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 )
         st.info("ℹ️ **E3.13.1 Não aplicável:** O município não participou da última edição da Prova Brasil/SAEB.")
 
+            # =============================================================================
+    # INDICADOR E3.13.2 • KEY ÚNICA GARANTIDA (Condicional ao E3.13)
+    # =============================================================================
+    if resp_e313 == "Sim":
+        with st.container(key=f"cnt_bloco_ieduc_e3_13_2_{ano_sel}", border=True):
+            with st.expander(
+                f"📌 INDICADOR E3.13.2 - Percentual de Alunos Avaliados no SAEB - 5º Ano ({ano_sel})",
+                expanded=True,
+            ):
+                st.subheader("INDICADOR E3.13.2 • Alunos Avaliados no SAEB")
+                st.write(
+                    "**Em relação aos alunos matriculados nas escolas municipais que integraram o público-alvo da última edição do Prova Brasil/SAEB, informe (Dados INEP):**"
+                )
+
+                d_e313_2 = res_data.get("E3.13.2") or {
+                    "valor": '{"presentes_5ano": 0, "ausentes_5ano": 0}',
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": "",
+                }
+
+                try:
+                    val_banco_e313_2 = (
+                        json.loads(str(d_e313_2.get("valor", "{}")).replace("'", '"'))
+                        if isinstance(d_e313_2.get("valor"), str)
+                        else d_e313_2.get("valor", {})
+                    )
+                    init_pres_5 = int(val_banco_e313_2.get("presentes_5ano", 0))
+                    init_aus_5 = int(val_banco_e313_2.get("ausentes_5ano", 0))
+                except Exception:
+                    init_pres_5 = 0
+                    init_aus_5 = 0
+
+                chave_pres_e313_2 = f"v_num_e3132_pres_{ano_sel}"
+                chave_aus_e313_2 = f"v_num_e3132_aus_{ano_sel}"
+                chave_link_e313_2 = f"l_e313_2_in_{ano_sel}_educ"
+                chave_coment_e313_2 = f"coment_E3.13.2_{ano_sel}_educ"
+
+                evidencia_e313_2_salva = d_e313_2.get("link", "")
+
+                c1, c2 = st.columns([1, 1])
+
+                with c1:
+                    q_presentes_5ano = st.number_input(
+                        "5º Ano do Ensino Fundamental - Alunos presentes:",
+                        min_value=0,
+                        step=1,
+                        value=int(
+                            st.session_state.get(chave_pres_e313_2, init_pres_5)
+                        ),
+                        key=f"input_num_e3132_pres_{ano_sel}",
+                    )
+                    st.session_state[chave_pres_e313_2] = q_presentes_5ano
+
+                    q_ausentes_5ano = st.number_input(
+                        "5º Ano do Ensino Fundamental - Alunos ausentes:",
+                        min_value=0,
+                        step=1,
+                        value=int(
+                            st.session_state.get(chave_aus_e313_2, init_aus_5)
+                        ),
+                        key=f"input_num_e3132_aus_{ano_sel}",
+                    )
+                    st.session_state[chave_aus_e313_2] = q_ausentes_5ano
+
+                    pts_e313_2 = 0.0
+                    p1_percentual = 0.0
+                    p_max = 18.0
+                    total_publico_alvo = q_presentes_5ano + q_ausentes_5ano
+
+                    if total_publico_alvo > 0:
+                        p1_percentual = q_presentes_5ano / total_publico_alvo
+                        pts_e313_2 = round(p_max * p1_percentual, 2)
+
+                    st.info(
+                        f"📊 **Análise de Participação no SAEB (5º Ano):**\n"
+                        f"* Total de Alunos no Público-Alvo: **{total_publico_alvo}**\n"
+                        f"* Taxa de Alunos Avaliados ($P_1$): **{p1_percentual:.2%}**\n"
+                        f"* ✨ **Pontuação Proporcional Obtida (NF):** **{pts_e313_2:.2f}** / 18.00 pontos"
+                    )
+
+                with c2:
+                    link_e313_2 = st.text_area(
+                        "Link/Evidência (E3.13.2):",
+                        value=evidencia_e313_2_salva,
+                        key=chave_link_e313_2,
+                        placeholder="Insira os links e evidências...",
+                        height=180,
+                    )
+
+                    placeholder_links_e313_2 = st.empty()
+                    links_visuais_e313_2 = re.findall(regex_url, link_e313_2 or "")
+                    if links_visuais_e313_2:
+                        placeholder_links_e313_2.markdown(
+                            "**🔗 Links Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_visuais_e313_2
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                if bloco_coment:
+                    bloco_coment("E3.13.2", res_data, sufixo="educ")
+
+                if st.button(
+                    "💾 Salvar Indicador E3.13.2",
+                    key=f"btn_salvar_e3_13_2_{ano_sel}",
+                    type="primary",
+                ):
+                    dict_salvar_e313_2 = {
+                        "presentes_5ano": q_presentes_5ano,
+                        "ausentes_5ano": q_ausentes_5ano,
+                    }
+                    str_salvar_e313_2 = json.dumps(dict_salvar_e313_2)
+                    lnk_val_e313_2 = link_e313_2.strip()
+                    coment_salvar_e313_2 = st.session_state.get(
+                        chave_coment_e313_2, d_e313_2.get("comentarios", "")
+                    )
+
+                    if save_func:
+                        save_func(
+                            qid="E3.13.2",
+                            valor=str_salvar_e313_2,
+                            pontos=pts_e313_2,
+                            link=lnk_val_e313_2,
+                            comentarios=coment_salvar_e313_2,
+                        )
+
+                    res_data["E3.13.2"] = {
+                        "valor": str_salvar_e313_2,
+                        "pontos": pts_e313_2,
+                        "link": lnk_val_e313_2,
+                        "comentarios": coment_salvar_e313_2,
+                    }
+
+                    links_atuais_e313_2 = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(regex_url, lnk_val_e313_2 or "")
+                    ]
+                    links_antigos_e313_2 = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(regex_url, evidencia_e313_2_salva or "")
+                    ]
+
+                    if (
+                        lnk_val_e313_2 != evidencia_e313_2_salva
+                        and links_atuais_e313_2
+                        and links_atuais_e313_2 != links_antigos_e313_2
+                    ):
+                        st.session_state[f"links_pendentes_e3_13_2_{ano_sel}"] = (
+                            links_atuais_e313_2
+                        )
+                        st.session_state[f"gatilho_modal_e3_13_2_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Indicador E3.13.2 salvo com sucesso!", icon="✅")
+                    st.rerun()
+
+        if st.session_state.get(f"gatilho_modal_e3_13_2_{ano_sel}", False):
+            if modal_func:
+                modal_func(
+                    "E3.13.2",
+                    st.session_state.get(f"links_pendentes_e3_13_2_{ano_sel}", []),
+                )
+            st.session_state[f"gatilho_modal_e3_13_2_{ano_sel}"] = False
+    else:
+        if "E3.13.2" in res_data:
+            if save_func:
+                save_func(
+                    qid="E3.13.2",
+                    valor="Não se aplica",
+                    pontos=0.0,
+                    link="",
+                    comentarios="",
+                )
+        st.info("ℹ️ **E3.13.2 Não aplicável:** O município não participou da última edição da Prova Brasil/SAEB.")
+
+
+    # =============================================================================
+    # INDICADOR E3.13.3 • KEY ÚNICA GARANTIDA (Condicional ao E3.13)
+    # =============================================================================
+    if resp_e313 == "Sim":
+        with st.container(key=f"cnt_bloco_ieduc_e3_13_3_{ano_sel}", border=True):
+            with st.expander(
+                f"📌 INDICADOR E3.13.3 - Níveis de Desempenho SAEB - 5º Ano ({ano_sel})",
+                expanded=True,
+            ):
+                st.subheader("INDICADOR E3.13.3 • Níveis de Desempenho SAEB")
+                st.write(
+                    "**Informe o percentual de alunos do 5º ano do Ensino Fundamental do Município cujo nível de desempenho na última edição do Prova Brasil/SAEB esteve nos seguintes níveis (Dados INEP):**"
+                )
+
+                default_e313_3 = {
+                    "lp_p0": 0.0, "lp_p1": 0.0, "lp_p2": 0.0, "lp_p3": 0.0, "lp_p4": 0.0,
+                    "lp_p5": 0.0, "lp_p6": 0.0, "lp_p7": 0.0, "lp_p8": 0.0, "lp_p9": 0.0, "lp_p10": 0.0,
+                    "mt_p0": 0.0, "mt_p1": 0.0, "mt_p2": 0.0, "mt_p3": 0.0, "mt_p4": 0.0,
+                    "mt_p5": 0.0, "mt_p6": 0.0, "mt_p7": 0.0, "mt_p8": 0.0, "mt_p9": 0.0, "mt_p10": 0.0
+                }
+
+                d_e313_3 = res_data.get("E3.13.3") or {
+                    "valor": json.dumps(default_e313_3),
+                    "pontos": 0.0,
+                    "link": "",
+                    "comentarios": "",
+                }
+
+                try:
+                    val_banco_e313_3 = (
+                        json.loads(str(d_e313_3.get("valor", "{}")).replace("'", '"'))
+                        if isinstance(d_e313_3.get("valor"), str)
+                        else d_e313_3.get("valor", default_e313_3)
+                    )
+                except Exception:
+                    val_banco_e313_3 = default_e313_3
+
+                chave_link_e313_3 = f"l_e313_3_in_{ano_sel}_educ"
+                chave_coment_e313_3 = f"coment_E3.13.3_{ano_sel}_educ"
+
+                evidencia_e313_3_salva = d_e313_3.get("link", "")
+
+                q_lp = {}
+                q_mt = {}
+
+                c1, c2 = st.columns([1, 1])
+
+                with c1:
+                    col_lp, col_mt = st.columns(2)
+
+                    with col_lp:
+                        st.markdown("##### 📝 Língua Portuguesa")
+                        for i in range(11):
+                            init_lp = float(val_banco_e313_3.get(f"lp_p{i}", 0.0))
+                            ref_lp = float(st.session_state.get(f"v_num_e3133_lp_p{i}_{ano_sel}", init_lp))
+
+                            q_lp[f"p{i}"] = st.number_input(
+                                f"% Nível {i} (LP):",
+                                min_value=0.0,
+                                max_value=100.0,
+                                step=0.01,
+                                format="%.2f",
+                                value=ref_lp,
+                                key=f"input_num_e3133_lp_p{i}_{ano_sel}",
+                            )
+                            st.session_state[f"v_num_e3133_lp_p{i}_{ano_sel}"] = q_lp[f"p{i}"]
+
+                    with col_mt:
+                        st.markdown("##### 📐 Matemática")
+                        for i in range(11):
+                            init_mt = float(val_banco_e313_3.get(f"mt_p{i}", 0.0))
+                            ref_mt = float(st.session_state.get(f"v_num_e3133_mt_p{i}_{ano_sel}", init_mt))
+
+                            q_mt[f"p{i}"] = st.number_input(
+                                f"% Nível {i} (MT):",
+                                min_value=0.0,
+                                max_value=100.0,
+                                step=0.01,
+                                format="%.2f",
+                                value=ref_mt,
+                                key=f"input_num_e3133_mt_p{i}_{ano_sel}",
+                            )
+                            st.session_state[f"v_num_e3133_mt_p{i}_{ano_sel}"] = q_mt[f"p{i}"]
+
+                    soma_lp = sum(q_lp.values())
+                    soma_mt = sum(q_mt.values())
+
+                    if soma_lp > 0.0 and abs(soma_lp - 100.0) > 0.1:
+                        st.warning(f"⚠️ A soma dos percentuais de Língua Portuguesa é **{soma_lp:.2f}%**. O ideal é que feche em 100%.")
+                    if soma_mt > 0.0 and abs(soma_mt - 100.0) > 0.1:
+                        st.warning(f"⚠️ A soma dos percentuais de Matemática é **{soma_mt:.2f}%**. O ideal é que feche em 100%.")
+
+                    n1_lp = (
+                        (0.0 * q_lp["p0"]) + (0.0 * q_lp["p1"]) + (2.15 * q_lp["p2"]) +
+                        (4.3 * q_lp["p3"]) + (6.45 * q_lp["p4"]) + (8.6 * q_lp["p5"]) +
+                        (10.75 * q_lp["p6"]) + (12.9 * q_lp["p7"]) + (15.0 * q_lp["p8"]) +
+                        (19.0 * q_lp["p9"])
+                    ) / 100.0
+
+                    n2_mt = (
+                        (0.0 * q_mt["p0"]) + (0.0 * q_mt["p1"]) + (1.88 * q_mt["p2"]) +
+                        (3.76 * q_mt["p3"]) + (5.64 * q_mt["p4"]) + (7.52 * q_mt["p5"]) +
+                        (9.4 * q_mt["p6"]) + (11.28 * q_mt["p7"]) + (13.16 * q_mt["p8"]) +
+                        (15.0 * q_mt["p9"]) + (19.0 * q_mt["p10"])
+                    ) / 100.0
+
+                    pts_e313_3 = min(round(n1_lp + n2_mt, 2), 38.0)
+
+                    st.info(
+                        f"📊 **Cálculo da Nota de Proficiência (E3.13.3):**\n"
+                        f"* Nota Parcial Língua Portuguesa ($N_1$): **{n1_lp:.2f}** pontos\n"
+                        f"* Nota Parcial Matemática ($N_2$): **{n2_mt:.2f}** pontos\n"
+                        f"* ✨ **Pontuação Consolidada (NF):** **{pts_e313_3:.2f}** / 38.00 pontos"
+                    )
+
+                with c2:
+                    link_e313_3 = st.text_area(
+                        "Link/Evidência (E3.13.3):",
+                        value=evidencia_e313_3_salva,
+                        key=chave_link_e313_3,
+                        placeholder="Insira os links e evidências...",
+                        height=180,
+                    )
+
+                    placeholder_links_e313_3 = st.empty()
+                    links_visuais_e313_3 = re.findall(regex_url, link_e313_3 or "")
+                    if links_visuais_e313_3:
+                        placeholder_links_e313_3.markdown(
+                            "**🔗 Links Ativos:** "
+                            + " | ".join(
+                                [
+                                    f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                    for u in links_visuais_e313_3
+                                ]
+                            )
+                        )
+
+                st.markdown("---")
+
+                if bloco_coment:
+                    bloco_coment("E3.13.3", res_data, sufixo="educ")
+
+                if st.button(
+                    "💾 Salvar Indicador E3.13.3",
+                    key=f"btn_salvar_e3_13_3_{ano_sel}",
+                    type="primary",
+                ):
+                    dict_salvar_e313_3 = {}
+                    for i in range(11):
+                        dict_salvar_e313_3[f"lp_p{i}"] = q_lp[f"p{i}"]
+                        dict_salvar_e313_3[f"mt_p{i}"] = q_mt[f"p{i}"]
+                    str_salvar_e313_3 = json.dumps(dict_salvar_e313_3)
+                    lnk_val_e313_3 = link_e313_3.strip()
+                    coment_salvar_e313_3 = st.session_state.get(
+                        chave_coment_e313_3, d_e313_3.get("comentarios", "")
+                    )
+
+                    if save_func:
+                        save_func(
+                            qid="E3.13.3",
+                            valor=str_salvar_e313_3,
+                            pontos=pts_e313_3,
+                            link=lnk_val_e313_3,
+                            comentarios=coment_salvar_e313_3,
+                        )
+
+                    res_data["E3.13.3"] = {
+                        "valor": str_salvar_e313_3,
+                        "pontos": pts_e313_3,
+                        "link": lnk_val_e313_3,
+                        "comentarios": coment_salvar_e313_3,
+                    }
+
+                    links_atuais_e313_3 = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(regex_url, lnk_val_e313_3 or "")
+                    ]
+                    links_antigos_e313_3 = [
+                        u[0] if isinstance(u, tuple) else u
+                        for u in re.findall(regex_url, evidencia_e313_3_salva or "")
+                    ]
+
+                    if (
+                        lnk_val_e313_3 != evidencia_e313_3_salva
+                        and links_atuais_e313_3
+                        and links_atuais_e313_3 != links_antigos_e313_3
+                    ):
+                        st.session_state[f"links_pendentes_e3_13_3_{ano_sel}"] = (
+                            links_atuais_e313_3
+                        )
+                        st.session_state[f"gatilho_modal_e3_13_3_{ano_sel}"] = True
+
+                    st.cache_data.clear()
+                    st.toast("Indicador E3.13.3 salvo com sucesso!", icon="✅")
+                    st.rerun()
+
+        if st.session_state.get(f"gatilho_modal_e3_13_3_{ano_sel}", False):
+            if modal_func:
+                modal_func(
+                    "E3.13.3",
+                    st.session_state.get(f"links_pendentes_e3_13_3_{ano_sel}", []),
+                )
+            st.session_state[f"gatilho_modal_e3_13_3_{ano_sel}"] = False
+    else:
+        if "E3.13.3" in res_data:
+            if save_func:
+                save_func(
+                    qid="E3.13.3",
+                    valor="Não se aplica",
+                    pontos=0.0,
+                    link="",
+                    comentarios="",
+                )
+        st.info("ℹ️ **E3.13.3 Não aplicável:** O município não participou da última edição da Prova Brasil/SAEB.")
+
    
