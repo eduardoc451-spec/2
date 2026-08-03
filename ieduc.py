@@ -32518,8 +32518,8 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
 
             chave_txt_desp = f"txt_e11_desp_{ano_sel}"
             chave_txt_rec = f"txt_e11_rec_{ano_sel}"
-            chave_link_e11 = f"l_e11_in_{ano_sel}_educ"
-            chave_coment_e11 = f"coment_E11_{ano_sel}_educ"
+            chave_link_e11 = f"l_e11_ext_in_{ano_sel}_educ"
+            chave_coment_e11 = f"coment_E11_ext_{ano_sel}_educ"
 
             evidencia_e11_salva = d_e11.get("link", "")
 
