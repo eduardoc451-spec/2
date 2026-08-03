@@ -26085,9 +26085,9 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
         st.session_state[f"gatilho_modal_e1_9_{ano_sel}"] = False
 
 # =============================================================================
-    # INDICADOR E1.7 • TOTALMENTE INDEPENDENTE
+    # INDICADOR E1.7 • KEY ÚNICA GARANTIDA
     # =============================================================================
-    with st.container(key=f"container_bloco_ieduc_e1_7_{ano_sel}", border=True):
+    with st.container(key=f"cnt_bloco_ieduc_e1_7_{ano_sel}", border=True):
         with st.expander(
             f"📌 INDICADOR E1.7 - Profissionais da Educação na Creche ({ano_sel})",
             expanded=True,
@@ -26114,7 +26114,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 init_regentes = 0
                 init_apoio = 0
 
-            # Chaves padronizadas
+            # Chaves padronizadas e exclusivas
             chave_reg_e17 = f"v_num_e17_reg_{ano_sel}"
             chave_apo_e17 = f"v_num_e17_apo_{ano_sel}"
             chave_link_e17 = f"l_e17_in_{ano_sel}_educ"
@@ -26132,7 +26132,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     min_value=0,
                     step=1,
                     value=val_regentes_ref,
-                    key=f"num_e17_reg_{ano_sel}",
+                    key=f"input_num_e17_reg_{ano_sel}",
                 )
                 st.session_state[chave_reg_e17] = q_regentes
 
@@ -26142,7 +26142,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     min_value=0,
                     step=1,
                     value=val_apoio_ref,
-                    key=f"num_e17_apo_{ano_sel}",
+                    key=f"input_num_e17_apo_{ano_sel}",
                 )
                 st.session_state[chave_apo_e17] = q_apoio
 
@@ -26168,7 +26168,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 # Detecção visual de links
                 placeholder_links_e17 = st.empty()
                 links_visuais_e17 = re.findall(
-                    globals().get("REGEX_PURE_URL", REGEX_PURE_URL),
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
                     link_e17 or "",
                 )
                 if links_visuais_e17:
@@ -26224,14 +26224,15 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 }
 
                 # Verificação de modal de auditoria de links
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
                 links_atuais_e17 = [
                     u[0] if isinstance(u, tuple) else u
-                    for u in re.findall(REGEX_PURE_URL, lnk_val_e17 or "")
+                    for u in re.findall(regex_url, lnk_val_e17 or "")
                 ]
                 links_antigos_e17 = [
                     u[0] if isinstance(u, tuple) else u
                     for u in re.findall(
-                        REGEX_PURE_URL, evidencia_e17_salva or ""
+                        regex_url, evidencia_e17_salva or ""
                     )
                 ]
 
@@ -26264,9 +26265,9 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
 
 
     # =============================================================================
-    # INDICADOR E1.8 • TOTALMENTE INDEPENDENTE
+    # INDICADOR E1.8 • KEY ÚNICA GARANTIDA
     # =============================================================================
-    with st.container(key=f"container_bloco_ieduc_e1_8_{ano_sel}", border=True):
+    with st.container(key=f"cnt_bloco_ieduc_e1_8_{ano_sel}", border=True):
         with st.expander(
             f"📌 INDICADOR E1.8 - Creches com Atendimento em Tempo Integral ({ano_sel})",
             expanded=True,
@@ -26293,7 +26294,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 init_integral_e18 = 0
                 init_total_e18 = 0
 
-            # Chaves padronizadas
+            # Chaves padronizadas e exclusivas
             chave_int_e18 = f"v_num_e18_int_{ano_sel}"
             chave_tot_e18 = f"v_num_e18_tot_{ano_sel}"
             chave_link_e18 = f"l_e18_in_{ano_sel}_educ"
@@ -26311,7 +26312,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     min_value=0,
                     step=1,
                     value=val_integral_e18_ref,
-                    key=f"num_e18_int_{ano_sel}",
+                    key=f"input_num_e18_int_{ano_sel}",
                 )
                 st.session_state[chave_int_e18] = q_escolas_integral
 
@@ -26321,7 +26322,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     min_value=0,
                     step=1,
                     value=val_total_e18_ref,
-                    key=f"num_e18_tot_{ano_sel}",
+                    key=f"input_num_e18_tot_{ano_sel}",
                 )
                 st.session_state[chave_tot_e18] = q_total_escolas_e18
 
@@ -26365,7 +26366,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 # Detecção visual de links
                 placeholder_links_e18 = st.empty()
                 links_visuais_e18 = re.findall(
-                    globals().get("REGEX_PURE_URL", REGEX_PURE_URL),
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
                     link_e18 or "",
                 )
                 if links_visuais_e18:
@@ -26424,14 +26425,15 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 }
 
                 # Verificação de modal de auditoria de links
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
                 links_atuais_e18 = [
                     u[0] if isinstance(u, tuple) else u
-                    for u in re.findall(REGEX_PURE_URL, lnk_val_e18 or "")
+                    for u in re.findall(regex_url, lnk_val_e18 or "")
                 ]
                 links_antigos_e18 = [
                     u[0] if isinstance(u, tuple) else u
                     for u in re.findall(
-                        REGEX_PURE_URL, evidencia_e18_salva or ""
+                        regex_url, evidencia_e18_salva or ""
                     )
                 ]
 
@@ -26464,9 +26466,9 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
 
 
     # =============================================================================
-    # INDICADOR E1.9 • TOTALMENTE INDEPENDENTE
+    # INDICADOR E1.9 • KEY ÚNICA GARANTIDA
     # =============================================================================
-    with st.container(key=f"container_bloco_ieduc_e1_9_{ano_sel}", border=True):
+    with st.container(key=f"cnt_bloco_ieduc_e1_9_{ano_sel}", border=True):
         with st.expander(
             f"📌 INDICADOR E1.9 - Alunos de Creche em Tempo Integral ({ano_sel})",
             expanded=True,
@@ -26493,7 +26495,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 init_alunos_e19 = 0
                 init_total_alunos_e19 = 0
 
-            # Chaves padronizadas
+            # Chaves padronizadas e exclusivas
             chave_alu_e19 = f"v_num_e19_alu_{ano_sel}"
             chave_tot_e19 = f"v_num_e19_tot_{ano_sel}"
             chave_link_e19 = f"l_e19_in_{ano_sel}_educ"
@@ -26511,7 +26513,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     min_value=0,
                     step=1,
                     value=val_alunos_e19_ref,
-                    key=f"num_e19_alu_{ano_sel}",
+                    key=f"input_num_e19_alu_{ano_sel}",
                 )
                 st.session_state[chave_alu_e19] = q_alunos_integral
 
@@ -26523,7 +26525,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                     min_value=0,
                     step=1,
                     value=val_total_alunos_ref,
-                    key=f"num_e19_tot_{ano_sel}",
+                    key=f"input_num_e19_tot_{ano_sel}",
                 )
                 st.session_state[chave_tot_e19] = q_total_alunos
 
@@ -26567,7 +26569,7 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 # Detecção visual de links
                 placeholder_links_e19 = st.empty()
                 links_visuais_e19 = re.findall(
-                    globals().get("REGEX_PURE_URL", REGEX_PURE_URL),
+                    globals().get("REGEX_PURE_URL", r"https?://[^\s]+"),
                     link_e19 or "",
                 )
                 if links_visuais_e19:
@@ -26626,14 +26628,15 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 }
 
                 # Verificação de modal de auditoria de links
+                regex_url = globals().get("REGEX_PURE_URL", r"https?://[^\s]+")
                 links_atuais_e19 = [
                     u[0] if isinstance(u, tuple) else u
-                    for u in re.findall(REGEX_PURE_URL, lnk_val_e19 or "")
+                    for u in re.findall(regex_url, lnk_val_e19 or "")
                 ]
                 links_antigos_e19 = [
                     u[0] if isinstance(u, tuple) else u
                     for u in re.findall(
-                        REGEX_PURE_URL, evidencia_e19_salva or ""
+                        regex_url, evidencia_e19_salva or ""
                     )
                 ]
 
