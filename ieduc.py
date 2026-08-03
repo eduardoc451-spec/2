@@ -32642,4 +32642,124 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
             )
         st.session_state[f"gatilho_modal_e11_{ano_sel}"] = False
 
+    # =============================================================================
+    # ABA DE GRÁFICOS E DESEMPENHO HISTÓRICO (i-Saúde)
+    # =============================================================================
+    with aba_graf:
+        st.header("📈 Evolução e Desempenho Histórico - i-Saúde")
+        st.caption("Acompanhamento do progresso das pontuações consolidadas ao longo dos anos.")
+
+        import pandas as pd
+        import plotly.express as px
+
+        # Busca os dados de todos os anos com verificações de segurança para evitar NameError
+        all_data = {}
+        if "get_all_years_data" in globals():
+            all_data = get_all_years_data()
+        elif "get_all_years_data_isaude" in globals():
+            all_data = get_all_years_data_isaude()
+        else:
+            # Busca manual pelos anos da série histórica caso a função global não exista
+            anos_busca = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+            for a in anos_busca:
+                if "load_respostas" in globals():
+                    d = load_respostas(a)
+                elif "load_respostas_isaude" in globals():
+                    d = load_respostas_isaude(a)
+                else:
+                    d = st.session_state.get(f"respostas_isaude_{a}", {})
+                if d:
+                    all_data[a] = d
+
+        if all_data:
+            anos_lista = sorted(all_data.keys())
+
+            # Cálculo dos totais desconsiderando comentários e chaves auxiliares
+            totais = []
+            for ano in anos_lista:
+                dados_ano = all_data.get(ano, {})
+                tot_ano = 0.0
+                if isinstance(dados_ano, dict):
+                    for k, item in dados_ano.items():
+                        if k.startswith("COM_"):
+                            continue
+                        if "_" in k and not k.startswith("S"):
+                            continue
+                        if isinstance(item, dict):
+                            tot_ano += float(item.get("pontos", 0.0))
+                totais.append(round(tot_ano, 1))
+
+            # -----------------------------------------------------------------
+            # RESUMO EM MÉTRICAS (KPIs)
+            # -----------------------------------------------------------------
+            col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+
+            val_max = max(totais) if totais else 0.0
+            val_atual = totais[-1] if totais else 0.0
+            val_media = (sum(totais) / len(totais)) if totais else 0.0
+
+            with col_kpi1:
+                st.metric("🏆 Maior Pontuação Histórica", f"{val_max:.1f} pts")
+            with col_kpi2:
+                st.metric("📌 Pontuação Atual", f"{val_atual:.1f} pts")
+            with col_kpi3:
+                st.metric("📊 Média Anual", f"{val_media:.1f} pts")
+
+            st.divider()
+
+            # -----------------------------------------------------------------
+            # GRÁFICO DE BARRAS PLOTLY INTERATIVO
+            # -----------------------------------------------------------------
+            fig = px.bar(
+                x=[str(a) for a in anos_lista],
+                y=totais,
+                labels={'x': 'Ano de Avaliação', 'y': 'Pontuação Total (pts)'},
+                title="Evolução da Pontuação Total por Ano (i-Saúde)",
+                text=[f"{v:.1f}" for v in totais],
+                color=totais,
+                color_continuous_scale="Blues"
+            )
+
+            # Ajustes visuais no gráfico
+            fig.update_traces(
+                textposition='outside',
+                hovertemplate="<b>Ano:</b> %{x}<br><b>Pontuação:</b> %{y:.1f} pts<extra></extra>"
+            )
+
+            max_y = (max(totais) + 120) if totais else 100
+
+            fig.update_layout(
+                height=450,
+                margin=dict(l=20, r=20, t=50, b=40),
+                coloraxis_showscale=False,
+                xaxis=dict(type='category', title_font=dict(size=14)),
+                yaxis=dict(range=[0, max_y], title_font=dict(size=14), gridcolor="#E9ECEF"),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)"
+            )
+
+            st.plotly_chart(
+                fig, 
+                use_container_width=True, 
+                key=f"chart_evolucao_isaude_{ano_sel if 'ano_sel' in locals() else 'hist'}"
+            )
+
+            # -----------------------------------------------------------------
+            # TABELA COMPLEMENTAR DE DADOS
+            # -----------------------------------------------------------------
+            with st.expander("📄 Visualizar Tabela de Dados Históricos"):
+                dados_tabela = [
+                    {"Ano": str(ano), "Pontuação Total": f"{tot:.1f} pts"}
+                    for ano, tot in zip(anos_lista, totais)
+                ]
+                st.dataframe(
+                    dados_tabela, 
+                    use_container_width=True,
+                    key=f"df_historico_isaude_{ano_sel if 'ano_sel' in locals() else 'hist'}"
+                )
+
+        else:
+            st.info("ℹ️ Ainda não há dados salvos suficientes para gerar o gráfico de evolução do i-Saúde.")
+
+
    
