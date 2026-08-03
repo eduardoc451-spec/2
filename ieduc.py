@@ -24598,3 +24598,201 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
                 st.session_state.get(f"links_pendentes_e1_1_{ano_sel}", []),
             )
         st.session_state[f"gatilho_modal_e1_1_{ano_sel}"] = False
+
+    # =============================================================================
+    # INDICADOR E1.2 • TOTALMENTE INDEPENDENTE
+    # =============================================================================
+    with st.container(key=f"container_bloco_ieduc_e1_2_{ano_sel}", border=True):
+        with st.expander(
+            f"📌 INDICADOR E1.2 - Materiais Pedagógicos e Brinquedos na Creche ({ano_sel})",
+            expanded=True,
+        ):
+            st.subheader("INDICADOR E1.2 • Materiais Pedagógicos e Brinquedos")
+            st.write(
+                "**Informe a quantidade de estabelecimentos de Creche que disponibilizam brinquedos e materiais pedagógicos (Dados Censo Escolar 2025):**"
+            )
+
+            # Estado inicial / persistente do banco
+            d_e12 = res_data.get("E1.2") or {
+                "valor": '{"com_brinquedo": 0, "total": 0}',
+                "pontos": 0.0,
+                "link": "",
+                "comentarios": "",
+            }
+
+            # Chaves padronizadas
+            chave_brinquedo_e12 = f"v_num_e12_brinq_{ano_sel}"
+            chave_total_e12 = f"v_num_e12_total_{ano_sel}"
+            chave_link_e12 = f"l_e12_in_{ano_sel}_educ"
+            chave_coment_e12 = f"coment_E1.2_{ano_sel}_educ"
+
+            # Leitura do valor em JSON
+            try:
+                val_banco_e12 = json.loads(
+                    str(d_e12.get("valor", "{}")).replace("'", '"')
+                )
+                init_brinquedo = int(val_banco_e12.get("com_brinquedo", 0))
+                init_total_e12 = int(val_banco_e12.get("total", 0))
+            except Exception:
+                init_brinquedo = 0
+                init_total_e12 = 0
+
+            evidencia_e12_salva = d_e12.get("link", "")
+
+            # Layout em duas colunas (Inputs à Esquerda | Links/Evidências à Direita)
+            c1, c2 = st.columns([1, 1])
+
+            with c1:
+                val_brinquedo_ref = st.session_state.get(
+                    chave_brinquedo_e12, init_brinquedo
+                )
+                q_brinquedo = st.number_input(
+                    "Nº de creches que disponibilizam brinquedos/materiais pedagógicos (BP):",
+                    min_value=0,
+                    step=1,
+                    value=val_brinquedo_ref,
+                    key=f"num_e12_brinq_{ano_sel}",
+                )
+                st.session_state[chave_brinquedo_e12] = q_brinquedo
+
+                val_total_e12_ref = st.session_state.get(
+                    chave_total_e12, init_total_e12
+                )
+                q_total_e12 = st.number_input(
+                    "Total de estabelecimentos que oferecem creche (TE):",
+                    min_value=0,
+                    step=1,
+                    value=val_total_e12_ref,
+                    key=f"num_e12_total_{ano_sel}",
+                )
+                st.session_state[chave_total_e12] = q_total_e12
+
+            with c2:
+                link_e12 = st.text_area(
+                    "Link/Evidência (E1.2):",
+                    value=evidencia_e12_salva,
+                    key=chave_link_e12,
+                    placeholder="Insira os links e evidências do Censo Escolar...",
+                    height=115,
+                )
+
+                # Detecção visual de links
+                placeholder_links_e12 = st.empty()
+                links_visuais_e12 = re.findall(
+                    globals().get("REGEX_PURE_URL", REGEX_PURE_URL),
+                    link_e12 or "",
+                )
+                if links_visuais_e12:
+                    placeholder_links_e12.markdown(
+                        "**🔗 Links Ativos:** "
+                        + " | ".join(
+                            [
+                                f"[{u[0] if isinstance(u, tuple) else u}]({u[0] if isinstance(u, tuple) else u})"
+                                for u in links_visuais_e12
+                            ]
+                        )
+                    )
+
+            # Regra de negócio e cálculo matemático
+            pts_e12 = 0.0
+            prop_p = 0.0
+
+            if q_total_e12 > 0:
+                if q_brinquedo > q_total_e12:
+                    st.error(
+                        "⚠️ Atenção: O número de creches com brinquedos (BP) não pode ser maior do que o total de creches (TE)."
+                    )
+                else:
+                    prop_p = q_brinquedo / q_total_e12
+                    pts_e12 = round(prop_p * 4.0, 2)
+
+            st.markdown("---")
+
+            # Bloco de comentários padronizado
+            bloco_coment = globals().get(
+                "bloco_comentarios_ieduc", globals().get("bloco_comentarios")
+            )
+            if bloco_coment:
+                bloco_coment("E1.2", res_data, sufixo="educ")
+
+            # Botão de Salvamento Manual
+            if st.button(
+                "💾 Salvar Indicador E1.2",
+                key=f"btn_salvar_e1_2_{ano_sel}",
+                type="primary",
+            ):
+                str_salvar_e12 = json.dumps(
+                    {"com_brinquedo": q_brinquedo, "total": q_total_e12}
+                )
+                lnk_val_e12 = link_e12.strip()
+                coment_salvar_e12 = st.session_state.get(
+                    chave_coment_e12, d_e12.get("comentarios", "")
+                )
+
+                save_func = globals().get(
+                    "save_resp_ieduc", globals().get("save_resp")
+                )
+                if save_func:
+                    save_func(
+                        qid="E1.2",
+                        valor=str_salvar_e12,
+                        pontos=float(pts_e12),
+                        link=lnk_val_e12,
+                        comentarios=coment_salvar_e12,
+                    )
+
+                res_data["E1.2"] = {
+                    "valor": str_salvar_e12,
+                    "pontos": float(pts_e12),
+                    "link": lnk_val_e12,
+                    "comentarios": coment_salvar_e12,
+                }
+
+                # Verificação de modal de auditoria de links
+                links_atuais_e12 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(REGEX_PURE_URL, lnk_val_e12 or "")
+                ]
+                links_antigos_e12 = [
+                    u[0] if isinstance(u, tuple) else u
+                    for u in re.findall(
+                        REGEX_PURE_URL, evidencia_e12_salva or ""
+                    )
+                ]
+
+                if (
+                    lnk_val_e12 != evidencia_e12_salva
+                    and links_atuais_e12
+                    and links_atuais_e12 != links_antigos_e12
+                ):
+                    st.session_state[f"links_pendentes_e1_2_{ano_sel}"] = (
+                        links_atuais_e12
+                    )
+                    st.session_state[f"gatilho_modal_e1_2_{ano_sel}"] = True
+
+                st.cache_data.clear()
+                st.toast(
+                    "Indicador E1.2 salvo com sucesso!",
+                    icon="✅",
+                )
+                st.rerun()
+
+            # Status de pontuação
+            pts_exibido_e12 = d_e12.get("pontos", 0.0)
+            cor_status_e12 = "#28a745" if pts_exibido_e12 > 0 else "#dc3545"
+            st.markdown(
+                f"<span style='color:{cor_status_e12}; font-weight:bold;'>"
+                f"📊 Resultado do Indicador E1.2: {pts_exibido_e12:.2f} / 4.00 pontos obtidos "
+                f"(Proporção Alcançada: {prop_p:.2%})</span>",
+                unsafe_allow_html=True,
+            )
+
+    # Trigger do Modal (fora do container)
+    if st.session_state.get(f"gatilho_modal_e1_2_{ano_sel}", False):
+        modal_func = globals().get("modal_aviso_link")
+        if modal_func:
+            modal_func(
+                "E1.2",
+                st.session_state.get(f"links_pendentes_e1_2_{ano_sel}", []),
+            )
+        st.session_state[f"gatilho_modal_e1_2_{ano_sel}"] = False
