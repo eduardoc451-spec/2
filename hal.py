@@ -1,28 +1,13 @@
-import json
-import logging
-import os
-import re
-import time
-import plotly.graph_objects as go
 import psycopg2
-import psycopg2.extras
 import streamlit as st
 
-# ==============================================================================
-# FUNÇÃO DE CONEXÃO SEGURA COM O POSTGRESQL (NEON DB)
-# ==============================================================================
+
 @st.cache_resource
 def get_db_connection():
-    """
-    Tenta obter a URL do banco do st.secrets, caso contrário utiliza
-    a variável de ambiente ou a string de conexão padrão.
-    """
+    # URL do seu banco Neon DB direta no código, sem usar st.secrets
+    db_url = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
+
     try:
-        if "postgres" in st.secrets and "url" in st.secrets["postgres"]:
-            db_url = st.secrets["postgres"]["url"]
-        else:
-            db_url = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require")
-        
         conn = psycopg2.connect(db_url)
         return conn
     except Exception as e:
