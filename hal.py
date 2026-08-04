@@ -52,8 +52,8 @@ class SistemaHAL:
             ]
         return []
 
-    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca a resposta focando apenas em iCidade (tabela respostas_iplan)."""
+   def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+        """Busca a resposta em respostas_iplan fazendo cast do id para texto."""
 
         if dimensao != "iCidade":
             return {
@@ -74,16 +74,15 @@ class SistemaHAL:
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # Usamos SELECT * para ler todas as colunas independente do nome exato
-                query = f"SELECT * FROM {tabela} WHERE id = %s AND ano = %s;"
+                # O segredo tá aqui: id::text faz o PostgreSQL aceitar "1.0" ou "1"
+                query = f"SELECT * FROM {tabela} WHERE id::text = %s AND ano = %s;"
                 cur.execute(query, (str(codigo_quesito), int(ano)))
                 resultado = cur.fetchone()
 
                 if resultado:
-                    # Converte a linha do banco para dicionário
                     dados = dict(resultado)
 
-                    # Busca a resposta (tenta as colunas 'valor', 'resposta' ou 'texto')
+                    # Busca flexível da coluna de resposta
                     resp_val = (
                         dados.get("valor")
                         or dados.get("resposta")
@@ -91,10 +90,9 @@ class SistemaHAL:
                         or "Resposta cadastrada sem texto"
                     )
 
-                    # Busca os pontos (tenta 'pontos' ou 'pontuacao')
+                    # Busca flexível dos pontos
                     pontos_val = dados.get("pontos", dados.get("pontuacao", 0))
 
-                    # Trata o link e comentários
                     link = dados.get("link")
                     comentarios = dados.get("comentarios")
 
@@ -139,75 +137,3 @@ class SistemaHAL:
         finally:
             if conn:
                 conn.close()
-
-
-def mostrar_chat_hal():
-    st.title("🤖 Assistente HAL - Teste iCidade")
-
-    if "sistema_hal" not in st.session_state:
-        st.session_state.sistema_hal = SistemaHAL()
-
-    sistema = st.session_state.sistema_hal
-
-    with st.expander("🔌 Status da Conexão com o Banco", expanded=False):
-        conn, erro_conexao = criar_conexao_direta()
-        if conn:
-            st.success("✅ Conectado ao PostgreSQL (Neon) com sucesso!")
-            conn.close()
-        else:
-            st.error("❌ Falha ao conectar no banco Neon!")
-            st.code(f"Erro: {erro_conexao}", language="bash")
-
-    st.subheader("📊 Consulta por Dimensão e Quesito")
-
-    lista_dimensoes = sistema.get_dimensoes()
-    lista_anos = [2026, 2025, 2024, 2023]
-
-    col1, col2, col3 = st.columns([1, 2.5, 1])
-
-    with col1:
-        dimensao_sel = st.selectbox("Dimensão:", options=lista_dimensoes)
-
-    with col2:
-        lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(
-            dimensao_sel
-        )
-        quesito_formatado_sel = st.selectbox(
-            "Quesito / Pergunta:", options=lista_quesitos_formatados
-        )
-        codigo_quesito_sel = (
-            quesito_formatado_sel.split(" - ")[0]
-            if quesito_formatado_sel
-            else ""
-        )
-
-    with col3:
-        ano_sel = st.selectbox("Ano:", options=lista_anos)
-
-    if quesito_formatado_sel:
-        dados_resposta = sistema.get_resposta_municipio(
-            dimensao_sel, codigo_quesito_sel, ano_sel
-        )
-
-        with st.container(border=True):
-            st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
-            st.caption(f"**Item:** {quesito_formatado_sel}")
-            st.divider()
-
-            col_res1, col_res2 = st.columns([3, 1])
-            with col_res1:
-                st.write(
-                    "**Resposta Cadastrada:**"
-                    f" {dados_resposta.get('resposta', 'Sem registro')}"
-                )
-                st.write(
-                    "**Detalhamento:**"
-                    f" {dados_resposta.get('detalhes', 'Sem observações')}"
-                )
-            with col_res2:
-                pontos = dados_resposta.get("pontuacao_obtida", 0)
-                st.metric("Pontuação", pontos)
-
-
-if __name__ == "__main__":
-    mostrar_chat_hal()
