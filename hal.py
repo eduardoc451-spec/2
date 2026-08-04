@@ -22,8 +22,9 @@ class SistemaHAL:
 
     def get_db_connection(self):
         """
-        Conecta diretamente ao banco de dados Neon via URI completa.
+        Conecta diretamente ao banco de dados Neon via URI real.
         """
+        # Substituído a URL genérica pela sua conexão real do Neon
         DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
         try:
             conn = psycopg2.connect(DATABASE_URL)
