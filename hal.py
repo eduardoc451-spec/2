@@ -1035,8 +1035,11 @@ class SistemaHAL:
 def mostrar_chat_hal():
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
 
-    # Instancia o sistema no session_state de forma persistente
-    if "sistema_hal" not in st.session_state:
+    # Garante que a instância existe E que possui o método novo
+    if (
+        "sistema_hal" not in st.session_state
+        or not hasattr(st.session_state.sistema_hal, "get_db_connection")
+    ):
         st.session_state.sistema_hal = SistemaHAL()
 
     sistema = st.session_state.sistema_hal
@@ -1049,7 +1052,7 @@ def mostrar_chat_hal():
             conn.close()
         else:
             st.error("❌ Falha ao conectar no banco Neon!")
-            st.code(f"Erro retornado:\n{erro_conexao}", language="bash")
+            st.code(f"Erro: {erro_conexao}", language="bash")
 
     # ---------------------------------------------------------
     # Filtros de Consulta
