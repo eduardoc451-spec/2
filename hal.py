@@ -478,6 +478,5 @@ def mostrar_chat_hal():
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-# Execução direta para testes locais
-if __name__ == "__main__":
-    mostrar_chat_hal()
+
+  
