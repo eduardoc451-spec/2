@@ -1,37 +1,39 @@
 import logging
 import pandas as pd
-import psycopg2
 import streamlit as st
 
 # Importa a classe get_connection do seu arquivo icidade_completo.py
 try:
     from icidade_completo import get_connection
 except ImportError as e:
-    st.error(
-        f"❌ Não foi possível importar 'get_connection' do arquivo 'icidade_completo.py'. Erro: {e}"
-    )
+    logging.error(f"Erro ao importar get_connection do icidade_completo: {e}")
+
+    # Fallback/Alerta caso o arquivo mude de nome no ambiente Streamlit
+    def get_connection():
+        raise ImportError(
+            "Não foi possível importar 'get_connection' de 'icidade_completo.py'."
+        )
 
 
-def executar_diagnostico_tabela(tabela_nome, ano=2026):
-    """Executa a verificação segura na tabela usando o Context Manager get_connection."""
+def buscar_soma_pontos(tabela: str, ano: int) -> float:
+    """Consulta a soma de pontos em uma tabela PostgreSQL usando o Context Manager do Neon."""
     try:
-        # Usa o 'with' para respeitar a classe Context Manager do seu icidade_completo.py
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                query = f"SELECT COUNT(*) AS qtd, COALESCE(SUM(pontos), 0) AS soma FROM {tabela_nome} WHERE ano = %s;"
-                cursor.execute(query, (ano,))
+                # Consulta somando os pontos diretamente no banco
+                sql = f"SELECT COALESCE(SUM(pontos), 0) FROM {tabela} WHERE ano = %s;"
+                cursor.execute(sql, (int(ano),))
                 res = cursor.fetchone()
-                return {
-                    "Status": "OK / Tabela Acessada",
-                    "Qtd Registros": res[0] if res else 0,
-                    "Soma dos Pontos": res[1] if res else 0,
-                }
+                if res and res[0] is not None:
+                    return float(res[0])
     except Exception as e:
-        return {
-            "Status": f"Erro: {str(e)}",
-            "Qtd Registros": 0,
-            "Soma dos Pontos": 0,
-        }
+        logging.warning(
+            f"[IEG-M Final] Erro/Tabela inexistente '{tabela}' para ano {ano}: {e}"
+        )
+
+    return 0.0
+
+
 # =============================================================================
 # FUNÇÕES DE LEITURA DAS DIMENSÕES
 # =============================================================================
@@ -43,17 +45,11 @@ def puxar_nota_iplan(ano: int) -> int:
 
 def puxar_nota_ifiscal(ano: int) -> int:
     """Carrega i-Fiscal e aplica regra de rebaixamento crítico (<-100 zerando a dimensão)."""
-    ano_str = str(ano)
     try:
         with get_connection() as conn:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-
             with conn.cursor() as cursor:
-                sql = "SELECT pontos FROM respostas_ifiscal WHERE CAST(ano AS TEXT) = %s"
-                cursor.execute(sql, (ano_str,))
+                sql = "SELECT pontos FROM respostas_ifiscal WHERE ano = %s;"
+                cursor.execute(sql, (int(ano),))
                 rows = cursor.fetchall()
 
                 if not rows:
@@ -87,7 +83,11 @@ def puxar_nota_iamb(ano: int) -> int:
 
 
 def puxar_nota_icidade(ano: int) -> int:
-    return int(round(buscar_soma_pontos("respostas_icidade", ano)))
+    # Caso o iCidade use a tabela genérica 'respostas' ou 'respostas_icidade'
+    pts = buscar_soma_pontos("respostas_icidade", ano)
+    if pts == 0:
+        pts = buscar_soma_pontos("respostas", ano)
+    return int(round(pts))
 
 
 def puxar_nota_igov(ano: int) -> int:
@@ -150,7 +150,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
     registro_historico = []
 
-    # Lê as notas reais no PostgreSQL
+    # Lê as notas reais no PostgreSQL (Neon)
     for ano in anos:
         plan = puxar_nota_iplan(ano)
         fiscal = puxar_nota_ifiscal(ano)
@@ -298,11 +298,9 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     # DIAGNÓSTICO DO BANCO DE DADOS (EXPANSÍVEL)
     # =========================================================================
     with st.expander(
-        f"🛠️ Diagnóstico do PostgreSQL (Verificar se há dados no Ano {ano_selecionado})"
+        f"🛠️ Diagnóstico do Neon PostgreSQL (Ano {ano_selecionado})"
     ):
-        st.write(
-            "Abaixo está a verificação direta nas tabelas do seu banco de dados:"
-        )
+        st.write("Verificação do estado das tabelas diretamente no banco:")
 
         tabelas_para_testar = [
             "respostas_igov",
@@ -320,10 +318,9 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
             try:
                 with get_connection() as conn:
                     with conn.cursor() as cursor:
-                        # Verifica se tabela existe e quantos registros tem para o ano
                         cursor.execute(
-                            f"SELECT COUNT(*), COALESCE(SUM(pontos), 0) FROM {tab} WHERE CAST(ano AS TEXT) = %s",
-                            (str(ano_selecionado),),
+                            f"SELECT COUNT(*), COALESCE(SUM(pontos), 0) FROM {tab} WHERE ano = %s;",
+                            (int(ano_selecionado),),
                         )
                         qtd, soma = cursor.fetchone()
                         relatorio_db.append(
@@ -338,7 +335,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                 relatorio_db.append(
                     {
                         "Tabela": tab,
-                        "Status": f"Não encontrada / Erro ({err})",
+                        "Status": f"Não encontrada/Erro: {err}",
                         "Qtd Registros": 0,
                         "Soma dos Pontos": 0.0,
                     }
