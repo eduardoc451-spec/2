@@ -71,7 +71,8 @@ class SistemaHAL:
             ]
         return []
 
-    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+   def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+        """Busca a resposta real no banco de dados Neon consultando a tabela específica de cada dimensão."""
         mapa_tabelas = {
             "iGov-Ti": "respostas_igov",
             "i-Amb": "respostas_iamb",
@@ -86,11 +87,12 @@ class SistemaHAL:
                 "pontuacao_obtida": 0,
             }
 
-        conn, erro = self.get_db_connection()
+        # --- AQUI ESTAVA O PROBLEMA: FORÇANDO A CONEXÃO CORRETA ---
+        conn, erro = criar_conexao_direta()
         if not conn:
             return {
                 "resposta": "Sem conexão",
-                "detalhes": f"Não foi possível conectar ao banco Neon: {erro}",
+                "detalhes": f"Não foi possível conectar ao banco de dados Neon: {erro}",
                 "pontuacao_obtida": 0,
             }
 
@@ -151,7 +153,6 @@ class SistemaHAL:
         finally:
             if conn:
                 conn.close()
-
 
 def mostrar_chat_hal():
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
