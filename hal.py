@@ -8,7 +8,6 @@ import streamlit as st
 import plotly.graph_objects as go
 
 # String de conexão ajustada (removido channel_binding incompatível com o driver puro)
-# URL Ajustada para o psycopg2
 DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
 
@@ -19,22 +18,27 @@ class SistemaHAL:
         self.carregar_dicionarios_globais()
 
     def get_db_connection(self):
-    try:
-        conn = psycopg2.connect(
-            DATABASE_URL,
-            cursor_factory=psycopg2.extras.DictCursor,
-            connect_timeout=10
-        )
-        return conn, None
-    except Exception as e:
-        return None, str(e)
+        """
+        Conecta diretamente ao banco Neon utilizando a string de conexão fixa.
+        Retorna uma tupla (conexao, erro_mensagem).
+        """
+        try:
+            conn = psycopg2.connect(
+                DATABASE_URL,
+                cursor_factory=psycopg2.extras.DictCursor,
+                connect_timeout=10
+            )
+            return conn, None
+        except Exception as e:
+            return None, str(e)
 
     def executar_query(self, query, params=None):
         """
         Executa consultas SQL no banco PostgreSQL.
         """
-        conn = self.get_db_connection()
+        conn, erro = self.get_db_connection()
         if not conn:
+            st.error(f"Erro ao conectar para executar query: {erro}")
             return []
         
         try:
@@ -83,11 +87,11 @@ class SistemaHAL:
                 "pontuacao_obtida": 0
             }
 
-        conn = self.get_db_connection()
+        conn, erro = self.get_db_connection()
         if not conn:
             return {
                 "resposta": "Sem conexão",
-                "detalhes": "Não foi possível conectar ao banco de dados Neon. Verifique o aviso vermelho no topo da tela.",
+                "detalhes": f"Não foi possível conectar ao banco Neon. Detalhe: {erro}",
                 "pontuacao_obtida": 0
             }
 
@@ -132,7 +136,8 @@ class SistemaHAL:
                 "pontuacao_obtida": 0
             }
         finally:
-            conn.close()
+            if conn:
+                conn.close()
     def carregar_dicionarios_globais(self):
         # Dicionário unificado com as 3 dimensões operacionais
         self.questoes_por_dimensao = {
