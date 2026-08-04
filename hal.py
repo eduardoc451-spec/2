@@ -71,7 +71,25 @@ class SistemaHAL:
         return []
 
 def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca a resposta real consultando a tabela única 'respostas' usando a coluna id."""
+        """Busca a resposta real consultando a tabela específica da dimensão selecionada."""
+        # Mapeamento com base nas tabelas exatas da imagem
+        mapa_tabelas = {
+            "iCidade": "respostas_iplan",
+            "iGov-Ti": "respostas_igov",
+            "i-Amb": "respostas_iamb",
+            "iEduc": "respostas_ieduc",
+            "iFiscal": "respostas_ifiscal",
+            "iSaude": "respostas_isaude",
+        }
+
+        tabela = mapa_tabelas.get(dimensao)
+        if not tabela:
+            return {
+                "resposta": "Dimensão desconhecida",
+                "detalhes": f"Tabela para a dimensão '{dimensao}' não foi configurada.",
+                "pontuacao_obtida": 0,
+            }
+
         conn, erro = criar_conexao_direta()
         if not conn:
             return {
@@ -84,23 +102,26 @@ def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # Consulta ajustada: usando a coluna 'id' no lugar de 'qid'
-                query = """
-                    SELECT id, dimensao, ano, valor, pontos, link 
-                    FROM respostas 
-                    WHERE LOWER(dimensao) = LOWER(%s) 
-                      AND id = %s 
-                      AND ano = %s;
+                # Consulta SQL apontando para as colunas id, ano, valor, pontos, link, comentarios
+                query = f"""
+                    SELECT id, ano, valor, pontos, link, comentarios 
+                    FROM {tabela} 
+                    WHERE id = %s AND ano = %s;
                 """
-                cur.execute(query, (str(dimensao), str(codigo_quesito), int(ano)))
+                cur.execute(query, (str(codigo_quesito), int(ano)))
                 resultado = cur.fetchone()
 
                 if resultado:
                     detalhe_texto = []
                     link = resultado.get("link")
+                    comentarios = resultado.get("comentarios")
 
                     if link and link != "EMPTY_STRING":
                         detalhe_texto.append(f"Link: {link}")
+
+                    # Trata o campo comentarios (caso venha texto ou json/list)
+                    if comentarios and comentarios != "EMPTY_STRING" and comentarios != "[]":
+                        detalhe_texto.append(f"Comentários: {comentarios}")
 
                     txt_detalhes = (
                         " | ".join(detalhe_texto)
@@ -125,21 +146,20 @@ def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
                     return {
                         "resposta": "Sem registro",
                         "detalhes": (
-                            f"Nenhum registro encontrado para {dimensao} -"
-                            f" item {codigo_quesito} em {ano}."
+                            f"Nenhum registro encontrado na tabela '{tabela}'"
+                            f" para o item {codigo_quesito} em {ano}."
                         ),
                         "pontuacao_obtida": 0,
                     }
         except Exception as e:
             return {
                 "resposta": "Erro na consulta",
-                "detalhes": f"Erro SQL ao consultar tabela respostas: {e}",
+                "detalhes": f"Erro SQL ao consultar {tabela}: {e}",
                 "pontuacao_obtida": 0,
             }
         finally:
             if conn:
                 conn.close()
-
 def mostrar_chat_hal():
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
 
