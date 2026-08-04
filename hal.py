@@ -372,7 +372,7 @@ def mostrar_chat_hal():
     else:
         lista_dimensoes = ["iCidade", "iGov-Ti", "i-Amb"]
 
-    lista_anos = [2025, 2024, 2023] # Defina os anos suportados no seu projeto
+    lista_anos = [2030, 2029, 2028, 2027, 2026, 2025, 2024, 2023] # Defina os anos suportados no seu projeto
 
     col1, col2, col3 = st.columns([1, 2.5, 1])
     
