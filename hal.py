@@ -324,21 +324,72 @@ class SistemaHAL:
             ]
         return []
 
-    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+   def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
         """
-        Busca no banco de dados a resposta real enviada pelo município.
-        (Ajuste com sua consulta SQL real para a tabela de respostas)
+        Busca a resposta real no banco de dados Neon consultando a tabela específica de cada dimensão.
         """
-        # Exemplo simulado - substitua pela sua query no PostgreSQL (Neon)
-        pontuacao = 0
-        if hasattr(self, 'pontuacoes_maximas_por_dimensao'):
-            pontuacao = self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).get(codigo_quesito, 0)
-
-        return {
-            "resposta": "Sim",
-            "detalhes": f"Informação enviada pelo município para a questão {codigo_quesito} em {ano}.",
-            "pontuacao_obtida": pontuacao
+        # Mapeamento de dimensão para a tabela correspondente no banco
+        mapa_tabelas = {
+            "iGov-Ti": "respostas_igov",
+            "i-Amb": "respostas_iamb",
+            "iCidade": "respostas_iplan"  # ajuste para 'respostas' se a iCidade usar essa
         }
+
+        tabela = mapa_tabelas.get(dimensao)
+        if not tabela:
+            return {
+                "resposta": "Dimensão desconhecida",
+                "detalhes": f"Tabela para a dimensão {dimensao} não configurada.",
+                "pontuacao_obtida": 0
+            }
+
+        conn = self.get_db_connection()
+        if not conn:
+            return {
+                "resposta": "Sem conexão",
+                "detalhes": "Não foi possível conectar ao banco de dados Neon.",
+                "pontuacao_obtida": 0
+            }
+
+        try:
+            with conn.cursor() as cur:
+                # Consulta ajustada exatamente para as colunas do seu print (id, ano, valor, pontos, link)
+                query = f"""
+                    SELECT id, ano, valor, pontos, link, comentarios 
+                    FROM {tabela} 
+                    WHERE id = %s AND ano = %s;
+                """
+                cur.execute(query, (str(codigo_quesito), int(ano)))
+                resultado = cur.fetchone()
+
+                if resultado:
+                    detalhe_texto = []
+                    if resultado['link'] and resultado['link'] != 'EMPTY_STRING':
+                        detalhe_texto.append(f"Link/Detalhamento: {resultado['link']}")
+                    if resultado['comentarios'] and resultado['comentarios'] != 'EMPTY_STRING':
+                        detalhe_texto.append(f"Comentários: {resultado['comentarios']}")
+
+                    txt_detalhes = " | ".join(detalhe_texto) if detalhe_texto else "Sem observações adicionais."
+
+                    return {
+                        "resposta": resultado['valor'] if resultado['valor'] else "Sem resposta",
+                        "detalhes": txt_detalhes,
+                        "pontuacao_obtida": resultado['pontos'] if resultado['pontos'] is not None else 0
+                    }
+                else:
+                    return {
+                        "resposta": "Sem registro",
+                        "detalhes": f"Nenhum registro encontrado na tabela {tabela} para o item {codigo_quesito} em {ano}.",
+                        "pontuacao_obtida": 0
+                    }
+        except Exception as e:
+            return {
+                "resposta": "Erro na consulta",
+                "detalhes": f"Erro SQL ao consultar {tabela}: {e}",
+                "pontuacao_obtida": 0
+            }
+        finally:
+            conn.close()
 
 
 def mostrar_chat_hal():
