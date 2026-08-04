@@ -219,13 +219,13 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
         registro_historico.append(
             {
                 "Ano": ano,
-                "i-Plan": round(plan, 2),
-                "i-Fiscal": round(fiscal, 2),
-                "i-Educ": round(educ, 2),
-                "i-Saúde": round(saude, 2),
-                "i-Amb": round(amb, 2),
-                "i-Cidade": round(cidade, 2),
-                "i-Gov TI": round(gov, 2),
+                "i-Plan": round(plan, 1),
+                "i-Fiscal": round(fiscal, 1),
+                "i-Educ": round(educ, 1),
+                "i-Saúde": round(saude, 1),
+                "i-Amb": round(amb, 1),
+                "i-Cidade": round(cidade, 1),
+                "i-Gov TI": round(gov, 1),
                 "Nota Final": round(nota_f, 1),
                 "Faixa": faixa.split(" (")[0],
             }
@@ -287,7 +287,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     with c1:
         st.metric(
             label="Nota Final Calculada",
-            value=f"{dados_ano_atual['Nota Final']} pts",
+            value=f"{dados_ano_atual['Nota Final']:.1f} pts",
         )
     with c2:
         st.markdown("**Faixa TCESP:**")
@@ -314,13 +314,13 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
             ],
             "Peso TCESP": ["20%", "20%", "20%", "20%", "10%", "5%", "5%"],
             "Pontuação Obtida": [
-                f"{dados_ano_atual['i-Plan']} pts",
-                f"{dados_ano_atual['i-Fiscal']} pts",
-                f"{dados_ano_atual['i-Educ']} pts",
-                f"{dados_ano_atual['i-Saúde']} pts",
-                f"{dados_ano_atual['i-Amb']} pts",
-                f"{dados_ano_atual['i-Cidade']} pts",
-                f"{dados_ano_atual['i-Gov TI']} pts",
+                f"{dados_ano_atual['i-Plan']:.1f} pts",
+                f"{dados_ano_atual['i-Fiscal']:.1f} pts",
+                f"{dados_ano_atual['i-Educ']:.1f} pts",
+                f"{dados_ano_atual['i-Saúde']:.1f} pts",
+                f"{dados_ano_atual['i-Amb']:.1f} pts",
+                f"{dados_ano_atual['i-Cidade']:.1f} pts",
+                f"{dados_ano_atual['i-Gov TI']:.1f} pts",
             ],
         }
     )
@@ -376,7 +376,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                             {
                                 "Tabela": tab,
                                 "Qtd Quesitos": qtd,
-                                "Soma Exata do Banco": float(soma),
+                                "Soma Exata do Banco": round(float(soma), 1),
                                 "Status": "OK",
                             }
                         )
@@ -403,7 +403,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                         {
                             "Tabela": "respostas (dimensao='icidade')",
                             "Qtd Quesitos": qtd,
-                            "Soma Exata do Banco": float(soma),
+                            "Soma Exata do Banco": round(float(soma), 1),
                             "Status": "OK",
                         }
                     )
