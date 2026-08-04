@@ -85,8 +85,31 @@ def puxar_nota_isaude(ano: int) -> float:
 
 
 def puxar_nota_iamb(ano: int) -> float:
-    """Tabela: respostas_iamb (ano, quesito, pontos)"""
-    return buscar_pontuacao_dimensao("respostas_iamb", ano)
+    """Tabela: respostas_iamb (ano, quesito, pontos)
+
+    Busca na tabela dedicada e garante nota mínima 0.0 (regra TCESP).
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql = "SELECT pontos FROM respostas_iamb WHERE ano = %s;"
+                cursor.execute(sql, (int(ano),))
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return 0.0
+
+                pontos_lista = [float(r[0]) for r in rows if r[0] is not None]
+
+                # Regra de rebaixamento crítico TCESP
+                if any(p <= -100.0 for p in pontos_lista):
+                    return 0.0
+
+                total = sum(p for p in pontos_lista if p > -100.0)
+                return float(max(0.0, total))
+    except Exception as e:
+        logging.warning(f"[i-Amb] Falha ao ler ano {ano}: {e}")
+        return 0.0
 
 
 def puxar_nota_icidade(ano: int) -> float:
