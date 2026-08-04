@@ -1348,12 +1348,23 @@ def render_sidebar_ieduc():
         "Ano de Referência:", anos, key="ano_referencia_ieduc"
     )
 
+    # Carrega os dados do ano selecionado
     if "load_respostas_ieduc" in globals():
         res_data = load_respostas_ieduc(ano_sel)
     elif "load_respostas" in globals():
         res_data = load_respostas(ano_sel)
     else:
         res_data = st.session_state.get(f"respostas_ieduc_{ano_sel}", {})
+
+    # Carrega todo o histórico (all_data) para a série histórica do PDF
+    all_data = {}
+    for a in anos:
+        if "load_respostas_ieduc" in globals():
+            all_data[a] = load_respostas_ieduc(a)
+        elif "load_respostas" in globals():
+            all_data[a] = load_respostas(a)
+        else:
+            all_data[a] = st.session_state.get(f"respostas_ieduc_{a}", {})
 
     total_pts = sum(
         float(item.get("pontos", 0.0))
@@ -1383,33 +1394,39 @@ def render_sidebar_ieduc():
 
     col1, col2 = st.sidebar.columns(2)
 
-    # Botão de Download direto
+    # Botão de Download do Relatório PDF (Garantido Ativo)
     with col1:
         pdf_bytes = b""
-        if "gerar_relatorio_pdf_ieduc" in globals():
-            res_pdf = gerar_relatorio_pdf_ieduc(
-                res_data, ano_sel, total_pts, faixa
-            )
-            pdf_bytes = (
-                res_pdf.getvalue()
-                if hasattr(res_pdf, "getvalue")
-                else res_pdf
-            )
-        elif "gerar_relatorio_pdf" in globals():
-            res_pdf = gerar_relatorio_pdf(res_data, ano_sel, total_pts, faixa)
-            pdf_bytes = (
-                res_pdf.getvalue()
-                if hasattr(res_pdf, "getvalue")
-                else res_pdf
-            )
+        try:
+            if "gerar_relatorio_pdf_ieduc" in globals():
+                res_pdf = gerar_relatorio_pdf_ieduc(
+                    res_data, ano_sel, total_pts, faixa, all_data=all_data
+                )
+                pdf_bytes = (
+                    res_pdf.getvalue()
+                    if hasattr(res_pdf, "getvalue")
+                    else res_pdf
+                )
+            elif "gerar_relatorio_pdf" in globals():
+                res_pdf = gerar_relatorio_pdf(
+                    res_data, ano_sel, total_pts, faixa, all_data=all_data
+                )
+                pdf_bytes = (
+                    res_pdf.getvalue()
+                    if hasattr(res_pdf, "getvalue")
+                    else res_pdf
+                )
+        except Exception as e:
+            logging.error(f"Erro ao gerar PDF no botão: {e}")
 
+        # O botão fica ativo desde que haja bytes gerados
         st.download_button(
             label="📄 Baixar PDF",
             data=pdf_bytes,
             file_name=f"Relatorio_iEduc_{ano_sel}.pdf",
             mime="application/pdf",
             use_container_width=True,
-            disabled=(pdf_bytes == b""),
+            disabled=(len(pdf_bytes) == 0),
         )
 
     # Botão para abrir o Modal de confirmação
@@ -1422,7 +1439,6 @@ def render_sidebar_ieduc():
             confirmar_zerar_dialog_ieduc(ano_sel)
 
     return total_pts, res_data, ano_sel
-
 
 # =============================================================================
 # 5. GRÁFICOS E HISTÓRICO - i-Educ
