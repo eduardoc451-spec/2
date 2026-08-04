@@ -1,151 +1,445 @@
-import os
+import logging
+import pandas as pd
 import streamlit as st
 
-# Nome da pasta raiz no sistema de arquivos
-RAIZ_BIBLIOTECA = "biblioteca"
+# Importa a conexão do icidade_completo.py
+try:
+    from icidade_completo import get_connection
+except ImportError as e:
+    logging.error(f"Erro ao importar get_connection do icidade_completo: {e}")
 
-# Lista de dimensões/pastas principais oficiais do projeto
-PASTAS_PRINCIPAIS = [
-    "i-fiscal",
-    "i-plan",
-    "i-educ",
-    "i-saúde",
-    "i-govti",
-    "i-cidade",
-    "i-amb",
-    "relatorios tce",
-    "leis e decretos",
-    "provas fotográficas",
-    "diversos"
-]
-
-# Lista de anos obrigatórios para as subpastas
-ANOS_DISPONIVEIS = ["2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"]
-
-def inicializar_estrutura_pastas():
-    """Garante que a árvore de diretórios física exista com as subpastas de anos."""
-    if not os.path.exists(RAIZ_BIBLIOTECA):
-        os.makedirs(RAIZ_BIBLIOTECA)
-        
-    for pasta in PASTAS_PRINCIPAIS:
-        caminho_pasta = os.path.join(RAIZ_BIBLIOTECA, pasta)
-        if not os.path.exists(caminho_pasta):
-            os.makedirs(caminho_pasta)
-            
-        for ano in ANOS_DISPONIVEIS:
-            caminho_ano = os.path.join(caminho_pasta, ano)
-            if not os.path.exists(caminho_ano):
-                os.makedirs(caminho_ano)
-
-# Inicializa as pastas no HD
-inicializar_estrutura_pastas()
+    def get_connection():
+        raise ImportError(
+            "Não foi possível importar 'get_connection' de 'icidade_completo.py'."
+        )
 
 
-def gerenciar_upload_e_arquivos():
-    """Painel de controle em formato de árvore de arquivos com botão manual de atualização."""
-    
-    # Força o recarregamento limpo do Streamlit
-    col_titulo, col_btn_refresh = st.columns([0.7, 0.3])
-    with col_titulo:
-        st.markdown("### 🔍 Varredura e Busca Rápida")
-    with col_btn_refresh:
-        if st.button("🔄 Atualizar Biblioteca", use_container_width=True, key="global_refresh_btn"):
-            st.rerun()
+def buscar_pontuacao_dimensao(tabela: str, ano: int) -> float:
+    """Consulta a soma REAL de pontos na tabela da dimensão correspondente
 
-    busca = st.text_input("Procurar arquivo em qualquer diretório ou ano:", placeholder="Digite o nome do documento...").strip().lower()
+    sem multiplicadores de escala ou alteração nos valores armazenados.
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql = f"SELECT COALESCE(SUM(pontos), 0) FROM {tabela} WHERE ano = %s;"
+                cursor.execute(sql, (int(ano),))
+                res = cursor.fetchone()
 
-    if busca:
-        st.markdown(f"📂 *Resultados da pesquisa para:* `{busca}`")
-        encontrou_algo = False
-        
-        for pasta_p in PASTAS_PRINCIPAIS:
-            for ano_s in ANOS_DISPONIVEIS:
-                dir_busca = os.path.join(RAIZ_BIBLIOTECA, pasta_p, ano_s)
-                if os.path.exists(dir_busca):
-                    for arq in os.listdir(dir_busca):
-                        if not arq.startswith('.') and busca in arq.lower():
-                            encontrou_algo = True
-                            caminho_arq = os.path.join(dir_busca, arq)
-                            
-                            with open(caminho_arq, "rb") as f:
-                                b_conteudo = f.read()
-                                
-                            col_txt, col_op = st.columns([0.7, 0.3])
-                            with col_txt:
-                                st.markdown(f"📄 **{arq}** \n↳ Local: `{pasta_p}` / Ano: `{ano_s}`")
-                            with col_op:
-                                sub_col1, sub_col2 = st.columns(2)
-                                with sub_col1:
-                                    st.download_button("📥 Abrir", data=b_conteudo, file_name=arq, key=f"s_down_{pasta_p}_{ano_s}_{arq}")
-                                with sub_col2:
-                                    if st.button("❌", key=f"s_del_{pasta_p}_{ano_s}_{arq}"):
-                                        os.remove(caminho_arq)
-                                        st.rerun()
-                            st.markdown("---")
-        if not encontrou_algo:
-            st.warning("Nenhum arquivo correspondente foi localizado.")
-        st.markdown("---")
+                if res and res[0] is not None:
+                    return float(res[0])
+    except Exception as e:
+        logging.warning(
+            f"[IEG-M Final] Erro ao ler tabela '{tabela}' para ano {ano}: {e}"
+        )
 
-    # 2. ÁRVORE DE DIRETÓRIOS ESTILO COMPUTADOR
-    st.markdown("### 🗁 Árvore de Diretórios e Documentos")
-    st.write("Clique nas pastas abaixo para abrir as subpastas de anos e gerenciar seus arquivos:")
+    return 0.0
 
-    for pasta_p in sorted(PASTAS_PRINCIPAIS):
-        with st.expander(f"📁 {pasta_p.upper()}", expanded=False):
-            
-            for ano_s in ANOS_DISPONIVEIS:
-                caminho_sub = os.path.join(RAIZ_BIBLIOTECA, pasta_p, ano_s)
-                
-                with st.expander(f"📅 Ano {ano_s}", expanded=False):
-                    
-                    key_uploader = f"up_{pasta_p}_{ano_s}"
-                    arquivos_enviados = st.file_uploader(
-                        "Anexar novas evidências para este ano:", 
-                        accept_multiple_files=True,
-                        key=key_uploader
+
+# =============================================================================
+# FUNÇÕES DE LEITURA ESPECÍFICAS DE CADA MÓDULO/TABELA
+# =============================================================================
+
+
+def puxar_nota_iplan(ano: int) -> float:
+    """Tabela: respostas_iplan (ano, quesito, pontos)"""
+    return buscar_pontuacao_dimensao("respostas_iplan", ano)
+
+
+def puxar_nota_ifiscal(ano: int) -> float:
+    """Tabela: respostas_ifiscal (ano, quesito, pontos)
+
+    Aplica a regra de item crítico TCESP (pontos <= -100).
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql = "SELECT pontos FROM respostas_ifiscal WHERE ano = %s;"
+                cursor.execute(sql, (int(ano),))
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return 0.0
+
+                pontos_lista = [float(r[0]) for r in rows if r[0] is not None]
+
+                # Regra de rebaixamento crítico TCESP
+                if any(p <= -100.0 for p in pontos_lista):
+                    return 0.0
+
+                total = sum(p for p in pontos_lista if p > -100.0)
+                return float(total)
+    except Exception as e:
+        logging.warning(f"[i-Fiscal] Falha ao ler ano {ano}: {e}")
+        return 0.0
+
+
+def puxar_nota_ieduc(ano: int) -> float:
+    """Tabela: respostas_ieduc (ano, quesito, pontos)"""
+    return buscar_pontuacao_dimensao("respostas_ieduc", ano)
+
+
+def puxar_nota_isaude(ano: int) -> float:
+    """Tabela: respostas_isaude (ano, quesito, pontos)"""
+    return buscar_pontuacao_dimensao("respostas_isaude", ano)
+
+
+def puxar_nota_iamb(ano: int) -> float:
+    """Tabela: respostas_iamb (ano, quesito, pontos)
+
+    Busca na tabela dedicada e garante nota mínima 0.0 (regra TCESP).
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql = "SELECT pontos FROM respostas_iamb WHERE ano = %s;"
+                cursor.execute(sql, (int(ano),))
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return 0.0
+
+                pontos_lista = [float(r[0]) for r in rows if r[0] is not None]
+
+                # Regra de rebaixamento crítico TCESP
+                if any(p <= -100.0 for p in pontos_lista):
+                    return 0.0
+
+                total = sum(p for p in pontos_lista if p > -100.0)
+                return float(max(0.0, total))
+    except Exception as e:
+        logging.warning(f"[i-Amb] Falha ao ler ano {ano}: {e}")
+        return 0.0
+
+
+def puxar_nota_icidade(ano: int) -> float:
+    """Tabela: respostas (dimensao='icidade', ano, qid, pontos)"""
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql_respostas = "SELECT COALESCE(SUM(pontos), 0) FROM respostas WHERE dimensao = 'icidade' AND ano = %s;"
+                cursor.execute(sql_respostas, (int(ano),))
+                res = cursor.fetchone()
+
+                if res and res[0] is not None and float(res[0]) > 0:
+                    return float(res[0])
+
+                sql_icidade = "SELECT COALESCE(SUM(pontos), 0) FROM respostas_icidade WHERE ano = %s;"
+                cursor.execute(sql_icidade, (int(ano),))
+                res_fallback = cursor.fetchone()
+
+                if res_fallback and res_fallback[0] is not None:
+                    return float(res_fallback[0])
+    except Exception as e:
+        logging.warning(
+            f"[i-Cidade] Erro ao consultar pontos para o ano {ano}: {e}"
+        )
+
+    return 0.0
+
+
+def puxar_nota_igov(ano: int) -> float:
+    """Tabela: respostas_igov (id, ano, pontos)"""
+    return buscar_pontuacao_dimensao("respostas_igov", ano)
+
+
+# =============================================================================
+# CÁLCULOS OFICIAIS TCESP
+# =============================================================================
+
+
+def calcular_nota_final(
+    plan: float,
+    fiscal: float,
+    educ: float,
+    saude: float,
+    amb: float,
+    cidade: float,
+    gov: float,
+) -> float:
+    """Calcula a Média Ponderada oficial do IEG-M TCESP."""
+    try:
+        soma = (
+            (float(plan) * 0.20)
+            + (float(fiscal) * 0.20)
+            + (float(educ) * 0.20)
+            + (float(saude) * 0.20)
+            + (float(amb) * 0.10)
+            + (float(cidade) * 0.05)
+            + (float(gov) * 0.05)
+        )
+        return round(soma, 1)
+    except Exception:
+        return 0.0
+
+
+def obter_faixa_classificacao(nota: float):
+    if nota >= 900:
+        return "A (Altamente Efetiva)", "#10B981"
+    elif nota >= 750:
+        return "B+ (Muito Efetiva)", "#3B82F6"
+    elif nota >= 600:
+        return "B (Efetiva)", "#F59E0B"
+    elif nota >= 500:
+        return "C+ (Em Fase de Adequação)", "#F97316"
+    else:
+        return "C (Baixo Nível de Adequação)", "#EF4444"
+
+
+# =============================================================================
+# PAINEL PRINCIPAL STREAMLIT
+# =============================================================================
+
+
+def mostrar_painel_iegm_final(ano_selecionado: int):
+    st.subheader(
+        "🏆 Consolidação do Índice de Efetividade da Gestão Municipal (IEG-M)"
+    )
+
+    # -------------------------------------------------------------------------
+    # BOTÃO DIRETO PARA O GOOGLE DRIVE
+    # -------------------------------------------------------------------------
+    st.link_button(
+        "🔗 Acessar Biblioteca no Google Drive",
+        "https://drive.google.com/drive/folders/1iwiuHHbQYZ-p6aEMB9oSjugDEvdB8GVK?usp=drive_link",
+        use_container_width=True,
+    )
+    st.markdown("---")
+
+    anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
+    registro_historico = []
+
+    # Leitura dos dados reais de todas as dimensões
+    for ano in anos:
+        plan = puxar_nota_iplan(ano)
+        fiscal = puxar_nota_ifiscal(ano)
+        educ = puxar_nota_ieduc(ano)
+        saude = puxar_nota_isaude(ano)
+        amb = puxar_nota_iamb(ano)
+        cidade = puxar_nota_icidade(ano)
+        gov = puxar_nota_igov(ano)
+
+        nota_f = calcular_nota_final(
+            plan, fiscal, educ, saude, amb, cidade, gov
+        )
+        faixa, _ = obter_faixa_classificacao(nota_f)
+
+        registro_historico.append(
+            {
+                "Ano": ano,
+                "i-Plan": round(plan, 1),
+                "i-Fiscal": round(fiscal, 1),
+                "i-Educ": round(educ, 1),
+                "i-Saúde": round(saude, 1),
+                "i-Amb": round(amb, 1),
+                "i-Cidade": round(cidade, 1),
+                "i-Gov TI": round(gov, 1),
+                "Nota Final": round(nota_f, 1),
+                "Faixa": faixa.split(" (")[0],
+            }
+        )
+
+    df_historico = pd.DataFrame(registro_historico)
+
+    # Cálculo da variação percentual
+    variacoes = ["-"]
+    for i in range(1, len(df_historico)):
+        nota_ant = df_historico.loc[i - 1, "Nota Final"]
+        nota_at = df_historico.loc[i, "Nota Final"]
+
+        if nota_ant == 0:
+            variacoes.append("▲ +100.0%" if nota_at > 0 else "0.0%")
+        else:
+            pct = ((nota_at - nota_ant) / nota_ant) * 100
+            if pct > 0:
+                variacoes.append(f"▲ +{pct:.1f}%")
+            elif pct < 0:
+                variacoes.append(f"▼ {pct:.1f}%")
+            else:
+                variacoes.append("0.0%")
+
+    df_historico["Variação %"] = variacoes
+
+    colunas_ordenadas = [
+        "Ano",
+        "i-Plan",
+        "i-Fiscal",
+        "i-Educ",
+        "i-Saúde",
+        "i-Amb",
+        "i-Cidade",
+        "i-Gov TI",
+        "Nota Final",
+        "Variação %",
+        "Faixa",
+    ]
+    df_historico = df_historico[colunas_ordenadas]
+
+    # Filtra o ano selecionado
+    df_ano_atual = df_historico[df_historico["Ano"] == int(ano_selecionado)]
+    dados_ano_atual = (
+        df_ano_atual.iloc[0]
+        if not df_ano_atual.empty
+        else df_historico.iloc[0]
+    )
+
+    nota_f_atual = dados_ano_atual["Nota Final"]
+    faixa_atual, cor_atual = obter_faixa_classificacao(nota_f_atual)
+
+    st.markdown(
+        f"### Resultado Consolidado Real: Ano de Referência {ano_selecionado}"
+    )
+
+    c1, c2, c3 = st.columns([1, 1, 2])
+    with c1:
+        st.metric(
+            label="Nota Final Calculada",
+            value=f"{dados_ano_atual['Nota Final']:.1f} pts",
+        )
+    with c2:
+        st.markdown("**Faixa TCESP:**")
+        st.markdown(
+            f"<div style='padding: 8px; border-radius: 8px; background-color: {cor_atual}; color: white; text-align: center; font-weight: bold;'>{faixa_atual}</div>",
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.info(
+            "💡 **Fórmula TCESP:** `(i-Plan×0.20 + i-Fiscal×0.20 + i-Educ×0.20 + i-Saúde×0.20 + i-Amb×0.10 + i-Cidade×0.05 + i-Gov TI×0.05)`"
+        )
+
+    st.markdown("#### Desempenho Real das Dimensões")
+    dados_tabela_atual = pd.DataFrame(
+        {
+            "Dimensão": [
+                "i-Plan",
+                "i-Fiscal",
+                "i-Educ",
+                "i-Saúde",
+                "i-Amb",
+                "i-Cidade",
+                "i-Gov TI",
+            ],
+            "Peso TCESP": ["20%", "20%", "20%", "20%", "10%", "5%", "5%"],
+            "Pontuação Obtida": [
+                f"{dados_ano_atual['i-Plan']:.1f} pts",
+                f"{dados_ano_atual['i-Fiscal']:.1f} pts",
+                f"{dados_ano_atual['i-Educ']:.1f} pts",
+                f"{dados_ano_atual['i-Saúde']:.1f} pts",
+                f"{dados_ano_atual['i-Amb']:.1f} pts",
+                f"{dados_ano_atual['i-Cidade']:.1f} pts",
+                f"{dados_ano_atual['i-Gov TI']:.1f} pts",
+            ],
+        }
+    )
+
+    st.dataframe(
+        dados_tabela_atual.style.set_properties(
+            **{"text-align": "center"}
+        ).hide(axis="index"),
+        use_container_width=True,
+    )
+
+    st.markdown("---")
+    st.markdown("### 📊 Painel Evolutivo — Série Histórica Real (2023 a 2030)")
+
+    df_grafico = df_historico.set_index("Ano")[["Nota Final"]]
+    st.bar_chart(df_grafico)
+
+    st.markdown("#### 📅 Matriz de Dados Históricos Consolidados")
+    df_exibicao = df_historico.set_index("Ano")
+
+    cols_numericas = [
+        "i-Plan",
+        "i-Fiscal",
+        "i-Educ",
+        "i-Saúde",
+        "i-Amb",
+        "i-Cidade",
+        "i-Gov TI",
+        "Nota Final",
+    ]
+
+    st.dataframe(
+        df_exibicao.style.format(
+            "{:.1f}", subset=cols_numericas
+        ).set_properties(**{"text-align": "center"}),
+        use_container_width=True,
+    )
+
+    # =========================================================================
+    # DIAGNÓSTICO DO BANCO DE DADOS
+    # =========================================================================
+    with st.expander(
+        f"🛠️ Diagnóstico do PostgreSQL/Neon (Ano {ano_selecionado})"
+    ):
+        tabelas_para_testar = [
+            "respostas_iplan",
+            "respostas_ifiscal",
+            "respostas_ieduc",
+            "respostas_isaude",
+            "respostas_iamb",
+            "respostas_igov",
+        ]
+
+        relatorio_db = []
+
+        for tab in tabelas_para_testar:
+            try:
+                with get_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            f"SELECT COUNT(*), COALESCE(SUM(pontos), 0) FROM {tab} WHERE ano = %s;",
+                            (int(ano_selecionado),),
+                        )
+                        qtd, soma = cursor.fetchone()
+                        relatorio_db.append(
+                            {
+                                "Tabela": tab,
+                                "Qtd Quesitos": qtd,
+                                "Soma Exata do Banco": round(float(soma), 1),
+                                "Status": "OK",
+                            }
+                        )
+            except Exception as err:
+                relatorio_db.append(
+                    {
+                        "Tabela": tab,
+                        "Qtd Quesitos": 0,
+                        "Soma Exata do Banco": 0.0,
+                        "Status": f"Erro/Ausente: {err}",
+                    }
+                )
+
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT COUNT(*), COALESCE(SUM(pontos), 0) FROM respostas WHERE dimensao = 'icidade' AND ano = %s;",
+                        (int(ano_selecionado),),
                     )
-                    
-                    if arquivos_enviados:
-                        arquivos_salvos_agora = False
-                        for arquivo in arquivos_enviados:
-                            caminho_salvar = os.path.join(caminho_sub, arquivo.name)
-                            if not os.path.exists(caminho_salvar):
-                                with open(caminho_salvar, "wb") as f:
-                                    f.write(arquivo.getbuffer())
-                                arquivos_salvos_agora = True
-                        
-                        if arquivos_salvos_agora:
-                            st.success("Novos arquivos guardados! Clique no botão 'Atualizar Biblioteca' no topo para atualizar a lista.")
-                    
-                    st.markdown("---")
-                    
-                    if os.path.exists(caminho_sub):
-                        arquivos_locais = [a for a in os.listdir(caminho_sub) if not a.startswith('.')]
-                    else:
-                        arquivos_locais = []
-                        
-                    if arquivos_locais:
-                        for arquivo in arquivos_locais:
-                            caminho_completo_arq = os.path.join(caminho_sub, arquivo)
-                            
-                            with open(caminho_completo_arq, "rb") as file_ready:
-                                conteudo_bytes = file_ready.read()
-                            
-                            col_icon, col_name, col_down, col_del = st.columns([0.05, 0.55, 0.2, 0.2])
-                            with col_icon:
-                                st.markdown("📄")
-                            with col_name:
-                                st.markdown(f"*{arquivo}*")
-                            with col_down:
-                                st.download_button(
-                                    label="📥 Abrir",
-                                    data=conteudo_bytes,
-                                    file_name=arquivo,
-                                    key=f"dl_{pasta_p}_{ano_s}_{arquivo}"
-                                )
-                            with col_del:
-                                if st.button("❌ Deletar", key=f"del_{pasta_p}_{ano_s}_{arquivo}"):
-                                    os.remove(caminho_completo_arq)
-                                    st.rerun()
-                    else:
-                        st.info("Pasta vazia. Nenhum documento enviado.")
+                    qtd, soma = cursor.fetchone()
+                    relatorio_db.append(
+                        {
+                            "Tabela": "respostas (dimensao='icidade')",
+                            "Qtd Quesitos": qtd,
+                            "Soma Exata do Banco": round(float(soma), 1),
+                            "Status": "OK",
+                        }
+                    )
+        except Exception as err:
+            relatorio_db.append(
+                {
+                    "Tabela": "respostas (dimensao='icidade')",
+                    "Qtd Quesitos": 0,
+                    "Soma Exata do Banco": 0.0,
+                    "Status": f"Erro/Ausente: {err}",
+                }
+            )
+
+        df_relatorio = pd.DataFrame(relatorio_db)
+        st.dataframe(
+            df_relatorio.style.format(
+                "{:.1f}", subset=["Soma Exata do Banco"]
+            ).set_properties(**{"text-align": "center"}),
+            use_container_width=True,
+        )
