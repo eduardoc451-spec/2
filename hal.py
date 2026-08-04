@@ -1,304 +1,130 @@
-import psycopg2
-from psycopg2.extras import DictCursor
+import re
 import streamlit as st
-
-
-@st.cache_resource
-def get_db_connection():
-    # URL do seu banco Neon DB
-    db_url = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
-
-    try:
-        conn = psycopg2.connect(db_url)
-        return conn
-    except Exception as e:
-        st.error(f"Erro ao conectar ao banco de dados: {e}")
-        return None
-
+import plotly.graph_objects as go
+from sqlalchemy import create_engine, text
 
 # ==============================================================================
-# CLASSE DO SISTEMA HAL
+# STRING DE CONEXÃO POSTGRESQL (NEON DB)
+# ==============================================================================
+DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+# ==============================================================================
+# CLASSE PRINCIPAL SISTEMA HAL
 # ==============================================================================
 class SistemaHAL:
     def __init__(self):
-        self.questoes_por_dimensao = {}
-        self.pontuacoes_maximas_por_dimensao = {}
-        self.carregar_dicionarios_globais()
-        self.conn = get_db_connection()
-
-    def puxar_nota_dimensao(self, dimensao: str, ano: int) -> float:
-        """Consulta a nota geral de uma dimensão e ano no PostgreSQL."""
-        if not self.conn:
-            return 0.0
-        try:
-            with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                query = "SELECT nota FROM desempenho WHERE dimensao = %s AND ano = %s;"
-                cur.execute(query, (dimensao, ano))
-                result = cur.fetchone()
-                return float(result['nota']) if result else 0.0
-        except Exception as e:
-            st.error(f"Erro ao consultar nota: {e}")
-            return 0.0
-
-    def consultar_historico_anos(self, dimensao: str, quesito_id: str):
-        """Busca o histórico de respostas de uma questão ao longo dos anos."""
-        if not self.conn:
-            return []
-        try:
-            with self.conn.cursor() as cur:
-                query = "SELECT ano, valor FROM respostas WHERE dimensao = %s AND id = %s ORDER BY ano ASC;"
-                cur.execute(query, (dimensao, quesito_id))
-                return cur.fetchall()
-        except Exception:
-            return []
-
-    def analisar_pontos_fracos(self, ano: int, dimensao: str):
-        """Mapeia os pontos fracos e penalidades de uma dimensão/ano."""
-        fracos = []
-        penalidades = []
-        
-        if not self.conn:
-            return fracos, penalidades
-
-        try:
-            with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                query = """
-                    SELECT questao_id, obtido, maximo, penalidade, pergunta 
-                    FROM analise_questoes 
-                    WHERE dimensao = %s AND ano = %s;
-                """
-                cur.execute(query, (dimensao, ano))
-                rows = cur.fetchall()
-                
-                for row in rows:
-                    if row['penalidade'] > 0:
-                        penalidades.append({
-                            'id': row['questao_id'],
-                            'pergunta': row['pergunta'],
-                            'penalidade': row['penalidade']
-                        })
-                    if row['obtido'] < row['maximo']:
-                        fracos.append({
-                            'id': row['questao_id'],
-                            'obtido': row['obtido'],
-                            'maximo': row['maximo'],
-                            'deficit': row['maximo'] - row['obtido']
-                        })
-        except Exception as e:
-            st.warning(f"Não foi possível recuperar detalhes de pontos fracos/penalidades: {e}")
-            
-        return fracos, penalidades
-
-    def carregar_dicionarios_globais(self):
-        """Dicionário unificado com as 3 dimensões operacionais."""
+        # Mapeamento Completo de Enunciados por Dimensão
         self.questoes_por_dimensao = {
             "iCidade": {
-                "1.0": "Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil (COMPDEC) ou órgão similar responsável pela execução, coordenação e mobilização de todas as ações de defesa civil no município?",
-                "1.3": "A COMPDEC ou órgão similar está associada ou subordinada a qual secretaria/diretoria?",
-                "1.4": "Os órgãos e entidades da administração pública municipal atuam de forma sistêmica, articulados com a COMPDEC, nas ações de prevenção, mitigação, preparação, resposta e recuperação, de acordo com a Política Nacional de Proteção e Defesa Civil (PNPDEC)?",
-                "2.0": "Sobre treinamento e capacitação em Proteção e Defesa Civil, a Prefeitura capacita seus agentes para ações municipais de Defesa Civil?",
-                "2.1": "Qual a data da última classificação dos agentes municipais para ações de Defesa Civil?",
-                "2.2": "A Prefeitura Municipal ofereceu cursos/treinamentos sobre Proteção e Defesa Civil para qual público?",
-                "3.0": "O Município realiza ações para estimular a participação de entidades privadas, associações de voluntários, clubes de serviços, organizações não governamentais e associações de classe e comunitárias nas ações de proteção e defesa civil?",
-                "3.1.1": "Qual a data do último treinamento de associações de voluntários?",
-                "4.2": "A Carta Geotécnica de Suscetibilidade, Aptidão à Urbanização e Risco consta no Plano Diretor, conforme art. 42-A, §§ 1º, 2º e 3º, da Lei Federal nº 10.257, de 10 de julho de 2001?",
-                "5.0": "O Município realizou, por conta própria, o mapeamento e identificação das principais ameaças existentes em seu território?",
-                "5.1.1": "As secretarias setoriais realizam a fiscalização das áreas de risco?",
-                "5.2": "A população foi informada sobre todas as ameaças identificadas pelo município?",
-                "6.0": "A Secretaria responsável realizou vistorias em edificações vulneráveis com o objetivo de identificar a necessidade de intervenção preventiva nos imóveis?",
-                "7.0": "O Município possui Plano de Contingência Municipal (PLANCON) de Defesa Civil?",
-                "7.1": "Foi elaborado um PLANCON específico para cada ameaça identificada?",
-                "7.2": "São realizados regularmente exercícios simulados para as contingências previstas no PLANCON?",
-                "7.3": "O Município possui sistema de alerta para desastres?",
-                "7.4": "O Município dispõe de sinal, dispositivo ou sistema de alarme para desastres?",
-                "7.5": "Possui cadastro dos locais para abrigo da população em situação de desastre junto à Coordenadoria Estadual de Proteção e Defesa Civil (CEPDEC)?",
-                "7.6": "O Município possui cadastro da lista de fornecedores para coleta e distribuição de suprimentos de ajuda humanitária para o caso de desastre?",
-                "8.0": "O Município possui um canal de atendimento de emergência à população para registro de ocorrências de desastres?",
-                "8.1.1.1": "O telefone 199 tem atendimento 24 horas por dia?",
-                "8.2": "O Município registra as ocorrências de Defesa Civil de forma eletrônica?",
-                "9.0": "O Município realizou estudo de avaliação da estrutura de todas as escolas e unidades de saúde para garantir que, em caso de desastre, esses locais estejam preparados para abrigar e atender a população afetada?",
-                "10.0": "O Município elaborou seu Plano de Mobilidade Urbana?",
-                "11.1": "Foram estabelecidas metas de qualidade e desempenho para o transporte público coletivo municipal?",
-                "11.1.1": "As metas de qualidade e desempenho do transporte público coletivo estão sendo atingidas?",
-                "11.2": "Foi realizada pesquisa de satisfação dos usuários do transporte público coletivo em 2025?",
-                "12.1": "Informe o instrumento normativo, número e data da publicação do transporte regulamentado.",
-                "12.1.3": "O Município fiscaliza regularmente o transporte remunerado privado individual de passageiros (táxi por aplicativo)?",
-                "14.0": "O Município adequou os calçamentos públicos para acessibilidade das pessoas com deficiência e restrição de mobilidade?",
-                "15.0": "As vias públicas pavimentadas estão devidamente sinalizadas (vertical e horizontalmente) de forma a garantir condições adequadas de segurança na circulação?",
-                "16.0": "Há manutenção adequada das vias públicas no Município?",
-                "C1.1": "Indique os pontos de controle externos da auditoria ou controle de metas vigentes."
+                "1.0": "1.0 - Planejamento Urbano e Plano Diretor",
+                "1.3": "1.3 - Zoneamento e Uso do Solo",
+                "1.4": "1.4 - Regularização Fundiária Urbana (REURB)",
+                "2.0": "2.0 - Mobilidade e Transporte Público",
+                "2.1": "2.1 - Acessibilidade em Vias e Edificações",
+                "2.2": "2.2 - Malha Cicloviária e Infraestrutura de Pedestres",
+                "3.0": "3.0 - Saneamento Básico e Drenagem Urbana",
+                "3.1.1": "3.1.1 - Coleta e Tratamento de Esgoto",
+                "5.0": "5.0 - Gestão de Resíduos Sólidos e Coleta Seletiva",
+                "7.0": "7.0 - Habitação de Interesse Social",
+                "7.1": "7.1 - Mapeamento de Áreas de Risco",
+                "7.2": "7.2 - Prevenção de Desastres e Defesa Civil",
+                "7.3": "7.3 - Infraestrutura em Assentamentos Precários",
+                "7.4": "7.4 - Programas de Melhoria Habitacional",
+                "7.5": "7.5 - Cadastro Único de Habitação",
+                "7.6": "7.6 - Parcerias para Habitação Popular",
+                "8.0": "8.0 - Arborização Urbana e Áreas Verdes",
+                "8.1.1.1": "8.1.1.1 - Preservação de Áreas de Proteção Ambiental",
+                "8.2": "8.2 - Manutenção de Praças e Parques",
+                "9.0": "9.0 - Iluminação Pública e Eficiência Energética",
+                "15.0": "15.0 - Equipamentos Públicos de Lazer e Esporte",
+                "16.0": "16.0 - Conservação do Patrimônio Histórico e Cultural",
+                "C1.1": "C1.1 - Monitoramento de Obras e Intervenções Urbanas"
             },
             "iGov-Ti": {
-                "1.0": "A Prefeitura possui uma área ou setor que cuida de Tecnologia da Informação e Comunicação (TIC)?",
-                "1.1": "Informe a quantidade de funcionários concursados, comissionados e estagiários no suporte e atendimento de primeiro nível.",
-                "1.2": "A prefeitura municipal definiu formalmente as atribuições do pessoal do setor de Tecnologia da Informação e Comunicação (TIC)?",
-                "1.3": "A prefeitura disponibilizou capacitação para o pessoal da área de Tecnologia da Informação e Comunicação (TIC)?",
-                "1.3.1": "Informe em quais áreas houve capacitação.",
-                "1.4": "Nas licitações e contratos que tenham como soluções o uso de TIC, houve participação formalizada do pessoal de TIC? (Verba municipal)",
-                "1.4.1": "Assinale as etapas que o pessoal de TIC participa.",
-                "1.4.2": "Sobre softwares adquiridos/licenciados nos últimos 5 anos, foi realizada análise ou estudo prévio com a participação de TIC?",
-                "2.0": "A prefeitura municipal possui um PDTIC vigente que estabeleça diretrizes e metas de atingimento no futuro?",
-                "2.1": "Informe a página eletrônica (link na internet) do PDTIC.",
-                "2.2": "O plano de TIC vigente contempla as metas operacionais estratégicas municipais?",
-                "2.3": "Qual a data da última atualização do PDTIC?",
-                "3.0": "A Prefeitura dispõe de Política de Segurança da Informação formalmente instituída e de cumprimento obrigatório?",
-                "3.1": "A Prefeitura estabelece procedimentos e responsabilidades quanto ao uso de TI (Termo de Responsabilidade/Compromisso)?",
-                "3.1.1": "O Termo de Responsabilidade/Compromisso dispõe sobre o uso da assinatura eletrônica pelos funcionários?",
-                "3.1.1.1": "Informe o tipo de assinatura eletrônica utilizada nos documentos digitais.",
-                "3.2": "Os riscos de TIC são identificados de acordo com as normas brasileiras da família ISO/IEC 27000?",
-                "3.2.1": "As secretarias realizam a fiscalização das áreas de risco? Informe quais normas ISO/IEC 27000 são utilizadas.",
-                "3.3": "Os riscos de TIC são identificados de acordo com as normas da ABNT NBR ISO/IEC 31000?",
-                "3.4": "A Prefeitura possui um Plano de Continuidade dos Serviços de Tecnologia da Informação e Comunicação (TIC)?",
-                "3.5": "A Prefeitura dispõe de política de cópias de segurança (backup) formalmente instituída como norma obrigatória?",
-                "3.6": "A Prefeitura possui inventário atualizado dos ativos de TIC?",
-                "3.6.1": "Como é composta a base de ativos?",
-                "4.0": "O município regulamentou a Lei de Acesso à Informação (Lei Federal nº 12.527/2011)?",
-                "4.1": "Informe o Instrumento normativo, Número e Data da publicação (LAI).",
-                "4.2": "Página eletrônica (link na internet) do instrumento normativo da LAI.",
-                "5.0": "O município regulamentou a Lei sobre Eficiência Pública (Governo Digital - Lei Federal nº 14.129/2021)?",
-                "5.1": "Informe o Instrumento normativo, Número e Data da publicação (Governo Digital).",
-                "5.2": "Página eletrônica (link na internet) do instrumento normativo (Governo Digital).",
-                "5.3": "A Prefeitura implantou soluções digitais para trâmite de processos administrativos?",
-                "6.0": "A prefeitura mantém site na internet com informações atualizadas?",
-                "6.1": "O site eletrônico da prefeitura continha ferramenta de pesquisa/busca interna de conteúdo?",
-                "6.2": "O site possibilita o download de dados e informações em formatos abertos e não proprietários?",
-                "6.3": "O site disponibiliza as respostas a perguntas mais frequentes da sociedade?",
-                "6.4": "O site disponibiliza acessibilidade de conteúdo para pessoas com deficiência?",
-                "7.0": "A Prefeitura disponibiliza no site o Serviço de Informação ao Cidadão (e-SIC)?",
-                "7.1": "A solicitação por meio do e-SIC é simplificada?",
-                "7.2": "O e-SIC apresenta possibilidade de acompanhamento da solicitação?",
-                "7.3": "Há necessidade de informar os motivos para a solicitação de informações de interesse público?",
-                "8.0": "A Prefeitura possui programas de computador (softwares) para gestão de processos?",
-                "8.1": "Os programas de computador (softwares) englobam quais processos/setores?",
-                "8.2": "Informe quais sistemas encontram-se integrados ao Sistema de Contabilidade do município.",
-                "8.2.1": "Informe o nível de integração entre o Sistema da Dívida Ativa e o de Contabilidade.",
-                "8.2.2": "Informe o nível de integração entre o Sistema de Precatórios e o de Contabilidade.",
-                "8.3": "Assinale quais bases de dados encontram-se sob gestão direta da Prefeitura (Risco de Perdas).",
-                "8.4": "Assinale quais sistemas possuem controle de acesso à informação.",
-                "9.0": "A Prefeitura ofereceu serviços de forma online?",
-                "9.1": "Quais tipos de serviços são oferecidos online?",
-                "9.2": "Quais as formas de atendimento à distância disponibilizadas ao público pela Prefeitura?",
-                "10.0": "A Prefeitura Municipal regulamentou o tratamento de dados pessoais, inclusive nos meios digitais, segundo a LGPD (Lei Federal nº 13.709/2018)?",
-                "10.1": "Informe o instrumento normativo, número e data da publicação.",
-                "10.2": "Informe a página eletrônica (link na internet).",
-                "10.3": "Os contratos com os prestadores de serviços contêm cláusulas de observância à LGPD?",
-                "10.4": "A Prefeitura Municipal realizou mapeamento de dados (data mapping)?",
-                "10.5": "Foram adotadas medidas de segurança, técnicas e administrativas para proteção dos dados pessoais?",
-                "10.5.1": "Informe as medidas adotadas.",
-                "11.0": "A Prefeitura Municipal designou um encarregado para as operações de tratamento de dados pessoais?",
-                "11.1": "Informe a página eletrônica que contenha a identidade e as informações de contato do encarregado.",
-                "12.0": "Gostaria de registrar suas impressões, comentários e sugestões a respeito do presente questionário?"
+                "1.0": "1.0 - Governança de TI e Alinhamento Estratégico",
+                "1.1": "1.1 - Plano Diretor de Tecnologia da Informação (PDTI)",
+                "1.2": "1.2 - Comitê Gestor de TI e Tomada de Decisão",
+                "1.3": "1.3 - Gestão de Riscos de TI",
+                "1.3.1": "1.3.1 - Mapeamento de Processos Críticos de TI",
+                "1.4.1": "1.4.1 - Política de Segurança da Informação (POSI)",
+                "1.4.2": "1.4.2 - Plano de Continuidade de Negócios e Contingência",
+                "2.0": "2.0 - Conformidade com a LGPD e Proteção de Dados",
+                "2.1": "2.1 - Encarregado de Dados (DPO) Designado",
+                "2.2": "2.2 - Mapeamento do Fluxo de Dados Pessoais",
+                "2.3": "2.3 - Gestão de Consentimento e Direitos do Titular",
+                "3.0": "3.0 - Infraestrutura de Rede e Data Center",
+                "3.1": "3.1 - Política de Backup e Restauração de Dados",
+                "3.1.1": "3.1.1 - Testes Periódicos de Recuperação de Backup",
+                "3.1.1.1": "3.1.1.1 - Armazenamento de Backup Off-site / Nuvem",
+                "3.2.1": "3.2.1 - Controle de Acesso Físico aos Servidores",
+                "3.3": "3.3 - Monitoramento e Redundância de Conexão de Internet",
+                "3.4": "3.4 - Gestão de Licenciamento de Software",
+                "3.5": "3.5 - Atualização e Patching de Sistemas Operacionais",
+                "3.6": "3.6 - Inventário Atualizado de Ativos de TI",
+                "4.0": "4.0 - Serviços Digitais e Governo Eletrônico",
+                "6.0": "6.0 - Portal da Transparência e Acesso à Informação",
+                "6.1": "6.1 - Disponibilidade de Dados Abertos em Formato Reutilizável",
+                "6.2": "6.2 - Atualização das Informações de Receitas e Despesas",
+                "6.3": "6.3 - Ferramentas de Acessibilidade Web para Cidadãos",
+                "6.4": "6.4 - Atendimento ao Cidadão e Ouvidoria Digital (e-SIC)",
+                "7.0": "7.0 - Capacitação e Treinamento do Quadro de TI",
+                "7.1": "7.1 - Quadro de Pessoal Próprio de TI",
+                "7.2": "7.2 - Plano de Treinamento em Segurança Cibernética",
+                "7.3": "7.3 - Certificações Técnicas da Equipe de TI",
+                "8.0": "8.0 - Gestão de Contratos de TI e Terceirização",
+                "8.2.1": "8.2.1 - Fiscalização e Acompanhamento de Contratos de TI",
+                "8.2.2": "8.2.2 - Níveis de Serviço (SLA) Estabelecidos em Contratos",
+                "9.1": "9.1 - Interoperabilidade e Integração de Sistemas Municipais"
             },
             "i-Amb": {
-                "1.0": "Existe estrutura organizacional instalada para tratar de assuntos ligados ao Meio Ambiente Municipal?",
-                "1.1": "Informe a disponibilidade de recursos humanos para operacionalização dos assuntos ligados ao Meio Ambiente.",
-                "1.1.1": "Informe o detalhamento e informações sobre os recursos humanos da área.",
-                "1.1.2": "A prefeitura realizou treinamento específico voltado ao Meio Ambiente no ano de 2025?",
-                "1.1.3": "Informe os cursos e treinamentos de educação ambiental ofertados pela Secretaria de Meio Ambiente.",
-                "1.2": "Informe quais recursos foram disponibilizados para a operacionalização das atividades de meio ambiente.",
-                "2.0": "O Município promove a participação em Programas de Educação Ambiental?",
-                "2.1": "Há programas ou ações de educação ambiental implementadas na rede escolar municipal?",
-                "3.0": "O Município promove estímulo a projetos e ações para o uso racional de recursos naturais?",
-                "3.1": "Assinale quais tipos de ações são realizadas para o uso racional de recursos naturais.",
-                "4.0": "Há fiscalização da emissão de poluentes de combustíveis fósseis (diesel) na frota municipal?",
-                "5.0": "Existe contrato vigente para a prestação de serviços de poda e corte de árvores, arbustos e outras plantas lenhosas?",
-                "5.1": "Informe o número do contrato e o respectivo prestador de serviço.",
-                "5.2": "Qual a periodicidade definida para a realização de poda e manutenção das árvores?",
-                "5.2.1": "Informe a destinação final dada aos resíduos decorrentes das podas de árvores.",
-                "5.3": "Houve capacitação específica para os responsáveis pela execução da manutenção e poda de árvores?",
-                "6.0": "O Município adota ações e medidas preventivas de contingenciamento para períodos de estiagem?",
-                "6.1": "Informe os tipos de ações e medidas preventivas que foram executadas.",
-                "6.2": "Indique os setores envolvidos com ações específicas para a provisão de água potável.",
-                "7.0": "Existe Plano Municipal ou Regional de Saneamento Básico instituído e vigente?",
-                "7.1": "Informe o instrumento normativo de aprovação do Plano.",
-                "7.2": "Informe a página eletrônica (link na internet) para acesso ao Plano.",
-                "7.3": "O Plano estabelece metas específicas de abastecimento de água potável?",
-                "7.3.1": "Informe detalhadamente as metas estabelecidas para o abastecimento de água.",
-                "7.3.2": "Qual a data prevista para a universalização do atendimento de abastecimento de água?",
-                "7.4": "O Plano estabelece metas de coleta de esgoto sanitário?",
-                "7.4.1": "Informe as metas estabelecidas para o serviço de coleta de esgoto.",
-                "7.4.2": "Qual a data prevista para a universalização da coleta de esgoto?",
-                "7.5": "O Plano estabelece metas para o tratamento do esgoto coletado?",
-                "7.5.1": "Qual a data prevista para a universalização do tratamento de esgoto?",
-                "7.6": "O Plano contempla metas de drenagem e manejo de águas pluviais urbanas?",
-                "7.6.1": "Informe as metas estabelecidas voltadas à drenagem e manejo de águas pluviais.",
-                "7.7": "O Município realiza o monitoramento e avaliação das ações e metas de abastecimento de água e esgotamento sanitário?",
-                "7.7.1": "Informe de qual forma é realizado este monitoramento e avaliação.",
-                "7.8": "Existe um cronograma formalizado de metas para o saneamento básico?",
-                "7.8.1": "As metas estabelecidas estão sendo cumpridas dentro do prazo estipulado?",
-                "7.8.1.1": "Informe os principais motivos que justificam o não cumprimento das metas.",
-                "7.9": "O Plano apresenta previsão de áreas prioritárias ou críticas para intervenções de abastecimento de água e esgotamento sanitário?",
-                "7.10": "Qual a data da última revisão realizada no Plano de Saneamento Básico?",
-                "8.0": "Existe Plano Municipal ou Regional de Gestão Integrada de Resíduos Sólidos instituído?",
-                "8.1": "Informe o instrumento normativo de aprovação do Plano de Resíduos Sólidos.",
-                "8.2": "Informe a página eletrônica (link na internet) para acesso ao Plano.",
-                "8.3": "O Plano apresenta a caracterização qualitativa e quantitativa dos resíduos sólidos urbanos?",
-                "8.3.1": "Informe a metodologia ou forma utilizada para a caracterização dos resíduos.",
-                "8.4": "Existe um cronograma formalizado de metas para a gestão de resíduos sólidos?",
-                "8.4.1": "Informe as metas que foram formalmente estabelecidas sobre os resíduos sólidos.",
-                "8.4.2": "O Município realiza o monitoramento e avaliação das ações e metas deste Plano?",
-                "8.4.2.1": "Informe de qual forma é realizado esse monitoramento e avaliação.",
-                "8.4.3": "As metas estabelecidas estão sendo cumpridas dentro do prazo estipulado?",
-                "8.4.3.1": "Informe os principais motivos para o não cumprimento das metas no prazo.",
-                "8.4.4": "Qual a data da última revisão do Plano de Gestão Integrada de Resíduos Sólidos?",
-                "9.0": "O Município realiza de forma efetiva a coleta seletiva de resíduos sólidos?",
-                "9.1": "Existe um cronograma ou planejamento de coleta seletiva programada?",
-                "9.2": "A prestação da coleta seletiva atende a todas as regiões do território municipal?",
-                "9.3": "São promovidas ações e campanhas institucionais de incentivo à coleta seletiva?",
-                "9.3.1": "Informe quais tipos de ações e campanhas de conscientização foram realizadas.",
-                "10.0": "O Município realiza o serviço regular de coleta de lixo doméstico (resíduos domiciliares)?",
-                "10.1": "Existe um cronograma de atendimento para a coleta programada?",
-                "10.2": "O serviço regular de coleta de lixo domiciliar atende a todas as regiões do município?",
-                "10.3": "O Município dispõe de Área de Transbordo e Triagem (ATT) para resíduos sólidos urbanos?",
-                "10.3.1": "A referida ATT possui licença de operação ativa emitida pela CETESB?",
-                "10.3.1.1": "Informe o prazo de validade da licença de operação da CETESB.",
-                "11.0": "Existe Plano de Gerenciamento de Resíduos da Construção Civil (PGRCC) instituído?",
-                "11.1": "Informe o instrumento normativo que regulamenta o PGRCC.",
-                "11.2": "Informe a página eletrônica (link na internet) do PGRCC.",
-                "11.3": "Existe um cronograma de metas definido no âmbito do PGRCC?",
-                "11.3.1": "Informe as metas previstas no Plano de Resíduos da Construção Civil.",
-                "11.3.2": "Há monitoramento e avaliação das ações e metas do PGRCC?",
-                "11.3.2.1": "Informe de qual forma é realizado o monitoramento e a avaliação.",
-                "11.3.3": "As metas estabelecidas no PGRCC estão sendo cumpridas no prazo estipulado?",
-                "11.3.3.1": "Informe os motivos identificados para o não cumprimento das metas estruturadas.",
-                "11.4": "Quem é o agente ou setor responsável pela triagem dos resíduos da construção civil?",
-                "11.5": "O Município realiza a fiscalização ativa das atividades relacionadas aos resíduos da construção civil?",
-                "11.5.1": "Informe quais as principais atividades que são fiscalizadas pelo órgão municipal.",
-                "11.6": "Existe Área de Transbordo e Triagem (ATT) específica para resíduos da construção civil?",
-                "11.6.1": "A referida ATT de resíduos da construção civil possui licença de operação da CETESB?",
-                "11.6.1.1": "Informe o prazo de validade da licença emitida pela CETESB.",
-                "12.0": "O Município adota alguma forma de processamento de resíduos antes da sua disposição final?",
-                "12.1": "Informe detalhadamente qual a forma de processamento utilizada nos resíduos.",
-                "13.0": "Existe aterro sanitário ou industrial para destinação de resíduos sólidos urbanos no território municipal ou consorciado?",
-                "13.1": "Informe as características e a situação atual do local de destinação final dos resíduos.",
-                "13.1.1": "Informe a data provável estimada para o fechamento ou esgotamento do aterro.",
-                "13.2": "O aterro utilizado possui licença de operação regular emitida pela CETESB?",
-                "13.2.1": "Informe o prazo de validade da respectiva licença de operação.",
-                "14.0": "Foram identificados pontos de descarte irregular de lixo ou entulho no município?",
-                "14.1": "Informe a quantidade total de pontos de descarte irregular atualmente identificados.",
-                "14.2": "Indique os endereços ou localizações dos pontos críticos identificados.",
-                "14.3": "Quais ações práticas e fiscalizatórias foram promovidas para combater e mitigar o descarte irregular?",
-                "15.0": "Está definida qual a entidade responsável pela regulação e fiscalização dos serviços de saneamento básico?",
-                "15.1": "Assinale quais serviços municipais possuem entidade reguladora e fiscalizadora externa ou interna.",
-                "15.1.1": "Informe a entidade responsável pela regulação do abastecimento de água potável.",
-                "15.1.2": "Informe a entidade responsável pela regulação do esgotamento sanitário.",
-                "15.1.3": "Informe a entidade responsável pela regulação da limpeza urbana e manejo de resíduos sólidos.",
-                "15.1.4": "Informe a entidade responsável pela regulação da drenagem e manejo das águas pluviais urbanas.",
-                "16.0": "Gostaria de registrar suas impressões, comentários e sugestões gerais a respeito deste bloco do questionário?",
-                "A1": "O Município possui Zoneamento Ecológico-Econômico (ZEE) instituído ou em andamento?",
-                "A2": "Há monitoramento sistemático da qualidade do ar nas zonas urbanas ou industriais do município?",
-                "A3": "O município possui mapeamento atualizado e proteção ativa de suas Áreas de Preservação Permanente (APP)?",
-                "A4": "Existe programa municipal voltado para a proteção e bem-estar de animais domésticos e controle de zoonoses?",
-                "A4.1.1": "Informe a capacidade física e operacional do abrigo ou canil municipal.",
-                "A4.1.1.1": "Há veterinário responsável contratado em regime definitivo ou plantonista?",
-                "A4.1.2": "O município realiza campanhas periódicas e gratuitas de castração de cães e gatos?",
-                "A4.1.3": "Informe o número de procedimentos de esterilização animal realizados no último ano de exercício.",
-                "A4.1.4": "Existem parcerias ativas com ONGs e protetores independentes locais registradas?",
-                "A5": "O Município possui plano de prevenção e combate a incêndios florestais e queimadas urbanas?",
-                "A6": "O órgão ambiental municipal possui equipamentos adequados para atendimento e contenção de emergências químicas ou derramamentos?"
+                "1.1.2": "1.1.2 - Conselho Municipal do Meio Ambiente Ativo",
+                "1.1.3": "1.1.3 - Fundo Municipal do Meio Ambiente Operacional",
+                "1.2": "1.2 - Licenciamento e Fiscalização Ambiental Local",
+                "2.0": "2.0 - Educação Ambiental na Rede de Ensino",
+                "2.1": "2.1 - Programas Continuados de Conscientização Ambiental",
+                "3.0": "3.0 - Gestão de Recursos Hídricos e Bacias Hidrográficas",
+                "3.1": "3.1 - Proteção de Nascentes e Áreas de Preservação Permanente",
+                "4.0": "4.0 - Monitoramento da Qualidade do Ar",
+                "5.2.1": "5.2.1 - Controle de Queimadas e Incêndios Florestais",
+                "6.0": "6.0 - Gestão do Saneamento Ambiental",
+                "6.1": "6.1 - Percentual de Coleta e Tratamento de Esgoto Sanitário",
+                "6.2": "6.2 - Controle de Perdas na Rede de Distribuição de Água",
+                "7.2": "7.2 - Coleta Seletiva de Resíduos Sólidos Urbano",
+                "7.3": "7.3 - Destinação Adequada de Resíduos de Saúde (RSS)",
+                "7.3.1": "7.3.1 - Tratamento de Resíduos Perigosos",
+                "7.4": "7.4 - Logística Reversa de Lixo Eletrônico e Baterias",
+                "7.4.1": "7.4.1 - Pontos de Entrega Voluntária (PEV) Instalados",
+                "7.5": "7.5 - Compostagem de Resíduos Orgânicos",
+                "7.7": "7.7 - Erradicação de Lixões e Gestão de Aterro Sanitário",
+                "7.8": "7.8 - Licenciamento Ambiental do Aterro Sanitário",
+                "7.8.1": "7.8.1 - Monitoramento do Chorume e Gases no Aterro",
+                "7.9": "7.9 - Cooperativas de Catadores Apoiadas pelo Município",
+                "8.2": "8.2 - Recuperação de Áreas Degradadas",
+                "8.3": "8.3 - Reflorestamento com Espécies Nativas",
+                "8.4": "8.4 - Unidades de Conservação Municipais Criadas e Mantidas",
+                "8.4.1": "8.4.1 - Plano de Manejo das Unidades de Conservação",
+                "8.4.2": "8.4.2 - Infraestrutura de Fiscalização das Áreas Protegidas",
+                "8.4.3": "8.4.3 - Regularização Fundiária das Unidades de Conservação",
+                "9.2": "9.2 - Uso de Energias Renováveis em Prédios Públicos",
+                "9.3": "9.3 - Eficiência Energética na Frota Municipal",
+                "9.3.1": "9.3.1 - Incentivo a Veículos Elétricos ou Híbridos",
+                "11.2": "11.2 - Controle de Zooses e Manejo de Animais",
+                "11.3": "11.3 - Castração e Microchipagem de Cães e Gatos",
+                "11.3.2": "11.3.2 - Centro de Acolhimento e Bem-Estar Animal",
+                "11.3.3": "11.3.3 - Campanhas de Vacinação Animal",
+                "11.5": "11.5 - Fiscalização contra Maus-Tratos a Animais",
+                "12.1": "12.1 - Plano de Adaptação às Mudanças Climáticas",
+                "14.3": "14.3 - Drenagem Sustentável e Piscinões",
+                "15": "15.0 - Combate à Poluição Sonora",
+                "15.1": "15.1 - Fiscalização de Ruídos e Emissões Sonoras",
+                "A4.1.1": "A4.1.1 - Auditoria Ambiental nas Atividades Poluidoras",
+                "A4.1.2": "A4.1.2 - Monitoramento de Ruído Urbano",
+                "A4.1.3": "A4.1.3 - Certificações e Selos Verdes Municipais",
+                "A6": "A6 - Transparência nas Licenças Ambientais Emitidas"
             }
         }
 
+        # Dicionário de Pontuações Máximas
         self.pontuacoes_maximas_por_dimensao = {
             "iCidade": {
                 "1.0": 40, "1.3": 5, "1.4": 50, "2.0": 20, "2.1": 30, "2.2": 10,
@@ -324,98 +150,26 @@ class SistemaHAL:
                 "A4.1.3": 22, "A6": 5
             }
         }
-
-
-# ==============================================================================
-# FUNÇÃO DE RENDERIZAÇÃO PARA O STREAMLIT
-# ==============================================================================
-def mostrar_chat_hal():
-    st.title("🤖 HAL - Sistema de Diagnóstico TCESP")
-    st.write("Conectado ao banco de dados PostgreSQL (Neon DB).")
-
-    # Instancia o sistema HAL
-    hal = SistemaHAL()
-
-    # Seleção de ano e dimensão
-    col1, col2 = st.columns(2)
-    with col1:
-        ano = st.number_input("Ano de Análise", min_value=2020, max_value=2026, value=2025)
-    with col2:
-        dimensao = st.selectbox("Dimensão", list(hal.questoes_por_dimensao.keys()))
-
-    if st.button("Analisar Desempenho", type="primary"):
-        nota = hal.puxar_nota_dimensao(dimensao, ano)
-        st.metric(label=f"Nota na dimensão {dimensao} ({ano})", value=f"{nota:.2f}")
-
-        fracos, penalidades = hal.analisar_pontos_fracos(ano, dimensao)
-
-        if penalidades:
-            st.error("⚠️ Penalidades Detectadas")
-            for p in penalidades:
-                st.write(f"- **[ID {p['id']}]** {p['pergunta']} (Penalidade: {p['penalidade']})")
-
-        if fracos:
-            st.warning("📉 Pontos com Déficit de Pontuação")
-            for f in fracos:
-                st.write(f"- **[ID {f['id']}]** Obtido: {f['obtido']} / Máx: {f['maximo']} (Déficit: {f['deficit']})")
-
-        self.pontuacoes_maximas_por_dimensao = {
-            "iCidade": {
-                "1.0": 40, "1.3": 5, "1.4": 50, "2.0": 20, "2.1": 30, "2.2": 10,
-                "3.0": 10, "3.1.1": 10, "5.0": 200, "7.0": 50, "7.1": 5, "7.2": 80,
-                "7.3": 50, "7.4": 50, "7.5": 10, "7.6": 10, "8.0": 50, "8.1.1.1": 20,
-                "8.2": 50, "9.0": 100, "15.0": 50, "16.0": 50, "C1.1": 50
-            },
-            "iGov-Ti": {
-                "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
-                "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
-                "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
-                "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
-                "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
-            },
-            "i-Amb": {
-                "1.1.2": 20, "1.1.3": 5, "1.2": 20, "2.0": 10, "2.1": 50, "3.0": 10,
-                "3.1": 20, "4.0": 20, "5.2.1": 20, "6.0": 20, "6.1": 50, "6.2": 25,
-                "7.2": 2, "7.3": 10, "7.3.1": 20, "7.4": 10, "7.4.1": 20, "7.5": 30,
-                "7.7": 30, "7.8": 20, "7.8.1": 50, "7.9": 3, "8.2": 2, "8.3": 10,
-                "8.4": 20, "8.4.1": 10, "8.4.2": 30, "8.4.3": 50, "9.2": 100, "9.3": 5,
-                "9.3.1": 5, "11.2": 2, "11.3": 30, "11.3.2": 20, "11.3.3": 40, "11.5": 10,
-                "12.1": 54, "14.3": 30, "15": 2, "15.1": 3, "A4.1.1": 90, "A4.1.2": 20,
-                "A4.1.3": 22, "A6": 5
-            }
-        }
-
-    def inicializar_bancos_dados(self):
-        bancos = {
-            "iGov-Ti": "dados_igov_ti.db",
-            "iCidade": "dados_iegm_web.db",
-            "i-Amb": "dados_iamb.db"
-        }
-        conexoes = {}
-        for dim, arq in bancos.items():
-            try:
-                conexoes[dim] = sqlite3.connect(arq, check_same_thread=False)
-            except Exception:
-                conexoes[dim] = None
-        return conexoes
-
-    def obter_conexao(self, dimensao):
-        return self.conexoes.get(dimensao, self.conexoes.get("iCidade"))
+        
+        # Cria a engine de conexão com o PostgreSQL Neon DB
+        self.engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
     def consultar_anos(self, dimensao, quesito_id):
-        conn = self.obter_conexao(dimensao)
-        if not conn: return []
-        cursor = conn.cursor()
         try:
-            cursor.execute("SELECT ano, valor FROM respostas WHERE id = ? ORDER BY ano ASC;", (quesito_id,))
-            return cursor.fetchall()
-        except Exception:
+            with self.engine.connect() as conn:
+                query = text("""
+                    SELECT ano, valor 
+                    FROM respostas 
+                    WHERE id = :id AND LOWER(dimensao) = LOWER(:dimensao)
+                    ORDER BY ano ASC;
+                """)
+                result = conn.execute(query, {"id": str(quesito_id), "dimensao": dimensao})
+                return [(row.ano, row.valor) for row in result]
+        except Exception as e:
+            st.error(f"Erro ao consultar anos no PostgreSQL: {e}")
             return []
 
     def analisar_pontos_fracos(self, ano, dimensao):
-        conn = self.obter_conexao(dimensao)
-        if not conn: return [], []
-        cursor = conn.cursor()
         pontos_fracos = []
         penalidades_detectadas = []
         
@@ -423,70 +177,109 @@ def mostrar_chat_hal():
         pontuacoes_maximas = self.pontuacoes_maximas_por_dimensao.get(dimensao, {})
         
         try:
-            cursor.execute("SELECT id, valor, pontos FROM respostas WHERE ano = ?;", (ano,))
-            rows = cursor.fetchall()
+            with self.engine.connect() as conn:
+                query = text("""
+                    SELECT id, valor, pontos 
+                    FROM respostas 
+                    WHERE ano = :ano AND LOWER(dimensao) = LOWER(:dimensao);
+                """)
+                rows = conn.execute(query, {"ano": int(ano), "dimensao": dimensao}).fetchall()
             
-            for qid, valor, pontos_reais in rows:
-                if qid in questoes:
-                    if pontos_reais < 0:
-                        penalidades_detectadas.append({
-                            "id": qid, "pergunta": questoes.get(qid),
-                            "valor": valor, "penalidade": pontos_reais
+            for row in rows:
+                qid = str(row.id)
+                valor = row.valor
+                pontos_reais = float(row.pontos) if row.pontos is not None else 0.0
+
+                enunciado = questoes.get(qid, f"Quesito {qid}")
+
+                if pontos_reais < 0:
+                    penalidades_detectadas.append({
+                        "id": qid,
+                        "pergunta": enunciado,
+                        "valor": valor,
+                        "penalidade": pontos_reais
+                    })
+                elif qid in pontuacoes_maximas:
+                    max_possivel = float(pontuacoes_maximas[qid])
+                    if pontos_reais < max_possivel:
+                        deficit = max_possivel - pontos_reais
+                        pontos_fracos.append({
+                            "id": qid,
+                            "pergunta": enunciado,
+                            "valor": valor,
+                            "obtido": pontos_reais,
+                            "maximo": max_possivel,
+                            "deficit": deficit
                         })
-                    elif qid in pontuacoes_maximas:
-                        max_possivel = pontuacoes_maximas[qid]
-                        if pontos_reais < max_possivel:
-                            deficit = max_possivel - pontos_reais
-                            pontos_fracos.append({
-                                "id": qid, "pergunta": questoes.get(qid),
-                                "valor": valor, "obtido": pontos_reais,
-                                "maximo": max_possivel, "deficit": deficit
-                            })
             
             pontos_fracos.sort(key=lambda x: x["deficit"], reverse=True)
             penalidades_detectadas.sort(key=lambda x: x["penalidade"])
             return pontos_fracos, penalidades_detectadas
-        except Exception:
+        except Exception as e:
+            st.error(f"Erro ao analisar pontos fracos no PostgreSQL: {e}")
             return [], []
 
     def calcular_evolucao_pontos(self, dimensao):
-        conn = self.obter_conexao(dimensao)
-        if not conn: return []
-        cursor = conn.cursor()
         anos_validos = [2023, 2024, 2025, 2026, 2027]
         dados_anos = []
         
         try:
-            for ano in anos_validos:
-                cursor.execute("SELECT SUM(pontos) FROM respostas WHERE ano = ? AND pontos > 0", (ano,))
-                res_bruto = cursor.fetchone()[0]
-                pontos_brutos = float(res_bruto) if res_bruto else 0.0
+            with self.engine.connect() as conn:
+                for ano in anos_validos:
+                    q_bruto = text("""
+                        SELECT SUM(pontos) FROM respostas 
+                        WHERE ano = :ano AND LOWER(dimensao) = LOWER(:dimensao) AND pontos > 0;
+                    """)
+                    res_bruto = conn.execute(q_bruto, {"ano": ano, "dimensao": dimensao}).scalar()
+                    pontos_brutos = float(res_bruto) if res_bruto else 0.0
 
-                cursor.execute("SELECT SUM(pontos) FROM respostas WHERE ano = ? AND pontos < 0", (ano,))
-                res_penalidade = cursor.fetchone()[0]
-                penalidades_negativas = float(res_penalidade) if res_penalidade else 0.0
+                    q_penalidade = text("""
+                        SELECT SUM(pontos) FROM respostas 
+                        WHERE ano = :ano AND LOWER(dimensao) = LOWER(:dimensao) AND pontos < 0;
+                    """)
+                    res_penalidade = conn.execute(q_penalidade, {"ano": ano, "dimensao": dimensao}).scalar()
+                    penalidades_negativas = float(res_penalidade) if res_penalidade else 0.0
 
-                total_liquido = pontos_brutos + penalidades_negativas
-                if total_liquido < 0: total_liquido = 0.0
-                
-                max_dim = sum(self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).values()) or 100
-                p_perc = (total_liquido / max_dim) * 100
-                
-                if p_perc <= 50:    faixa, cor = "C",  "rgba(239, 68, 68, 0.85)"
-                elif p_perc <= 60:  faixa, cor = "C+", "rgba(249, 115, 22, 0.85)"
-                elif p_perc <= 75:  faixa, cor = "B",  "rgba(229, 191, 5, 0.85)"
-                elif p_perc <= 90:  faixa, cor = "B+", "rgba(34, 197, 94, 0.85)"
-                else:               faixa, cor = "A",  "rgba(22, 163, 74, 0.85)"
-                
-                dados_anos.append({
-                    "ano": ano, "bruto": pontos_brutos, "penalidade": penalidades_negativas,
-                    "liquido": total_liquido, "faixa": faixa, "cor_faixa": cor
-                })
+                    total_liquido = pontos_brutos + penalidades_negativas
+                    if total_liquido < 0:
+                        total_liquido = 0.0
+                    
+                    max_dim = sum(self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).values()) or 100
+                    p_perc = (total_liquido / max_dim) * 100
+                    
+                    if p_perc <= 50:
+                        faixa, cor = "C", "rgba(239, 68, 68, 0.85)"
+                    elif p_perc <= 60:
+                        faixa, cor = "C+", "rgba(249, 115, 22, 0.85)"
+                    elif p_perc <= 75:
+                        faixa, cor = "B", "rgba(229, 191, 5, 0.85)"
+                    elif p_perc <= 90:
+                        faixa, cor = "B+", "rgba(34, 197, 94, 0.85)"
+                    else:
+                        faixa, cor = "A", "rgba(22, 163, 74, 0.85)"
+                    
+                    dados_anos.append({
+                        "ano": ano,
+                        "bruto": pontos_brutos,
+                        "penalidade": penalidades_negativas,
+                        "liquido": total_liquido,
+                        "faixa": faixa,
+                        "cor_faixa": cor
+                    })
             return dados_anos
-        except Exception:
+        except Exception as e:
+            st.error(f"Erro ao calcular evolução no PostgreSQL: {e}")
             return []
 
+
+# ==============================================================================
+# FUNÇÃO DE RENDERIZAÇÃO STREAMLIT
+# ==============================================================================
 def mostrar_chat_hal():
+    st.set_page_config(page_title="HAL - Diagnóstico TCESP", layout="wide")
+    st.title("🤖 HAL - Sistema de Diagnóstico TCESP")
+    st.write("Conectado diretamente ao banco de dados **PostgreSQL (Neon DB)**.")
+
     if "hal_sistema" not in st.session_state:
         st.session_state.hal_sistema = SistemaHAL()
     sistema = st.session_state.hal_sistema
@@ -497,7 +290,7 @@ def mostrar_chat_hal():
     st.markdown(
         """
         <style>
-        .chat-wrapper { max-width: 850px; margin: 0 auto; font-family: -apple-system, sans-serif; }
+        .chat-wrapper { max-width: 900px; margin: 0 auto; font-family: -apple-system, sans-serif; }
         .chat-bubble-user { background-color: #f4f4f4; color: #1d1d1f; padding: 14px 18px; border-radius: 18px; display: inline-block; max-width: 80%; margin-bottom: 20px; float: right; clear: both; }
         .chat-bubble-ia { display: flex; gap: 16px; margin-bottom: 25px; clear: both; align-items: flex-start; }
         .avatar-ia { background-color: #10a37f; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0; }
@@ -513,19 +306,12 @@ def mostrar_chat_hal():
     dimensoes_disponiveis = ["iGov-Ti", "iCidade", "i-Amb"]
     dimensao_selecionada = st.selectbox("📂 Selecione a Dimensão Operacional:", dimensoes_disponiveis, index=0)
 
-    if dimensao_selecionada == "iGov-Ti":
-        banco_ativo = "dados_igov_ti.db"
-    elif dimensao_selecionada == "i-Amb":
-        banco_ativo = "dados_iamb.db"
-    else:
-        banco_ativo = "dados_iegm_web.db"
-
     st.markdown(
         f"""
         <div class="chat-bubble-ia">
             <div class="avatar-ia">HAL</div>
             <div class="content-ia">
-                Roteamento concluído com sucesso. Lendo dados de <b>{banco_ativo}</b> para processar o índice <b>{dimensao_selecionada}</b>.
+                Conexão PostgreSQL ativa. Consultando dados remotos no Neon DB para o índice <b>{dimensao_selecionada}</b>.
             </div>
         </div>
         """,
@@ -539,7 +325,7 @@ def mostrar_chat_hal():
         eixo_x = [f"Ano {d['ano']}" for d in historico_performance]
         valores_liquidos = [d['liquido'] for d in historico_performance]
         cores = [d['cor_faixa'] for d in historico_performance]
-        textos = [f"Faixa {d['faixa']}" for d in historico_performance]
+        textos = [f"Faixa {d['faixa']} ({d['liquido']:.1f} pts)" for d in historico_performance]
 
         fig = go.Figure(data=[
             go.Bar(
@@ -558,17 +344,20 @@ def mostrar_chat_hal():
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("Nenhum dado estruturado foi retornado para a performance desta dimensão.")
+        st.info("Nenhum dado estruturado foi retornado do PostgreSQL para esta dimensão.")
 
     # ==============================================================================
-    # PARTE RECUPERADA 1: Recuperação Segmentada de Respostas
+    # PARTE 1: Recuperação Segmentada de Respostas por Quesito
     # ==============================================================================
+    st.markdown("---")
     questoes_atuais = sistema.questoes_por_dimensao.get(dimensao_selecionada, {})
-    ids_ordenados = sorted(list(questoes_atuais.keys()), key=lambda x: [float(n) for n in re.findall(r'\d+', x)] if re.search(r'\d+', x) else [0.0])
+    ids_ordenados = sorted(
+        list(questoes_atuais.keys()), 
+        key=lambda x: [float(n) for n in re.findall(r'\d+', x)] if re.search(r'\d+', x) else [0.0]
+    )
     opcoes_select = ["-- Selecione o item que deseja analisar --"] + [f"{q_id} - {questoes_atuais[q_id]}" for q_id in ids_ordenados]
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    selecionado = st.selectbox(f"💬 Recuperar Resposta do Banco ({dimensao_selecionada}):", options=opcoes_select, key="sel_hal_split")
+    selecionado = st.selectbox(f"💬 Recuperar Resposta do Banco PostgreSQL ({dimensao_selecionada}):", options=opcoes_select, key="sel_hal_split")
 
     if selecionado != "-- Selecione o item que deseja analisar --":
         id_alvo = selecionado.split(" - ")[0]
@@ -587,10 +376,10 @@ def mostrar_chat_hal():
                 elif str(ano) in dict_historico:
                     st.success(f"**Resposta registrada:** {dict_historico[str(ano)]}")
                 else:
-                    st.warning("Nenhum dado encontrado para este ano neste banco.")
+                    st.warning("Nenhum dado encontrado para este ano no banco de dados.")
 
     # ==============================================================================
-    # PARTE RECUPERADA 2: Painel de Auditoria por Banco
+    # PARTE 2: Painel de Auditoria e Diagnóstico de Gaps
     # ==============================================================================
     st.markdown("---")
     st.markdown(f"### 🚨 Painel de Diagnóstico de Gaps ({dimensao_selecionada})")
@@ -628,10 +417,10 @@ def mostrar_chat_hal():
                         """, unsafe_allow_html=True
                     )
         else:
-            st.info(f"Nenhuma perda ou penalidade registrada para {dimensao_selecionada} no ano {ano_auditoria}.")
+            st.info(f"Nenhuma perda ou penalidade registrada no PostgreSQL para {dimensao_selecionada} no ano {ano_auditoria}.")
 
     # ==============================================================================
-    # ÁREA DE DIÁLOGO DO ASSISTENTE CHAT
+    # PARTE 3: ÁREA DE DIÁLOGO DO ASSISTENTE CHAT
     # ==============================================================================
     st.markdown("---")
     st.markdown("### 💬 Conversar com Assistente HAL")
@@ -671,9 +460,9 @@ def mostrar_chat_hal():
                 for pt in pontos_fracos[:3]:
                     resposta_ia += f"- **Item {pt['id']}**: Defasagem de {pt['deficit']} pts.<br>"
             if not penalidades and not pontos_fracos:
-                resposta_ia += "Tudo limpo! Não identifiquei perdas de pontuação estruturadas no banco."
+                resposta_ia += "Tudo limpo! Não identifiquei perdas de pontuação registradas no banco Neon DB."
         else:
-            resposta_ia = f"Processando dados de **{dimensao_selecionada}**. Para auditoria automatizada via prompt, especifique comandos contendo o ano desejado."
+            resposta_ia = f"Processando dados de **{dimensao_selecionada}**. Para auditoria automatizada via prompt, especifique comandos contendo o ano desejado (ex: *'analisar pontos fracos 2025'*)."
 
         st.markdown(
             f"""
@@ -687,3 +476,8 @@ def mostrar_chat_hal():
         st.session_state.hal_chat_history.append({"role": "assistant", "content": resposta_ia})
         
     st.markdown('</div>', unsafe_allow_html=True)
+
+
+# Execução direta para testes locais
+if __name__ == "__main__":
+    mostrar_chat_hal()
