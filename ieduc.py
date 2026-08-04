@@ -1416,6 +1416,7 @@ def render_sidebar_ieduc():
     with col2:
         if st.button("🗑️ Zerar", use_container_width=True):
             confirmar_zerar_dialog_ieduc(ano_sel)
+    return total_pts, res_data, ano_sel
 
 # =============================================================================
 # 5. GRÁFICOS E HISTÓRICO - i-Educ
