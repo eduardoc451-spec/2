@@ -32642,6 +32642,9 @@ def render_aba_dados_externos_e1_1(res_data: dict, ano_sel: str):
             )
         st.session_state[f"gatilho_modal_e11_{ano_sel}"] = False
 
+    # Em ieduc.py (perto do final onde fica essa função)
+
+def render_aba_graficos(aba_graf, ano_sel):
     # =============================================================================
     # ABA 3: GRÁFICOS E DESEMPENHO HISTÓRICO (i-Saúde / i-Educ)
     # =============================================================================
