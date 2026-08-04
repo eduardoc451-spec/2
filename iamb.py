@@ -122,24 +122,14 @@ def modal_aviso_link(qid, links_encontrados):
     """)
     if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
         st.rerun()
-import streamlit as st
-import json
-import logging
-import re
-from datetime import datetime
-from psycopg2.extras import RealDictCursor
 
 # =============================================================================
 # 1. GESTÃO DE ESTADO E PERSISTÊNCIA (SESSION STATE + NEON POSTGRES)
 # =============================================================================
 
 def get_ano_atual() -> int:
-    """Recupera o ano de referência ativo para o iFiscal."""
-    return int(
-        st.session_state.get("ano_referencia_ifiscal")
-        or st.session_state.get("ano_referencia_global")
-        or 2026
-    )
+    """Recupera o ano de referência ativo para o iAMB."""
+    return int(st.session_state.get("ano_referencia_iamb") or st.session_state.get("ano_referencia_global") or 2026)
 
 
 def load_respostas(ano: int = None) -> dict:
@@ -147,7 +137,7 @@ def load_respostas(ano: int = None) -> dict:
     if ano is None:
         ano = get_ano_atual()
     
-    key_ano = f"respostas_ifiscal_{ano}"
+    key_ano = f"respostas_iamb_{ano}"
     
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
@@ -156,7 +146,7 @@ def load_respostas(ano: int = None) -> dict:
             with get_connection() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(
-                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_ifiscal WHERE ano = %s",
+                        "SELECT quesito, resposta, pontos, detalhes FROM respostas_iamb WHERE ano = %s",
                         (int(ano),)
                     )
                     rows = cursor.fetchall()
@@ -177,15 +167,15 @@ def load_respostas(ano: int = None) -> dict:
                             "detalhes": detalhes
                         }
         except Exception as e:
-            logging.error(f"Erro ao carregar respostas do banco iFiscal: {e}")
+            logging.error(f"Erro ao carregar respostas do banco iAMB: {e}")
 
     return st.session_state[key_ano]
 
 
 def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
-    """Salva/Atualiza respostas no st.session_state e sincroniza com a tabela respostas_ifiscal no Neon."""
+    """Salva/Atualiza respostas no st.session_state e sincroniza com a tabela respostas_iamb no Neon."""
     ano_int = get_ano_atual()
-    key_ano = f"respostas_ifiscal_{ano_int}"
+    key_ano = f"respostas_iamb_{ano_int}"
     
     if key_ano not in st.session_state:
         st.session_state[key_ano] = {}
@@ -217,12 +207,12 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
     }
     st.session_state[key_ano][str(qid)] = dados_salvar
 
-    # 2. Persiste no banco de dados Neon (UPSERT nas colunas exatas da tabela respostas_ifiscal)
+    # 2. Persiste no banco de dados Neon (UPSERT nas colunas exatas da tabela respostas_iamb)
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO respostas_ifiscal (ano, quesito, resposta, pontos, detalhes, atualizado_em)
+                    INSERT INTO respostas_iamb (ano, quesito, resposta, pontos, detalhes, atualizado_em)
                     VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (ano, quesito) 
                     DO UPDATE SET 
@@ -240,194 +230,61 @@ def save_resp(qid, valor, pontos, link="", comentarios=None, comentario=""):
             conn.commit()
             return True
     except Exception as e:
-        logging.error(f"Erro ao salvar resposta do iFiscal no banco Neon: {e}")
+        logging.error(f"Erro ao salvar resposta do iAMB no banco Neon: {e}")
         st.error(f"Erro ao salvar no banco Neon: {e}")
         return False
-
-import json
-import logging
-import re
-from datetime import datetime
-import streamlit as st
-
-# =============================================================================
-# 1. FUNÇÕES DE BANCO DE DADOS E PERSISTÊNCIA (i-Amb)
-# =============================================================================
-
-
-def save_resp(
-    qid: str,
-    valor: str = "",
-    pontos: float = 0.0,
-    link: str = "",
-    comentarios: list = None,
-):
-    """Salva a resposta do i-Amb na memória (session_state) e grava no PostgreSQL."""
-    ano_sel = get_ano_atual()
-    chave_sessao = f"respostas_iamb_{ano_sel}"
-
-    if comentarios is None:
-        comentarios = []
-
-    # 1. Salva na sessão local do Streamlit
-    if chave_sessao not in st.session_state:
-        st.session_state[chave_sessao] = {}
-
-    st.session_state[chave_sessao][qid] = {
-        "valor": valor,
-        "pontos": float(pontos),
-        "link": link,
-        "comentarios": comentarios,
-    }
-
-    # 2. Persiste no banco de dados PostgreSQL (tabela respostas_iamb)
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                # O i-Amb guarda o link e comentários na coluna 'detalhes' como JSON
-                detalhes_dict = {"link": link, "comentarios": comentarios}
-                detalhes_json = json.dumps(detalhes_dict, ensure_ascii=False)
-
-                # Chave única para o registro (ex: '2026_Q1')
-                id_registro = f"{ano_sel}_{qid}"
-
-                sql = """
-                    INSERT INTO respostas_iamb (id, ano, quesito, resposta, pontos, detalhes, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                    ON CONFLICT (id) DO UPDATE SET
-                        resposta = EXCLUDED.resposta,
-                        pontos = EXCLUDED.pontos,
-                        detalhes = EXCLUDED.detalhes,
-                        atualizado_em = NOW();
-                """
-                cursor.execute(
-                    sql,
-                    (
-                        id_registro,
-                        int(ano_sel),
-                        str(qid),
-                        str(valor),
-                        float(pontos),
-                        detalhes_json,
-                    ),
-                )
-                conn.commit()
-                logging.info(
-                    f"[i-Amb] Questão {qid} ({ano_sel}) salva no DB com sucesso."
-                )
-    except Exception as e:
-        logging.error(f"[i-Amb] Erro ao gravar questão {qid} no banco: {e}")
-        st.error(f"⚠️ Erro ao gravar no banco de dados: {e}")
-
-
-def carregar_respostas_iamb(ano: int):
-    """Carrega as respostas salvas na tabela 'respostas_iamb' para o st.session_state."""
-    chave_sessao = f"respostas_iamb_{ano}"
-
-    if chave_sessao not in st.session_state:
-        st.session_state[chave_sessao] = {}
-
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cursor:
-                sql = "SELECT quesito, resposta, pontos, detalhes FROM respostas_iamb WHERE ano = %s;"
-                cursor.execute(sql, (int(ano),))
-                rows = cursor.fetchall()
-
-                for row in rows:
-                    qid, resposta, pontos, detalhes_db = row
-
-                    link = ""
-                    comentarios = []
-
-                    # Trata e parseia a coluna JSON 'detalhes'
-                    if detalhes_db:
-                        if isinstance(detalhes_db, str):
-                            try:
-                                det = json.loads(detalhes_db)
-                            except Exception:
-                                det = {}
-                        elif isinstance(detalhes_db, dict):
-                            det = detalhes_db
-                        else:
-                            det = {}
-
-                        link = det.get("link", "")
-                        comentarios = det.get("comentarios", [])
-
-                    st.session_state[chave_sessao][qid] = {
-                        "valor": resposta or "",
-                        "pontos": float(pontos) if pontos is not None else 0.0,
-                        "link": link,
-                        "comentarios": comentarios,
-                    }
-    except Exception as e:
-        logging.error(
-            f"[i-Amb] Erro ao carregar respostas do banco para o ano {ano}: {e}"
-        )
-
 
 # =============================================================================
 # 2. COMPONENTE PARA RENDERIZAR E SALVAR QUESTÕES
 # =============================================================================
 
-
 def renderizar_questao(qid, res_data):
     """Renderiza a questão com botão de salvamento manual."""
     dados_q = res_data.get(qid, {})
-
+    
     val_existente = dados_q.get("valor", "")
     pts_existente = float(dados_q.get("pontos", 0.0))
     link_existente = dados_q.get("link", "")
-
+    
     with st.container(border=True):
         st.markdown(f"#### Quesito: `{qid}`")
-
+        
         col_txt, col_meta = st.columns([3, 1])
-
+        
         with col_txt:
             novo_valor = st.text_area(
-                "Resposta / Evidência:",
-                value=val_existente,
+                "Resposta / Evidência:", 
+                value=val_existente, 
                 key=f"txt_val_{qid}",
-                height=100,
+                height=100
             )
             novo_link = st.text_input(
-                "Link da Evidência (opcional):",
-                value=link_existente,
-                key=f"txt_link_{qid}",
+                "Link da Evidência (opcional):", 
+                value=link_existente, 
+                key=f"txt_link_{qid}"
             )
 
         with col_meta:
             novos_pontos = st.number_input(
-                "Pontuação:", value=pts_existente, key=f"num_pts_{qid}"
+                "Pontuação:", 
+                value=pts_existente, 
+                key=f"num_pts_{qid}"
             )
-
+            
             st.markdown("<br>", unsafe_allow_html=True)
-
-            if st.button(
-                "💾 Salvar Questão",
-                key=f"btn_save_{qid}",
-                type="primary",
-                use_container_width=True,
-            ):
-                links = re.findall(
-                    r"https?://[^\s]+", novo_valor
-                ) + re.findall(r"https?://[^\s]+", novo_link)
-
-                # Mantém os comentários existentes ao salvar
-                comentarios_existentes = dados_q.get("comentarios", [])
-
+            
+            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
+                
                 save_resp(
-                    qid=qid,
-                    valor=novo_valor,
-                    pontos=novos_pontos,
-                    link=novo_link,
-                    comentarios=comentarios_existentes,
+                    qid=qid, 
+                    valor=novo_valor, 
+                    pontos=novos_pontos, 
+                    link=novo_link
                 )
-
+                
                 st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
-
+                
                 if links and "modal_aviso_link" in globals():
                     modal_aviso_link(qid, links)
 
@@ -438,59 +295,45 @@ def renderizar_questao(qid, res_data):
 def bloco_comentarios(questao_id, res_data, sufixo=None):
     """Gera o diálogo interno avançado com histórico e status."""
     ano_sel = get_ano_atual()
-    usuario_atual = st.session_state.get(
-        "username", st.session_state.get("usuario", "Usuário Anônimo")
-    )
-
+    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+    
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
     key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
     key_radio = f"rad_status_{id_chave}_{ano_sel}"
-
+    
     if key_estado_limpar not in st.session_state:
         st.session_state[key_estado_limpar] = False
-
+        
     dados_questao = res_data.get(questao_id, {})
     historico = list(dados_questao.get("comentarios", []))
-
+    
     status_global = "Resolvido"
     for com in historico:
         if isinstance(com, dict) and "status_definido" in com:
             status_global = com["status_definido"]
-
-    badge_status = (
-        "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
-    )
-
-    with st.expander(
-        f"💬 Diálogo Interno {id_chave} | Status: {badge_status}",
-        expanded=(status_global == "Pendente"),
-    ):
+            
+    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+    
+    with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
         opcoes_status = ["Resolvido", "Pendente"]
-        idx_status_atual = (
-            opcoes_status.index(status_global)
-            if status_global in opcoes_status
-            else 0
-        )
-
+        idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
+        
         novo_status_clicado = st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
             index=idx_status_atual,
             horizontal=True,
-            key=key_radio,
+            key=key_radio
         )
-
+        
         # Mudança de Status
-        if (
-            key_radio in st.session_state
-            and st.session_state[key_radio] != status_global
-        ):
+        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
                 "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
-                "status_definido": novo_status_clicado,
+                "status_definido": novo_status_clicado
             }
             historico.append(log_mudanca)
             save_resp(
@@ -498,7 +341,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 valor=dados_questao.get("valor", ""),
                 pontos=dados_questao.get("pontos", 0),
                 link=dados_questao.get("link", ""),
-                comentarios=historico,
+                comentarios=historico
             )
             st.rerun()
 
@@ -507,19 +350,18 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                 if not isinstance(com, dict):
                     continue
                 col_balao, col_lixeira = st.columns([11, 1])
-
+                
                 with col_balao:
-                    autor = com.get("autor", "Anônimo")
-                    data_com = com.get("data", "")
-                    texto_com = com.get("texto", "")
-
+                    autor = com.get('autor', 'Anônimo')
+                    data_com = com.get('data', '')
+                    texto_com = com.get('texto', '')
+                    
                     if "Sistema /" in autor:
                         st.markdown(
                             f"""<div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
                                 <span style="font-size: 11px; color: #6c757d; font-style: italic;">{autor} - {data_com}</span>
                                 <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057;">{texto_com}</p>
-                            </div>""",
-                            unsafe_allow_html=True,
+                            </div>""", unsafe_allow_html=True
                         )
                     else:
                         st.markdown(
@@ -527,70 +369,56 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                                 <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">{autor}</span> 
                                 <span style="font-size: 10px; color: #999; margin-left: 10px;">{data_com}</span>
                                 <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{texto_com}</p>
-                            </div>""",
-                            unsafe_allow_html=True,
+                            </div>""", unsafe_allow_html=True
                         )
-
+                
                 with col_lixeira:
-                    if st.button(
-                        "🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}"
-                    ):
+                    if st.button("🗑️", key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}"):
                         historico.pop(idx)
                         save_resp(
                             qid=questao_id,
                             valor=dados_questao.get("valor", ""),
                             pontos=dados_questao.get("pontos", 0),
                             link=dados_questao.get("link", ""),
-                            comentarios=historico,
+                            comentarios=historico
                         )
                         st.rerun()
-
+        
         # Limpeza do campo de entrada
         if st.session_state[key_estado_limpar]:
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
-
-        novo_texto = st.text_area(
-            "Novo comentário:",
-            key=key_texto,
-            height=70,
-            label_visibility="collapsed",
-        )
-
-        if st.button(
-            "Postar Comentário",
-            key=f"btn_com_{id_chave}_{ano_sel}",
-            type="primary",
-        ):
+            
+        novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
+        
+        if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
             if novo_texto.strip():
                 nova_mensagem = {
                     "autor": usuario_atual,
                     "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "texto": novo_texto.strip(),
-                    "status_definido": status_global,
+                    "status_definido": status_global
                 }
                 historico.append(nova_mensagem)
                 save_resp(
-                    qid=questao_id,
-                    valor=dados_questao.get("valor", ""),
-                    pontos=dados_questao.get("pontos", 0),
+                    qid=questao_id, 
+                    valor=dados_questao.get("valor", ""), 
+                    pontos=dados_questao.get("pontos", 0), 
                     link=dados_questao.get("link", ""),
-                    comentarios=historico,
+                    comentarios=historico
                 )
                 st.session_state[key_estado_limpar] = True
                 st.rerun()
 
-
 # =============================================================================
-# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (i-Amb)
+# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO (iAMB)
 # =============================================================================
-
 
 def get_all_years_data():
     """Varre a sessão procurando por chaves do tipo respostas_iamb_<ano>."""
     all_data = {}
     prefixo = "respostas_iamb_"
-
+    
     for key in list(st.session_state.keys()):
         if key.startswith(prefixo):
             try:
@@ -598,20 +426,15 @@ def get_all_years_data():
                 all_data[ano] = st.session_state[key]
             except ValueError:
                 continue
-
+                
     return all_data
 
 
 def analyze_performance(res_data):
-    """Mapeia os pontos fortes e fragilidades do ano atual no i-Amb usando PONTUACOES_MAX_IAMB."""
+    """Mapeia os pontos fortes e fragilidades do ano atual no iAMB usando PONTUACOES_MAX_IAMB."""
     pontos_fortes = []
     criticos_zero = {"Alta": [], "Média": [], "Baixa": []}
     criticos_negativos = {"Alta": [], "Média": [], "Baixa": []}
-
-    # Fallback de segurança se a constante tiver outro nome
-    pontuacoes_max = globals().get(
-        "PONTUACOES_MAX_IAMB", globals().get("PONTUACOES_MAX_IFISCAL", {})
-    )
 
     def classificar_relevancia(impacto):
         abs_impacto = abs(impacto)
@@ -623,44 +446,25 @@ def analyze_performance(res_data):
             return "Baixa"
 
     for qid, info in res_data.items():
-        if qid.startswith("COM_") or qid not in pontuacoes_max:
+        if qid.startswith("COM_") or qid not in PONTUACOES_MAX_IAMB:
             continue
 
         pontos_atuais = float(info.get("pontos", 0.0))
-        max_pontos = pontuacoes_max[qid]
+        max_pontos = PONTUACOES_MAX_IAMB[qid]
 
         if pontos_atuais == max_pontos:
-            pontos_fortes.append(
-                (
-                    qid,
-                    pontos_atuais,
-                    info.get("valor", ""),
-                    info.get("link", ""),
-                )
-            )
+            pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
         else:
             impacto = max_pontos - pontos_atuais
             relevancia = classificar_relevancia(impacto)
 
             if pontos_atuais < 0:
                 criticos_negativos[relevancia].append(
-                    (
-                        qid,
-                        pontos_atuais,
-                        info.get("valor", ""),
-                        info.get("link", ""),
-                        impacto,
-                    )
+                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
                 )
             else:
                 criticos_zero[relevancia].append(
-                    (
-                        qid,
-                        pontos_atuais,
-                        info.get("valor", ""),
-                        info.get("link", ""),
-                        impacto,
-                    )
+                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
                 )
 
     pontos_fortes.sort(key=lambda x: x[1], reverse=True)
@@ -669,7 +473,7 @@ def analyze_performance(res_data):
         criticos_negativos[rel].sort(key=lambda x: x[4], reverse=True)
 
     return pontos_fortes, criticos_zero, criticos_negativos
-    
+
 import io
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
