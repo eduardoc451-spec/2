@@ -7,7 +7,7 @@ NEON_URI = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-po
 
 
 def criar_conexao_direta():
-    """Conecta ao banco PostgreSQL Neon."""
+    """Conecta diretamente ao banco de dados Neon."""
     try:
         conn = psycopg2.connect(NEON_URI)
         return conn, None
@@ -22,6 +22,7 @@ class SistemaHAL:
         self.carregar_dicionarios_globais()
 
     def carregar_dicionarios_globais(self):
+        # Apenas iCidade configurado para este teste
         self.questoes_por_dimensao = {
             "iCidade": {
                 "1.0": (
@@ -32,36 +33,17 @@ class SistemaHAL:
                     "A COMPDEC ou órgão similar está associada ou subordinada"
                     " a qual secretaria/diretoria?"
                 ),
-            },
-            "iGov-Ti": {
-                "1.0": (
-                    "A Prefeitura possui uma área ou setor que cuida de"
-                    " Tecnologia da Informação..."
-                ),
-            },
-            "i-Amb": {
-                "1.0": (
-                    "Existe estrutura organizacional instalada para tratar de"
-                    " assuntos ligados ao Meio Ambiente Municipal?"
-                ),
-            },
+            }
         }
 
     def get_db_connection(self):
         return criar_conexao_direta()
 
     def get_dimensoes(self):
-        if hasattr(self, "questoes_por_dimensao") and isinstance(
-            self.questoes_por_dimensao, dict
-        ):
-            return list(self.questoes_por_dimensao.keys())
-        return ["iCidade", "iGov-Ti", "i-Amb"]
+        return list(self.questoes_por_dimensao.keys())
 
     def get_quesitos_por_dimensao(self, dimensao):
-        if (
-            hasattr(self, "questoes_por_dimensao")
-            and dimensao in self.questoes_por_dimensao
-        ):
+        if dimensao in self.questoes_por_dimensao:
             return [
                 f"{codigo} - {texto}"
                 for codigo, texto in self.questoes_por_dimensao[
@@ -71,59 +53,61 @@ class SistemaHAL:
         return []
 
     def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca a resposta consultando a tabela específica da dimensão."""
-        mapa_tabelas = {
-            "iCidade": "respostas_iplan",
-            "iGov-Ti": "respostas_igov",
-            "i-Amb": "respostas_iamb",
-            "iEduc": "respostas_ieduc",
-            "iFiscal": "respostas_ifiscal",
-            "iSaude": "respostas_isaude",
-        }
+        """Busca a resposta focando apenas em iCidade (tabela respostas_iplan)."""
 
-        tabela = mapa_tabelas.get(dimensao)
-        if not tabela:
+        if dimensao != "iCidade":
             return {
-                "resposta": "Dimensão desconhecida",
-                "detalhes": (
-                    f"Tabela para a dimensão '{dimensao}' não foi configurada."
-                ),
+                "resposta": "Dimensão em teste",
+                "detalhes": "Apenas a dimensão iCidade está ativa no momento.",
                 "pontuacao_obtida": 0,
             }
+
+        tabela = "respostas_iplan"
 
         conn, erro = criar_conexao_direta()
         if not conn:
             return {
                 "resposta": "Sem conexão",
-                "detalhes": (
-                    f"Não foi possível conectar ao banco de dados Neon: {erro}"
-                ),
+                "detalhes": f"Erro de conexão com o Neon: {erro}",
                 "pontuacao_obtida": 0,
             }
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                query = f"""
-                    SELECT id, ano, valor, pontos, link, comentarios 
-                    FROM {tabela} 
-                    WHERE id = %s AND ano = %s;
-                """
+                # Usamos SELECT * para ler todas as colunas independente do nome exato
+                query = f"SELECT * FROM {tabela} WHERE id = %s AND ano = %s;"
                 cur.execute(query, (str(codigo_quesito), int(ano)))
                 resultado = cur.fetchone()
 
                 if resultado:
-                    detalhe_texto = []
-                    link = resultado.get("link")
-                    comentarios = resultado.get("comentarios")
+                    # Converte a linha do banco para dicionário
+                    dados = dict(resultado)
 
-                    if link and link != "EMPTY_STRING":
+                    # Busca a resposta (tenta as colunas 'valor', 'resposta' ou 'texto')
+                    resp_val = (
+                        dados.get("valor")
+                        or dados.get("resposta")
+                        or dados.get("texto")
+                        or "Resposta cadastrada sem texto"
+                    )
+
+                    # Busca os pontos (tenta 'pontos' ou 'pontuacao')
+                    pontos_val = dados.get("pontos", dados.get("pontuacao", 0))
+
+                    # Trata o link e comentários
+                    link = dados.get("link")
+                    comentarios = dados.get("comentarios")
+
+                    detalhe_texto = []
+                    if link and str(link) not in ["EMPTY_STRING", "None", ""]:
                         detalhe_texto.append(f"Link: {link}")
 
-                    if (
-                        comentarios
-                        and comentarios != "EMPTY_STRING"
-                        and comentarios != "[]"
-                    ):
+                    if comentarios and str(comentarios) not in [
+                        "EMPTY_STRING",
+                        "[]",
+                        "None",
+                        "",
+                    ]:
                         detalhe_texto.append(f"Comentários: {comentarios}")
 
                     txt_detalhes = (
@@ -133,24 +117,16 @@ class SistemaHAL:
                     )
 
                     return {
-                        "resposta": (
-                            resultado.get("valor")
-                            if resultado.get("valor")
-                            else "Sem resposta"
-                        ),
+                        "resposta": resp_val,
                         "detalhes": txt_detalhes,
-                        "pontuacao_obtida": (
-                            resultado.get("pontos")
-                            if resultado.get("pontos") is not None
-                            else 0
-                        ),
+                        "pontuacao_obtida": pontos_val,
                     }
                 else:
                     return {
                         "resposta": "Sem registro",
                         "detalhes": (
-                            f"Nenhum registro encontrado na tabela '{tabela}'"
-                            f" para o item {codigo_quesito} em {ano}."
+                            f"Nenhum registro encontrado em {tabela} para o"
+                            f" item {codigo_quesito} no ano {ano}."
                         ),
                         "pontuacao_obtida": 0,
                     }
@@ -165,11 +141,9 @@ class SistemaHAL:
                 conn.close()
 
 
-# --- FUNÇÃO PRINCIPAL DE RENDERIZAÇÃO DA INTERFACE ---
 def mostrar_chat_hal():
-    st.title("🤖 Assistente HAL - Análise & Diagnóstico")
+    st.title("🤖 Assistente HAL - Teste iCidade")
 
-    # Garante a inicialização limpa no session state
     if "sistema_hal" not in st.session_state:
         st.session_state.sistema_hal = SistemaHAL()
 
@@ -234,40 +208,6 @@ def mostrar_chat_hal():
                 pontos = dados_resposta.get("pontuacao_obtida", 0)
                 st.metric("Pontuação", pontos)
 
-    st.divider()
 
-    st.subheader("💬 Diagnóstico com o Assistente HAL")
-
-    if "mensagens" not in st.session_state:
-        st.session_state.mensagens = []
-
-    for msg in st.session_state.mensagens:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    if prompt := st.chat_input(
-        f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."
-    ):
-        st.session_state.mensagens.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        with st.chat_message("assistant"):
-            texto_pergunta = sistema.questoes_por_dimensao.get(
-                dimensao_sel, {}
-            ).get(codigo_quesito_sel, "")
-
-            resposta = (
-                f"Analisando **{dimensao_sel}** (Item {codigo_quesito_sel} -"
-                f" {ano_sel}):\n\nRecebi sua pergunta: *\"{prompt}\"*."
-            )
-
-            st.write(resposta)
-            st.session_state.mensagens.append(
-                {"role": "assistant", "content": resposta}
-            )
-
-
-# Permite executar o hal.py diretamente se necessário
 if __name__ == "__main__":
     mostrar_chat_hal()
