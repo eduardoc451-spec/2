@@ -7,8 +7,8 @@ import psycopg2.extras
 import streamlit as st
 import plotly.graph_objects as go
 
-# URL do Neon definida diretamente no código
-DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# String de conexão ajustada (removido channel_binding incompatível com o driver puro)
+DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
 
 class SistemaHAL:
@@ -24,11 +24,13 @@ class SistemaHAL:
         try:
             conn = psycopg2.connect(
                 DATABASE_URL,
-                cursor_factory=psycopg2.extras.DictCursor
+                cursor_factory=psycopg2.extras.DictCursor,
+                connect_timeout=10
             )
             return conn
         except Exception as e:
-            st.error(f"Erro ao conectar ao PostgreSQL: {e}")
+            # Imprime o erro real na tela do Streamlit para sabermos se é rede/senha/driver
+            st.error(f"Erro ao conectar ao PostgreSQL Neon: {e}")
             return None
 
     def executar_query(self, query, params=None):
@@ -89,12 +91,13 @@ class SistemaHAL:
         if not conn:
             return {
                 "resposta": "Sem conexão",
-                "detalhes": "Não foi possível conectar ao banco de dados Neon.",
+                "detalhes": "Não foi possível conectar ao banco de dados Neon. Verifique o aviso vermelho no topo da tela.",
                 "pontuacao_obtida": 0
             }
 
         try:
-            with conn.cursor() as cur:
+            # Força o DictCursor aqui para conseguir acessar por nome de coluna
+            with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 query = f"""
                     SELECT id, ano, valor, pontos, link, comentarios 
                     FROM {tabela} 
@@ -105,17 +108,20 @@ class SistemaHAL:
 
                 if resultado:
                     detalhe_texto = []
-                    if resultado.get('link') and resultado['link'] != 'EMPTY_STRING':
-                        detalhe_texto.append(f"Link: {resultado['link']}")
-                    if resultado.get('comentarios') and resultado['comentarios'] != 'EMPTY_STRING':
-                        detalhe_texto.append(f"Comentários: {resultado['comentarios']}")
+                    link = resultado.get('link')
+                    comentarios = resultado.get('comentarios')
+
+                    if link and str(link).strip() not in ('EMPTY_STRING', 'None', ''):
+                        detalhe_texto.append(f"Link: {link}")
+                    if comentarios and str(comentarios).strip() not in ('EMPTY_STRING', 'None', ''):
+                        detalhe_texto.append(f"Comentários: {comentarios}")
 
                     txt_detalhes = " | ".join(detalhe_texto) if detalhe_texto else "Sem observações adicionais."
 
                     return {
-                        "resposta": resultado['valor'] if resultado['valor'] else "Sem resposta",
+                        "resposta": resultado['valor'] if resultado.get('valor') else "Sem resposta",
                         "detalhes": txt_detalhes,
-                        "pontuacao_obtida": resultado['pontos'] if resultado['pontos'] is not None else 0
+                        "pontuacao_obtida": resultado['pontos'] if resultado.get('pontos') is not None else 0
                     }
                 else:
                     return {
@@ -131,7 +137,6 @@ class SistemaHAL:
             }
         finally:
             conn.close()
-
     def carregar_dicionarios_globais(self):
         # Dicionário unificado com as 3 dimensões operacionais
         self.questoes_por_dimensao = {
