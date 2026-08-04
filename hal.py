@@ -4,11 +4,6 @@ import plotly.graph_objects as go
 from sqlalchemy import create_engine, text
 
 # ==============================================================================
-# CONFIGURAÇÃO INICIAL DO STREAMLIT (DEVE SER A PRIMEIRA LINHA STREAMLIT)
-# ==============================================================================
-st.set_page_config(page_title="HAL - Diagnóstico TCESP", layout="wide")
-
-# ==============================================================================
 # STRING DE CONEXÃO POSTGRESQL (NEON DB)
 # ==============================================================================
 DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
@@ -278,10 +273,9 @@ class SistemaHAL:
 
 
 # ==============================================================================
-# FUNÇÃO DE RENDERIZAÇÃO STREAMLIT
+# FUNÇÃO PRINCIPAL CHAMADA PELO MAIN.PY
 # ==============================================================================
 def mostrar_chat_hal():
-    st.title("🤖 HAL - Sistema de Diagnóstico TCESP")
     st.write("Conectado diretamente ao banco de dados **PostgreSQL (Neon DB)**.")
 
     if "hal_sistema" not in st.session_state:
@@ -482,7 +476,6 @@ def mostrar_chat_hal():
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ==============================================================================
-# DISPARO DIRETO DA APLICAÇÃO (GARANTE QUE O STREAMLIT CARREGUE A TELA)
-# ==============================================================================
-mostrar_chat_hal()
+# Alias para compatibilidade caso o main chame main() em vez de mostrar_chat_hal()
+def main():
+    mostrar_chat_hal()
