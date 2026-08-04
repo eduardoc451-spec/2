@@ -1437,7 +1437,6 @@ def render_sidebar_ieduc():
             use_container_width=True,
         ):
             confirmar_zerar_dialog_ieduc(ano_sel)
-
     return total_pts, res_data, ano_sel
 
 # =============================================================================
