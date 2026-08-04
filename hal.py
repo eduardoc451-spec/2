@@ -19,8 +19,7 @@ class SistemaHAL:
 
     def get_db_connection(self):
         """
-        Conecta diretamente ao banco Neon utilizando a string de conexão fixa.
-        Retorna uma tupla (conexao, erro_mensagem).
+        Conecta ao banco PostgreSQL Neon e retorna (conexao, erro).
         """
         try:
             conn = psycopg2.connect(
