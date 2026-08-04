@@ -702,99 +702,30 @@ class SistemaHAL:
 
 def mostrar_chat_hal():
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
-    
-    # Instancia ou recupera o sistema da sessão
-    if "sistema_hal" not in st.session_state:
+
+    # 1. Garante que a instância da classe existe e possui os métodos
+    if "sistema_hal" not in st.session_state or not hasattr(st.session_state.sistema_hal, 'get_db_connection'):
         st.session_state.sistema_hal = SistemaHAL()
-    
+
     sistema = st.session_state.sistema_hal
 
-    # ---------------------------------------------------------
-    # 🔌 Status da Conexão com Diagnóstico Detalhado
-    # ---------------------------------------------------------
+    # 2. Verificação de segurança adicional para evitar o AttributeError
+    if not hasattr(sistema, 'get_db_connection'):
+        st.error("⚠️ O objeto 'SistemaHAL' não foi carregado corretamente.")
+        return
+
+    # 3. Chamada da conexão com tratamento do tipo de retorno (tupla ou conexao simples)
     with st.expander("🔌 Status da Conexão com o Banco", expanded=True):
-        # Desempacota a tupla (conn, erro)
-        conn, erro_conexao = sistema.get_db_connection()
+        res = sistema.get_db_connection()
+        
+        if isinstance(res, tuple):
+            conn, erro_conexao = res
+        else:
+            conn, erro_conexao = res, "Sem detalhes do erro"
+
         if conn:
             st.success("✅ Conectado ao PostgreSQL (Neon) com sucesso!")
             conn.close()
         else:
-            st.error("❌ Falha ao conectar no banco de dados Neon!")
-            st.code(f"Erro retornado do banco/driver:\n{erro_conexao}", language="bash")
-
-    # ---------------------------------------------------------
-    # 📊 Consulta por Dimensão e Quesito
-    # ---------------------------------------------------------
-    st.subheader("📊 Consulta por Dimensão e Quesito")
-
-    lista_dimensoes = sistema.get_dimensoes()
-    lista_anos = [2026, 2025, 2024, 2023]
-
-    col1, col2, col3 = st.columns([1, 2.5, 1])
-    
-    with col1:
-        dimensao_sel = st.selectbox(
-            "Dimensão:", 
-            options=lista_dimensoes if lista_dimensoes else ["iGov-Ti", "iCidade", "i-Amb"]
-        )
-        
-    with col2:
-        lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
-        quesito_formatado_sel = st.selectbox("Quesito / Pergunta:", options=lista_quesitos_formatados)
-        codigo_quesito_sel = quesito_formatado_sel.split(" - ")[0] if quesito_formatado_sel else ""
-
-    with col3:
-        ano_sel = st.selectbox("Ano:", options=lista_anos)
-
-    # ---------------------------------------------------------
-    # 📍 Exibição da Resposta Registrada
-    # ---------------------------------------------------------
-    if quesito_formatado_sel:
-        dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
-
-        with st.container(border=True):
-            st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
-            st.caption(f"**Item:** {quesito_formatado_sel}")
-            st.divider()
-            
-            if isinstance(dados_resposta, dict):
-                col_res1, col_res2 = st.columns([3, 1])
-                with col_res1:
-                    st.write(f"**Resposta Cadastrada:** {dados_resposta.get('resposta', 'Sem registro')}")
-                    st.write(f"**Detalhamento:** {dados_resposta.get('detalhes', 'Sem observações')}")
-                with col_res2:
-                    pontos = dados_resposta.get('pontuacao_obtida', 'N/A')
-                    st.metric("Pontuação", pontos)
-            else:
-                st.write(dados_resposta)
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # 💬 Chat Interativo
-    # ---------------------------------------------------------
-    st.subheader("💬 Diagnóstico com o Assistente HAL")
-
-    if "mensagens" not in st.session_state:
-        st.session_state.mensagens = []
-
-    for msg in st.session_state.mensagens:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    if prompt := st.chat_input(f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."):
-        st.session_state.mensagens.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        with st.chat_message("assistant"):
-            resposta = f"Analisando dados do quesito **{codigo_quesito_sel}** ({dimensao_sel} - {ano_sel})..."
-            st.write(resposta)
-            st.session_state.mensagens.append({"role": "assistant", "content": resposta})
-
-
-def main():
-    mostrar_chat_hal()
-
-if __name__ == "__main__":
-    main()
+            st.error("❌ Falha ao conectar no banco Neon!")
+            st.code(f"Erro retornado:\n{erro_conexao}", language="bash")
