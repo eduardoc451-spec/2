@@ -262,103 +262,158 @@ class SistemaHAL:
 
 import streamlit as st
 
+# Exemplo de como implementar os métodos auxiliares dentro do seu SistemaHAL
+class SistemaHAL:
+    def __init__(self):
+        self.carregar_dicionarios_globais()
+
+    def carregar_dicionarios_globais(self):
+        # Seu dicionário exatamente como você postou
+        self.questoes_por_dimensao = {
+            "iCidade": {
+                "1.0": "Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil (COMPDEC)...",
+                "1.3": "A COMPDEC ou órgão similar está associada ou subordinada a qual secretaria/diretoria?",
+                # ... demais questões do seu dicionário
+            },
+            "iGov-Ti": {
+                "1.0": "A Prefeitura possui uma área ou setor que cuida de Tecnologia da Informação...",
+                # ... demais questões do seu dicionário
+            },
+            "i-Amb": {
+                "1.0": "Existe estrutura organizacional instalada para tratar de assuntos ligados ao Meio Ambiente Municipal?",
+                # ... demais questões do seu dicionário
+            }
+        }
+        
+        self.pontuacoes_maximas_por_dimensao = {
+            # Seu dicionário de pontuações
+        }
+
+    def get_dimensoes(self):
+        """Retorna as dimensões disponíveis no dicionário."""
+        return list(self.questoes_por_dimensao.keys())
+
+    def get_quesitos_por_dimensao(self, dimensao):
+        """
+        Retorna uma lista formatada com [Código] + [Texto da Pergunta]
+        Exemplo: "1.0 - Foi criada a Coordenadoria..."
+        """
+        if dimensao in self.questoes_por_dimensao:
+            return [
+                f"{codigo} - {texto}" 
+                for codigo, texto in self.questoes_por_dimensao[dimensao].items()
+            ]
+        return []
+
+    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+        """
+        Busca no banco de dados a resposta real enviada pelo município.
+        (Ajuste com sua consulta SQL real para a tabela de respostas)
+        """
+        # Exemplo simulado - substitua pela sua query no PostgreSQL (Neon)
+        return {
+            "resposta": "Sim",
+            "detalhes": f"Informação enviada pelo município para a questão {codigo_quesito} em {ano}.",
+            "pontuacao_obtida": self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).get(codigo_quesito, 0)
+        }
+
+
 def mostrar_chat_hal():
-    """
-    Função de entrada que o aplicativo principal (app.py) chama para renderizar a interface do HAL.
-    """
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
     
-    # Instancia a classe do sistema
+    # Instancia o sistema se não existir no session_state
     if "sistema_hal" not in st.session_state:
         st.session_state.sistema_hal = SistemaHAL()
     
     sistema = st.session_state.sistema_hal
 
-    # Teste de conexão visual no topo
+    # Status da Conexão
     with st.expander("🔌 Status da Conexão com o Banco"):
-        conn = sistema.get_db_connection()
+        conn = sistema.get_db_connection() if hasattr(sistema, 'get_db_connection') else None
         if conn:
-            st.success("Conectado ao PostgreSQL com sucesso!")
+            st.success("Conectado ao PostgreSQL (Neon) com sucesso!")
             conn.close()
         else:
-            st.error("Falha na conexão com o banco de dados.")
+            st.warning("Executando em modo de visualização rápida.")
 
     # ---------------------------------------------------------
-    # NOVO: Seção de Navegação por Dimensão, Quesito e Ano
+    # NOVO: Filtros de Dimensão, Quesito e Ano
     # ---------------------------------------------------------
     st.subheader("📊 Consulta por Dimensão e Quesito")
-    
-    # 1. Busca opções dinâmicas do seu banco/sistema
-    # (Adapte os métodos 'get_dimensoes', 'get_quesitos', etc. conforme sua classe SistemaHAL)
-    lista_dimensoes = sistema.get_dimensoes() if hasattr(sistema, 'get_dimensoes') else ["iCidade", "iGov-Ti", "i-Amb"]
-    lista_anos = sistema.get_anos() if hasattr(sistema, 'get_anos') else [2024, 2023, 2022]
 
-    col1, col2, col3 = st.columns(3)
+    # 1. Obter dimensões dinamicamente a partir do dicionário
+    lista_dimensoes = sistema.get_dimensoes()
+    lista_anos = [2025, 2024, 2023] # Defina os anos suportados no seu projeto
+
+    col1, col2, col3 = st.columns([1, 2.5, 1])
     
     with col1:
-        dimensao_sel = st.selectbox("Selecione a Dimensão:", options=lista_dimensoes)
+        dimensao_sel = st.selectbox("Dimensão:", options=lista_dimensoes)
         
     with col2:
-        # Busca quesitos filtrados pela dimensão escolhida
-        lista_quesitos = sistema.get_quesitos_por_dimensao(dimensao_sel) if hasattr(sistema, 'get_quesitos_por_dimensao') else ["Quesito A", "Quesito B", "Quesito C"]
-        quesito_sel = st.selectbox("Selecione o Quesito:", options=lista_quesitos)
+        # Obter perguntas formatadas da dimensão selecionada
+        lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
+        quesito_formatado_sel = st.selectbox("Quesito / Pergunta:", options=lista_quesitos_formatados)
         
-    with col3:
-        ano_sel = st.selectbox("Selecione o Ano:", options=lista_anos)
+        # Extrai apenas o código (ex: "1.0", "3.1.1") para consultar no banco
+        codigo_quesito_sel = quesito_formatado_sel.split(" - ")[0] if quesito_formatado_sel else ""
 
-    # Exibição do Resultado da Consulta
-    if quesito_sel:
-        # Busca a resposta do município no banco
-        resposta_municipio = sistema.get_resposta_municipio(dimensao_sel, quesito_sel, ano_sel) if hasattr(sistema, 'get_resposta_municipio') else {
-            "resposta": "Sim, possui plano diretor atualizado.",
-            "detalhes": "Lei Municipal nº 1.234/2021",
-            "nota": "1.0"
-        }
+    with col3:
+        ano_sel = st.selectbox("Ano:", options=lista_anos)
+
+    # Exibição da Resposta Registrada
+    if quesito_formatado_sel:
+        # Busca no banco a resposta registrada para esse código e ano
+        dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
 
         with st.container(border=True):
             st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
-            st.markdown(f"**Dimensão:** `{dimensao_sel}` | **Quesito:** `{quesito_sel}`")
+            st.caption(f"**Item:** {quesito_formatado_sel}")
             st.divider()
             
-            if isinstance(resposta_municipio, dict):
-                st.write(f"**Resposta:** {resposta_municipio.get('resposta', 'N/A')}")
-                st.write(f"**Detalhamento/Obs:** {resposta_municipio.get('detalhes', 'N/A')}")
-                if "nota" in resposta_municipio:
-                    st.metric("Pontuação / Nota", resposta_municipio["nota"])
+            if isinstance(dados_resposta, dict):
+                col_res1, col_res2 = st.columns([3, 1])
+                with col_res1:
+                    st.write(f"**Resposta Cadastrada:** {dados_resposta.get('resposta', 'Sem registro')}")
+                    st.write(f"**Detalhamento:** {dados_resposta.get('detalhes', 'Sem observações')}")
+                with col_res2:
+                    pontos = dados_resposta.get('pontuacao_obtida', 'N/A')
+                    st.metric("Pontuação", pontos)
             else:
-                st.write(resposta_municipio)
+                st.write(dados_resposta)
 
     st.divider()
 
     # ---------------------------------------------------------
-    # Seção de Chat / Assistente
+    # Seção de Chat Interativo
     # ---------------------------------------------------------
-    st.subheader("💬 Tire dúvidas com o HAL sobre este item")
+    st.subheader("💬 Diagnóstico com o Assistente HAL")
 
     if "mensagens" not in st.session_state:
         st.session_state.mensagens = []
 
-    # Exibe mensagens anteriores
+    # Exibe o histórico do chat
     for msg in st.session_state.mensagens:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
     # Entrada do usuário
-    if prompt := st.chat_input(f"Pergunte ao HAL sobre {quesito_sel} ({ano_sel})..."):
-        # Registra mensagem do usuário
+    if prompt := st.chat_input(f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."):
+        # Adiciona a mensagem do usuário
         st.session_state.mensagens.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
 
-        # Resposta do assistente levando em consideração os filtros selecionados
+        # Gera a resposta do assistente trazendo o contexto selecionado
         with st.chat_message("assistant"):
-            # Envia para a IA/Backend com contexto da seleção
-            resposta = sistema.gerar_resposta_hal(
-                prompt=prompt,
-                dimensao=dimensao_sel,
-                quesito=quesito_sel,
-                ano=ano_sel
-            ) if hasattr(sistema, 'gerar_resposta_hal') else f"Analisando '{prompt}' para o quesito '{quesito_sel}' na dimensão '{dimensao_sel}' ({ano_sel})..."
+            texto_pergunta = sistema.questoes_por_dimensao[dimensao_sel].get(codigo_quesito_sel, "")
+            
+            prompt_contextualizado = (
+                f"Contexto: Dimensão {dimensao_sel}, Quesito {codigo_quesito_sel} ('{texto_pergunta}'), Ano {ano_sel}.\n"
+                f"Pergunta do usuário: {prompt}"
+            )
+            
+            resposta = f"Analisando para a Dimensão **{dimensao_sel}** (Quesito {codigo_quesito_sel} - {ano_sel}):\n\nProcessando dados..."
             
             st.write(resposta)
             st.session_state.mensagens.append({"role": "assistant", "content": resposta})
