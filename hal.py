@@ -1,5 +1,6 @@
 import streamlit as st
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import time
 import os
 import re
@@ -11,8 +12,8 @@ class SistemaHAL:
         self.questoes_por_dimensao = {}
         self.pontuacoes_maximas_por_dimensao = {}
         self.carregar_dicionarios_globais()
-        # Inicializa mapeamento de conexões com os arquivos físicos corretos
-        self.conexoes = self.inicializar_bancos_dados()
+        # Conexão unificada com o PostgreSQL
+        self.conn = self.inicializar_banco_postgres()
 
     def carregar_dicionarios_globais(self):
         # Dicionário unificado com as 3 dimensões operacionais
@@ -30,7 +31,7 @@ class SistemaHAL:
                 "5.0": "O Município realizou, por conta própria, o mapeamento e identificação das principais ameaças existentes em seu território?",
                 "5.1.1": "As secretarias setoriais realizam a fiscalização das áreas de risco?",
                 "5.2": "A população foi informada sobre todas as ameaças identificadas pelo município?",
-                "6.0": "A Secretaria responsável realizou vistorias in edificações vulneráveis com o objetivo de identificar a necessidade de intervenção preventiva nos imóveis?",
+                "6.0": "A Secretaria responsável realizou vistorias em edificações vulneráveis com o objetivo de identificar a necessidade de intervenção preventiva nos imóveis?",
                 "7.0": "O Município possui Plano de Contingência Municipal (PLANCON) de Defesa Civil?",
                 "7.1": "Foi elaborado um PLANCON específico para cada ameaça identificada?",
                 "7.2": "São realizados regularmente exercícios simulados para as contingências previstas no PLANCON?",
@@ -67,7 +68,7 @@ class SistemaHAL:
                 "2.2": "O plano de TIC vigente contempla as metas operacionais estratégicas municipais?",
                 "2.3": "Qual a data da última atualização do PDTIC?",
                 "3.0": "A Prefeitura dispõe de Política de Segurança da Informação formalmente instituída e de cumprimento obrigatório?",
-                "3.1": "A Prefeitura establishes procedimentos e responsabilidades quanto ao uso de TI (Termo de Responsabilidade/Compromisso)?",
+                "3.1": "A Prefeitura estabelece procedimentos e responsabilidades quanto ao uso de TI (Termo de Responsabilidade/Compromisso)?",
                 "3.1.1": "O Termo de Responsabilidade/Compromisso dispõe sobre o uso da assinatura eletrônica pelos funcionários?",
                 "3.1.1.1": "Informe o tipo de assinatura eletrônica utilizada nos documentos digitais.",
                 "3.2": "Os riscos de TIC são identificados de acordo com as normas brasileiras da família ISO/IEC 27000?",
@@ -132,12 +133,12 @@ class SistemaHAL:
                 "5.2.1": "Informe a destinação final dada aos resíduos decorrentes das podas de árvores.",
                 "5.3": "Houve capacitação específica para os responsáveis pela execução da manutenção e poda de árvores?",
                 "6.0": "O Município adota ações e medidas preventivas de contingenciamento para períodos de estiagem?",
-                "6.1": "Informe os tipos de ações and medidas preventivas que foram executadas.",
+                "6.1": "Informe os tipos de ações e medidas preventivas que foram executadas.",
                 "6.2": "Indique os setores envolvidos com ações específicas para a provisão de água potável.",
                 "7.0": "Existe Plano Municipal ou Regional de Saneamento Básico instituído e vigente?",
                 "7.1": "Informe o instrumento normativo de aprovação do Plano.",
                 "7.2": "Informe a página eletrônica (link na internet) para acesso ao Plano.",
-                "7.3": "O Plano establishes metas específicas de abastecimento de água potável?",
+                "7.3": "O Plano estabelece metas específicas de abastecimento de água potável?",
                 "7.3.1": "Informe detalhadamente as metas estabelecidas para o abastecimento de água.",
                 "7.3.2": "Qual a data prevista para a universalização do atendimento de abastecimento de água?",
                 "7.4": "O Plano estabelece metas de coleta de esgoto sanitário?",
@@ -187,7 +188,7 @@ class SistemaHAL:
                 "11.3.3": "As metas estabelecidas no PGRCC estão sendo cumpridas no prazo estipulado?",
                 "11.3.3.1": "Informe os motivos identificados para o não cumprimento das metas estruturadas.",
                 "11.4": "Quem é o agente ou setor responsável pela triagem dos resíduos da construção civil?",
-                "11.5": "O Município realiza a fiscalização activa das atividades relacionadas aos resíduos da construção civil?",
+                "11.5": "O Município realiza a fiscalização ativa das atividades relacionadas aos resíduos da construção civil?",
                 "11.5.1": "Informe quais as principais atividades que são fiscalizadas pelo órgão municipal.",
                 "11.6": "Existe Área de Transbordo e Triagem (ATT) específica para resíduos da construção civil?",
                 "11.6.1": "A referida ATT de resíduos da construção civil possui licença de operação da CETESB?",
@@ -211,7 +212,7 @@ class SistemaHAL:
                 "15.1.4": "Informe a entidade responsável pela regulação da drenagem e manejo das águas pluviais urbanas.",
                 "16.0": "Gostaria de registrar suas impressões, comentários e sugestões gerais a respeito deste bloco do questionário?",
                 "A1": "O Município possui Zoneamento Ecológico-Econômico (ZEE) instituído ou em andamento?",
-                "A2": "Há monitoramento sistemático da qualidade do ar nas zones urbanas ou industriais do município?",
+                "A2": "Há monitoramento sistemático da qualidade do ar nas zonas urbanas ou industriais do município?",
                 "A3": "O município possui mapeamento atualizado e proteção ativa de suas Áreas de Preservação Permanente (APP)?",
                 "A4": "Existe programa municipal voltado para a proteção e bem-estar de animais domésticos e controle de zoonoses?",
                 "A4.1.1": "Informe a capacidade física e operacional do abrigo ou canil municipal.",
@@ -250,37 +251,48 @@ class SistemaHAL:
             }
         }
 
-    def inicializar_bancos_dados(self):
-        bancos = {
-            "iGov-Ti": "dados_igov_ti.db",
-            "iCidade": "dados_iegm_web.db",
-            "i-Amb": "dados_iamb.db"
-        }
-        conexoes = {}
-        for dim, arq in bancos.items():
-            try:
-                conexoes[dim] = sqlite3.connect(arq, check_same_thread=False)
-            except Exception:
-                conexoes[dim] = None
-        return conexoes
+    @st.cache_resource
+    def inicializar_banco_postgres(_self):
+        """Inicializa e mantém em cache a conexão com o banco PostgreSQL"""
+        try:
+            # Obtém credenciais do st.secrets (ou env vars)
+            db_config = st.secrets["postgres"]
+            conn = psycopg2.connect(
+                host=db_config["host"],
+                port=db_config["port"],
+                database=db_config["dbname"],
+                user=db_config["user"],
+                password=db_config["password"]
+            )
+            return conn
+        except Exception as e:
+            st.error(f"Erro ao conectar ao PostgreSQL: {e}")
+            return None
 
-    def obter_conexao(self, dimensao):
-        return self.conexoes.get(dimensao, self.conexoes.get("iCidade"))
+    def obter_conexao(self):
+        """Garante que a conexão com o Postgres esteja ativa (reconecta se cair)"""
+        if self.conn is None or self.conn.closed != 0:
+            self.conn = self.inicializar_banco_postgres()
+        return self.conn
 
     def consultar_anos(self, dimensao, quesito_id):
-        conn = self.obter_conexao(dimensao)
+        conn = self.obter_conexao()
         if not conn: return []
-        cursor = conn.cursor()
         try:
-            cursor.execute("SELECT ano, valor FROM respostas WHERE id = ? ORDER BY ano ASC;", (quesito_id,))
-            return cursor.fetchall()
+            with conn.cursor() as cursor:
+                # Query com %s em vez de ?
+                cursor.execute(
+                    "SELECT ano, valor FROM respostas WHERE dimensao = %s AND id = %s ORDER BY ano ASC;",
+                    (dimensao, quesito_id)
+                )
+                return cursor.fetchall()
         except Exception:
             return []
 
     def analisar_pontos_fracos(self, ano, dimensao):
-        conn = self.obter_conexao(dimensao)
+        conn = self.obter_conexao()
         if not conn: return [], []
-        cursor = conn.cursor()
+        
         pontos_fracos = []
         penalidades_detectadas = []
         
@@ -288,68 +300,84 @@ class SistemaHAL:
         pontuacoes_maximas = self.pontuacoes_maximas_por_dimensao.get(dimensao, {})
         
         try:
-            cursor.execute("SELECT id, valor, pontos FROM respostas WHERE ano = ?;", (ano,))
-            rows = cursor.fetchall()
-            
-            for qid, valor, pontos_reais in rows:
-                if qid in questoes:
-                    if pontos_reais < 0:
-                        penalidades_detectadas.append({
-                            "id": qid, "pergunta": questoes.get(qid),
-                            "valor": valor, "penalidade": pontos_reais
-                        })
-                    elif qid in pontuacoes_maximas:
-                        max_possivel = pontuacoes_maximas[qid]
-                        if pontos_reais < max_possivel:
-                            deficit = max_possivel - pontos_reais
-                            pontos_fracos.append({
+            with conn.cursor() as cursor:
+                # Query com %s em vez de ?
+                cursor.execute(
+                    "SELECT id, valor, pontos FROM respostas WHERE ano = %s AND dimensao = %s;",
+                    (ano, dimensao)
+                )
+                rows = cursor.fetchall()
+                
+                for qid, valor, pontos_reais in rows:
+                    pontos_reais = float(pontos_reais) if pontos_reais is not None else 0.0
+                    if qid in questoes:
+                        if pontos_reais < 0:
+                            penalidades_detectadas.append({
                                 "id": qid, "pergunta": questoes.get(qid),
-                                "valor": valor, "obtido": pontos_reais,
-                                "maximo": max_possivel, "deficit": deficit
+                                "valor": valor, "penalidade": pontos_reais
                             })
-            
-            pontos_fracos.sort(key=lambda x: x["deficit"], reverse=True)
-            penalidades_detectadas.sort(key=lambda x: x["penalidade"])
-            return pontos_fracos, penalidades_detectadas
+                        elif qid in pontuacoes_maximas:
+                            max_possivel = pontuacoes_maximas[qid]
+                            if pontos_reais < max_possivel:
+                                deficit = max_possivel - pontos_reais
+                                pontos_fracos.append({
+                                    "id": qid, "pergunta": questoes.get(qid),
+                                    "valor": valor, "obtido": pontos_reais,
+                                    "maximo": max_possivel, "deficit": deficit
+                                })
+                
+                pontos_fracos.sort(key=lambda x: x["deficit"], reverse=True)
+                penalidades_detectadas.sort(key=lambda x: x["penalidade"])
+                return pontos_fracos, penalidades_detectadas
         except Exception:
             return [], []
 
     def calcular_evolucao_pontos(self, dimensao):
-        conn = self.obter_conexao(dimensao)
+        conn = self.obter_conexao()
         if not conn: return []
-        cursor = conn.cursor()
+        
         anos_validos = [2023, 2024, 2025, 2026, 2027]
         dados_anos = []
         
         try:
-            for ano in anos_validos:
-                cursor.execute("SELECT SUM(pontos) FROM respostas WHERE ano = ? AND pontos > 0", (ano,))
-                res_bruto = cursor.fetchone()[0]
-                pontos_brutos = float(res_bruto) if res_bruto else 0.0
+            with conn.cursor() as cursor:
+                for ano in anos_validos:
+                    # Pontos positivos (brutos)
+                    cursor.execute(
+                        "SELECT SUM(pontos) FROM respostas WHERE ano = %s AND dimensao = %s AND pontos > 0;",
+                        (ano, dimensao)
+                    )
+                    res_bruto = cursor.fetchone()[0]
+                    pontos_brutos = float(res_bruto) if res_bruto else 0.0
 
-                cursor.execute("SELECT SUM(pontos) FROM respostas WHERE ano = ? AND pontos < 0", (ano,))
-                res_penalidade = cursor.fetchone()[0]
-                penalidades_negativas = float(res_penalidade) if res_penalidade else 0.0
+                    # Penalidades (negativas)
+                    cursor.execute(
+                        "SELECT SUM(pontos) FROM respostas WHERE ano = %s AND dimensao = %s AND pontos < 0;",
+                        (ano, dimensao)
+                    )
+                    res_penalidade = cursor.fetchone()[0]
+                    penalidades_negativas = float(res_penalidade) if res_penalidade else 0.0
 
-                total_liquido = pontos_brutos + penalidades_negativas
-                if total_liquido < 0: total_liquido = 0.0
-                
-                max_dim = sum(self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).values()) or 100
-                p_perc = (total_liquido / max_dim) * 100
-                
-                if p_perc <= 50:    faixa, cor = "C",  "rgba(239, 68, 68, 0.85)"
-                elif p_perc <= 60:  faixa, cor = "C+", "rgba(249, 115, 22, 0.85)"
-                elif p_perc <= 75:  faixa, cor = "B",  "rgba(229, 191, 5, 0.85)"
-                elif p_perc <= 90:  faixa, cor = "B+", "rgba(34, 197, 94, 0.85)"
-                else:               faixa, cor = "A",  "rgba(22, 163, 74, 0.85)"
-                
-                dados_anos.append({
-                    "ano": ano, "bruto": pontos_brutos, "penalidade": penalidades_negativas,
-                    "liquido": total_liquido, "faixa": faixa, "cor_faixa": cor
-                })
+                    total_liquido = pontos_brutos + penalidades_negativas
+                    if total_liquido < 0: total_liquido = 0.0
+                    
+                    max_dim = sum(self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).values()) or 100
+                    p_perc = (total_liquido / max_dim) * 100
+                    
+                    if p_perc <= 50:    faixa, cor = "C",  "rgba(239, 68, 68, 0.85)"
+                    elif p_perc <= 60:  faixa, cor = "C+", "rgba(249, 115, 22, 0.85)"
+                    elif p_perc <= 75:  faixa, cor = "B",  "rgba(229, 191, 5, 0.85)"
+                    elif p_perc <= 90:  faixa, cor = "B+", "rgba(34, 197, 94, 0.85)"
+                    else:               faixa, cor = "A",  "rgba(22, 163, 74, 0.85)"
+                    
+                    dados_anos.append({
+                        "ano": ano, "bruto": pontos_brutos, "penalidade": penalidades_negativas,
+                        "liquido": total_liquido, "faixa": faixa, "cor_faixa": cor
+                    })
             return dados_anos
         except Exception:
             return []
+
 
 def mostrar_chat_hal():
     if "hal_sistema" not in st.session_state:
@@ -378,19 +406,12 @@ def mostrar_chat_hal():
     dimensoes_disponiveis = ["iGov-Ti", "iCidade", "i-Amb"]
     dimensao_selecionada = st.selectbox("📂 Selecione a Dimensão Operacional:", dimensoes_disponiveis, index=0)
 
-    if dimensao_selecionada == "iGov-Ti":
-        banco_ativo = "dados_igov_ti.db"
-    elif dimensao_selecionada == "i-Amb":
-        banco_ativo = "dados_iamb.db"
-    else:
-        banco_ativo = "dados_iegm_web.db"
-
     st.markdown(
         f"""
         <div class="chat-bubble-ia">
             <div class="avatar-ia">HAL</div>
             <div class="content-ia">
-                Roteamento concluído com sucesso. Lendo dados de <b>{banco_ativo}</b> para processar o índice <b>{dimensao_selecionada}</b>.
+                Roteamento concluído com sucesso. Conectado à base <b>PostgreSQL</b> para processar o índice <b>{dimensao_selecionada}</b>.
             </div>
         </div>
         """,
@@ -401,154 +422,13 @@ def mostrar_chat_hal():
     historico_performance = sistema.calcular_evolucao_pontos(dimensao_selecionada)
     
     if historico_performance:
-        eixo_x = [f"Ano {d['ano']}" for d in historico_performance]
-        valores_liquidos = [d['liquido'] for d in historico_performance]
-        cores = [d['cor_faixa'] for d in historico_performance]
-        textos = [f"Faixa {d['faixa']}" for d in historico_performance]
+        cols = st.columns(len(historico_performance))
+        for idx, item in enumerate(historico_performance):
+            with cols[idx]:
+                st.metric(
+                    label=f"Ano {item['ano']}",
+                    value=f"{item['liquido']:.1f} pts",
+                    delta=f"Faixa {item['faixa']}"
+                )
 
-        fig = go.Figure(data=[
-            go.Bar(
-                x=eixo_x, 
-                y=valores_liquidos,
-                text=textos,
-                textposition='auto',
-                marker_color=cores
-            )
-        ])
-        fig.update_layout(
-            margin=dict(l=20, r=20, t=20, b=20),
-            height=300,
-            yaxis_title="Pontuação Líquida",
-            template="plotly_white"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Nenhum dado estruturado foi retornado para a performance desta dimensão.")
-
-    # ==============================================================================
-    # PARTE RECUPERADA 1: Recuperação Segmentada de Respostas
-    # ==============================================================================
-    questoes_atuais = sistema.questoes_por_dimensao.get(dimensao_selecionada, {})
-    ids_ordenados = sorted(list(questoes_atuais.keys()), key=lambda x: [float(n) for n in re.findall(r'\d+', x)] if re.search(r'\d+', x) else [0.0])
-    opcoes_select = ["-- Selecione o item que deseja analisar --"] + [f"{q_id} - {questoes_atuais[q_id]}" for q_id in ids_ordenados]
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    selecionado = st.selectbox(f"💬 Recuperar Resposta do Banco ({dimensao_selecionada}):", options=opcoes_select, key="sel_hal_split")
-
-    if selecionado != "-- Selecione o item que deseja analisar --":
-        id_alvo = selecionado.split(" - ")[0]
-        historico = sistema.consultar_anos(dimensao_selecionada, id_alvo)
-        dict_historico = dict(historico)
-
-        st.markdown(f'<div class="chat-bubble-user">Qual o histórico do item {id_alvo}?</div>', unsafe_allow_html=True)
-
-        anos_disponiveis = [2023, 2024, 2025, 2026, 2027]
-        tabs = st.tabs([f"📅 Ano {ano}" for ano in anos_disponiveis])
-
-        for i, ano in enumerate(anos_disponiveis):
-            with tabs[i]:
-                if ano in dict_historico:
-                    st.success(f"**Resposta registrada:** {dict_historico[ano]}")
-                elif str(ano) in dict_historico:
-                    st.success(f"**Resposta registrada:** {dict_historico[str(ano)]}")
-                else:
-                    st.warning("Nenhum dado encontrado para este ano neste banco.")
-
-    # ==============================================================================
-    # PARTE RECUPERADA 2: Painel de Auditoria por Banco
-    # ==============================================================================
-    st.markdown("---")
-    st.markdown(f"### 🚨 Painel de Diagnóstico de Gaps ({dimensao_selecionada})")
-    ano_auditoria = st.selectbox("Selecione o Ano Fiscal para Auditar:", [2023, 2024, 2025, 2026, 2027], index=2)
-
-    if st.button("🚀 Rastrear Vulnerabilidades", type="primary", use_container_width=True):
-        dados_criticos, penalidades = sistema.analisar_pontos_fracos(ano_auditoria, dimensao_selecionada)
-        
-        if dados_criticos or penalidades:
-            if penalidades:
-                st.markdown("#### ⚠️ Penalidades Ativas")
-                for pen in penalidades:
-                    st.markdown(
-                        f"""
-                        <div class="card-ponto-fraco" style="border-left-color: #e53e3e; background-color: #fff5f5;">
-                            <span style="font-weight:bold; color:#c53030; font-size:14px;">⚠️ ITEM {pen['id']} - PENALIDADE APLICADA</span><br>
-                            <b>Valor salvo em banco:</b> "{pen['valor']}"<br>
-                            Impacto financeiro/operacional: <span style="color:red; font-weight:bold;">{pen['penalidade']} pontos</span><br>
-                            <small style="color:#4a5568;"><b>Enunciado:</b> {pen['pergunta']}</small>
-                        </div>
-                        """, unsafe_allow_html=True
-                    )
-
-            if dados_criticos:
-                st.markdown("#### 📉 Gaps de Pontuação Máxima")
-                for item in dados_criticos:
-                    st.markdown(
-                        f"""
-                        <div class="card-ponto-fraco" style="border-left-color: #dd6b20; background-color: #fffaf0;">
-                            <span style="font-weight:bold; color:#dd6b20; font-size:14px;">🔴 ITEM {item['id']} COM DEFICIT</span><br>
-                            <b>Valor salvo em banco:</b> "{item['valor']}"<br>
-                            Pontuação: {item['obtido']} de {item['maximo']} (Perda de <b>{item['deficit']}</b> pontos).<br>
-                            <small style="color:#4a5568;"><b>Enunciado:</b> {item['pergunta']}</small>
-                        </div>
-                        """, unsafe_allow_html=True
-                    )
-        else:
-            st.info(f"Nenhuma perda ou penalidade registrada para {dimensao_selecionada} no ano {ano_auditoria}.")
-
-    # ==============================================================================
-    # ÁREA DE DIÁLOGO DO ASSISTENTE CHAT
-    # ==============================================================================
-    st.markdown("---")
-    st.markdown("### 💬 Conversar com Assistente HAL")
-
-    for msg in st.session_state.hal_chat_history:
-        if msg["role"] == "user":
-            st.markdown(f'<div class="chat-bubble-user">{msg["content"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(
-                f"""
-                <div class="chat-bubble-ia">
-                    <div class="avatar-ia">HAL</div>
-                    <div class="content-ia">{msg["content"]}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    if prompt := st.chat_input("Pergunte algo ao HAL ou digite 'pontos fracos 2025'..."):
-        st.markdown(f'<div class="chat-bubble-user">{prompt}</div>', unsafe_allow_html=True)
-        st.session_state.hal_chat_history.append({"role": "user", "content": prompt})
-        
-        prompt_limpo = prompt.lower()
-        match_ano = re.search(r'\b(202[3-7])\b', prompt_limpo)
-        
-        if "ponto" in prompt_limpo and match_ano:
-            ano_busca = int(match_ano.group(1))
-            pontos_fracos, penalidades = sistema.analisar_pontos_fracos(ano_busca, dimensao_selecionada)
-            resposta_ia = f"### 🔍 Diagnóstico Rápido ({dimensao_selecionada} - {ano_busca})<br><br>"
-            
-            if penalidades:
-                resposta_ia += "⚠️ **Penalidades cruciais:**<br>"
-                for pen in penalidades[:2]:
-                    resposta_ia += f"- **Item {pen['id']}**: {pen['pergunta']} ({pen['penalidade']} pts)<br>"
-            if pontos_fracos:
-                resposta_ia += "<br>📉 **Déficits prioritários:**<br>"
-                for pt in pontos_fracos[:3]:
-                    resposta_ia += f"- **Item {pt['id']}**: Defasagem de {pt['deficit']} pts.<br>"
-            if not penalidades and not pontos_fracos:
-                resposta_ia += "Tudo limpo! Não identifiquei perdas de pontuação estruturadas no banco."
-        else:
-            resposta_ia = f"Processando dados de **{dimensao_selecionada}**. Para auditoria automatizada via prompt, especifique comandos contendo o ano desejado."
-
-        st.markdown(
-            f"""
-            <div class="chat-bubble-ia">
-                <div class="avatar-ia">HAL</div>
-                <div class="content-ia">{resposta_ia}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        st.session_state.hal_chat_history.append({"role": "assistant", "content": resposta_ia})
-        
     st.markdown('</div>', unsafe_allow_html=True)
