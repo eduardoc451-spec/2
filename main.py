@@ -291,7 +291,7 @@ def dashboard_page():
             st.markdown('</div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("### 🛠️ Ecossistema de Gestão Avançada")
+    st.markdown("### 🛠️ IA, Biblioteca Digital e Área de Adminstração")
     col_hal, col_bib, col_admin = st.columns(3)
 
     with col_hal:
