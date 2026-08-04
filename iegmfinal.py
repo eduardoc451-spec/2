@@ -15,28 +15,19 @@ except ImportError as e:
 
 
 def buscar_pontuacao_dimensao(tabela: str, ano: int) -> float:
-    """Consulta a soma dos pontos na tabela da dimensão correspondente.
+    """Consulta a soma REAL de pontos na tabela da dimensão correspondente
 
-    Trata dinamicamente se a tabela usa a coluna 'quesito' ou 'id'.
+    sem multiplicadores arbitrários de escala.
     """
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                # 1. Tenta buscar da tabela específica (ex: respostas_iplan, respostas_ieduc)
                 sql = f"SELECT COALESCE(SUM(pontos), 0) FROM {tabela} WHERE ano = %s;"
                 cursor.execute(sql, (int(ano),))
                 res = cursor.fetchone()
 
                 if res and res[0] is not None:
-                    valor = float(res[0])
-
-                    # Ajuste automático de escala caso os pontos sejam gravados em decimais/percentuais
-                    if 0 < valor <= 10:
-                        valor *= 100
-                    elif 10 < valor <= 100:
-                        valor *= 10
-
-                    return min(valor, 1000.0)
+                    return float(res[0])
     except Exception as e:
         logging.warning(
             f"[IEG-M Final] Erro ao ler tabela '{tabela}' para ano {ano}: {e}"
@@ -50,11 +41,11 @@ def buscar_pontuacao_dimensao(tabela: str, ano: int) -> float:
 # =============================================================================
 
 
-def puxar_nota_iplan(ano: int) -> int:
-    return int(round(buscar_pontuacao_dimensao("respostas_iplan", ano)))
+def puxar_nota_iplan(ano: int) -> float:
+    return buscar_pontuacao_dimensao("respostas_iplan", ano)
 
 
-def puxar_nota_ifiscal(ano: int) -> int:
+def puxar_nota_ifiscal(ano: int) -> float:
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -63,48 +54,42 @@ def puxar_nota_ifiscal(ano: int) -> int:
                 rows = cursor.fetchall()
 
                 if not rows:
-                    return 0
+                    return 0.0
 
                 pontos_lista = [float(r[0]) for r in rows if r[0] is not None]
 
-                # Regra de rebaixamento crítico TCESP (se houver item crítico reprovado)
+                # Regra de rebaixamento crítico TCESP (se houver item crítico reprovado <= -100)
                 if any(p <= -100.0 for p in pontos_lista):
-                    return 0
+                    return 0.0
 
                 total = sum(p for p in pontos_lista if p > -100.0)
-
-                if 0 < total <= 10:
-                    total *= 100
-                elif 10 < total <= 100:
-                    total *= 10
-
-                return int(round(min(total, 1000.0)))
+                return float(total)
     except Exception as e:
         logging.warning(f"[i-Fiscal] Falha ao ler ano {ano}: {e}")
-        return 0
+        return 0.0
 
 
-def puxar_nota_ieduc(ano: int) -> int:
-    return int(round(buscar_pontuacao_dimensao("respostas_ieduc", ano)))
+def puxar_nota_ieduc(ano: int) -> float:
+    return buscar_pontuacao_dimensao("respostas_ieduc", ano)
 
 
-def puxar_nota_isaude(ano: int) -> int:
-    return int(round(buscar_pontuacao_dimensao("respostas_isaude", ano)))
+def puxar_nota_isaude(ano: int) -> float:
+    return buscar_pontuacao_dimensao("respostas_isaude", ano)
 
 
-def puxar_nota_iamb(ano: int) -> int:
-    return int(round(buscar_pontuacao_dimensao("respostas_iamb", ano)))
+def puxar_nota_iamb(ano: int) -> float:
+    return buscar_pontuacao_dimensao("respostas_iamb", ano)
 
 
-def puxar_nota_icidade(ano: int) -> int:
+def puxar_nota_icidade(ano: int) -> float:
     pts = buscar_pontuacao_dimensao("respostas_icidade", ano)
     if pts == 0:
         pts = buscar_pontuacao_dimensao("respostas", ano)
-    return int(round(pts))
+    return pts
 
 
-def puxar_nota_igov(ano: int) -> int:
-    return int(round(buscar_pontuacao_dimensao("respostas_igov", ano)))
+def puxar_nota_igov(ano: int) -> float:
+    return buscar_pontuacao_dimensao("respostas_igov", ano)
 
 
 # =============================================================================
@@ -120,8 +105,8 @@ def calcular_nota_final(
     amb: float,
     cidade: float,
     gov: float,
-) -> int:
-    """Calcula a Média Ponderada oficial do IEG-M TCESP (escala 0 a 1000)."""
+) -> float:
+    """Calcula a Média Ponderada oficial do IEG-M TCESP."""
     try:
         soma = (
             (float(plan) * 0.20)
@@ -132,12 +117,12 @@ def calcular_nota_final(
             + (float(cidade) * 0.05)
             + (float(gov) * 0.05)
         )
-        return int(round(soma))
+        return round(soma, 1)
     except Exception:
-        return 0
+        return 0.0
 
 
-def obter_faixa_classificacao(nota: int):
+def obter_faixa_classificacao(nota: float):
     if nota >= 900:
         return "A (Altamente Efetiva)", "#10B981"
     elif nota >= 750:
@@ -163,7 +148,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
     registro_historico = []
 
-    # Leitura dos dados no Neon
+    # Leitura dos dados reais no Neon
     for ano in anos:
         plan = puxar_nota_iplan(ano)
         fiscal = puxar_nota_ifiscal(ano)
@@ -181,14 +166,14 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
         registro_historico.append(
             {
                 "Ano": ano,
-                "i-Plan": plan,
-                "i-Fiscal": fiscal,
-                "i-Educ": educ,
-                "i-Saúde": saude,
-                "i-Amb": amb,
-                "i-Cidade": cidade,
-                "i-Gov TI": gov,
-                "Nota Final": nota_f,
+                "i-Plan": round(plan, 2),
+                "i-Fiscal": round(fiscal, 2),
+                "i-Educ": round(educ, 2),
+                "i-Saúde": round(saude, 2),
+                "i-Amb": round(amb, 2),
+                "i-Cidade": round(cidade, 2),
+                "i-Gov TI": round(gov, 2),
+                "Nota Final": round(nota_f, 1),
                 "Faixa": faixa.split(" (")[0],
             }
         )
@@ -248,7 +233,8 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     c1, c2, c3 = st.columns([1, 1, 2])
     with c1:
         st.metric(
-            label="Nota Final Calculada", value=f"{int(nota_f_atual)} pts"
+            label="Nota Final Calculada",
+            value=f"{dados_ano_atual['Nota Final']} pts",
         )
     with c2:
         st.markdown("**Faixa TCESP:**")
@@ -261,7 +247,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
             "💡 **Fórmula TCESP:** `(i-Plan×0.20 + i-Fiscal×0.20 + i-Educ×0.20 + i-Saúde×0.20 + i-Amb×0.10 + i-Cidade×0.05 + i-Gov TI×0.05)`"
         )
 
-    st.markdown("#### Desempenho das Dimensões (Escala 0-1000)")
+    st.markdown("#### Desempenho Real das Dimensões")
     dados_tabela_atual = pd.DataFrame(
         {
             "Dimensão": [
@@ -336,7 +322,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                             {
                                 "Tabela": tab,
                                 "Qtd Quesitos": qtd,
-                                "Soma dos Pontos": float(soma),
+                                "Soma Exata do Banco": float(soma),
                                 "Status": "OK",
                             }
                         )
@@ -345,7 +331,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                     {
                         "Tabela": tab,
                         "Qtd Quesitos": 0,
-                        "Soma dos Pontos": 0.0,
+                        "Soma Exata do Banco": 0.0,
                         "Status": f"Erro/Ausente: {err}",
                     }
                 )
