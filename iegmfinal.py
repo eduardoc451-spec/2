@@ -82,10 +82,34 @@ def puxar_nota_iamb(ano: int) -> float:
 
 
 def puxar_nota_icidade(ano: int) -> float:
-    pts = buscar_pontuacao_dimensao("respostas_icidade", ano)
-    if pts == 0:
-        pts = buscar_pontuacao_dimensao("respostas", ano)
-    return pts
+    """Busca a pontuação do iCidade na tabela 'respostas' (dimensao='icidade')
+
+    ou fallback na 'respostas_icidade'.
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                # 1. Tenta buscar na tabela central 'respostas' com filtro dimensao='icidade'
+                sql_respostas = "SELECT COALESCE(SUM(pontos), 0) FROM respostas WHERE dimensao = 'icidade' AND ano = %s;"
+                cursor.execute(sql_respostas, (int(ano),))
+                res = cursor.fetchone()
+
+                if res and res[0] is not None and float(res[0]) > 0:
+                    return float(res[0])
+
+                # 2. Fallback: Tenta buscar na tabela dedicada 'respostas_icidade'
+                sql_icidade = "SELECT COALESCE(SUM(pontos), 0) FROM respostas_icidade WHERE ano = %s;"
+                cursor.execute(sql_icidade, (int(ano),))
+                res_fallback = cursor.fetchone()
+
+                if res_fallback and res_fallback[0] is not None:
+                    return float(res_fallback[0])
+    except Exception as e:
+        logging.warning(
+            f"[i-Cidade] Erro ao consultar pontos para o ano {ano}: {e}"
+        )
+
+    return 0.0
 
 
 def puxar_nota_igov(ano: int) -> float:
@@ -335,5 +359,32 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                         "Status": f"Erro/Ausente: {err}",
                     }
                 )
+
+        # Checagem extra da tabela 'respostas' usada pelo iCidade
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT COUNT(*), COALESCE(SUM(pontos), 0) FROM respostas WHERE dimensao = 'icidade' AND ano = %s;",
+                        (int(ano_selecionado),),
+                    )
+                    qtd, soma = cursor.fetchone()
+                    relatorio_db.append(
+                        {
+                            "Tabela": "respostas (dimensao='icidade')",
+                            "Qtd Quesitos": qtd,
+                            "Soma Exata do Banco": float(soma),
+                            "Status": "OK",
+                        }
+                    )
+        except Exception as err:
+            relatorio_db.append(
+                {
+                    "Tabela": "respostas (dimensao='icidade')",
+                    "Qtd Quesitos": 0,
+                    "Soma Exata do Banco": 0.0,
+                    "Status": f"Erro/Ausente: {err}",
+                }
+            )
 
         st.dataframe(pd.DataFrame(relatorio_db), use_container_width=True)
