@@ -1,45 +1,37 @@
 import logging
-import psycopg2
-from psycopg2.extras import RealDictCursor
 import pandas as pd
+import psycopg2
 import streamlit as st
 
-# Tenta importar o get_connection da sua aplicação/módulo icidade
+# Importa a classe get_connection do seu arquivo icidade_completo.py
 try:
-    from icidade import get_connection
-except ImportError:
-    try:
-        from app import get_connection
-    except ImportError:
-        # Fallback genérico caso não encontre
-        st.error(
-            "❌ Não foi possível importar 'get_connection'. Verifique se o nome do arquivo principal é 'icidade.py'."
-        )
+    from icidade_completo import get_connection
+except ImportError as e:
+    st.error(
+        f"❌ Não foi possível importar 'get_connection' do arquivo 'icidade_completo.py'. Erro: {e}"
+    )
 
 
-def diagnostico_tabelas(tabela_nome):
-    """Executa a verificação segura nas tabelas usando a classe get_connection()."""
+def executar_diagnostico_tabela(tabela_nome, ano=2026):
+    """Executa a verificação segura na tabela usando o Context Manager get_connection."""
     try:
-        # Usa o context manager 'with' exatamente como definido na sua classe get_connection
+        # Usa o 'with' para respeitar a classe Context Manager do seu icidade_completo.py
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                # Consulta para contar registros e somar pontos
-                query = f"SELECT COUNT(*) as qtd, COALESCE(SUM(pontos), 0) as soma FROM {tabela_nome} WHERE ano = 2026;"
-                cursor.execute(query)
+                query = f"SELECT COUNT(*) AS qtd, COALESCE(SUM(pontos), 0) AS soma FROM {tabela_nome} WHERE ano = %s;"
+                cursor.execute(query, (ano,))
                 res = cursor.fetchone()
                 return {
-                    "status": "OK / Tabela Acessada",
-                    "qtd": res[0] if res else 0,
-                    "soma": res[1] if res else 0,
+                    "Status": "OK / Tabela Acessada",
+                    "Qtd Registros": res[0] if res else 0,
+                    "Soma dos Pontos": res[1] if res else 0,
                 }
     except Exception as e:
         return {
-            "status": f"Erro: {str(e)}",
-            "qtd": 0,
-            "soma": 0,
+            "Status": f"Erro: {str(e)}",
+            "Qtd Registros": 0,
+            "Soma dos Pontos": 0,
         }
-
-
 # =============================================================================
 # FUNÇÕES DE LEITURA DAS DIMENSÕES
 # =============================================================================
