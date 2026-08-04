@@ -1066,7 +1066,9 @@ def mostrar_formulario_educ(questoes: list = None):
         ["📋 Questionário i-Educ", "🌐 Dados Externos", "📊 Gráficos"]
     )
 
+    # -------------------------------------------------------------------------
     # ABA 1: QUESTIONÁRIO PRINCIPAL
+    # -------------------------------------------------------------------------
     with aba_quest:
         # Pega as funções exatamente na ordem de declaração no arquivo (sem sort)
         funcoes_questoes = [
@@ -1080,17 +1082,25 @@ def mostrar_formulario_educ(questoes: list = None):
         else:
             st.info("Nenhum quesito cadastrado até o momento.")
 
+    # -------------------------------------------------------------------------
     # ABA 2: DADOS EXTERNOS E INDICADORES
+    # -------------------------------------------------------------------------
     with aba_dados_ext:
-        # Chamada direta da função da Aba Dados Externos
         if "render_aba_dados_externos_e1_1" in globals():
+            # Apenas passa res_data e ano_sel (o conteúdo vai ficar DENTRO desta aba)
             render_aba_dados_externos_e1_1(res_data, ano_sel)
         else:
             st.info("Nenhum indicador de dados externos cadastrado até o momento.")
 
-    # ABA 3: GRÁFICOS (Se houver função para renderizar gráficos no futuro)
-    with aba_graf:
-        st.info("Painel de gráficos em desenvolvimento.")
+    # -------------------------------------------------------------------------
+    # ABA 3: GRÁFICOS
+    # -------------------------------------------------------------------------
+    if "render_aba_graficos" in globals():
+        # Chama a função dos gráficos passando o contexto da aba 3
+        render_aba_graficos(aba_graf, ano_sel)
+    else:
+        with aba_graf:
+            st.info("Painel de gráficos em desenvolvimento.")
 # =============================================================================
 # QUESITO 1.0 • OFERTA DE CRECHE (INFORMATIVO)
 # =============================================================================
