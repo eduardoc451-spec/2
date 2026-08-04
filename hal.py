@@ -50,6 +50,23 @@ class SistemaHAL:
         finally:
             conn.close()
 
+    def get_dimensoes(self):
+        """
+        Retorna as chaves das dimensões carregadas ('iCidade', 'iGov-Ti', 'i-Amb').
+        """
+        return list(self.questoes_por_dimensao.keys())
+
+    def get_quesitos_por_dimensao(self, dimensao):
+        """
+        Retorna a lista formatada 'Código - Pergunta' para a dimensão selecionada.
+        """
+        if dimensao in self.questoes_por_dimensao:
+            return [
+                f"{codigo} - {texto}"
+                for codigo, texto in self.questoes_por_dimensao[dimensao].items()
+            ]
+        return []
+
     def carregar_dicionarios_globais(self):
         # Dicionário unificado com as 3 dimensões operacionais
         self.questoes_por_dimensao = {
@@ -136,7 +153,7 @@ class SistemaHAL:
                 "8.2.2": "Informe o nível de integração entre o Sistema de Precatórios e o de Contabilidade.",
                 "8.3": "Assinale quais bases de dados encontram-se sob gestão direta da Prefeitura (Risco de Perdas).",
                 "8.4": "Assinale quais sistemas possuem controle de acesso à informação.",
-                "9.0": "A Prefeitura ofereceu serviços de forma online?",
+                "9.0": "A Prefeitura offered serviços de forma online?",
                 "9.1": "Quais tipos de serviços são oferecidos online?",
                 "9.2": "Quais as formas de atendimento à distância disponibilizadas ao público pela Prefeitura?",
                 "10.0": "A Prefeitura Municipal regulamentou o tratamento de dados pessoais, inclusive nos meios digitais, segundo a LGPD (Lei Federal nº 13.709/2018)?",
@@ -291,14 +308,16 @@ class SistemaHAL:
 
     def get_dimensoes(self):
         """Retorna as dimensões disponíveis no dicionário."""
-        return list(self.questoes_por_dimensao.keys())
+        if hasattr(self, 'questoes_por_dimensao') and isinstance(self.questoes_por_dimensao, dict):
+            return list(self.questoes_por_dimensao.keys())
+        return ["iCidade", "iGov-Ti", "i-Amb"]
 
     def get_quesitos_por_dimensao(self, dimensao):
         """
         Retorna uma lista formatada com [Código] + [Texto da Pergunta]
         Exemplo: "1.0 - Foi criada a Coordenadoria..."
         """
-        if dimensao in self.questoes_por_dimensao:
+        if hasattr(self, 'questoes_por_dimensao') and dimensao in self.questoes_por_dimensao:
             return [
                 f"{codigo} - {texto}" 
                 for codigo, texto in self.questoes_por_dimensao[dimensao].items()
@@ -311,10 +330,14 @@ class SistemaHAL:
         (Ajuste com sua consulta SQL real para a tabela de respostas)
         """
         # Exemplo simulado - substitua pela sua query no PostgreSQL (Neon)
+        pontuacao = 0
+        if hasattr(self, 'pontuacoes_maximas_por_dimensao'):
+            pontuacao = self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).get(codigo_quesito, 0)
+
         return {
             "resposta": "Sim",
             "detalhes": f"Informação enviada pelo município para a questão {codigo_quesito} em {ano}.",
-            "pontuacao_obtida": self.pontuacoes_maximas_por_dimensao.get(dimensao, {}).get(codigo_quesito, 0)
+            "pontuacao_obtida": pontuacao
         }
 
 
@@ -341,8 +364,14 @@ def mostrar_chat_hal():
     # ---------------------------------------------------------
     st.subheader("📊 Consulta por Dimensão e Quesito")
 
-    # 1. Obter dimensões dinamicamente a partir do dicionário
-    lista_dimensoes = sistema.get_dimensoes()
+    # 1. Obter dimensões dinamicamente a partir do dicionário ou método seguro
+    if hasattr(sistema, 'get_dimensoes'):
+        lista_dimensoes = sistema.get_dimensoes()
+    elif hasattr(sistema, 'questoes_por_dimensao'):
+        lista_dimensoes = list(sistema.questoes_por_dimensao.keys())
+    else:
+        lista_dimensoes = ["iCidade", "iGov-Ti", "i-Amb"]
+
     lista_anos = [2025, 2024, 2023] # Defina os anos suportados no seu projeto
 
     col1, col2, col3 = st.columns([1, 2.5, 1])
@@ -351,8 +380,16 @@ def mostrar_chat_hal():
         dimensao_sel = st.selectbox("Dimensão:", options=lista_dimensoes)
         
     with col2:
-        # Obter perguntas formatadas da dimensão selecionada
-        lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
+        # Obter perguntas formatadas da dimensão selecionada de forma segura
+        if hasattr(sistema, 'get_quesitos_por_dimensao'):
+            lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
+        elif hasattr(sistema, 'questoes_por_dimensao') and dimensao_sel in sistema.questoes_por_dimensao:
+            lista_quesitos_formatados = [
+                f"{cod} - {txt}" for cod, txt in sistema.questoes_por_dimensao[dimensao_sel].items()
+            ]
+        else:
+            lista_quesitos_formatados = []
+
         quesito_formatado_sel = st.selectbox("Quesito / Pergunta:", options=lista_quesitos_formatados)
         
         # Extrai apenas o código (ex: "1.0", "3.1.1") para consultar no banco
@@ -364,7 +401,14 @@ def mostrar_chat_hal():
     # Exibição da Resposta Registrada
     if quesito_formatado_sel:
         # Busca no banco a resposta registrada para esse código e ano
-        dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
+        if hasattr(sistema, 'get_resposta_municipio'):
+            dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
+        else:
+            dados_resposta = {
+                "resposta": "Sem registro",
+                "detalhes": f"Consulta indisponível para o quesito {codigo_quesito_sel} em {ano_sel}.",
+                "pontuacao_obtida": 0
+            }
 
         with st.container(border=True):
             st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
@@ -406,7 +450,9 @@ def mostrar_chat_hal():
 
         # Gera a resposta do assistente trazendo o contexto selecionado
         with st.chat_message("assistant"):
-            texto_pergunta = sistema.questoes_por_dimensao[dimensao_sel].get(codigo_quesito_sel, "")
+            texto_pergunta = ""
+            if hasattr(sistema, 'questoes_por_dimensao') and dimensao_sel in sistema.questoes_por_dimensao:
+                texto_pergunta = sistema.questoes_por_dimensao[dimensao_sel].get(codigo_quesito_sel, "")
             
             prompt_contextualizado = (
                 f"Contexto: Dimensão {dimensao_sel}, Quesito {codigo_quesito_sel} ('{texto_pergunta}'), Ano {ano_sel}.\n"
