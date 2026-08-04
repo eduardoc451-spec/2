@@ -2,7 +2,7 @@ import psycopg2
 import psycopg2.extras
 import streamlit as st
 
-# URL DIRETA DO SEU NEON (Sem variáveis extras ou strings antigas)
+# URL DIRETA DO SEU NEON
 NEON_URI = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
 
@@ -48,7 +48,6 @@ class SistemaHAL:
         }
 
     def get_db_connection(self):
-        # Chama a função global direta com a URL real
         return criar_conexao_direta()
 
     def get_dimensoes(self):
@@ -71,7 +70,7 @@ class SistemaHAL:
             ]
         return []
 
-   def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
         """Busca a resposta real no banco de dados Neon consultando a tabela específica de cada dimensão."""
         mapa_tabelas = {
             "iGov-Ti": "respostas_igov",
@@ -87,12 +86,13 @@ class SistemaHAL:
                 "pontuacao_obtida": 0,
             }
 
-        # --- AQUI ESTAVA O PROBLEMA: FORÇANDO A CONEXÃO CORRETA ---
         conn, erro = criar_conexao_direta()
         if not conn:
             return {
                 "resposta": "Sem conexão",
-                "detalhes": f"Não foi possível conectar ao banco de dados Neon: {erro}",
+                "detalhes": (
+                    f"Não foi possível conectar ao banco de dados Neon: {erro}"
+                ),
                 "pontuacao_obtida": 0,
             }
 
@@ -154,10 +154,10 @@ class SistemaHAL:
             if conn:
                 conn.close()
 
+
 def mostrar_chat_hal():
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
 
-    # FORÇA A DESTRUIÇÃO DO SESSION STATE ANTIGO CASO EXISTA
     if (
         "sistema_hal" not in st.session_state
         or "seu_host.neon.tech" in str(st.session_state.sistema_hal)
@@ -167,7 +167,6 @@ def mostrar_chat_hal():
     sistema = st.session_state.sistema_hal
 
     with st.expander("🔌 Status da Conexão com o Banco", expanded=True):
-        # TESTA DIRETO PELA FUNÇÃO ISOLADA
         conn, erro_conexao = criar_conexao_direta()
         if conn:
             st.success("✅ Conectado ao PostgreSQL (Neon) com sucesso!")
@@ -176,13 +175,10 @@ def mostrar_chat_hal():
             st.error("❌ Falha ao conectar no banco Neon!")
             st.code(f"Erro: {erro_conexao}", language="bash")
 
-    # ---------------------------------------------------------
-    # Filtros de Consulta
-    # ---------------------------------------------------------
     st.subheader("📊 Consulta por Dimensão e Quesito")
 
     lista_dimensoes = sistema.get_dimensoes()
-    lista_anos = [2026, 2025, 2024, 2023] # Anos relevantes em ordem decrescente
+    lista_anos = [2026, 2025, 2024, 2023]
 
     col1, col2, col3 = st.columns([1, 2.5, 1])
 
@@ -190,16 +186,25 @@ def mostrar_chat_hal():
         dimensao_sel = st.selectbox("Dimensão:", options=lista_dimensoes)
 
     with col2:
-        lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
-        quesito_formatado_sel = st.selectbox("Quesito / Pergunta:", options=lista_quesitos_formatados)
-        codigo_quesito_sel = quesito_formatado_sel.split(" - ")[0] if quesito_formatado_sel else ""
+        lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(
+            dimensao_sel
+        )
+        quesito_formatado_sel = st.selectbox(
+            "Quesito / Pergunta:", options=lista_quesitos_formatados
+        )
+        codigo_quesito_sel = (
+            quesito_formatado_sel.split(" - ")[0]
+            if quesito_formatado_sel
+            else ""
+        )
 
     with col3:
         ano_sel = st.selectbox("Ano:", options=lista_anos)
 
-    # Exibição do Resultado da Consulta
     if quesito_formatado_sel:
-        dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
+        dados_resposta = sistema.get_resposta_municipio(
+            dimensao_sel, codigo_quesito_sel, ano_sel
+        )
 
         with st.container(border=True):
             st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
@@ -208,46 +213,56 @@ def mostrar_chat_hal():
 
             col_res1, col_res2 = st.columns([3, 1])
             with col_res1:
-                st.write(f"**Resposta Cadastrada:** {dados_resposta.get('resposta', 'Sem registro')}")
-                st.write(f"**Detalhamento:** {dados_resposta.get('detalhes', 'Sem observações')}")
+                st.write(
+                    "**Resposta Cadastrada:**"
+                    f" {dados_resposta.get('resposta', 'Sem registro')}"
+                )
+                st.write(
+                    "**Detalhamento:**"
+                    f" {dados_resposta.get('detalhes', 'Sem observações')}"
+                )
             with col_res2:
-                pontos = dados_resposta.get('pontuacao_obtida', 0)
+                pontos = dados_resposta.get("pontuacao_obtida", 0)
                 st.metric("Pontuação", pontos)
 
     st.divider()
 
-    # ---------------------------------------------------------
-    # Chat Interativo
-    # ---------------------------------------------------------
     st.subheader("💬 Diagnóstico com o Assistente HAL")
 
     if "mensagens" not in st.session_state:
         st.session_state.mensagens = []
 
-    # Renderiza mensagens anteriores
     for msg in st.session_state.mensagens:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-    # Entrada do chat
-    if prompt := st.chat_input(f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."):
+    if prompt := st.chat_input(
+        f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."
+    ):
         st.session_state.mensagens.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
 
         with st.chat_message("assistant"):
-            texto_pergunta = sistema.questoes_por_dimensao.get(dimensao_sel, {}).get(codigo_quesito_sel, "")
-            
-            # Aqui você pode enviar 'prompt_contextualizado' para a API da sua LLM (OpenAI, Gemini, etc.)
+            texto_pergunta = sistema.questoes_por_dimensao.get(
+                dimensao_sel, {}
+            ).get(codigo_quesito_sel, "")
+
             prompt_contextualizado = (
-                f"Contexto: Dimensão {dimensao_sel}, Quesito {codigo_quesito_sel} ('{texto_pergunta}'), Ano {ano_sel}.\n"
-                f"Pergunta do usuário: {prompt}"
+                f"Contexto: Dimensão {dimensao_sel}, Quesito"
+                f" {codigo_quesito_sel} ('{texto_pergunta}'), Ano"
+                f" {ano_sel}.\nPergunta do usuário: {prompt}"
             )
 
-            resposta = f"Analisando **{dimensao_sel}** (Item {codigo_quesito_sel} - {ano_sel}):\n\nRecebi sua pergunta: *\"{prompt}\"*."
-            
+            resposta = (
+                f"Analisando **{dimensao_sel}** (Item {codigo_quesito_sel} -"
+                f" {ano_sel}):\n\nRecebi sua pergunta: *\"{prompt}\"*."
+            )
+
             st.write(resposta)
-            st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+            st.session_state.mensagens.append(
+                {"role": "assistant", "content": resposta}
+            )
 
 
 if __name__ == "__main__":
