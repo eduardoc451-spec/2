@@ -703,31 +703,40 @@ class SistemaHAL:
 def mostrar_chat_hal():
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
     
-    # Recria o objeto SistemaHAL na sessão para garatinr que os novos métodos estejam disponíveis
-    st.session_state.sistema_hal = SistemaHAL()
+    # Instancia ou recupera o sistema da sessão
+    if "sistema_hal" not in st.session_state:
+        st.session_state.sistema_hal = SistemaHAL()
+    
     sistema = st.session_state.sistema_hal
 
-    # Status da Conexão
-    with st.expander("🔌 Status da Conexão com o Banco"):
-        conn = sistema.get_db_connection() if hasattr(sistema, 'get_db_connection') else None
+    # ---------------------------------------------------------
+    # 🔌 Status da Conexão com Diagnóstico Detalhado
+    # ---------------------------------------------------------
+    with st.expander("🔌 Status da Conexão com o Banco", expanded=True):
+        # Desempacota a tupla (conn, erro)
+        conn, erro_conexao = sistema.get_db_connection()
         if conn:
-            st.success("Conectado ao PostgreSQL (Neon) com sucesso!")
+            st.success("✅ Conectado ao PostgreSQL (Neon) com sucesso!")
             conn.close()
         else:
-            st.warning("Executando em modo de visualização rápida (Sem conexão direta).")
+            st.error("❌ Falha ao conectar no banco de dados Neon!")
+            st.code(f"Erro retornado do banco/driver:\n{erro_conexao}", language="bash")
 
     # ---------------------------------------------------------
-    # Filtros de Dimensão, Quesito e Ano
+    # 📊 Consulta por Dimensão e Quesito
     # ---------------------------------------------------------
     st.subheader("📊 Consulta por Dimensão e Quesito")
 
     lista_dimensoes = sistema.get_dimensoes()
-    lista_anos = [2026, 2025, 2024, 2023, 2022]
+    lista_anos = [2026, 2025, 2024, 2023]
 
     col1, col2, col3 = st.columns([1, 2.5, 1])
     
     with col1:
-        dimensao_sel = st.selectbox("Dimensão:", options=lista_dimensoes)
+        dimensao_sel = st.selectbox(
+            "Dimensão:", 
+            options=lista_dimensoes if lista_dimensoes else ["iGov-Ti", "iCidade", "i-Amb"]
+        )
         
     with col2:
         lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
@@ -737,7 +746,9 @@ def mostrar_chat_hal():
     with col3:
         ano_sel = st.selectbox("Ano:", options=lista_anos)
 
-    # Exibição da Resposta Registrada
+    # ---------------------------------------------------------
+    # 📍 Exibição da Resposta Registrada
+    # ---------------------------------------------------------
     if quesito_formatado_sel:
         dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
 
@@ -760,33 +771,27 @@ def mostrar_chat_hal():
     st.divider()
 
     # ---------------------------------------------------------
-    # Seção de Chat Interativo
+    # 💬 Chat Interativo
     # ---------------------------------------------------------
     st.subheader("💬 Diagnóstico com o Assistente HAL")
 
     if "mensagens" not in st.session_state:
         st.session_state.mensagens = []
 
-    # Exibe o histórico do chat
     for msg in st.session_state.mensagens:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-    # Entrada do usuário
     if prompt := st.chat_input(f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."):
         st.session_state.mensagens.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
 
         with st.chat_message("assistant"):
-            texto_pergunta = ""
-            if hasattr(sistema, 'questoes_por_dimensao') and dimensao_sel in sistema.questoes_por_dimensao:
-                texto_pergunta = sistema.questoes_por_dimensao[dimensao_sel].get(codigo_quesito_sel, "")
-            
-            resposta = f"Analisando para a Dimensão **{dimensao_sel}** (Quesito {codigo_quesito_sel} - {ano_sel}):\n\nProcessando consulta..."
-            
+            resposta = f"Analisando dados do quesito **{codigo_quesito_sel}** ({dimensao_sel} - {ano_sel})..."
             st.write(resposta)
             st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+
 
 def main():
     mostrar_chat_hal()
