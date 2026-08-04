@@ -259,3 +259,50 @@ class SistemaHAL:
                 "A6": "O órgão ambiental municipal possui equipamentos adequados para atendimento e contenção de emergências químicas ou derramamentos?"
             }
         }
+
+def mostrar_chat_hal():
+    """
+    Função de entrada que o aplicativo principal (app.py) chama para renderizar a interface do HAL.
+    """
+    st.title("🤖 Assistente HAL - Análise & Diagnóstico")
+    
+    # Instancia a classe do sistema
+    if "sistema_hal" not in st.session_state:
+        st.session_state.sistema_hal = SistemaHAL()
+    
+    sistema = st.session_state.sistema_hal
+
+    # Teste de conexão visual no topo
+    with st.expander("🔌 Status da Conexão com o Banco"):
+        conn = sistema.get_db_connection()
+        if conn:
+            st.success("Conectado ao PostgreSQL (Neon) com sucesso!")
+            conn.close()
+        else:
+            st.error("Falha na conexão com o banco de dados.")
+
+    # Exemplo de Histórico do Chat
+    if "mensagens" not in st.session_state:
+        st.session_state.mensagens = []
+
+    # Exibe mensagens anteriores
+    for msg in st.session_state.mensagens:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    # Entrada do usuário
+    if prompt := st.chat_input("Como posso ajudar com os dados de iCidade, iGov-Ti ou i-Amb?"):
+        # Registra mensagem do usuário
+        st.session_state.mensagens.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        # Resposta do assistente
+        with st.chat_message("assistant"):
+            resposta = f"Processando sua solicitação: '{prompt}'. Consultando a base de dados..."
+            st.write(resposta)
+            st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+
+# Alias/Atalho caso seu app chame main() em vez de mostrar_chat_hal()
+def main():
+    mostrar_chat_hal()
