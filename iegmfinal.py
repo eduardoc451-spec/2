@@ -1,51 +1,43 @@
 import logging
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import pandas as pd
 import streamlit as st
 
-# Importa a conexão com o PostgreSQL do seu projeto
+# Tenta importar o get_connection da sua aplicação/módulo icidade
 try:
-    from database import get_connection
+    from icidade import get_connection
 except ImportError:
     try:
-        from db import get_connection
+        from app import get_connection
     except ImportError:
-
-        def get_connection():
-            raise NotImplementedError(
-                "Função get_connection() não encontrada no projeto."
-            )
-
-
-def buscar_soma_pontos(tabela: str, ano: int) -> float:
-    """Consulta a soma dos pontos de uma tabela no PostgreSQL de forma isolada e segura."""
-    ano_str = str(ano)
-
-    try:
-        with get_connection() as conn:
-            # Garante que a transação comece limpa
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-
-            with conn.cursor() as cursor:
-                # Consulta flexível convertendo ano para texto e somando 'pontos'
-                sql = f"""
-                    SELECT COALESCE(SUM(pontos), 0)
-                    FROM {tabela}
-                    WHERE CAST(ano AS TEXT) = %s
-                """
-                cursor.execute(sql, (ano_str,))
-                res = cursor.fetchone()
-
-                if res and res[0] is not None:
-                    return float(res[0])
-    except Exception as e:
-        logging.warning(
-            f"[IEG-M Final] Consulta na tabela {tabela} (Ano {ano}) falhou/não existe: {e}"
+        # Fallback genérico caso não encontre
+        st.error(
+            "❌ Não foi possível importar 'get_connection'. Verifique se o nome do arquivo principal é 'icidade.py'."
         )
 
-    return 0.0
+
+def diagnostico_tabelas(tabela_nome):
+    """Executa a verificação segura nas tabelas usando a classe get_connection()."""
+    try:
+        # Usa o context manager 'with' exatamente como definido na sua classe get_connection
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                # Consulta para contar registros e somar pontos
+                query = f"SELECT COUNT(*) as qtd, COALESCE(SUM(pontos), 0) as soma FROM {tabela_nome} WHERE ano = 2026;"
+                cursor.execute(query)
+                res = cursor.fetchone()
+                return {
+                    "status": "OK / Tabela Acessada",
+                    "qtd": res[0] if res else 0,
+                    "soma": res[1] if res else 0,
+                }
+    except Exception as e:
+        return {
+            "status": f"Erro: {str(e)}",
+            "qtd": 0,
+            "soma": 0,
+        }
 
 
 # =============================================================================
