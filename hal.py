@@ -1,10 +1,11 @@
 import psycopg2
+from psycopg2.extras import DictCursor
 import streamlit as st
 
 
 @st.cache_resource
 def get_db_connection():
-    # URL do seu banco Neon DB direta no código, sem usar st.secrets
+    # URL do seu banco Neon DB
     db_url = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
     try:
@@ -13,6 +14,7 @@ def get_db_connection():
     except Exception as e:
         st.error(f"Erro ao conectar ao banco de dados: {e}")
         return None
+
 
 # ==============================================================================
 # CLASSE DO SISTEMA HAL
@@ -24,28 +26,42 @@ class SistemaHAL:
         self.carregar_dicionarios_globais()
         self.conn = get_db_connection()
 
-    def puxar_nota_dimensao(self, dimensao, ano):
+    def puxar_nota_dimensao(self, dimensao: str, ano: int) -> float:
+        """Consulta a nota geral de uma dimensão e ano no PostgreSQL."""
         if not self.conn:
             return 0.0
         try:
-            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # Exemplo de consulta adaptada para PostgreSQL
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 query = "SELECT nota FROM desempenho WHERE dimensao = %s AND ano = %s;"
                 cur.execute(query, (dimensao, ano))
                 result = cur.fetchone()
-                return result['nota'] if result else 0.0
+                return float(result['nota']) if result else 0.0
         except Exception as e:
             st.error(f"Erro ao consultar nota: {e}")
             return 0.0
 
-    def analisar_pontos_fracos(self, ano, dimensao):
+    def consultar_historico_anos(self, dimensao: str, quesito_id: str):
+        """Busca o histórico de respostas de uma questão ao longo dos anos."""
+        if not self.conn:
+            return []
+        try:
+            with self.conn.cursor() as cur:
+                query = "SELECT ano, valor FROM respostas WHERE dimensao = %s AND id = %s ORDER BY ano ASC;"
+                cur.execute(query, (dimensao, quesito_id))
+                return cur.fetchall()
+        except Exception:
+            return []
+
+    def analisar_pontos_fracos(self, ano: int, dimensao: str):
+        """Mapeia os pontos fracos e penalidades de uma dimensão/ano."""
         fracos = []
         penalidades = []
+        
         if not self.conn:
             return fracos, penalidades
+
         try:
-            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # Exemplo de consulta para pontos fracos e penalidades
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
                 query = """
                     SELECT questao_id, obtido, maximo, penalidade, pergunta 
                     FROM analise_questoes 
@@ -53,6 +69,7 @@ class SistemaHAL:
                 """
                 cur.execute(query, (dimensao, ano))
                 rows = cur.fetchall()
+                
                 for row in rows:
                     if row['penalidade'] > 0:
                         penalidades.append({
@@ -73,70 +90,7 @@ class SistemaHAL:
         return fracos, penalidades
 
     def carregar_dicionarios_globais(self):
-        self.questoes_por_dimensao = {
-            "iCidade": {
-                "1.0": "Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil (COMPDEC)...",
-                # ... demais questões da dimensão
-            },
-            "iGov-Ti": {
-                "1.0": "A Prefeitura possui uma área ou setor que cuida de TIC...",
-                # ... demais questões da dimensão
-            },
-            "i-Amb": {
-                "1.0": "Existe estrutura organizacional instalada para tratar de Meio Ambiente...",
-                # ... demais questões da dimensão
-            }
-        }
-
-        self.pontuacoes_maximas_por_dimensao = {
-            "iCidade": {"1.0": 40, "1.3": 5, "1.4": 50},
-            "iGov-Ti": {"1.0": 30, "1.1": 30, "1.2": 30},
-            "i-Amb": {"1.1.2": 20, "1.1.3": 5, "1.2": 20}
-        }
-
-# ==============================================================================
-# FUNÇÃO DE RENDERIZAÇÃO PARA O STREAMLIT
-# ==============================================================================
-def mostrar_chat_hal():
-    st.title("🤖 HAL - Sistema de Diagnóstico TCESP")
-    st.write("Conectado ao banco de dados PostgreSQL (Neon DB).")
-
-    # Instancia o sistema HAL
-    hal = SistemaHAL()
-
-    # Seleção de ano e dimensão
-    col1, col2 = st.columns(2)
-    with col1:
-        ano = st.number_input("Ano de Análise", min_value=2020, max_value=2026, value=2025)
-    with col2:
-        dimensao = st.selectbox("Dimensão", list(hal.questoes_por_dimensao.keys()))
-
-    if st.button("Analisar Desempenho", type="primary"):
-        nota = hal.puxar_nota_dimensao(dimensao, ano)
-        st.metric(label=f"Nota na dimensão {dimensao} ({ano})", value=f"{nota:.2f}")
-
-        fracos, penalidades = hal.analisar_pontos_fracos(ano, dimensao)
-
-        if penalidades:
-            st.error("⚠️ Penalidades Detectadas")
-            for p in penalidades:
-                st.write(f"- **[ID {p['id']}]** {p['pergunta']} (Penalidade: {p['penalidade']})")
-
-        if fracos:
-            st.warning("📉 Pontos com Déficit de Pontuação")
-            for f in fracos:
-                st.write(f"- **[ID {f['id']}]** Obtido: {f['obtido']} / Máx: {f['maximo']} (Déficit: {f['deficit']})")
-
-class SistemaHAL:
-    def __init__(self):
-        self.questoes_por_dimensao = {}
-        self.pontuacoes_maximas_por_dimensao = {}
-        self.carregar_dicionarios_globais()
-        # Inicializa mapeamento de conexões com os arquivos físicos corretos
-        self.conexoes = self.inicializar_bancos_dados()
-
-    def carregar_dicionarios_globais(self):
-        # Dicionário unificado com as 3 dimensões operacionais
+        """Dicionário unificado com as 3 dimensões operacionais."""
         self.questoes_por_dimensao = {
             "iCidade": {
                 "1.0": "Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil (COMPDEC) ou órgão similar responsável pela execução, coordenação e mobilização de todas as ações de defesa civil no município?",
@@ -151,7 +105,7 @@ class SistemaHAL:
                 "5.0": "O Município realizou, por conta própria, o mapeamento e identificação das principais ameaças existentes em seu território?",
                 "5.1.1": "As secretarias setoriais realizam a fiscalização das áreas de risco?",
                 "5.2": "A população foi informada sobre todas as ameaças identificadas pelo município?",
-                "6.0": "A Secretaria responsável realizou vistorias in edificações vulneráveis com o objetivo de identificar a necessidade de intervenção preventiva nos imóveis?",
+                "6.0": "A Secretaria responsável realizou vistorias em edificações vulneráveis com o objetivo de identificar a necessidade de intervenção preventiva nos imóveis?",
                 "7.0": "O Município possui Plano de Contingência Municipal (PLANCON) de Defesa Civil?",
                 "7.1": "Foi elaborado um PLANCON específico para cada ameaça identificada?",
                 "7.2": "São realizados regularmente exercícios simulados para as contingências previstas no PLANCON?",
@@ -188,7 +142,7 @@ class SistemaHAL:
                 "2.2": "O plano de TIC vigente contempla as metas operacionais estratégicas municipais?",
                 "2.3": "Qual a data da última atualização do PDTIC?",
                 "3.0": "A Prefeitura dispõe de Política de Segurança da Informação formalmente instituída e de cumprimento obrigatório?",
-                "3.1": "A Prefeitura establishes procedimentos e responsabilidades quanto ao uso de TI (Termo de Responsabilidade/Compromisso)?",
+                "3.1": "A Prefeitura estabelece procedimentos e responsabilidades quanto ao uso de TI (Termo de Responsabilidade/Compromisso)?",
                 "3.1.1": "O Termo de Responsabilidade/Compromisso dispõe sobre o uso da assinatura eletrônica pelos funcionários?",
                 "3.1.1.1": "Informe o tipo de assinatura eletrônica utilizada nos documentos digitais.",
                 "3.2": "Os riscos de TIC são identificados de acordo com as normas brasileiras da família ISO/IEC 27000?",
@@ -253,12 +207,12 @@ class SistemaHAL:
                 "5.2.1": "Informe a destinação final dada aos resíduos decorrentes das podas de árvores.",
                 "5.3": "Houve capacitação específica para os responsáveis pela execução da manutenção e poda de árvores?",
                 "6.0": "O Município adota ações e medidas preventivas de contingenciamento para períodos de estiagem?",
-                "6.1": "Informe os tipos de ações and medidas preventivas que foram executadas.",
+                "6.1": "Informe os tipos de ações e medidas preventivas que foram executadas.",
                 "6.2": "Indique os setores envolvidos com ações específicas para a provisão de água potável.",
                 "7.0": "Existe Plano Municipal ou Regional de Saneamento Básico instituído e vigente?",
                 "7.1": "Informe o instrumento normativo de aprovação do Plano.",
                 "7.2": "Informe a página eletrônica (link na internet) para acesso ao Plano.",
-                "7.3": "O Plano establishes metas específicas de abastecimento de água potável?",
+                "7.3": "O Plano estabelece metas específicas de abastecimento de água potável?",
                 "7.3.1": "Informe detalhadamente as metas estabelecidas para o abastecimento de água.",
                 "7.3.2": "Qual a data prevista para a universalização do atendimento de abastecimento de água?",
                 "7.4": "O Plano estabelece metas de coleta de esgoto sanitário?",
@@ -308,7 +262,7 @@ class SistemaHAL:
                 "11.3.3": "As metas estabelecidas no PGRCC estão sendo cumpridas no prazo estipulado?",
                 "11.3.3.1": "Informe os motivos identificados para o não cumprimento das metas estruturadas.",
                 "11.4": "Quem é o agente ou setor responsável pela triagem dos resíduos da construção civil?",
-                "11.5": "O Município realiza a fiscalização activa das atividades relacionadas aos resíduos da construção civil?",
+                "11.5": "O Município realiza a fiscalização ativa das atividades relacionadas aos resíduos da construção civil?",
                 "11.5.1": "Informe quais as principais atividades que são fiscalizadas pelo órgão municipal.",
                 "11.6": "Existe Área de Transbordo e Triagem (ATT) específica para resíduos da construção civil?",
                 "11.6.1": "A referida ATT de resíduos da construção civil possui licença de operação da CETESB?",
@@ -332,7 +286,7 @@ class SistemaHAL:
                 "15.1.4": "Informe a entidade responsável pela regulação da drenagem e manejo das águas pluviais urbanas.",
                 "16.0": "Gostaria de registrar suas impressões, comentários e sugestões gerais a respeito deste bloco do questionário?",
                 "A1": "O Município possui Zoneamento Ecológico-Econômico (ZEE) instituído ou em andamento?",
-                "A2": "Há monitoramento sistemático da qualidade do ar nas zones urbanas ou industriais do município?",
+                "A2": "Há monitoramento sistemático da qualidade do ar nas zonas urbanas ou industriais do município?",
                 "A3": "O município possui mapeamento atualizado e proteção ativa de suas Áreas de Preservação Permanente (APP)?",
                 "A4": "Existe programa municipal voltado para a proteção e bem-estar de animais domésticos e controle de zoonoses?",
                 "A4.1.1": "Informe a capacidade física e operacional do abrigo ou canil municipal.",
@@ -344,6 +298,66 @@ class SistemaHAL:
                 "A6": "O órgão ambiental municipal possui equipamentos adequados para atendimento e contenção de emergências químicas ou derramamentos?"
             }
         }
+
+        self.pontuacoes_maximas_por_dimensao = {
+            "iCidade": {
+                "1.0": 40, "1.3": 5, "1.4": 50, "2.0": 20, "2.1": 30, "2.2": 10,
+                "3.0": 10, "3.1.1": 10, "5.0": 200, "7.0": 50, "7.1": 5, "7.2": 80,
+                "7.3": 50, "7.4": 50, "7.5": 10, "7.6": 10, "8.0": 50, "8.1.1.1": 20,
+                "8.2": 50, "9.0": 100, "15.0": 50, "16.0": 50, "C1.1": 50
+            },
+            "iGov-Ti": {
+                "1.0": 30, "1.1": 30, "1.2": 30, "1.3": 30, "1.3.1": 30, "1.4.1": 40, "1.4.2": 20,
+                "2.0": 40, "2.1": 20, "2.2": 40, "2.3": 20,
+                "3.0": 50, "3.1": 20, "3.1.1": 40, "3.1.1.1": 10, "3.2.1": 10, "3.3": 30, "3.4": 30, "3.5": 30, "3.6": 20,
+                "4.0": 40, "6.0": 20, "6.1": 20, "6.2": 20, "6.3": 10, "6.4": 30, "7.0": 25, "7.1": 10, "7.2": 10, "7.3": 5,
+                "8.0": 40, "8.2.1": 50, "8.2.2": 30, "9.1": 120
+            },
+            "i-Amb": {
+                "1.1.2": 20, "1.1.3": 5, "1.2": 20, "2.0": 10, "2.1": 50, "3.0": 10,
+                "3.1": 20, "4.0": 20, "5.2.1": 20, "6.0": 20, "6.1": 50, "6.2": 25,
+                "7.2": 2, "7.3": 10, "7.3.1": 20, "7.4": 10, "7.4.1": 20, "7.5": 30,
+                "7.7": 30, "7.8": 20, "7.8.1": 50, "7.9": 3, "8.2": 2, "8.3": 10,
+                "8.4": 20, "8.4.1": 10, "8.4.2": 30, "8.4.3": 50, "9.2": 100, "9.3": 5,
+                "9.3.1": 5, "11.2": 2, "11.3": 30, "11.3.2": 20, "11.3.3": 40, "11.5": 10,
+                "12.1": 54, "14.3": 30, "15": 2, "15.1": 3, "A4.1.1": 90, "A4.1.2": 20,
+                "A4.1.3": 22, "A6": 5
+            }
+        }
+
+
+# ==============================================================================
+# FUNÇÃO DE RENDERIZAÇÃO PARA O STREAMLIT
+# ==============================================================================
+def mostrar_chat_hal():
+    st.title("🤖 HAL - Sistema de Diagnóstico TCESP")
+    st.write("Conectado ao banco de dados PostgreSQL (Neon DB).")
+
+    # Instancia o sistema HAL
+    hal = SistemaHAL()
+
+    # Seleção de ano e dimensão
+    col1, col2 = st.columns(2)
+    with col1:
+        ano = st.number_input("Ano de Análise", min_value=2020, max_value=2026, value=2025)
+    with col2:
+        dimensao = st.selectbox("Dimensão", list(hal.questoes_por_dimensao.keys()))
+
+    if st.button("Analisar Desempenho", type="primary"):
+        nota = hal.puxar_nota_dimensao(dimensao, ano)
+        st.metric(label=f"Nota na dimensão {dimensao} ({ano})", value=f"{nota:.2f}")
+
+        fracos, penalidades = hal.analisar_pontos_fracos(ano, dimensao)
+
+        if penalidades:
+            st.error("⚠️ Penalidades Detectadas")
+            for p in penalidades:
+                st.write(f"- **[ID {p['id']}]** {p['pergunta']} (Penalidade: {p['penalidade']})")
+
+        if fracos:
+            st.warning("📉 Pontos com Déficit de Pontuação")
+            for f in fracos:
+                st.write(f"- **[ID {f['id']}]** Obtido: {f['obtido']} / Máx: {f['maximo']} (Déficit: {f['deficit']})")
 
         self.pontuacoes_maximas_por_dimensao = {
             "iCidade": {
