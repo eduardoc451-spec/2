@@ -8,43 +8,53 @@ try:
 except ImportError as e:
     logging.error(f"Erro ao importar get_connection do icidade_completo: {e}")
 
-    # Fallback/Alerta caso o arquivo mude de nome no ambiente Streamlit
     def get_connection():
         raise ImportError(
             "Não foi possível importar 'get_connection' de 'icidade_completo.py'."
         )
 
 
-def buscar_soma_pontos(tabela: str, ano: int) -> float:
-    """Consulta a soma de pontos em uma tabela PostgreSQL usando o Context Manager do Neon."""
+def buscar_pontuacao_dimensao(tabela: str, ano: int) -> float:
+    """Consulta a soma dos pontos na tabela da dimensão correspondente.
+
+    Trata dinamicamente se a tabela usa a coluna 'quesito' ou 'id'.
+    """
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                # Consulta somando os pontos diretamente no banco
+                # 1. Tenta buscar da tabela específica (ex: respostas_iplan, respostas_ieduc)
                 sql = f"SELECT COALESCE(SUM(pontos), 0) FROM {tabela} WHERE ano = %s;"
                 cursor.execute(sql, (int(ano),))
                 res = cursor.fetchone()
+
                 if res and res[0] is not None:
-                    return float(res[0])
+                    valor = float(res[0])
+
+                    # Ajuste automático de escala caso os pontos sejam gravados em decimais/percentuais
+                    if 0 < valor <= 10:
+                        valor *= 100
+                    elif 10 < valor <= 100:
+                        valor *= 10
+
+                    return min(valor, 1000.0)
     except Exception as e:
         logging.warning(
-            f"[IEG-M Final] Erro/Tabela inexistente '{tabela}' para ano {ano}: {e}"
+            f"[IEG-M Final] Erro ao ler tabela '{tabela}' para ano {ano}: {e}"
         )
 
     return 0.0
 
 
 # =============================================================================
-# FUNÇÕES DE LEITURA DAS DIMENSÕES
+# FUNÇÕES DE LEITURA ESPECÍFICAS
 # =============================================================================
 
 
 def puxar_nota_iplan(ano: int) -> int:
-    return int(round(buscar_soma_pontos("respostas_iplan", ano)))
+    return int(round(buscar_pontuacao_dimensao("respostas_iplan", ano)))
 
 
 def puxar_nota_ifiscal(ano: int) -> int:
-    """Carrega i-Fiscal e aplica regra de rebaixamento crítico (<-100 zerando a dimensão)."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -55,47 +65,50 @@ def puxar_nota_ifiscal(ano: int) -> int:
                 if not rows:
                     return 0
 
-                pontos_lista = [
-                    float(r[0]) for r in rows if r[0] is not None
-                ]
+                pontos_lista = [float(r[0]) for r in rows if r[0] is not None]
 
-                # Rebaixamento crítico
+                # Regra de rebaixamento crítico TCESP (se houver item crítico reprovado)
                 if any(p <= -100.0 for p in pontos_lista):
                     return 0
 
                 total = sum(p for p in pontos_lista if p > -100.0)
-                return int(round(total))
+
+                if 0 < total <= 10:
+                    total *= 100
+                elif 10 < total <= 100:
+                    total *= 10
+
+                return int(round(min(total, 1000.0)))
     except Exception as e:
         logging.warning(f"[i-Fiscal] Falha ao ler ano {ano}: {e}")
         return 0
 
 
 def puxar_nota_ieduc(ano: int) -> int:
-    return int(round(buscar_soma_pontos("respostas_ieduc", ano)))
+    return int(round(buscar_pontuacao_dimensao("respostas_ieduc", ano)))
 
 
 def puxar_nota_isaude(ano: int) -> int:
-    return int(round(buscar_soma_pontos("respostas_isaude", ano)))
+    return int(round(buscar_pontuacao_dimensao("respostas_isaude", ano)))
 
 
 def puxar_nota_iamb(ano: int) -> int:
-    return int(round(buscar_soma_pontos("respostas_iamb", ano)))
+    return int(round(buscar_pontuacao_dimensao("respostas_iamb", ano)))
 
 
 def puxar_nota_icidade(ano: int) -> int:
-    # Caso o iCidade use a tabela genérica 'respostas' ou 'respostas_icidade'
-    pts = buscar_soma_pontos("respostas_icidade", ano)
+    pts = buscar_pontuacao_dimensao("respostas_icidade", ano)
     if pts == 0:
-        pts = buscar_soma_pontos("respostas", ano)
+        pts = buscar_pontuacao_dimensao("respostas", ano)
     return int(round(pts))
 
 
 def puxar_nota_igov(ano: int) -> int:
-    return int(round(buscar_soma_pontos("respostas_igov", ano)))
+    return int(round(buscar_pontuacao_dimensao("respostas_igov", ano)))
 
 
 # =============================================================================
-# CÁLCULOS TCESP
+# CÁLCULOS OFICIAIS TCESP
 # =============================================================================
 
 
@@ -111,15 +124,15 @@ def calcular_nota_final(
     """Calcula a Média Ponderada oficial do IEG-M TCESP (escala 0 a 1000)."""
     try:
         soma = (
-            (float(plan) * 20)
-            + (float(fiscal) * 20)
-            + (float(educ) * 20)
-            + (float(saude) * 20)
-            + (float(amb) * 10)
-            + (float(cidade) * 5)
-            + (float(gov) * 5)
+            (float(plan) * 0.20)
+            + (float(fiscal) * 0.20)
+            + (float(educ) * 0.20)
+            + (float(saude) * 0.20)
+            + (float(amb) * 0.10)
+            + (float(cidade) * 0.05)
+            + (float(gov) * 0.05)
         )
-        return int(round(soma / 100.0))
+        return int(round(soma))
     except Exception:
         return 0
 
@@ -138,7 +151,7 @@ def obter_faixa_classificacao(nota: int):
 
 
 # =============================================================================
-# EXIBIÇÃO NO STREAMLIT
+# PAINEL PRINCIPAL STREAMLIT
 # =============================================================================
 
 
@@ -150,7 +163,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
     registro_historico = []
 
-    # Lê as notas reais no PostgreSQL (Neon)
+    # Leitura dos dados no Neon
     for ano in anos:
         plan = puxar_nota_iplan(ano)
         fiscal = puxar_nota_ifiscal(ano)
@@ -201,7 +214,6 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
 
     df_historico["Variação %"] = variacoes
 
-    # Reordenar
     colunas_ordenadas = [
         "Ano",
         "i-Plan",
@@ -246,7 +258,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
         )
     with c3:
         st.info(
-            "💡 **Fórmula TCESP:** `(i-Plan×20 + i-Fiscal×20 + i-Educ×20 + i-Saúde×20 + i-Amb×10 + i-Cidade×5 + i-Gov TI×5) / 100`"
+            "💡 **Fórmula TCESP:** `(i-Plan×0.20 + i-Fiscal×0.20 + i-Educ×0.20 + i-Saúde×0.20 + i-Amb×0.10 + i-Cidade×0.05 + i-Gov TI×0.05)`"
         )
 
     st.markdown("#### Desempenho das Dimensões (Escala 0-1000)")
@@ -263,13 +275,13 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
             ],
             "Peso TCESP": ["20%", "20%", "20%", "20%", "10%", "5%", "5%"],
             "Pontuação Obtida": [
-                dados_ano_atual["i-Plan"],
-                dados_ano_atual["i-Fiscal"],
-                dados_ano_atual["i-Educ"],
-                dados_ano_atual["i-Saúde"],
-                dados_ano_atual["i-Amb"],
-                dados_ano_atual["i-Cidade"],
-                dados_ano_atual["i-Gov TI"],
+                f"{dados_ano_atual['i-Plan']} pts",
+                f"{dados_ano_atual['i-Fiscal']} pts",
+                f"{dados_ano_atual['i-Educ']} pts",
+                f"{dados_ano_atual['i-Saúde']} pts",
+                f"{dados_ano_atual['i-Amb']} pts",
+                f"{dados_ano_atual['i-Cidade']} pts",
+                f"{dados_ano_atual['i-Gov TI']} pts",
             ],
         }
     )
@@ -295,22 +307,19 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     )
 
     # =========================================================================
-    # DIAGNÓSTICO DO BANCO DE DADOS (EXPANSÍVEL)
+    # DIAGNÓSTICO DO BANCO DE DADOS
     # =========================================================================
     with st.expander(
-        f"🛠️ Diagnóstico do Neon PostgreSQL (Ano {ano_selecionado})"
+        f"🛠️ Diagnóstico do PostgreSQL/Neon (Ano {ano_selecionado})"
     ):
-        st.write("Verificação do estado das tabelas diretamente no banco:")
-
         tabelas_para_testar = [
-            "respostas_igov",
-            "respostas_icidade",
             "respostas_iplan",
             "respostas_ifiscal",
             "respostas_ieduc",
             "respostas_isaude",
             "respostas_iamb",
-            "respostas",
+            "respostas_icidade",
+            "respostas_igov",
         ]
 
         relatorio_db = []
@@ -326,18 +335,18 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                         relatorio_db.append(
                             {
                                 "Tabela": tab,
-                                "Status": "Existe no DB",
-                                "Qtd Registros": qtd,
+                                "Qtd Quesitos": qtd,
                                 "Soma dos Pontos": float(soma),
+                                "Status": "OK",
                             }
                         )
             except Exception as err:
                 relatorio_db.append(
                     {
                         "Tabela": tab,
-                        "Status": f"Não encontrada/Erro: {err}",
-                        "Qtd Registros": 0,
+                        "Qtd Quesitos": 0,
                         "Soma dos Pontos": 0.0,
+                        "Status": f"Erro/Ausente: {err}",
                     }
                 )
 
