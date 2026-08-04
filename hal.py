@@ -1,3 +1,11 @@
+import streamlit as st
+import sqlite3
+import time
+import os
+import re
+import json
+import plotly.graph_objects as go
+
 class SistemaHAL:
     def __init__(self):
         self.questoes_por_dimensao = {}
