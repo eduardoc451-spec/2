@@ -949,254 +949,13 @@ class SistemaHAL:
         }
 
 import streamlit as st
-
-# Exemplo de como implementar os métodos auxiliares dentro do seu SistemaHAL
-class SistemaHAL:
-    def __init__(self):
-        self.carregar_dicionarios_globais()
-
-    def carregar_dicionarios_globais(self):
-        # Seu dicionário exatamente como você postou
-        self.questoes_por_dimensao = {
-            "iCidade": {
-                "1.0": "Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil (COMPDEC)...",
-                "1.3": "A COMPDEC ou órgão similar está associada ou subordinada a qual secretaria/diretoria?",
-                # ... demais questões do seu dicionário
-            },
-            "iGov-Ti": {
-                "1.0": "A Prefeitura possui uma área ou setor que cuida de Tecnologia da Informação...",
-                # ... demais questões do seu dicionário
-            },
-            "i-Amb": {
-                "1.0": "Existe estrutura organizacional instalada para tratar de assuntos ligados ao Meio Ambiente Municipal?",
-                # ... demais questões do seu dicionário
-            }
-        }
-        
-        self.pontuacoes_maximas_por_dimensao = {
-            # Seu dicionário de pontuações
-        }
-
-    def get_dimensoes(self):
-        """Retorna as dimensões disponíveis no dicionário."""
-        if hasattr(self, 'questoes_por_dimensao') and isinstance(self.questoes_por_dimensao, dict):
-            return list(self.questoes_por_dimensao.keys())
-        return ["iCidade", "iGov-Ti", "i-Amb"]
-
-    def get_quesitos_por_dimensao(self, dimensao):
-        """
-        Retorna uma lista formatada com [Código] + [Texto da Pergunta]
-        Exemplo: "1.0 - Foi criada a Coordenadoria..."
-        """
-        if hasattr(self, 'questoes_por_dimensao') and dimensao in self.questoes_por_dimensao:
-            return [
-                f"{codigo} - {texto}" 
-                for codigo, texto in self.questoes_por_dimensao[dimensao].items()
-            ]
-        return []
-
-    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """
-        Busca a resposta real no banco de dados Neon consultando a tabela específica de cada dimensão.
-        """
-        # Mapeamento de dimensão para a tabela correspondente no banco
-        mapa_tabelas = {
-            "iGov-Ti": "respostas_igov",
-            "i-Amb": "respostas_iamb",
-            "iCidade": "respostas_iplan"  # ajuste para 'respostas' se a iCidade usar essa
-        }
-
-        tabela = mapa_tabelas.get(dimensao)
-        if not tabela:
-            return {
-                "resposta": "Dimensão desconhecida",
-                "detalhes": f"Tabela para a dimensão {dimensao} não configurada.",
-                "pontuacao_obtida": 0
-            }
-
-        conn = self.get_db_connection() if hasattr(self, 'get_db_connection') else None
-        if not conn:
-            return {
-                "resposta": "Sem conexão",
-                "detalhes": "Não foi possível conectar ao banco de dados Neon.",
-                "pontuacao_obtida": 0
-            }
-
-        try:
-            with conn.cursor() as cur:
-                # Consulta ajustada exatamente para as colunas do seu print (id, ano, valor, pontos, link)
-                query = f"""
-                    SELECT id, ano, valor, pontos, link, comentarios 
-                    FROM {tabela} 
-                    WHERE id = %s AND ano = %s;
-                """
-                cur.execute(query, (str(codigo_quesito), int(ano)))
-                resultado = cur.fetchone()
-
-                if resultado:
-                    detalhe_texto = []
-                    if resultado['link'] and resultado['link'] != 'EMPTY_STRING':
-                        detalhe_texto.append(f"Link/Detalhamento: {resultado['link']}")
-                    if resultado['comentarios'] and resultado['comentarios'] != 'EMPTY_STRING':
-                        detalhe_texto.append(f"Comentários: {resultado['comentarios']}")
-
-                    txt_detalhes = " | ".join(detalhe_texto) if detalhe_texto else "Sem observações adicionais."
-
-                    return {
-                        "resposta": resultado['valor'] if resultado['valor'] else "Sem resposta",
-                        "detalhes": txt_detalhes,
-                        "pontuacao_obtida": resultado['pontos'] if resultado['pontos'] is not None else 0
-                    }
-                else:
-                    return {
-                        "resposta": "Sem registro",
-                        "detalhes": f"Nenhum registro encontrado na tabela {tabela} para o item {codigo_quesito} em {ano}.",
-                        "pontuacao_obtida": 0
-                    }
-        except Exception as e:
-            return {
-                "resposta": "Erro na consulta",
-                "detalhes": f"Erro SQL ao consultar {tabela}: {e}",
-                "pontuacao_obtida": 0
-            }
-        finally:
-            conn.close()
-
-
-def mostrar_chat_hal():
-    st.title("🤖 Assistente HAL - Análise & Diagnóstico")
-    
-    # Instancia o sistema se não existir no session_state
-    if "sistema_hal" not in st.session_state:
-        st.session_state.sistema_hal = SistemaHAL()
-    
-    sistema = st.session_state.sistema_hal
-
-    # Status da Conexão
-    with st.expander("🔌 Status da Conexão com o Banco"):
-        conn = sistema.get_db_connection() if hasattr(sistema, 'get_db_connection') else None
-        if conn:
-            st.success("Conectado ao PostgreSQL (Neon) com sucesso!")
-            conn.close()
-        else:
-            st.warning("Executando em modo de visualização rápida.")
-
-    # ---------------------------------------------------------
-    # NOVO: Filtros de Dimensão, Quesito e Ano
-    # ---------------------------------------------------------
-    st.subheader("📊 Consulta por Dimensão e Quesito")
-
-    # 1. Obter dimensões dinamicamente a partir do dicionário ou método seguro
-    if hasattr(sistema, 'get_dimensoes'):
-        lista_dimensoes = sistema.get_dimensoes()
-    elif hasattr(sistema, 'questoes_por_dimensao'):
-        lista_dimensoes = list(sistema.questoes_por_dimensao.keys())
-    else:
-        lista_dimensoes = ["iCidade", "iGov-Ti", "i-Amb"]
-
-    lista_anos = [2030, 2029, 2028, 2027, 2026, 2025, 2024, 2023] # Defina os anos suportados no seu projeto
-
-    col1, col2, col3 = st.columns([1, 2.5, 1])
-    
-    with col1:
-        dimensao_sel = st.selectbox("Dimensão:", options=lista_dimensoes)
-        
-    with col2:
-        # Obter perguntas formatadas da dimensão selecionada de forma segura
-        if hasattr(sistema, 'get_quesitos_por_dimensao'):
-            lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
-        elif hasattr(sistema, 'questoes_por_dimensao') and dimensao_sel in sistema.questoes_por_dimensao:
-            lista_quesitos_formatados = [
-                f"{cod} - {txt}" for cod, txt in sistema.questoes_por_dimensao[dimensao_sel].items()
-            ]
-        else:
-            lista_quesitos_formatados = []
-
-        quesito_formatado_sel = st.selectbox("Quesito / Pergunta:", options=lista_quesitos_formatados)
-        
-        # Extrai apenas o código (ex: "1.0", "3.1.1") para consultar no banco
-        codigo_quesito_sel = quesito_formatado_sel.split(" - ")[0] if quesito_formatado_sel else ""
-
-    with col3:
-        ano_sel = st.selectbox("Ano:", options=lista_anos)
-
-    # Exibição da Resposta Registrada
-    if quesito_formatado_sel:
-        # Busca no banco a resposta registrada para esse código e ano
-        if hasattr(sistema, 'get_resposta_municipio'):
-            dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
-        else:
-            dados_resposta = {
-                "resposta": "Sem registro",
-                "detalhes": f"Consulta indisponível para o quesito {codigo_quesito_sel} em {ano_sel}.",
-                "pontuacao_obtida": 0
-            }
-
-        with st.container(border=True):
-            st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
-            st.caption(f"**Item:** {quesito_formatado_sel}")
-            st.divider()
-            
-            if isinstance(dados_resposta, dict):
-                col_res1, col_res2 = st.columns([3, 1])
-                with col_res1:
-                    st.write(f"**Resposta Cadastrada:** {dados_resposta.get('resposta', 'Sem registro')}")
-                    st.write(f"**Detalhamento:** {dados_resposta.get('detalhes', 'Sem observações')}")
-                with col_res2:
-                    pontos = dados_resposta.get('pontuacao_obtida', 'N/A')
-                    st.metric("Pontuação", pontos)
-            else:
-                st.write(dados_resposta)
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # Seção de Chat Interativo
-    # ---------------------------------------------------------
-    st.subheader("💬 Diagnóstico com o Assistente HAL")
-
-    if "mensagens" not in st.session_state:
-        st.session_state.mensagens = []
-
-    # Exibe o histórico do chat
-    for msg in st.session_state.mensagens:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    # Entrada do usuário
-    if prompt := st.chat_input(f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."):
-        # Adiciona a mensagem do usuário
-        st.session_state.mensagens.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        # Gera a resposta do assistente trazendo o contexto selecionado
-        with st.chat_message("assistant"):
-            texto_pergunta = ""
-            if hasattr(sistema, 'questoes_por_dimensao') and dimensao_sel in sistema.questoes_por_dimensao:
-                texto_pergunta = sistema.questoes_por_dimensao[dimensao_sel].get(codigo_quesito_sel, "")
-            
-            prompt_contextualizado = (
-                f"Contexto: Dimensão {dimensao_sel}, Quesito {codigo_quesito_sel} ('{texto_pergunta}'), Ano {ano_sel}.\n"
-                f"Pergunta do usuário: {prompt}"
-            )
-            
-            resposta = f"Analisando para a Dimensão **{dimensao_sel}** (Quesito {codigo_quesito_sel} - {ano_sel}):\n\nProcessando dados..."
-            
-            st.write(resposta)
-            st.session_state.mensagens.append({"role": "assistant", "content": resposta})
-
-def main():
-    mostrar_chat_hal()
-
-import streamlit as st
 import psycopg2
 import psycopg2.extras
 
-# Exemplo de como implementar a classe e a interface no Streamlit
 class SistemaHAL:
     def __init__(self):
         self.questoes_por_dimensao = {}
+        self.pontuacoes_maximas_por_dimensao = {}
         self.carregar_dicionarios_globais()
 
     def carregar_dicionarios_globais(self):
@@ -1212,8 +971,28 @@ class SistemaHAL:
                 "1.0": "Existe estrutura organizacional instalada para tratar de assuntos ligados ao Meio Ambiente Municipal?",
             }
         }
-        
-        self.pontuacoes_maximas_por_dimensao = {}
+
+    def get_db_connection(self):
+        """
+        Estabelece a conexão com o PostgreSQL (Neon).
+        Lê as credenciais preferencialmente do st.secrets.
+        """
+        try:
+            # Caso esteja configurado no st.secrets (.streamlit/secrets.toml)
+            if "postgres" in st.secrets:
+                conn = psycopg2.connect(**st.secrets["postgres"])
+            else:
+                # Exemplo fallback para desenvolvimento local (substitua com suas credenciais se necessário)
+                conn = psycopg2.connect(
+                    dbname="seu_banco",
+                    user="seu_usuario",
+                    password="sua_senha",
+                    host="seu_host.neon.tech",
+                    port="5432"
+                )
+            return conn, None
+        except Exception as e:
+            return None, str(e)
 
     def get_dimensoes(self):
         """Retorna as dimensões disponíveis no dicionário."""
@@ -1232,7 +1011,7 @@ class SistemaHAL:
 
     def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
         """
-        Busca a resposta real no banco de dados Neon consultando a tabela específica de cada dimensão.
+        Busca a resposta real no banco de dados Neon consultando a tabela específica.
         """
         mapa_tabelas = {
             "iGov-Ti": "respostas_igov",
@@ -1248,11 +1027,11 @@ class SistemaHAL:
                 "pontuacao_obtida": 0
             }
 
-        conn = self.get_db_connection() if hasattr(self, 'get_db_connection') else None
+        conn, erro = self.get_db_connection()
         if not conn:
             return {
                 "resposta": "Sem conexão",
-                "detalhes": "Não foi possível conectar ao banco de dados Neon.",
+                "detalhes": f"Não foi possível conectar ao banco de dados Neon: {erro}",
                 "pontuacao_obtida": 0
             }
 
@@ -1303,29 +1082,95 @@ class SistemaHAL:
 def mostrar_chat_hal():
     st.title("🤖 Assistente HAL - Análise & Diagnóstico")
 
-    # 1. Garante que a instância da classe existe e possui os métodos
-    if "sistema_hal" not in st.session_state or not hasattr(st.session_state.sistema_hal, 'get_db_connection'):
+    # Instancia o sistema no session_state de forma persistente
+    if "sistema_hal" not in st.session_state:
         st.session_state.sistema_hal = SistemaHAL()
 
     sistema = st.session_state.sistema_hal
 
-    # 2. Verificação de segurança adicional para evitar o AttributeError
-    if not hasattr(sistema, 'get_db_connection'):
-        st.error("⚠️ O objeto 'SistemaHAL' não foi carregado corretamente.")
-        return
-
-    # 3. Chamada da conexão com tratamento do tipo de retorno (tupla ou conexao simples)
-    with st.expander("🔌 Status da Conexão com o Banco", expanded=True):
-        res = sistema.get_db_connection()
-        
-        if isinstance(res, tuple):
-            conn, erro_conexao = res
-        else:
-            conn, erro_conexao = res, "Sem detalhes do erro"
-
+    # Status da Conexão com o Banco
+    with st.expander("🔌 Status da Conexão com o Banco", expanded=False):
+        conn, erro_conexao = sistema.get_db_connection()
         if conn:
             st.success("✅ Conectado ao PostgreSQL (Neon) com sucesso!")
             conn.close()
         else:
             st.error("❌ Falha ao conectar no banco Neon!")
             st.code(f"Erro retornado:\n{erro_conexao}", language="bash")
+
+    # ---------------------------------------------------------
+    # Filtros de Consulta
+    # ---------------------------------------------------------
+    st.subheader("📊 Consulta por Dimensão e Quesito")
+
+    lista_dimensoes = sistema.get_dimensoes()
+    lista_anos = [2026, 2025, 2024, 2023] # Anos relevantes em ordem decrescente
+
+    col1, col2, col3 = st.columns([1, 2.5, 1])
+
+    with col1:
+        dimensao_sel = st.selectbox("Dimensão:", options=lista_dimensoes)
+
+    with col2:
+        lista_quesitos_formatados = sistema.get_quesitos_por_dimensao(dimensao_sel)
+        quesito_formatado_sel = st.selectbox("Quesito / Pergunta:", options=lista_quesitos_formatados)
+        codigo_quesito_sel = quesito_formatado_sel.split(" - ")[0] if quesito_formatado_sel else ""
+
+    with col3:
+        ano_sel = st.selectbox("Ano:", options=lista_anos)
+
+    # Exibição do Resultado da Consulta
+    if quesito_formatado_sel:
+        dados_resposta = sistema.get_resposta_municipio(dimensao_sel, codigo_quesito_sel, ano_sel)
+
+        with st.container(border=True):
+            st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
+            st.caption(f"**Item:** {quesito_formatado_sel}")
+            st.divider()
+
+            col_res1, col_res2 = st.columns([3, 1])
+            with col_res1:
+                st.write(f"**Resposta Cadastrada:** {dados_resposta.get('resposta', 'Sem registro')}")
+                st.write(f"**Detalhamento:** {dados_resposta.get('detalhes', 'Sem observações')}")
+            with col_res2:
+                pontos = dados_resposta.get('pontuacao_obtida', 0)
+                st.metric("Pontuação", pontos)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # Chat Interativo
+    # ---------------------------------------------------------
+    st.subheader("💬 Diagnóstico com o Assistente HAL")
+
+    if "mensagens" not in st.session_state:
+        st.session_state.mensagens = []
+
+    # Renderiza mensagens anteriores
+    for msg in st.session_state.mensagens:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    # Entrada do chat
+    if prompt := st.chat_input(f"Pergunte ao HAL sobre o quesito {codigo_quesito_sel} ({ano_sel})..."):
+        st.session_state.mensagens.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        with st.chat_message("assistant"):
+            texto_pergunta = sistema.questoes_por_dimensao.get(dimensao_sel, {}).get(codigo_quesito_sel, "")
+            
+            # Aqui você pode enviar 'prompt_contextualizado' para a API da sua LLM (OpenAI, Gemini, etc.)
+            prompt_contextualizado = (
+                f"Contexto: Dimensão {dimensao_sel}, Quesito {codigo_quesito_sel} ('{texto_pergunta}'), Ano {ano_sel}.\n"
+                f"Pergunta do usuário: {prompt}"
+            )
+
+            resposta = f"Analisando **{dimensao_sel}** (Item {codigo_quesito_sel} - {ano_sel}):\n\nRecebi sua pergunta: *\"{prompt}\"*."
+            
+            st.write(resposta)
+            st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+
+
+if __name__ == "__main__":
+    mostrar_chat_hal()
