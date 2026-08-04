@@ -67,6 +67,71 @@ class SistemaHAL:
             ]
         return []
 
+    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+        """
+        Busca no banco PostgreSQL Neon a resposta cadastrada do quesito e ano selecionados.
+        """
+        mapa_tabelas = {
+            "iGov-Ti": "respostas_igov",
+            "i-Amb": "respostas_iamb",
+            "iCidade": "respostas_iplan"
+        }
+
+        tabela = mapa_tabelas.get(dimensao)
+        if not tabela:
+            return {
+                "resposta": "Dimensão não mapeada",
+                "detalhes": f"A tabela para a dimensão {dimensao} não foi configurada.",
+                "pontuacao_obtida": 0
+            }
+
+        conn = self.get_db_connection()
+        if not conn:
+            return {
+                "resposta": "Sem conexão",
+                "detalhes": "Não foi possível conectar ao banco de dados Neon.",
+                "pontuacao_obtida": 0
+            }
+
+        try:
+            with conn.cursor() as cur:
+                query = f"""
+                    SELECT id, ano, valor, pontos, link, comentarios 
+                    FROM {tabela} 
+                    WHERE id = %s AND ano = %s;
+                """
+                cur.execute(query, (str(codigo_quesito), int(ano)))
+                resultado = cur.fetchone()
+
+                if resultado:
+                    detalhe_texto = []
+                    if resultado.get('link') and resultado['link'] != 'EMPTY_STRING':
+                        detalhe_texto.append(f"Link: {resultado['link']}")
+                    if resultado.get('comentarios') and resultado['comentarios'] != 'EMPTY_STRING':
+                        detalhe_texto.append(f"Comentários: {resultado['comentarios']}")
+
+                    txt_detalhes = " | ".join(detalhe_texto) if detalhe_texto else "Sem observações adicionais."
+
+                    return {
+                        "resposta": resultado['valor'] if resultado['valor'] else "Sem resposta",
+                        "detalhes": txt_detalhes,
+                        "pontuacao_obtida": resultado['pontos'] if resultado['pontos'] is not None else 0
+                    }
+                else:
+                    return {
+                        "resposta": "Sem registro",
+                        "detalhes": f"Nenhum registro encontrado na tabela '{tabela}' para o id '{codigo_quesito}' no ano {ano}.",
+                        "pontuacao_obtida": 0
+                    }
+        except Exception as e:
+            return {
+                "resposta": "Erro na consulta",
+                "detalhes": f"Erro SQL ao consultar {tabela}: {e}",
+                "pontuacao_obtida": 0
+            }
+        finally:
+            conn.close()
+
     def carregar_dicionarios_globais(self):
         # Dicionário unificado com as 3 dimensões operacionais
         self.questoes_por_dimensao = {
