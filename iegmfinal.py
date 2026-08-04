@@ -418,3 +418,5 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
             )
 
         st.dataframe(pd.DataFrame(relatorio_db), use_container_width=True)
+
+    
