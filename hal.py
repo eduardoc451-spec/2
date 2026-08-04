@@ -260,6 +260,8 @@ class SistemaHAL:
             }
         }
 
+import streamlit as st
+
 def mostrar_chat_hal():
     """
     Função de entrada que o aplicativo principal (app.py) chama para renderizar a interface do HAL.
@@ -276,12 +278,63 @@ def mostrar_chat_hal():
     with st.expander("🔌 Status da Conexão com o Banco"):
         conn = sistema.get_db_connection()
         if conn:
-            st.success("Conectado ao PostgreSQL (Neon) com sucesso!")
+            st.success("Conectado ao PostgreSQL com sucesso!")
             conn.close()
         else:
             st.error("Falha na conexão com o banco de dados.")
 
-    # Exemplo de Histórico do Chat
+    # ---------------------------------------------------------
+    # NOVO: Seção de Navegação por Dimensão, Quesito e Ano
+    # ---------------------------------------------------------
+    st.subheader("📊 Consulta por Dimensão e Quesito")
+    
+    # 1. Busca opções dinâmicas do seu banco/sistema
+    # (Adapte os métodos 'get_dimensoes', 'get_quesitos', etc. conforme sua classe SistemaHAL)
+    lista_dimensoes = sistema.get_dimensoes() if hasattr(sistema, 'get_dimensoes') else ["iCidade", "iGov-Ti", "i-Amb"]
+    lista_anos = sistema.get_anos() if hasattr(sistema, 'get_anos') else [2024, 2023, 2022]
+
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        dimensao_sel = st.selectbox("Selecione a Dimensão:", options=lista_dimensoes)
+        
+    with col2:
+        # Busca quesitos filtrados pela dimensão escolhida
+        lista_quesitos = sistema.get_quesitos_por_dimensao(dimensao_sel) if hasattr(sistema, 'get_quesitos_por_dimensao') else ["Quesito A", "Quesito B", "Quesito C"]
+        quesito_sel = st.selectbox("Selecione o Quesito:", options=lista_quesitos)
+        
+    with col3:
+        ano_sel = st.selectbox("Selecione o Ano:", options=lista_anos)
+
+    # Exibição do Resultado da Consulta
+    if quesito_sel:
+        # Busca a resposta do município no banco
+        resposta_municipio = sistema.get_resposta_municipio(dimensao_sel, quesito_sel, ano_sel) if hasattr(sistema, 'get_resposta_municipio') else {
+            "resposta": "Sim, possui plano diretor atualizado.",
+            "detalhes": "Lei Municipal nº 1.234/2021",
+            "nota": "1.0"
+        }
+
+        with st.container(border=True):
+            st.markdown(f"### 📍 Resposta do Município ({ano_sel})")
+            st.markdown(f"**Dimensão:** `{dimensao_sel}` | **Quesito:** `{quesito_sel}`")
+            st.divider()
+            
+            if isinstance(resposta_municipio, dict):
+                st.write(f"**Resposta:** {resposta_municipio.get('resposta', 'N/A')}")
+                st.write(f"**Detalhamento/Obs:** {resposta_municipio.get('detalhes', 'N/A')}")
+                if "nota" in resposta_municipio:
+                    st.metric("Pontuação / Nota", resposta_municipio["nota"])
+            else:
+                st.write(resposta_municipio)
+
+    st.divider()
+
+    # ---------------------------------------------------------
+    # Seção de Chat / Assistente
+    # ---------------------------------------------------------
+    st.subheader("💬 Tire dúvidas com o HAL sobre este item")
+
     if "mensagens" not in st.session_state:
         st.session_state.mensagens = []
 
@@ -291,18 +344,24 @@ def mostrar_chat_hal():
             st.write(msg["content"])
 
     # Entrada do usuário
-    if prompt := st.chat_input("Como posso ajudar com os dados de iCidade, iGov-Ti ou i-Amb?"):
+    if prompt := st.chat_input(f"Pergunte ao HAL sobre {quesito_sel} ({ano_sel})..."):
         # Registra mensagem do usuário
         st.session_state.mensagens.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
 
-        # Resposta do assistente
+        # Resposta do assistente levando em consideração os filtros selecionados
         with st.chat_message("assistant"):
-            resposta = f"Processando sua solicitação: '{prompt}'. Consultando a base de dados..."
+            # Envia para a IA/Backend com contexto da seleção
+            resposta = sistema.gerar_resposta_hal(
+                prompt=prompt,
+                dimensao=dimensao_sel,
+                quesito=quesito_sel,
+                ano=ano_sel
+            ) if hasattr(sistema, 'gerar_resposta_hal') else f"Analisando '{prompt}' para o quesito '{quesito_sel}' na dimensão '{dimensao_sel}' ({ano_sel})..."
+            
             st.write(resposta)
             st.session_state.mensagens.append({"role": "assistant", "content": resposta})
 
-# Alias/Atalho caso seu app chame main() em vez de mostrar_chat_hal()
 def main():
     mostrar_chat_hal()
