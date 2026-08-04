@@ -1,97 +1,70 @@
-import json
-import os
-import re
-import time
-import plotly.graph_objects as go
 import psycopg2
 import psycopg2.extras
-import streamlit as st
-
-# String de conexão ajustada
-DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
-
 
 class SistemaHAL:
-
     def __init__(self):
         self.questoes_por_dimensao = {}
-        self.pontuacoes_maximas_por_dimensao = {}
         self.carregar_dicionarios_globais()
 
+    def carregar_dicionarios_globais(self):
+        self.questoes_por_dimensao = {
+            "iCidade": {
+                "1.0": "Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil (COMPDEC)...",
+                "1.3": "A COMPDEC ou órgão similar está associada ou subordinada a qual secretaria/diretoria?",
+            },
+            "iGov-Ti": {
+                "1.0": "A Prefeitura possui uma área ou setor que cuida de Tecnologia da Informação...",
+            },
+            "i-Amb": {
+                "1.0": "Existe estrutura organizacional instalada para tratar de assuntos ligados ao Meio Ambiente Municipal?",
+            }
+        }
+
     def get_db_connection(self):
-        """Conecta ao banco PostgreSQL Neon e retorna (conexao, erro)."""
+        """
+        Conecta diretamente ao banco de dados Neon via URI completa.
+        """
+        DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
         try:
-            conn = psycopg2.connect(
-                DATABASE_URL,
-                cursor_factory=psycopg2.extras.DictCursor,
-                connect_timeout=10,
-            )
+            conn = psycopg2.connect(DATABASE_URL)
             return conn, None
         except Exception as e:
             return None, str(e)
 
-    def executar_query(self, query, params=None):
-        """Executa consultas SQL no banco PostgreSQL."""
-        conn, erro = self.get_db_connection()
-        if not conn:
-            st.error(f"Erro ao conectar para executar query: {erro}")
-            return []
-
-        try:
-            with conn.cursor() as cur:
-                cur.execute(query, params or ())
-                resultados = cur.fetchall()
-            return resultados
-        except Exception as e:
-            st.error(f"Erro na execução do SQL: {e}")
-            return []
-        finally:
-            conn.close()
-
     def get_dimensoes(self):
-        """Retorna as chaves das dimensões carregadas ('iCidade', 'iGov-Ti', 'i-Amb')."""
-        if hasattr(self, "questoes_por_dimensao") and isinstance(
-            self.questoes_por_dimensao, dict
-        ):
+        if hasattr(self, 'questoes_por_dimensao') and isinstance(self.questoes_por_dimensao, dict):
             return list(self.questoes_por_dimensao.keys())
         return ["iCidade", "iGov-Ti", "i-Amb"]
 
     def get_quesitos_por_dimensao(self, dimensao):
-        """Retorna a lista formatada 'Código - Pergunta' para a dimensão selecionada."""
-        if (
-            hasattr(self, "questoes_por_dimensao")
-            and dimensao in self.questoes_por_dimensao
-        ):
+        if hasattr(self, 'questoes_por_dimensao') and dimensao in self.questoes_por_dimensao:
             return [
-                f"{codigo} - {texto}"
-                for codigo, texto in self.questoes_por_dimensao[
-                    dimensao
-                ].items()
+                f"{codigo} - {texto}" 
+                for codigo, texto in self.questoes_por_dimensao[dimensao].items()
             ]
         return []
 
     def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca no banco PostgreSQL Neon a resposta cadastrada do quesito e ano selecionados."""
         mapa_tabelas = {
             "iGov-Ti": "respostas_igov",
             "i-Amb": "respostas_iamb",
-            "iCidade": "respostas_iplan",
+            "iCidade": "respostas_iplan"
         }
 
         tabela = mapa_tabelas.get(dimensao)
         if not tabela:
             return {
-                "resposta": "Dimensão não mapeada",
-                "detalhes": f"A tabela para a dimensão {dimensao} não foi configurada.",
-                "pontuacao_obtida": 0,
+                "resposta": "Dimensão desconhecida",
+                "detalhes": f"Tabela para a dimensão {dimensao} não configurada.",
+                "pontuacao_obtida": 0
             }
 
         conn, erro = self.get_db_connection()
         if not conn:
             return {
                 "resposta": "Sem conexão",
-                "detalhes": f"Não foi possível conectar ao banco Neon. Detalhe: {erro}",
-                "pontuacao_obtida": 0,
+                "detalhes": f"Não foi possível conectar ao banco Neon: {erro}",
+                "pontuacao_obtida": 0
             }
 
         try:
@@ -106,52 +79,32 @@ class SistemaHAL:
 
                 if resultado:
                     detalhe_texto = []
-                    link = resultado.get("link")
-                    comentarios = resultado.get("comentarios")
+                    link = resultado.get('link')
+                    comentarios = resultado.get('comentarios')
 
-                    if link and str(link).strip() not in (
-                        "EMPTY_STRING",
-                        "None",
-                        "",
-                    ):
+                    if link and link != 'EMPTY_STRING':
                         detalhe_texto.append(f"Link: {link}")
-                    if comentarios and str(comentarios).strip() not in (
-                        "EMPTY_STRING",
-                        "None",
-                        "",
-                    ):
+                    if comentarios and comentarios != 'EMPTY_STRING':
                         detalhe_texto.append(f"Comentários: {comentarios}")
 
-                    txt_detalhes = (
-                        " | ".join(detalhe_texto)
-                        if detalhe_texto
-                        else "Sem observações adicionais."
-                    )
+                    txt_detalhes = " | ".join(detalhe_texto) if detalhe_texto else "Sem observações adicionais."
 
                     return {
-                        "resposta": (
-                            resultado["valor"]
-                            if resultado.get("valor")
-                            else "Sem resposta"
-                        ),
+                        "resposta": resultado.get('valor') if resultado.get('valor') else "Sem resposta",
                         "detalhes": txt_detalhes,
-                        "pontuacao_obtida": (
-                            resultado["pontos"]
-                            if resultado.get("pontos") is not None
-                            else 0
-                        ),
+                        "pontuacao_obtida": resultado.get('pontos') if resultado.get('pontos') is not None else 0
                     }
                 else:
                     return {
                         "resposta": "Sem registro",
-                        "detalhes": f"Nenhum registro encontrado na tabela '{tabela}' para o id '{codigo_quesito}' no ano {ano}.",
-                        "pontuacao_obtida": 0,
+                        "detalhes": f"Nenhum registro encontrado na tabela {tabela} para o item {codigo_quesito} em {ano}.",
+                        "pontuacao_obtida": 0
                     }
         except Exception as e:
             return {
                 "resposta": "Erro na consulta",
                 "detalhes": f"Erro SQL ao consultar {tabela}: {e}",
-                "pontuacao_obtida": 0,
+                "pontuacao_obtida": 0
             }
         finally:
             if conn:
