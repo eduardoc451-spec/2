@@ -340,8 +340,23 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
 
     st.markdown("#### 📅 Matriz de Dados Históricos Consolidados")
     df_exibicao = df_historico.set_index("Ano")
+
+    # Colunas numéricas que devem ser estritamente formatadas com 1 casa decimal
+    cols_numericas = [
+        "i-Plan",
+        "i-Fiscal",
+        "i-Educ",
+        "i-Saúde",
+        "i-Amb",
+        "i-Cidade",
+        "i-Gov TI",
+        "Nota Final",
+    ]
+
     st.dataframe(
-        df_exibicao.style.set_properties(**{"text-align": "center"}),
+        df_exibicao.style.format("{:.1f}", subset=cols_numericas).set_properties(
+            **{"text-align": "center"}
+        ),
         use_container_width=True,
     )
 
@@ -417,4 +432,10 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                 }
             )
 
-        st.dataframe(pd.DataFrame(relatorio_db), use_container_width=True)
+        df_relatorio = pd.DataFrame(relatorio_db)
+        st.dataframe(
+            df_relatorio.style.format(
+                "{:.1f}", subset=["Soma Exata do Banco"]
+            ).set_properties(**{"text-align": "center"}),
+            use_container_width=True,
+        )
