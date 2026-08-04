@@ -8,6 +8,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 # String de conexão ajustada (removido channel_binding incompatível com o driver puro)
+# URL Ajustada para o psycopg2
 DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
 
@@ -18,20 +19,15 @@ class SistemaHAL:
         self.carregar_dicionarios_globais()
 
     def get_db_connection(self):
-        """
-        Conecta diretamente ao banco Neon utilizando a string de conexão fixa.
-        """
-        try:
-            conn = psycopg2.connect(
-                DATABASE_URL,
-                cursor_factory=psycopg2.extras.DictCursor,
-                connect_timeout=10
-            )
-            return conn
-        except Exception as e:
-            # Imprime o erro real na tela do Streamlit para sabermos se é rede/senha/driver
-            st.error(f"Erro ao conectar ao PostgreSQL Neon: {e}")
-            return None
+    try:
+        conn = psycopg2.connect(
+            DATABASE_URL,
+            cursor_factory=psycopg2.extras.DictCursor,
+            connect_timeout=10
+        )
+        return conn, None
+    except Exception as e:
+        return None, str(e)
 
     def executar_query(self, query, params=None):
         """
