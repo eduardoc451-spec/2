@@ -9,6 +9,39 @@ import psycopg2.extras
 import streamlit as st
 
 # ==============================================================================
+# FUNÇÃO DE RENDERIZAÇÃO PARA O STREAMLIT
+# ==============================================================================
+def mostrar_chat_hal():
+    st.title("🤖 HAL - Sistema de Diagnóstico TCESP")
+    st.write("Conectado ao banco de dados PostgreSQL (Neon DB).")
+
+    # Instancia o sistema HAL
+    hal = SistemaHAL()
+
+    # Seleção de ano e dimensão
+    col1, col2 = st.columns(2)
+    with col1:
+        ano = st.number_input("Ano de Análise", min_value=2020, max_value=2026, value=2025)
+    with col2:
+        dimensao = st.selectbox("Dimensão", list(hal.questoes_por_dimensao.keys()))
+
+    if st.button("Analisar Desempenho", type="primary"):
+        nota = hal.puxar_nota_dimensao(dimensao, ano)
+        st.metric(label=f"Nota na dimensão {dimensao} ({ano})", value=f"{nota:.2f}")
+
+        fracos, penalidades = hal.analisar_pontos_fracos(ano, dimensao)
+
+        if penalidades:
+            st.error("⚠️ Penalidades Detectadas")
+            for p in penalidades:
+                st.write(f"- **[ID {p['id']}]** {p['pergunta']} (Penalidade: {p['penalidade']})")
+
+        if fracos:
+            st.warning("📉 Pontos com Déficit de Pontuação")
+            for f in fracos:
+                st.write(f"- **[ID {f['id']}]** Obtido: {f['obtido']} / Máx: {f['maximo']} (Déficit: {f['deficit']})")
+
+# ==============================================================================
 # CONFIGURAÇÃO DIRETA DO POSTGRESQL (NEON DB)
 # ==============================================================================
 DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
