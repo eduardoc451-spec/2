@@ -324,7 +324,7 @@ class SistemaHAL:
             ]
         return []
 
-   def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
         """
         Busca a resposta real no banco de dados Neon consultando a tabela específica de cada dimensão.
         """
@@ -343,7 +343,7 @@ class SistemaHAL:
                 "pontuacao_obtida": 0
             }
 
-        conn = self.get_db_connection()
+        conn = self.get_db_connection() if hasattr(self, 'get_db_connection') else None
         if not conn:
             return {
                 "resposta": "Sem conexão",
@@ -514,6 +514,9 @@ def mostrar_chat_hal():
             
             st.write(resposta)
             st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+
+def main():
+    mostrar_chat_hal()
 
 def main():
     mostrar_chat_hal()
