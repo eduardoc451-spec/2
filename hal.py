@@ -70,8 +70,8 @@ class SistemaHAL:
             ]
         return []
 
-    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca a resposta real consultando a tabela única 'respostas'."""
+def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+        """Busca a resposta real consultando a tabela única 'respostas' usando a coluna id."""
         conn, erro = criar_conexao_direta()
         if not conn:
             return {
@@ -84,12 +84,12 @@ class SistemaHAL:
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # Consulta ajustada para a estrutura real: tabela 'respostas' e coluna 'qid'
+                # Consulta ajustada: usando a coluna 'id' no lugar de 'qid'
                 query = """
-                    SELECT qid, dimensao, ano, valor, pontos, link 
+                    SELECT id, dimensao, ano, valor, pontos, link 
                     FROM respostas 
                     WHERE LOWER(dimensao) = LOWER(%s) 
-                      AND qid = %s 
+                      AND id = %s 
                       AND ano = %s;
                 """
                 cur.execute(query, (str(dimensao), str(codigo_quesito), int(ano)))
