@@ -9,6 +9,107 @@ import psycopg2.extras
 import streamlit as st
 
 # ==============================================================================
+# FUNÇÃO DE CONEXÃO SEGURA COM O POSTGRESQL (NEON DB)
+# ==============================================================================
+@st.cache_resource
+def get_db_connection():
+    """
+    Tenta obter a URL do banco do st.secrets, caso contrário utiliza
+    a variável de ambiente ou a string de conexão padrão.
+    """
+    try:
+        if "postgres" in st.secrets and "url" in st.secrets["postgres"]:
+            db_url = st.secrets["postgres"]["url"]
+        else:
+            db_url = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require")
+        
+        conn = psycopg2.connect(db_url)
+        return conn
+    except Exception as e:
+        st.error(f"Erro ao conectar ao banco de dados: {e}")
+        return None
+
+# ==============================================================================
+# CLASSE DO SISTEMA HAL
+# ==============================================================================
+class SistemaHAL:
+    def __init__(self):
+        self.questoes_por_dimensao = {}
+        self.pontuacoes_maximas_por_dimensao = {}
+        self.carregar_dicionarios_globais()
+        self.conn = get_db_connection()
+
+    def puxar_nota_dimensao(self, dimensao, ano):
+        if not self.conn:
+            return 0.0
+        try:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                # Exemplo de consulta adaptada para PostgreSQL
+                query = "SELECT nota FROM desempenho WHERE dimensao = %s AND ano = %s;"
+                cur.execute(query, (dimensao, ano))
+                result = cur.fetchone()
+                return result['nota'] if result else 0.0
+        except Exception as e:
+            st.error(f"Erro ao consultar nota: {e}")
+            return 0.0
+
+    def analisar_pontos_fracos(self, ano, dimensao):
+        fracos = []
+        penalidades = []
+        if not self.conn:
+            return fracos, penalidades
+        try:
+            with self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                # Exemplo de consulta para pontos fracos e penalidades
+                query = """
+                    SELECT questao_id, obtido, maximo, penalidade, pergunta 
+                    FROM analise_questoes 
+                    WHERE dimensao = %s AND ano = %s;
+                """
+                cur.execute(query, (dimensao, ano))
+                rows = cur.fetchall()
+                for row in rows:
+                    if row['penalidade'] > 0:
+                        penalidades.append({
+                            'id': row['questao_id'],
+                            'pergunta': row['pergunta'],
+                            'penalidade': row['penalidade']
+                        })
+                    if row['obtido'] < row['maximo']:
+                        fracos.append({
+                            'id': row['questao_id'],
+                            'obtido': row['obtido'],
+                            'maximo': row['maximo'],
+                            'deficit': row['maximo'] - row['obtido']
+                        })
+        except Exception as e:
+            st.warning(f"Não foi possível recuperar detalhes de pontos fracos/penalidades: {e}")
+            
+        return fracos, penalidades
+
+    def carregar_dicionarios_globais(self):
+        self.questoes_por_dimensao = {
+            "iCidade": {
+                "1.0": "Foi criada a Coordenadoria Municipal de Proteção e Defesa Civil (COMPDEC)...",
+                # ... demais questões da dimensão
+            },
+            "iGov-Ti": {
+                "1.0": "A Prefeitura possui uma área ou setor que cuida de TIC...",
+                # ... demais questões da dimensão
+            },
+            "i-Amb": {
+                "1.0": "Existe estrutura organizacional instalada para tratar de Meio Ambiente...",
+                # ... demais questões da dimensão
+            }
+        }
+
+        self.pontuacoes_maximas_por_dimensao = {
+            "iCidade": {"1.0": 40, "1.3": 5, "1.4": 50},
+            "iGov-Ti": {"1.0": 30, "1.1": 30, "1.2": 30},
+            "i-Amb": {"1.1.2": 20, "1.1.3": 5, "1.2": 20}
+        }
+
+# ==============================================================================
 # FUNÇÃO DE RENDERIZAÇÃO PARA O STREAMLIT
 # ==============================================================================
 def mostrar_chat_hal():
@@ -40,12 +141,6 @@ def mostrar_chat_hal():
             st.warning("📉 Pontos com Déficit de Pontuação")
             for f in fracos:
                 st.write(f"- **[ID {f['id']}]** Obtido: {f['obtido']} / Máx: {f['maximo']} (Déficit: {f['deficit']})")
-
-# ==============================================================================
-# CONFIGURAÇÃO DIRETA DO POSTGRESQL (NEON DB)
-# ==============================================================================
-DATABASE_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-# ==============================================================================
 
 class SistemaHAL:
     def __init__(self):
