@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 import streamlit as st
 
-# Importa a classe get_connection do seu arquivo icidade_completo.py
+# Importa a conexão do icidade_completo.py
 try:
     from icidade_completo import get_connection
 except ImportError as e:
@@ -17,7 +17,7 @@ except ImportError as e:
 def buscar_pontuacao_dimensao(tabela: str, ano: int) -> float:
     """Consulta a soma REAL de pontos na tabela da dimensão correspondente
 
-    sem multiplicadores arbitrários de escala.
+    sem multiplicadores de escala ou alteração nos valores armazenados.
     """
     try:
         with get_connection() as conn:
@@ -37,15 +37,20 @@ def buscar_pontuacao_dimensao(tabela: str, ano: int) -> float:
 
 
 # =============================================================================
-# FUNÇÕES DE LEITURA ESPECÍFICAS
+# FUNÇÕES DE LEITURA ESPECÍFICAS DE CADA MÓDULO/TABELA
 # =============================================================================
 
 
 def puxar_nota_iplan(ano: int) -> float:
+    """Tabela: respostas_iplan (ano, quesito, pontos)"""
     return buscar_pontuacao_dimensao("respostas_iplan", ano)
 
 
 def puxar_nota_ifiscal(ano: int) -> float:
+    """Tabela: respostas_ifiscal (ano, quesito, pontos)
+
+    Aplica a regra de item crítico TCESP (pontos <= -100).
+    """
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -58,7 +63,7 @@ def puxar_nota_ifiscal(ano: int) -> float:
 
                 pontos_lista = [float(r[0]) for r in rows if r[0] is not None]
 
-                # Regra de rebaixamento crítico TCESP (se houver item crítico reprovado <= -100)
+                # Regra de rebaixamento crítico TCESP
                 if any(p <= -100.0 for p in pontos_lista):
                     return 0.0
 
@@ -70,26 +75,26 @@ def puxar_nota_ifiscal(ano: int) -> float:
 
 
 def puxar_nota_ieduc(ano: int) -> float:
+    """Tabela: respostas_ieduc (ano, quesito, pontos)"""
     return buscar_pontuacao_dimensao("respostas_ieduc", ano)
 
 
 def puxar_nota_isaude(ano: int) -> float:
+    """Tabela: respostas_isaude (ano, quesito, pontos)"""
     return buscar_pontuacao_dimensao("respostas_isaude", ano)
 
 
 def puxar_nota_iamb(ano: int) -> float:
+    """Tabela: respostas_iamb (ano, quesito, pontos)"""
     return buscar_pontuacao_dimensao("respostas_iamb", ano)
 
 
 def puxar_nota_icidade(ano: int) -> float:
-    """Busca a pontuação do iCidade na tabela 'respostas' (dimensao='icidade')
-
-    ou fallback na 'respostas_icidade'.
-    """
+    """Tabela: respostas (dimensao='icidade', ano, qid, pontos)"""
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
-                # 1. Tenta buscar na tabela central 'respostas' com filtro dimensao='icidade'
+                # Busca principal na tabela central 'respostas' com filtro dimensao = 'icidade'
                 sql_respostas = "SELECT COALESCE(SUM(pontos), 0) FROM respostas WHERE dimensao = 'icidade' AND ano = %s;"
                 cursor.execute(sql_respostas, (int(ano),))
                 res = cursor.fetchone()
@@ -97,7 +102,7 @@ def puxar_nota_icidade(ano: int) -> float:
                 if res and res[0] is not None and float(res[0]) > 0:
                     return float(res[0])
 
-                # 2. Fallback: Tenta buscar na tabela dedicada 'respostas_icidade'
+                # Fallback em respostas_icidade (caso exista)
                 sql_icidade = "SELECT COALESCE(SUM(pontos), 0) FROM respostas_icidade WHERE ano = %s;"
                 cursor.execute(sql_icidade, (int(ano),))
                 res_fallback = cursor.fetchone()
@@ -113,6 +118,7 @@ def puxar_nota_icidade(ano: int) -> float:
 
 
 def puxar_nota_igov(ano: int) -> float:
+    """Tabela: respostas_igov (id, ano, pontos)"""
     return buscar_pontuacao_dimensao("respostas_igov", ano)
 
 
@@ -172,7 +178,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
     anos = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
     registro_historico = []
 
-    # Leitura dos dados reais no Neon
+    # Leitura dos dados reais de todas as dimensões
     for ano in anos:
         plan = puxar_nota_iplan(ano)
         fiscal = puxar_nota_ifiscal(ano)
@@ -328,11 +334,12 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
             "respostas_ieduc",
             "respostas_isaude",
             "respostas_iamb",
-            "respostas_icidade",
             "respostas_igov",
         ]
 
         relatorio_db = []
+
+        # Checagem das tabelas com sufixo
         for tab in tabelas_para_testar:
             try:
                 with get_connection() as conn:
@@ -360,7 +367,7 @@ def mostrar_painel_iegm_final(ano_selecionado: int):
                     }
                 )
 
-        # Checagem extra da tabela 'respostas' usada pelo iCidade
+        # Checagem do iCidade na tabela 'respostas'
         try:
             with get_connection() as conn:
                 with conn.cursor() as cursor:
