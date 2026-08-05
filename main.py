@@ -5,7 +5,15 @@ import sys
 import pandas as pd
 import streamlit as st
 
-# Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
+# Configuração da página (DEVE SER A PRIMEIRA INSTRUÇÃO STREAMLIT)
+st.set_page_config(
+    page_title="IEG-M Francisco Morato",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Configuração de diretório local
 current_dir = (
     os.path.dirname(os.path.abspath(__file__))
     if "__file__" in locals()
@@ -15,54 +23,9 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 
-# Importar módulos locais com tratamento de erros dinâmico
-def import_local_module(module_name):
-    try:
-        import importlib
-
-        if module_name in sys.modules:
-            return importlib.reload(sys.modules[module_name])
-        return importlib.import_module(module_name)
-    except Exception:
-        return None
-
-
-icidade = import_local_module("icidade_completo") or import_local_module(
-    "icidade"
-)
-igov = import_local_module("igov")
-iamb = import_local_module("iamb")
-ifiscal = import_local_module("ifiscal")
-iplan = import_local_module("iplan")
-ieduc = import_local_module("ieduc")
-isaude = import_local_module("isaude")
-iegm_final = import_local_module("iegmfinal")
-
-# Novos módulos integrados
-bib_core = import_local_module("biblioteca")
-admin_core = import_local_module("administrador")
-atividade = import_local_module("atividade")
-plano_acao = import_local_module("plano_acao")
-treinamento = import_local_module("treinamento")  # Módulo de treinamento
-
-# Novas importações do Sistema de Controle Interno
-vistoria = import_local_module("vistoria")
-planos = import_local_module("planos")
-contratos = import_local_module("contratos")
-
-# Importação do módulo HAL 9000
-hal_core = import_local_module("hal")
-
-# Configuração da página
-st.set_page_config(
-    page_title="IEG-M Francisco Morato",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-
-# FUNÇÃO: Converte a imagem local para Base64
+# --- OTIMIZAÇÃO 1: CACHE DE IMAGENS EM BASE64 ---
+# Lê a imagem do disco apenas UMA VEZ e salva na memória
+@st.cache_data(show_spinner=False)
 def get_image_base64(filename):
     full_path = os.path.join(current_dir, filename)
     if os.path.exists(full_path):
@@ -71,7 +34,19 @@ def get_image_base64(filename):
     return None
 
 
-# CSS Avançado
+# --- OTIMIZAÇÃO 2: IMPORTAÇÃO SOB DEMANDA (LAZY LOADING) ---
+# Importa o módulo apenas quando for realmente utilizado pelo usuário
+@st.cache_resource(show_spinner=False)
+def get_module(module_name):
+    import importlib
+    try:
+        return importlib.import_module(module_name)
+    except Exception as e:
+        st.error(f"Erro ao carregar o módulo '{module_name}': {e}")
+        return None
+
+
+# CSS Otimizado
 st.markdown(
     """
     <style>
@@ -167,7 +142,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Inicialização do banco de dados simulado
+# Inicialização do banco de dados simulado no Session State
 if "users_db" not in st.session_state:
     st.session_state.users_db = {
         "jefferson.espanha": {
@@ -187,66 +162,30 @@ if "authenticated" not in st.session_state:
 
 AVAILABLE_YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
 
+# Estruturas de dados (Dicionários são levíssimos na memória)
 DIMENSIONS_DATA = {
-    "i-Gov TI": {
-        "img": "i_gov_ti.png",
-        "desc": "Governança de Tecnologia da Informação.",
-    },
-    "i-Educ": {"img": "i_educ.png", "desc": "Gestão da Educação Municipal"},
-    "i-Saúde": {"img": "i_saude.png", "desc": "Gestão da Saúde municipal."},
-    "i-Plan": {
-        "img": "i_plan.png",
-        "desc": "Eficiência do planejamento orçamentário.",
-    },
-    "i-Amb": {
-        "img": "i_amb.png",
-        "desc": "Políticas de meio ambiente e sustentabilidade.",
-    },
-    "i-Cidade": {
-        "img": "i_cidade.png",
-        "desc": "Defesa Civil e infraestrutura urbana.",
-    },
-    "i-Fiscal": {
-        "img": "i_fiscal.png",
-        "desc": "Gestão fiscal e execução financeira.",
-    },
-    "ieg-m": {
-        "img": "i_iegmfinal.png",
-        "desc": "Faixa e Pontuação do IEG-M final",
-    },
-    "Relatório de Atividades": {
-        "img": "relatorio_atividade.png",
-        "desc": "Monitoramento do PPA",
-    },
-    "Plano de Ação": {
-        "img": "plano_acao.png",
-        "desc": "Plano de Ação Corretiva e Metas Estratégicas",
-    },
-    "Área de treinamento": {
-        "img": "treinamento.png",
-        "desc": "Área de treinamento e capacitação de pessoal.",
-    },
+    "i-Gov TI": {"img": "i_gov_ti.png", "desc": "Governança de Tecnologia da Informação.", "module": "igov"},
+    "i-Educ": {"img": "i_educ.png", "desc": "Gestão da Educação Municipal", "module": "ieduc"},
+    "i-Saúde": {"img": "i_saude.png", "desc": "Gestão da Saúde municipal.", "module": "isaude"},
+    "i-Plan": {"img": "i_plan.png", "desc": "Eficiência do planejamento orçamentário.", "module": "iplan"},
+    "i-Amb": {"img": "i_amb.png", "desc": "Políticas de meio ambiente e sustentabilidade.", "module": "iamb"},
+    "i-Cidade": {"img": "i_cidade.png", "desc": "Defesa Civil e infraestrutura urbana.", "module": "icidade_completo"},
+    "i-Fiscal": {"img": "i_fiscal.png", "desc": "Gestão fiscal e execução financeira.", "module": "ifiscal"},
+    "ieg-m": {"img": "i_iegmfinal.png", "desc": "Faixa e Pontuação do IEG-M final", "module": "iegmfinal"},
+    "Relatório de Atividades": {"img": "relatorio_atividade.png", "desc": "Monitoramento do PPA", "module": "atividade"},
+    "Plano de Ação": {"img": "plano_acao.png", "desc": "Plano de Ação Corretiva e Metas Estratégicas", "module": "plano_acao"},
+    "Área de treinamento": {"img": "treinamento.png", "desc": "Área de treinamento e capacitação de pessoal.", "module": "treinamento"},
 }
 
-# Sistema de Controle Interno
 CONTROLE_INTERNO_DATA = {
-    "Vistorias in loco": {
-        "img": "vistoria.png",
-        "desc": "Módulo de vistorias técnicas e relatórios in loco.",
-    },
-    "Planos municipais": {
-        "img": "planos.png",
-        "desc": "Acompanhamento e gestão de Planos Municipais.",
-    },
-    "Contratos": {
-        "img": "contratos.png",
-        "desc": "Gestão e controle interno de contratos administrativos.",
-    },
+    "Vistorias in loco": {"img": "vistoria.png", "desc": "Módulo de vistorias técnicas e relatórios in loco.", "module": "vistoria"},
+    "Planos municipais": {"img": "planos.png", "desc": "Acompanhamento e gestão de Planos Municipais.", "module": "planos"},
+    "Contratos": {"img": "contratos.png", "desc": "Gestão e controle interno de contratos administrativos.", "module": "contratos"},
 }
 
 
 def login_page():
-    """Página de login."""
+    """Página de login otimizada."""
     col1, col2, col3 = st.columns([1.1, 1.6, 1.1])
     with col2:
         logo_b64 = get_image_base64("iegm.png")
@@ -256,9 +195,7 @@ def login_page():
                 unsafe_allow_html=True,
             )
         else:
-            st.markdown(
-                "<div style='padding: 20px;'></div>", unsafe_allow_html=True
-            )
+            st.markdown("<div style='padding: 20px;'></div>", unsafe_allow_html=True)
 
         st.markdown(
             '<div class="cad-frame"><h3 style="text-align: center; color: #FFFFFF; font-size: 16px; margin: 0;">Sistema de Preenchimento do IEG-M</h3></div>',
@@ -405,7 +342,7 @@ def dashboard_page():
     )
     st.markdown("---")
 
-    # SISTEMA DE GESTÃO AVANÇADA
+  # SISTEMA DE GESTÃO AVANÇADA
     st.markdown("### 📊 Sistema de Gestão Avançada")
     dim_cols = st.columns(4)
 
@@ -518,12 +455,7 @@ def dashboard_page():
 
 
 def dimension_page():
-    """Página de exibição dinâmica."""
-    st.markdown(
-        "<script>setTimeout(function() { window.scrollTo(0, 0); }, 100);</script>",
-        unsafe_allow_html=True,
-    )
-
+    """Página de exibição dinâmica com Lazy Loading habilitado."""
     dimension = st.session_state.selected_dimension
     year = st.session_state.ano_referencia_global
 
@@ -549,16 +481,14 @@ def dimension_page():
 
     st.markdown("---")
 
-    # Roteamento central das subpáginas do ecossistema
+    # --- ROTEAMENTO DINÂMICO COM LAZY LOADING ---
     if dimension == "Administrador":
-        if admin_core:
+        admin_core = get_module("administrador")
+        if admin_core and hasattr(admin_core, "mostrar_painel_admin"):
             admin_core.mostrar_painel_admin(year)
         else:
-            st.error(
-                "Erro técnico: O arquivo 'administrador.py' não foi detectado no sistema."
-            )
+            st.error("Erro técnico: O arquivo 'administrador.py' não foi detectado ou é inválido.")
 
-    # CORRIGIDO: Acesso Direto ao Drive (Sem bib_core.gerenciar_upload_e_arquivos)
     elif dimension == "Biblioteca":
         st.subheader("📚 Biblioteca de Documentos")
         st.markdown(
@@ -570,126 +500,120 @@ def dimension_page():
             use_container_width=True,
         )
 
-    # Bloco dinâmico do HAL 9000
     elif dimension == "HAL 9000":
         st.subheader("🔴 HAL 9000 — Inteligência Artificial")
+        hal_core = get_module("hal")
         if hal_core:
             if hasattr(hal_core, "mostrar_chat_hal"):
                 hal_core.mostrar_chat_hal()
             elif hasattr(hal_core, "main"):
                 hal_core.main()
             else:
-                st.warning(
-                    "Módulo 'hal.py' carregado, mas nenhuma função de renderização conhecida ('mostrar_chat_hal' ou 'main') foi encontrada."
-                )
+                st.warning("Módulo 'hal.py' carregado, mas nenhuma função de renderização conhecida foi encontrada.")
                 st.chat_input("Como posso ajudar hoje? (Modo de Segurança)")
         else:
-            st.error(
-                "Erro técnico: O arquivo 'hal.py' não foi detectado no sistema."
-            )
-            st.chat_input("Como posso ajudar hoje? (Modo Offline)")
+            st.error("Erro técnico: O arquivo 'hal.py' não foi detectado no sistema.")
 
     elif dimension == "i-Cidade":
-        if icidade is None:
-            st.error(
-                "❌ O arquivo 'icidade_completo.py' não foi encontrado ou falhou ao ser importado."
-            )
-        else:
+        icidade = get_module("icidade_completo")
+        if icidade:
             try:
                 if hasattr(icidade, "init_db"):
                     icidade.init_db()
 
-                funcao_encontrada = None
-                for nome_fn in [
-                    "mostrar_formulario_cidade",
-                    "mostrar_formulario_icidade",
-                    "mostrar_icidade",
-                    "run",
-                    "main",
-                    "app",
-                ]:
+                for nome_fn in ["mostrar_formulario_cidade", "mostrar_formulario_icidade", "mostrar_icidade", "run", "main", "app"]:
                     if hasattr(icidade, nome_fn):
-                        funcao_encontrada = getattr(icidade, nome_fn)
+                        getattr(icidade, nome_fn)()
                         break
-
-                if funcao_encontrada:
-                    funcao_encontrada()
                 else:
-                    funcoes_disponiveis = [
-                        f
-                        for f in dir(icidade)
-                        if not f.startswith("_")
-                        and callable(getattr(icidade, f))
-                    ]
-                    st.warning(
-                        f"⚠️ Nenhuma função padrão foi encontrada. Funções detectadas no arquivo: {funcoes_disponiveis}"
-                    )
+                    st.warning("⚠️ Nenhuma função padrão foi encontrada no 'icidade_completo.py'.")
             except Exception as e:
                 st.error(f"❌ Erro ao executar o i-Cidade: {e}")
+        else:
+            st.error("❌ O arquivo 'icidade_completo.py' não foi encontrado.")
 
-    elif dimension == "i-Gov TI" and igov:
-        igov.mostrar_formulario_igov()
-    elif dimension == "i-Amb" and iamb:
-        iamb.mostrar_formulario_iamb()
-    elif dimension == "i-Fiscal" and ifiscal:
-        ifiscal.mostrar_formulario_ifiscal()
-    elif dimension == "i-Plan" and iplan:
-        iplan.mostrar_formulario_plan()
-    elif dimension == "i-Educ" and ieduc:
-        ieduc.mostrar_formulario_educ()
-    elif dimension == "i-Saúde" and isaude:
-        isaude.mostrar_formulario_saude()
+    elif dimension == "i-Gov TI":
+        igov = get_module("igov")
+        if igov and hasattr(igov, "mostrar_formulario_igov"):
+            igov.mostrar_formulario_igov()
+        else:
+            st.error("Erro ao carregar o módulo 'igov.py'.")
+
+    elif dimension == "i-Amb":
+        iamb = get_module("iamb")
+        if iamb and hasattr(iamb, "mostrar_formulario_iamb"):
+            iamb.mostrar_formulario_iamb()
+        else:
+            st.error("Erro ao carregar o módulo 'iamb.py'.")
+
+    elif dimension == "i-Fiscal":
+        ifiscal = get_module("ifiscal")
+        if ifiscal and hasattr(ifiscal, "mostrar_formulario_ifiscal"):
+            ifiscal.mostrar_formulario_ifiscal()
+        else:
+            st.error("Erro ao carregar o módulo 'ifiscal.py'.")
+
+    elif dimension == "i-Plan":
+        iplan = get_module("iplan")
+        if iplan and hasattr(iplan, "mostrar_formulario_plan"):
+            iplan.mostrar_formulario_plan()
+        else:
+            st.error("Erro ao carregar o módulo 'iplan.py'.")
+
+    elif dimension == "i-Educ":
+        ieduc = get_module("ieduc")
+        if ieduc and hasattr(ieduc, "mostrar_formulario_educ"):
+            ieduc.mostrar_formulario_educ()
+        else:
+            st.error("Erro ao carregar o módulo 'ieduc.py'.")
+
+    elif dimension == "i-Saúde":
+        isaude = get_module("isaude")
+        if isaude and hasattr(isaude, "mostrar_formulario_saude"):
+            isaude.mostrar_formulario_saude()
+        else:
+            st.error("Erro ao carregar o módulo 'isaude.py'.")
+
     elif dimension == "ieg-m":
-        if iegm_final:
+        iegm_final = get_module("iegmfinal")
+        if iegm_final and hasattr(iegm_final, "mostrar_painel_iegm_final"):
             iegm_final.mostrar_painel_iegm_final(year)
         else:
             st.error("Erro: Módulo 'iegmfinal.py' não localizado.")
 
     elif dimension == "Relatório de Atividades":
-        if atividade:
-            if hasattr(atividade, "mostrar_formulario_atividade"):
-                atividade.mostrar_formulario_atividade()
-            else:
-                st.warning(
-                    "Módulo 'atividade.py' carregado, mas a função 'mostrar_formulario_atividade' não foi encontrada."
-                )
+        atividade = get_module("atividade")
+        if atividade and hasattr(atividade, "mostrar_formulario_atividade"):
+            atividade.mostrar_formulario_atividade()
         else:
-            st.error("Erro: Módulo 'atividade.py' não localizado.")
+            st.error("Erro: Módulo 'atividade.py' não localizado ou função ausente.")
 
     elif dimension == "Plano de Ação":
+        plano_acao = get_module("plano_acao")
         if plano_acao:
             if hasattr(plano_acao, "mostrar_formulario_plano_acao"):
                 plano_acao.mostrar_formulario_plano_acao()
             elif hasattr(plano_acao, "mostrar_painel_plano_acao"):
                 plano_acao.mostrar_painel_plano_acao()
             else:
-                st.warning(
-                    "Módulo carregado, mas a função de renderização padrão não foi encontrada."
-                )
+                st.warning("Módulo 'plano_acao.py' carregado, mas nenhuma função de renderização foi encontrada.")
         else:
             st.error("Erro: Módulo 'plano_acao.py' não localizado.")
 
     elif dimension == "Área de treinamento":
         st.subheader("🎓 Área de Treinamento e Capacitação")
+        treinamento = get_module("treinamento")
         if treinamento:
-            if hasattr(treinamento, "mostrar_painel_treinamento"):
-                treinamento.mostrar_painel_treinamento()
-            elif hasattr(treinamento, "mostrar_formulario_treinamento"):
-                treinamento.mostrar_formulario_treinamento()
-            elif hasattr(treinamento, "main"):
-                treinamento.main()
-            else:
-                st.warning(
-                    "Módulo 'treinamento.py' carregado, mas nenhuma função de renderização padrão foi detectada."
-                )
+            for fn in ["mostrar_painel_treinamento", "mostrar_formulario_treinamento", "main"]:
+                if hasattr(treinamento, fn):
+                    getattr(treinamento, fn)()
+                    break
         else:
-            st.error(
-                "Erro técnico: O arquivo 'treinamento.py' não foi detectado no sistema."
-            )
+            st.error("Erro técnico: O arquivo 'treinamento.py' não foi detectado no sistema.")
 
-    # MÓDULOS ADICIONADOS: SISTEMA DE CONTROLE INTERNO
     elif dimension == "Vistorias in loco":
         st.subheader("🔍 Vistorias in loco")
+        vistoria = get_module("vistoria")
         if vistoria:
             if hasattr(vistoria, "mostrar_painel_vistoria"):
                 vistoria.mostrar_painel_vistoria(year)
@@ -697,17 +621,12 @@ def dimension_page():
                 vistoria.mostrar_formulario_vistoria()
             elif hasattr(vistoria, "main"):
                 vistoria.main()
-            else:
-                st.warning(
-                    "Módulo 'vistoria.py' carregado, mas nenhuma função de renderização foi encontrada."
-                )
         else:
-            st.error(
-                "Erro técnico: O arquivo 'vistoria.py' não foi detectado no sistema."
-            )
+            st.error("Erro técnico: O arquivo 'vistoria.py' não foi detectado no sistema.")
 
     elif dimension == "Planos municipais":
         st.subheader("📜 Planos Municipais")
+        planos = get_module("planos")
         if planos:
             if hasattr(planos, "mostrar_painel_planos"):
                 planos.mostrar_painel_planos(year)
@@ -715,17 +634,12 @@ def dimension_page():
                 planos.mostrar_formulario_planos()
             elif hasattr(planos, "main"):
                 planos.main()
-            else:
-                st.warning(
-                    "Módulo 'planos.py' carregado, mas nenhuma função de renderização foi encontrada."
-                )
         else:
-            st.error(
-                "Erro técnico: O arquivo 'planos.py' não foi detectado no sistema."
-            )
+            st.error("Erro técnico: O arquivo 'planos.py' não foi detectado no sistema.")
 
     elif dimension == "Contratos":
         st.subheader("📝 Contratos")
+        contratos = get_module("contratos")
         if contratos:
             if hasattr(contratos, "mostrar_painel_contratos"):
                 contratos.mostrar_painel_contratos(year)
@@ -733,20 +647,14 @@ def dimension_page():
                 contratos.mostrar_formulario_contratos()
             elif hasattr(contratos, "main"):
                 contratos.main()
-            else:
-                st.warning(
-                    "Módulo 'contratos.py' carregado, mas nenhuma função de renderização foi encontrada."
-                )
         else:
-            st.error(
-                "Erro técnico: O arquivo 'contratos.py' não foi detectado no sistema."
-            )
+            st.error("Erro técnico: O arquivo 'contratos.py' não foi detectado no sistema.")
 
     else:
         st.info(f"Módulo {dimension} pronto para integração.")
 
 
-# Gerenciador de Estado de Telas do Streamlit
+# --- GERENCIADOR DE ESTADO DE TELAS DO STREAMLIT ---
 if not st.session_state.authenticated:
     login_page()
 else:
