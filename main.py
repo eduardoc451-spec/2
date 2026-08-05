@@ -5,15 +5,7 @@ import sys
 import pandas as pd
 import streamlit as st
 
-# Configuração da página (DEVE SER A PRIMEIRA INSTRUÇÃO STREAMLIT)
-st.set_page_config(
-    page_title="IEG-M Francisco Morato",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# Configuração de diretório local
+# Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
 current_dir = (
     os.path.dirname(os.path.abspath(__file__))
     if "__file__" in locals()
@@ -23,9 +15,54 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 
-# --- OTIMIZAÇÃO 1: CACHE DE IMAGENS EM BASE64 ---
-# Lê a imagem do disco apenas UMA VEZ e salva na memória
-@st.cache_data(show_spinner=False)
+# Importar módulos locais com tratamento de erros dinâmico
+def import_local_module(module_name):
+    try:
+        import importlib
+
+        if module_name in sys.modules:
+            return importlib.reload(sys.modules[module_name])
+        return importlib.import_module(module_name)
+    except Exception:
+        return None
+
+
+icidade = import_local_module("icidade_completo") or import_local_module(
+    "icidade"
+)
+igov = import_local_module("igov")
+iamb = import_local_module("iamb")
+ifiscal = import_local_module("ifiscal")
+iplan = import_local_module("iplan")
+ieduc = import_local_module("ieduc")
+isaude = import_local_module("isaude")
+iegm_final = import_local_module("iegmfinal")
+
+# Novos módulos integrados
+bib_core = import_local_module("biblioteca")
+admin_core = import_local_module("administrador")
+atividade = import_local_module("atividade")
+plano_acao = import_local_module("plano_acao")
+treinamento = import_local_module("treinamento")  # Módulo de treinamento
+
+# Novas importações do Sistema de Controle Interno
+vistoria = import_local_module("vistoria")
+planos = import_local_module("planos")
+contratos = import_local_module("contratos")
+
+# Importação do módulo HAL 9000
+hal_core = import_local_module("hal")
+
+# Configuração da página
+st.set_page_config(
+    page_title="IEG-M Francisco Morato",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+# FUNÇÃO: Converte a imagem local para Base64
 def get_image_base64(filename):
     full_path = os.path.join(current_dir, filename)
     if os.path.exists(full_path):
@@ -34,19 +71,7 @@ def get_image_base64(filename):
     return None
 
 
-# --- OTIMIZAÇÃO 2: IMPORTAÇÃO SOB DEMANDA (LAZY LOADING) ---
-# Importa o módulo apenas quando for realmente utilizado pelo usuário
-@st.cache_resource(show_spinner=False)
-def get_module(module_name):
-    import importlib
-    try:
-        return importlib.import_module(module_name)
-    except Exception as e:
-        st.error(f"Erro ao carregar o módulo '{module_name}': {e}")
-        return None
-
-
-# CSS Otimizado
+# CSS Avançado
 st.markdown(
     """
     <style>
@@ -142,7 +167,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Inicialização do banco de dados simulado no Session State
+# Inicialização do banco de dados simulado
 if "users_db" not in st.session_state:
     st.session_state.users_db = {
         "jefferson.espanha": {
@@ -162,30 +187,66 @@ if "authenticated" not in st.session_state:
 
 AVAILABLE_YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
 
-# Estruturas de dados (Dicionários são levíssimos na memória)
 DIMENSIONS_DATA = {
-    "i-Gov TI": {"img": "i_gov_ti.png", "desc": "Governança de Tecnologia da Informação.", "module": "igov"},
-    "i-Educ": {"img": "i_educ.png", "desc": "Gestão da Educação Municipal", "module": "ieduc"},
-    "i-Saúde": {"img": "i_saude.png", "desc": "Gestão da Saúde municipal.", "module": "isaude"},
-    "i-Plan": {"img": "i_plan.png", "desc": "Eficiência do planejamento orçamentário.", "module": "iplan"},
-    "i-Amb": {"img": "i_amb.png", "desc": "Políticas de meio ambiente e sustentabilidade.", "module": "iamb"},
-    "i-Cidade": {"img": "i_cidade.png", "desc": "Defesa Civil e infraestrutura urbana.", "module": "icidade_completo"},
-    "i-Fiscal": {"img": "i_fiscal.png", "desc": "Gestão fiscal e execução financeira.", "module": "ifiscal"},
-    "ieg-m": {"img": "i_iegmfinal.png", "desc": "Faixa e Pontuação do IEG-M final", "module": "iegmfinal"},
-    "Relatório de Atividades": {"img": "relatorio_atividade.png", "desc": "Monitoramento do PPA", "module": "atividade"},
-    "Plano de Ação": {"img": "plano_acao.png", "desc": "Plano de Ação Corretiva e Metas Estratégicas", "module": "plano_acao"},
-    "Área de treinamento": {"img": "treinamento.png", "desc": "Área de treinamento e capacitação de pessoal.", "module": "treinamento"},
+    "i-Gov TI": {
+        "img": "i_gov_ti.png",
+        "desc": "Governança de Tecnologia da Informação.",
+    },
+    "i-Educ": {"img": "i_educ.png", "desc": "Gestão da Educação Municipal"},
+    "i-Saúde": {"img": "i_saude.png", "desc": "Gestão da Saúde municipal."},
+    "i-Plan": {
+        "img": "i_plan.png",
+        "desc": "Eficiência do planejamento orçamentário.",
+    },
+    "i-Amb": {
+        "img": "i_amb.png",
+        "desc": "Políticas de meio ambiente e sustentabilidade.",
+    },
+    "i-Cidade": {
+        "img": "i_cidade.png",
+        "desc": "Defesa Civil e infraestrutura urbana.",
+    },
+    "i-Fiscal": {
+        "img": "i_fiscal.png",
+        "desc": "Gestão fiscal e execução financeira.",
+    },
+    "ieg-m": {
+        "img": "i_iegmfinal.png",
+        "desc": "Faixa e Pontuação do IEG-M final",
+    },
+    "Relatório de Atividades": {
+        "img": "relatorio_atividade.png",
+        "desc": "Monitoramento do PPA",
+    },
+    "Plano de Ação": {
+        "img": "plano_acao.png",
+        "desc": "Plano de Ação Corretiva e Metas Estratégicas",
+    },
+    "Área de treinamento": {
+        "img": "treinamento.png",
+        "desc": "Área de treinamento e capacitação de pessoal.",
+    },
 }
 
+# Sistema de Controle Interno
 CONTROLE_INTERNO_DATA = {
-    "Vistorias in loco": {"img": "vistoria.png", "desc": "Módulo de vistorias técnicas e relatórios in loco.", "module": "vistoria"},
-    "Planos municipais": {"img": "planos.png", "desc": "Acompanhamento e gestão de Planos Municipais.", "module": "planos"},
-    "Contratos": {"img": "contratos.png", "desc": "Gestão e controle interno de contratos administrativos.", "module": "contratos"},
+    "Vistorias in loco": {
+        "img": "vistoria.png",
+        "desc": "Módulo de vistorias técnicas e relatórios in loco.",
+    },
+    "Planos municipais": {
+        "img": "planos.png",
+        "desc": "Acompanhamento e gestão de Planos Municipais.",
+    },
+    "Contratos": {
+        "img": "contratos.png",
+        "desc": "Gestão e controle interno de contratos administrativos.",
+    },
 }
 
 
 def login_page():
-    """Página de login otimizada."""
+    """Página de login."""
     col1, col2, col3 = st.columns([1.1, 1.6, 1.1])
     with col2:
         logo_b64 = get_image_base64("iegm.png")
@@ -195,7 +256,9 @@ def login_page():
                 unsafe_allow_html=True,
             )
         else:
-            st.markdown("<div style='padding: 20px;'></div>", unsafe_allow_html=True)
+            st.markdown(
+                "<div style='padding: 20px;'></div>", unsafe_allow_html=True
+            )
 
         st.markdown(
             '<div class="cad-frame"><h3 style="text-align: center; color: #FFFFFF; font-size: 16px; margin: 0;">Sistema de Preenchimento do IEG-M</h3></div>',
@@ -342,7 +405,7 @@ def dashboard_page():
     )
     st.markdown("---")
 
- # SISTEMA DE GESTÃO AVANÇADA
+    # SISTEMA DE GESTÃO AVANÇADA
     st.markdown("### 📊 Sistema de Gestão Avançada")
     dim_cols = st.columns(4)
 
