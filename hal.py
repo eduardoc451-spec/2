@@ -1663,12 +1663,11 @@ class SistemaHAL:
                     "Aplicação mínima do FUNDEB para profissionais da educação"
                 ),
                 "E11": "Aplicação do mínimo constitucional em educação (25%)",
-            }
-        },  # 👈 Fecha o dicionário de questões por dimensão (questoes_por_dimensao)
-        "iSaude": {
+            },
+            "iSaude": {
                 "1.0": (
-                    "O Conselho Municipal de Saúde participou da elaboração do"
-                    " Plano Municipal de Saúde 2022-2025?"
+                    "O Conselho Municipal de Saúde participou da elaboração"
+                    " do Plano Municipal de Saúde 2022-2025?"
                 ),
                 "2.0": (
                     "Quando ocorreu a aprovação do Plano Municipal de Saúde"
@@ -1683,8 +1682,8 @@ class SistemaHAL:
                     " foram executadas?"
                 ),
                 "3.2": (
-                    "As metas previstas para os indicadores foram atingidas na"
-                    " Programação Anual de Saúde de 2025?"
+                    "As metas previstas para os indicadores foram atingidas"
+                    " na Programação Anual de Saúde de 2025?"
                 ),
                 "7.0": (
                     "O gestor municipal de saúde apresentou quais Relatórios"
@@ -1697,9 +1696,9 @@ class SistemaHAL:
                     " Conselho Municipal de Saúde até 30/03/2026?"
                 ),
                 "9.0": (
-                    "O Parecer Conclusivo sobre o Relatório Anual de Gestão 2025"
-                    " foi aprovado sem ressalvas, aprovado com ressalvas ou"
-                    " irregular/não aprovado?"
+                    "O Parecer Conclusivo sobre o Relatório Anual de Gestão"
+                    " 2025 foi aprovado sem ressalvas, aprovado com ressalvas"
+                    " ou irregular/não aprovado?"
                 ),
                 "9.1": (
                     "Informe a forma e data da publicação do Parecer Conclusivo"
@@ -1712,8 +1711,8 @@ class SistemaHAL:
                 ),
                 "S1": "Aplicação do mínimo constitucional em saúde.",
                 "5.0": (
-                    "Os recursos financeiros municipais (fonte 1) destinados ao"
-                    " SUS são movimentados em contas bancárias próprias?"
+                    "Os recursos financeiros municipais (fonte 1) destinados"
+                    " ao SUS são movimentados em contas bancárias próprias?"
                 ),
                 "5.1": "Informe o Banco, Agência e nº da conta.",
                 "6.0": (
@@ -1731,8 +1730,8 @@ class SistemaHAL:
                     " (PCCS) específico para os profissionais de saúde?"
                 ),
                 "11.1": (
-                    "Informe o instrumento normativo de regulamentação do PCCS"
-                    " específico para os profissionais de saúde."
+                    "Informe o instrumento normativo de regulamentação do"
+                    " PCCS específico para os profissionais de saúde."
                 ),
                 "11.2": (
                     "Informe a página eletrônica de divulgação do PCCS"
@@ -1740,7 +1739,8 @@ class SistemaHAL:
                 ),
                 "12.0": (
                     "O município adotou a Estratégia de Saúde da Família como"
-                    " estratégia prioritária de organização da Atenção Básica?"
+                    " estratégia prioritária de organização da Atenção"
+                    " Básica?"
                 ),
                 "12.1": (
                     "Informe o total de equipes de Saúde da Família e equipes"
@@ -1767,10 +1767,12 @@ class SistemaHAL:
                     "O município possui controle de absenteísmo para as"
                     " consultas médicas da Atenção Básica?"
                 ),
-                "14.2.1": "Informe a taxa de absenteísmo de consulta médica nas UBSs.",
+                "14.2.1": (
+                    "Informe a taxa de absenteísmo de consulta médica nas UBSs."
+                ),
                 "14.2.2": (
-                    "O município realiza medidas para a redução desta taxa de"
-                    " absenteísmo?"
+                    "O município realiza medidas para a redução desta taxa"
+                    " de absenteísmo?"
                 ),
                 "14.2.2.1": (
                     "Assinale as medidas utilizadas para a redução da taxa de"
@@ -1785,8 +1787,8 @@ class SistemaHAL:
                     " Básica."
                 ),
                 "15.2": (
-                    "O município realiza medidas para a redução desta taxa de"
-                    " absenteísmo?"
+                    "O município realiza medidas para a redução desta taxa"
+                    " de absenteísmo?"
                 ),
                 "15.2.1": (
                     "Assinale as medidas utilizadas para a redução da taxa de"
@@ -1849,29 +1851,19 @@ class SistemaHAL:
                 "17.5.2.1": (
                     "Assinale os serviços inseridos no sistema de regulação."
                 ),
-                "17.5.2.1.1": (
-                    "Informar serviço com maior tempo de espera (1)."
-                ),
-                "17.5.2.1.2": (
-                    "Informar serviço com maior tempo de espera (2)."
-                ),
-                "17.5.2.1.3": (
-                    "Informar serviço com maior tempo de espera (3)."
-                ),
-                "17.5.2.1.4": (
-                    "Informar serviço com maior tempo de espera (4)."
-                ),
-                "17.5.2.1.5": (
-                    "Informar serviço com maior tempo de espera (5)."
-                ),
-                "17.5.2.1.6": (
-                    "Informar serviço com maior tempo de espera (6)."
-                ),
+                "17.5.2.1.1": "Informar serviço com maior tempo de espera (1).",
+                "17.5.2.1.2": "Informar serviço com maior tempo de espera (2).",
+                "17.5.2.1.3": "Informar serviço com maior tempo de espera (3).",
+                "17.5.2.1.4": "Informar serviço com maior tempo de espera (4).",
+                "17.5.2.1.5": "Informar serviço com maior tempo de espera (5).",
+                "17.5.2.1.6": "Informar serviço com maior tempo de espera (6).",
                 "17.6": (
                     "O município implantou o Prontuário Eletrônico do Paciente"
                     " na Atenção Especializada?"
                 ),
-                "17.6.1": "Assinale os serviços inseridos no Prontuário Eletrônico.",
+                "17.6.1": (
+                    "Assinale os serviços inseridos no Prontuário Eletrônico."
+                ),
                 "17.7": "O município possui mamógrafos na rede própria?",
                 "17.7.1": "Informe detalhamento dos mamógrafos.",
                 "17.8": (
@@ -1879,7 +1871,9 @@ class SistemaHAL:
                     " na rede própria?"
                 ),
                 "17.8.1": "Informe detalhamento do ultrassom.",
-                "17.9": "O município possui hospital ou Santa Casa sob sua gestão?",
+                "17.9": (
+                    "O município possui hospital ou Santa Casa sob sua gestão?"
+                ),
                 "17.9.1": "Informe detalhamento hospitalar.",
                 "17.9.2": (
                     "Informe o número de hospitais com taxa de ocupação"
@@ -1887,10 +1881,12 @@ class SistemaHAL:
                 ),
                 "18.0": (
                     "Há demanda de ações e serviços voltados à assistência aos"
-                    " portadores de transtornos mentais e usuários de substâncias"
-                    " psicoativas?"
+                    " portadores de transtornos mentais e usuários de"
+                    " substâncias psicoativas?"
                 ),
-                "18.1": "Realizou Plano de Ação municipal para inclusão à RAPS?",
+                "18.1": (
+                    "Realizou Plano de Ação municipal para inclusão à RAPS?"
+                ),
                 "18.2": (
                     "A Secretaria de Saúde está integrada com outros órgãos"
                     " municipais para ampliar a oferta desses serviços?"
@@ -1903,7 +1899,9 @@ class SistemaHAL:
                     " Psicossocial?"
                 ),
                 "18.4.1": "Assinale os tipos de indicadores.",
-                "18.5": "O município possui população superior a 15 mil habitantes?",
+                "18.5": (
+                    "O município possui população superior a 15 mil habitantes?"
+                ),
                 "18.5.1": (
                     "A quantidade de CAPS e Unidades de Acolhimento é"
                     " adequada?"
@@ -1949,10 +1947,12 @@ class SistemaHAL:
                     " coleta de meios diagnósticos?"
                 ),
                 "20.3": (
-                    "A Prefeitura disponibilizou todos os EPIs para manuseio dos"
-                    " insumos de controle de vetores?"
+                    "A Prefeitura disponibilizou todos os EPIs para manuseio"
+                    " dos insumos de controle de vetores?"
                 ),
-                "21.0": "O município analisa semanalmente os dados de arboviroses?",
+                "21.0": (
+                    "O município analisa semanalmente os dados de arboviroses?"
+                ),
                 "22.0": (
                     "O município investiga casos notificados, surtos e óbitos"
                     " de arboviroses?"
@@ -1968,7 +1968,9 @@ class SistemaHAL:
                     "O município desenvolve ações reguladoras por meio de"
                     " complexo regulador?"
                 ),
-                "26.0": "O município elaborou protocolos de regulação formalizados?",
+                "26.0": (
+                    "O município elaborou protocolos de regulação formalizados?"
+                ),
                 "27.0": (
                     "O município regula a referência a ser realizada em outros"
                     " municípios?"
@@ -2024,8 +2026,8 @@ class SistemaHAL:
                     "As equipes das Unidades Móveis tiveram composição mínima?"
                 ),
                 "32.0": (
-                    "O município utiliza sistema informatizado para gerenciar o"
-                    " estoque de materiais e insumos médicos?"
+                    "O município utiliza sistema informatizado para gerenciar"
+                    " o estoque de materiais e insumos médicos?"
                 ),
                 "32.1": "Assinale as funções do sistema.",
                 "33.0": "O município possui Ouvidoria da Saúde implantada?",
@@ -2037,7 +2039,10 @@ class SistemaHAL:
                     "O município possui componente municipal do Sistema"
                     " Nacional de Auditoria?"
                 ),
-                "35.1": "Assinale as características do componente municipal do SNA.",
+                "35.1": (
+                    "Assinale as características do componente municipal do"
+                    " SNA."
+                ),
                 "35.2": (
                     "As auditorias concluídas em 2025 estão disponibilizadas"
                     " em site?"
@@ -2049,7 +2054,9 @@ class SistemaHAL:
                 ),
                 "36.1": "Assinale as funções existentes no sistema.",
                 "37.0": "Informe detalhes do estoque de medicamentos.",
-                "38.0": "Houve disponibilização do serviço de telemedicina em 2025?",
+                "38.0": (
+                    "Houve disponibilização do serviço de telemedicina em 2025?"
+                ),
                 "38.1": "Assinale os serviços disponibilizados.",
                 "38.2": (
                     "Foi utilizado sistema informatizado para prescrição"
@@ -2109,8 +2116,8 @@ class SistemaHAL:
                     " saúde sob gestão municipal em 2025, informe."
                 ),
                 "S14": (
-                    "Sobre os pacientes internados em estabelecimentos de saúde"
-                    " sob gestão municipal, informe."
+                    "Sobre os pacientes internados em estabelecimentos de"
+                    " saúde sob gestão municipal, informe."
                 ),
                 "S15": "Informe detalhamento S15.",
                 "S16": "Informe detalhamento S16.",
@@ -2119,7 +2126,7 @@ class SistemaHAL:
                 "S19": "Informe detalhamento S19.",
                 "S20": "Informe detalhamento S20.",
             },
-        }  # 👈 Fecha o dicionário de questões por dimensão (questoes_por_dimensao)
+        }
 
     def get_db_connection(self):
         return criar_conexao_direta()
@@ -2147,7 +2154,7 @@ class SistemaHAL:
             "iPlan": "respostas_iplan",
             "iFiscal": "respostas_ifiscal",
             "iEduc": "respostas_ieduc",
-            "iSaude": "respostas_isaude",  # 👈 Adicionada nova dimensão
+            "iSaude": "respostas_isaude",
         }
 
         if dimensao not in tabelas_map:
@@ -2171,7 +2178,6 @@ class SistemaHAL:
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # 👈 Tabelas respostas_iamb, respostas_iplan, respostas_ifiscal, respostas_ieduc e respostas_isaude utilizam 'quesito' ao invés de 'id'
                 if tabela in [
                     "respostas_iamb",
                     "respostas_iplan",
@@ -2293,6 +2299,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()# 👈 Fecha o dicionário de questões por dimensão (questoes_por_dimensao)
-
-   
+    main()
