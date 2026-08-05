@@ -807,6 +807,309 @@ class SistemaHAL:
                 ),
             },
         }
+        "iPlan": {
+                "1.0": (
+                    "Prefeitura realizou audiências públicas para elaboração das"
+                    " peças orçamentárias?"
+                ),
+                "1.1": (
+                    "Para quais peças orçamentárias foram realizadas as"
+                    " audiências públicas?"
+                ),
+                "1.2": "Dia e horário das audiências públicas.",
+                "1.3": (
+                    "As audiências são registradas em atas ou documentos?"
+                ),
+                "1.3.1": "Link de divulgação das atas.",
+                "1.4": (
+                    "Elementos considerados no planejamento e organização das"
+                    " audiências."
+                ),
+                "2.0": (
+                    "Houve consulta pública online para elaboração do PPA"
+                    " 2022-2025?"
+                ),
+                "2.1": (
+                    "Foi disponibilizado glossário explicativo na consulta"
+                    " pública?"
+                ),
+                "3.0": "Foi realizado diagnóstico prévio ao planejamento?",
+                "3.1": (
+                    "O diagnóstico considerou programas federais ou estadual?"
+                ),
+                "3.1.1": "Quais programas foram utilizados?",
+                "3.2": "Os programas do PPA tiveram diagnóstico prévio?",
+                "4.0": (
+                    "Há estabelecimento de metas físicas e financeiras anuais"
+                    " no PPA?"
+                ),
+                "4.1": "Os programas finalísticos possuem objetivo comum?",
+                "4.1.1": "Houve avaliação dos programas finalísticos?",
+                "4.1.1.1": "Houve Relatório Anual de Avaliação?",
+                "4.1.1.1.1": "Aspectos analisados na avaliação.",
+                "4.1.1.2": "Houve publicação dos resultados?",
+                "4.1.1.2.1": "Link da divulgação dos resultados.",
+                "4.2": "Indicadores são mensuráveis e coerentes?",
+                "4.3": "Planos Setoriais incorporados ao PPA.",
+                "5.0": "É realizado estudo/análise para previsão de receitas?",
+                "5.1": "Tipos de tributos e transferências avaliados.",
+                "5.1.1": "Considera previsão de repasse do ICMS?",
+                "5.2": "Metodologia varia conforme a espécie da receita?",
+                "6.0": "Itens dispostos na LDO.",
+                "7.0": (
+                    "Houve remanejamento, transposição ou transferência por"
+                    " decreto?"
+                ),
+                "7.1": "Classificação funcional das despesas alteradas.",
+                "8.0": "O Anexo de Metas Fiscais integra a LDO?",
+                "8.1": "Link de divulgação.",
+                "8.2": "Itens constantes do Anexo de Metas Fiscais.",
+                "9.0": "O Anexo de Riscos Fiscais integra a LDO?",
+                "9.1": "Link de divulgação.",
+                "9.2": "Etapas de gerenciamento dos riscos.",
+                "10.0": (
+                    "Itens que demonstram compatibilidade entre LOA, PPA e LDO."
+                ),
+                "11.0": (
+                    "A LOA prevê abertura de créditos adicionais por decreto?"
+                ),
+                "11.1": "Percentual autorizado para crédito suplementar.",
+                "12.0": (
+                    "Há estrutura administrativa voltada ao planejamento?"
+                ),
+                "12.1": "Há recursos humanos para planejamento?",
+                "12.1.1.1": "Equipe possui qualificação técnica?",
+                "12.1.2": "Servidores recebem treinamento específico?",
+                "13.0": "Há acompanhamento da execução do planejamento?",
+                "13.1": (
+                    "Metas fiscais são avaliadas em audiências públicas"
+                    " quadrimestrais?"
+                ),
+                "13.1.1": "Foram elaborados Relatórios Quadrimestrais?",
+                "13.1.1.1": "Link dos relatórios.",
+                "13.2": (
+                    "Há acompanhamento mensal da execução orçamentária com"
+                    " participação do Prefeito?"
+                ),
+                "13.3": "O acompanhamento subsidia o replanejamento?",
+                "14.0": (
+                    "Houve instituição e regulamentação do Sistema de Controle"
+                    " Interno?"
+                ),
+                "14.1": "Instrumento normativo.",
+                "14.2": "Link de divulgação.",
+                "14.3": "Funções atribuídas ao controle interno.",
+                "14.4": "Há recursos humanos para o sistema?",
+                "14.4.1": "Responsável ocupa cargo efetivo?",
+                "14.4.2": "Equipe recebe treinamento?",
+                "14.4.3": "Existe segregação de funções?",
+                "14.4.4": "A UCCI possui autonomia?",
+                "14.4.4.1": "Vinculação da UCCI.",
+                "14.4.4.2": "Houve comunicação de irregularidades?",
+                "14.4.4.2.1": "Quantidade de irregularidades comunicadas.",
+                "14.4.5": "Há relatórios periódicos?",
+                "14.4.5.1": "O Prefeito determinou providências?",
+                "14.4.5.1.1": (
+                    "O Controle Interno acompanhou as providências?"
+                ),
+                "14.5": "Houve Plano Operativo Anual?",
+                "14.5.1": "Atividades previstas no Plano Operativo Anual.",
+                "15.0": "Houve criação da Ouvidoria Pública?",
+                "15.1": "Instrumento normativo de criação.",
+                "15.2": "Link de divulgação.",
+                "15.3": "Link de divulgação.",
+                "15.4": "Foi elaborado Relatório de Gestão da Ouvidoria?",
+                "15.4.1": (
+                    "Informações constantes dos relatórios gerenciais."
+                ),
+                "15.4.2": "Link do sistema.",
+                "15.5": "Iniciativas de divulgação e mobilização social.",
+                "16.0": "A Prefeitura elaborou a Carta de Serviços ao Usuário?",
+                "16.1": "Link de divulgação.",
+                "16.2": "A carta está atualizada?",
+                "16.3": "Houve regulamentação da Carta?",
+                "16.3.1": "Instrumento normativo.",
+                "16.3.2": "Link de divulgação.",
+                "17.0": (
+                    "A Prefeitura regulamentou e instituiu o Conselho de"
+                    " Usuários?"
+                ),
+                "17.1": "Instrumento normativo.",
+                "17.2": "Link de divulgação.",
+                "18.0": "O Município elaborou Plano Diretor?",
+                "18.1": "Data da última atualização.",
+                "19.0": (
+                    "Impressões, comentários e sugestões sobre o questionário."
+                ),
+            },
+        }
+
+    def get_db_connection(self):
+        return criar_conexao_direta()
+
+    def get_dimensoes(self):
+        return list(self.questoes_por_dimensao.keys())
+
+    def get_quesitos_por_dimensao(self, dimensao):
+        if dimensao in self.questoes_por_dimensao:
+            return [
+                f"{codigo} - {texto}"
+                for codigo, texto in self.questoes_por_dimensao[
+                    dimensao
+                ].items()
+            ]
+        return []
+
+    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+        """Busca a resposta na tabela correspondente à dimensão fornecida."""
+
+        tabelas_map = {
+            "iCidade": "respostas",
+            "iGov-Ti": "respostas_igov",
+            "i-Amb": "respostas_iamb",
+            "iPlan": "respostas_iplan",
+        }
+
+        if dimensao not in tabelas_map:
+            return {
+                "resposta": "Dimensão em teste",
+                "detalhes": (
+                    f"A dimensão '{dimensao}' não possui tabela configurada."
+                ),
+                "pontuacao_obtida": 0,
+            }
+
+        tabela = tabelas_map[dimensao]
+
+        conn, erro = criar_conexao_direta()
+        if not conn:
+            return {
+                "resposta": "Sem conexão",
+                "detalhes": f"Erro de conexão com o Neon: {erro}",
+                "pontuacao_obtida": 0,
+            }
+
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                # respostas_iamb e respostas_iplan utilizam a coluna 'quesito' ao invés de 'id'
+                if tabela in ["respostas_iamb", "respostas_iplan"]:
+                    query = f"SELECT * FROM {tabela} WHERE quesito::text = %s AND ano = %s;"
+                else:
+                    query = f"SELECT * FROM {tabela} WHERE id::text = %s AND ano = %s;"
+
+                cur.execute(query, (str(codigo_quesito), int(ano)))
+                resultado = cur.fetchone()
+
+                if resultado:
+                    dados = dict(resultado)
+
+                    resp_val = (
+                        dados.get("valor")
+                        or dados.get("resposta")
+                        or dados.get("texto")
+                        or "Resposta cadastrada sem texto"
+                    )
+
+                    pontos_val = dados.get("pontos", dados.get("pontuacao", 0))
+
+                    # Trata o campo 'detalhes' (jsonb ou string) e campos clássicos 'link'/'comentarios'
+                    link = dados.get("link")
+                    comentarios = dados.get("comentarios")
+                    detalhes_campo = dados.get("detalhes")
+
+                    detalhe_texto = []
+                    if link and str(link) not in ["EMPTY_STRING", "None", ""]:
+                        detalhe_texto.append(f"Link: {link}")
+
+                    if comentarios and str(comentarios) not in [
+                        "EMPTY_STRING",
+                        "[]",
+                        "None",
+                        "",
+                    ]:
+                        detalhe_texto.append(f"Comentários: {comentarios}")
+
+                    if detalhes_campo and str(detalhes_campo) not in [
+                        "EMPTY_STRING",
+                        "{}",
+                        "[]",
+                        "None",
+                        "",
+                    ]:
+                        detalhe_texto.append(f"Detalhes: {detalhes_campo}")
+
+                    txt_detalhes = (
+                        " | ".join(detalhe_texto)
+                        if detalhe_texto
+                        else "Sem observações adicionais."
+                    )
+
+                    return {
+                        "resposta": resp_val,
+                        "detalhes": txt_detalhes,
+                        "pontuacao_obtida": pontos_val,
+                    }
+                else:
+                    return {
+                        "resposta": "Sem registro",
+                        "detalhes": (
+                            f"Nenhum registro encontrado em {tabela} para o"
+                            f" item {codigo_quesito} no ano {ano}."
+                        ),
+                        "pontuacao_obtida": 0,
+                    }
+        except Exception as e:
+            return {
+                "resposta": "Erro na consulta",
+                "detalhes": f"Erro SQL ao consultar {tabela}: {e}",
+                "pontuacao_obtida": 0,
+            }
+        finally:
+            if conn:
+                conn.close()
+
+
+def mostrar_chat_hal():
+    """Função para desenhar a interface do Streamlit."""
+    st.title("Sistema HAL - Consulta")
+
+    hal = SistemaHAL()
+
+    dimensoes = hal.get_dimensoes()
+    if dimensoes:
+        dim_selecionada = st.selectbox("Selecione a Dimensão:", dimensoes)
+
+        quesitos = hal.get_quesitos_por_dimensao(dim_selecionada)
+        if quesitos:
+            quesito_selecionado = st.selectbox(
+                "Selecione o Quesito:", quesitos
+            )
+            # Extrai apenas o código (ex: "1.0" de "1.0 - Texto...")
+            codigo_quesito = quesito_selecionado.split(" - ")[0]
+
+            ano = st.number_input(
+                "Ano:", min_value=2000, max_value=2030, value=2026
+            )
+
+            if st.button("Buscar Resposta"):
+                resultado = hal.get_resposta_municipio(
+                    dim_selecionada, codigo_quesito, ano
+                )
+
+                st.subheader(f"Resposta: {resultado['resposta']}")
+                st.write(f"**Detalhes:** {resultado['detalhes']}")
+                st.write(
+                    f"**Pontuação:** {resultado['pontuacao_obtida']} pontos"
+                )
+
+
+def main():
+    """Ponto de entrada do script."""
+    mostrar_chat_hal()
+
+
+if __name__ == "__main__":
+    main()
 
     def get_db_connection(self):
         return criar_conexao_direta()
