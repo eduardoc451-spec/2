@@ -433,33 +433,6 @@ def dashboard_page():
             st.markdown("</div></div>", unsafe_allow_html=True)
 
     st.markdown("---")
-
-    # SISTEMA DE CONTROLE INTERNO
-    st.markdown("### 🛡️ Sistema de Controle Interno")
-    ci_cols = st.columns(3)
-
-    for idx, (ci_name, ci_info) in enumerate(CONTROLE_INTERNO_DATA.items()):
-        with ci_cols[idx % 3]:
-            img_b64 = get_image_base64(ci_info["img"])
-            img_html = (
-                f'<img src="{img_b64}" />'
-                if img_b64
-                else '<div style="font-size:42px;">🛡️</div>'
-            )
-
-            st.markdown(
-                f'<div class="card-container" style="border-bottom: 4px solid #001A4D;"><div class="card-img-container">{img_html}</div><div class="card-title">{ci_name}</div><div class="card-text">{ci_info["desc"]}</div><div class="hidden-btn-container">',
-                unsafe_allow_html=True,
-            )
-            if st.button(
-                "Acessar", key=f"btn_real_ci_{ci_name}", use_container_width=True
-            ):
-                st.session_state.selected_dimension = ci_name
-                st.session_state.current_page = "dimension"
-                st.rerun()
-            st.markdown("</div></div>", unsafe_allow_html=True)
-
-    st.markdown("---")
     st.markdown("### 🛠️ IA, Biblioteca Digital e Área de Administração")
     col_hal, col_bib, col_admin = st.columns(3)
 
@@ -515,6 +488,31 @@ def dashboard_page():
             st.session_state.current_page = "dimension"
             st.rerun()
         st.markdown("</div></div>", unsafe_allow_html=True)
+
+    # SISTEMA DE CONTROLE INTERNO
+    st.markdown("### 🛡️ Sistema de Controle Interno")
+    ci_cols = st.columns(3)
+
+    for idx, (ci_name, ci_info) in enumerate(CONTROLE_INTERNO_DATA.items()):
+        with ci_cols[idx % 3]:
+            img_b64 = get_image_base64(ci_info["img"])
+            img_html = (
+                f'<img src="{img_b64}" />'
+                if img_b64
+                else '<div style="font-size:42px;">🛡️</div>'
+            )
+
+            st.markdown(
+                f'<div class="card-container" style="border-bottom: 4px solid #001A4D;"><div class="card-img-container">{img_html}</div><div class="card-title">{ci_name}</div><div class="card-text">{ci_info["desc"]}</div><div class="hidden-btn-container">',
+                unsafe_allow_html=True,
+            )
+            if st.button(
+                "Acessar", key=f"btn_real_ci_{ci_name}", use_container_width=True
+            ):
+                st.session_state.selected_dimension = ci_name
+                st.session_state.current_page = "dimension"
+                st.rerun()
+            st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def dimension_page():
