@@ -137,3 +137,46 @@ class SistemaHAL:
         finally:
             if conn:
                 conn.close()
+
+
+def mostrar_chat_hal():
+    """Função de renderização para a interface do Streamlit."""
+    st.title("Sistema HAL - Consulta")
+
+    hal = SistemaHAL()
+
+    dimensoes = hal.get_dimensoes()
+    if dimensoes:
+        dim_selecionada = st.selectbox("Selecione a Dimensão:", dimensoes)
+
+        quesitos = hal.get_quesitos_por_dimensao(dim_selecionada)
+        if quesitos:
+            quesito_selecionado = st.selectbox(
+                "Selecione o Quesito:", quesitos
+            )
+            # Extrai apenas o código (ex: "1.0" de "1.0 - Texto...")
+            codigo_quesito = quesito_selecionado.split(" - ")[0]
+
+            ano = st.number_input(
+                "Ano:", min_value=2000, max_value=2030, value=2024
+            )
+
+            if st.button("Buscar Resposta"):
+                resultado = hal.get_resposta_municipio(
+                    dim_selecionada, codigo_quesito, ano
+                )
+
+                st.subheader(f"Resposta: {resultado['resposta']}")
+                st.write(f"**Detalhes:** {resultado['detalhes']}")
+                st.write(
+                    f"**Pontuação:** {resultado['pontuacao_obtida']} pontos"
+                )
+
+
+def main():
+    """Ponto de entrada padrão caso o script seja executado diretamente."""
+    mostrar_chat_hal()
+
+
+if __name__ == "__main__":
+    main()
