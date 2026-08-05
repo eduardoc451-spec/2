@@ -1664,7 +1664,7 @@ class SistemaHAL:
                 ),
                 "E11": "Aplicação do mínimo constitucional em educação (25%)",
             }
-        },
+        },  # 👈 Fecha o dicionário de questões por dimensão (questoes_por_dimensao)
         "iSaude": {
                 "1.0": (
                     "O Conselho Municipal de Saúde participou da elaboração do"
