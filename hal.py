@@ -946,7 +946,7 @@ class SistemaHAL:
                     "Impressões, comentários e sugestões sobre o questionário."
                 ),
             },
-        }
+        },
         "iFiscal": {
                 "1.0": (
                     "Há estrutura administrativa voltada para a administração"
