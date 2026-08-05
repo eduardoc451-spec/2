@@ -19,9 +19,8 @@ if current_dir not in sys.path:
 def import_local_module(module_name):
     try:
         import importlib
-
         if module_name in sys.modules:
-            return importlib.reload(sys.modules[module_name])
+            return importlib.reload(sys.modules[module_name]) # <-- AQUI ESTÁ O PERIGO!
         return importlib.import_module(module_name)
     except Exception:
         return None
