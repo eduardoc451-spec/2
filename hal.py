@@ -467,13 +467,15 @@ class SistemaHAL:
                     "Existe Plano Municipal ou Regional de Saneamento Básico"
                     " instituído e vigente?"
                 ),
-                "7.1": "Informe o instrumento normativo de aprovação do Plano.",
+                "7.1": (
+                    "Informe o instrumento normativo de aprovação do Plano."
+                ),
                 "7.2": (
-                    "Informe a página eletrônica (link na internet) para acesso"
-                    " ao Plano."
+                    "Informe a página eletrônica (link na internet) para"
+                    " acesso ao Plano."
                 ),
                 "7.3": (
-                    "O Plano establishes metas específicas de abastecimento de"
+                    "O Plano estabelece metas específicas de abastecimento de"
                     " água potável?"
                 ),
                 "7.3.1": (
@@ -500,8 +502,8 @@ class SistemaHAL:
                     " coletado?"
                 ),
                 "7.5.1": (
-                    "Qual a data prevista para a universalização do tratamento"
-                    " de esgoto?"
+                    "Qual a data prevista para a universalização do"
+                    " tratamento de esgoto?"
                 ),
                 "7.6": (
                     "O Plano contempla metas de drenagem e manejo de águas"
@@ -513,7 +515,8 @@ class SistemaHAL:
                 ),
                 "7.7": (
                     "O Município realiza o monitoramento e avaliação das ações"
-                    " e metas de abastecimento de água e esgotamento sanitário?"
+                    " e metas de abastecimento de água e esgotamento"
+                    " sanitário?"
                 ),
                 "7.7.1": (
                     "Informe de qual forma é realizado este monitoramento e"
@@ -549,8 +552,8 @@ class SistemaHAL:
                     " Resíduos Sólidos."
                 ),
                 "8.2": (
-                    "Informe a página eletrônica (link na internet) para acesso"
-                    " ao Plano."
+                    "Informe a página eletrônica (link na internet) para"
+                    " acesso ao Plano."
                 ),
                 "8.3": (
                     "O Plano apresenta a caracterização qualitativa e"
@@ -639,7 +642,9 @@ class SistemaHAL:
                 "11.1": (
                     "Informe o instrumento normativo que regulamenta o PGRCC."
                 ),
-                "11.2": "Informe a página eletrônica (link na internet) do PGRCC.",
+                "11.2": (
+                    "Informe a página eletrônica (link na internet) do PGRCC."
+                ),
                 "11.3": (
                     "Existe um cronograma de metas definido no âmbito do PGRCC?"
                 ),
@@ -806,8 +811,7 @@ class SistemaHAL:
                     " derramamentos?"
                 ),
             },
-        }
-        "iPlan": {
+            "iPlan": {
                 "1.0": (
                     "Prefeitura realizou audiências públicas para elaboração das"
                     " peças orçamentárias?"
@@ -991,7 +995,6 @@ class SistemaHAL:
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # respostas_iamb e respostas_iplan utilizam a coluna 'quesito' ao invés de 'id'
                 if tabela in ["respostas_iamb", "respostas_iplan"]:
                     query = f"SELECT * FROM {tabela} WHERE quesito::text = %s AND ano = %s;"
                 else:
@@ -1012,7 +1015,6 @@ class SistemaHAL:
 
                     pontos_val = dados.get("pontos", dados.get("pontuacao", 0))
 
-                    # Trata o campo 'detalhes' (jsonb ou string) e campos clássicos 'link'/'comentarios'
                     link = dados.get("link")
                     comentarios = dados.get("comentarios")
                     detalhes_campo = dados.get("detalhes")
@@ -1084,173 +1086,6 @@ def mostrar_chat_hal():
             quesito_selecionado = st.selectbox(
                 "Selecione o Quesito:", quesitos
             )
-            # Extrai apenas o código (ex: "1.0" de "1.0 - Texto...")
-            codigo_quesito = quesito_selecionado.split(" - ")[0]
-
-            ano = st.number_input(
-                "Ano:", min_value=2000, max_value=2030, value=2026
-            )
-
-            if st.button("Buscar Resposta"):
-                resultado = hal.get_resposta_municipio(
-                    dim_selecionada, codigo_quesito, ano
-                )
-
-                st.subheader(f"Resposta: {resultado['resposta']}")
-                st.write(f"**Detalhes:** {resultado['detalhes']}")
-                st.write(
-                    f"**Pontuação:** {resultado['pontuacao_obtida']} pontos"
-                )
-
-
-def main():
-    """Ponto de entrada do script."""
-    mostrar_chat_hal()
-
-
-if __name__ == "__main__":
-    main()
-
-    def get_db_connection(self):
-        return criar_conexao_direta()
-
-    def get_dimensoes(self):
-        return list(self.questoes_por_dimensao.keys())
-
-    def get_quesitos_por_dimensao(self, dimensao):
-        if dimensao in self.questoes_por_dimensao:
-            return [
-                f"{codigo} - {texto}"
-                for codigo, texto in self.questoes_por_dimensao[
-                    dimensao
-                ].items()
-            ]
-        return []
-
-    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca a resposta na tabela correspondente à dimensão fornecida."""
-
-        tabelas_map = {
-            "iCidade": "respostas",
-            "iGov-Ti": "respostas_igov",
-            "i-Amb": "respostas_iamb",
-        }
-
-        if dimensao not in tabelas_map:
-            return {
-                "resposta": "Dimensão em teste",
-                "detalhes": (
-                    f"A dimensão '{dimensao}' não possui tabela configurada."
-                ),
-                "pontuacao_obtida": 0,
-            }
-
-        tabela = tabelas_map[dimensao]
-
-        conn, erro = criar_conexao_direta()
-        if not conn:
-            return {
-                "resposta": "Sem conexão",
-                "detalhes": f"Erro de conexão com o Neon: {erro}",
-                "pontuacao_obtida": 0,
-            }
-
-        try:
-            with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # respostas_iamb utiliza a coluna 'quesito' ao invés de 'id'
-                if tabela == "respostas_iamb":
-                    query = f"SELECT * FROM {tabela} WHERE quesito::text = %s AND ano = %s;"
-                else:
-                    query = f"SELECT * FROM {tabela} WHERE id::text = %s AND ano = %s;"
-
-                cur.execute(query, (str(codigo_quesito), int(ano)))
-                resultado = cur.fetchone()
-
-                if resultado:
-                    dados = dict(resultado)
-
-                    resp_val = (
-                        dados.get("valor")
-                        or dados.get("resposta")
-                        or dados.get("texto")
-                        or "Resposta cadastrada sem texto"
-                    )
-
-                    pontos_val = dados.get("pontos", dados.get("pontuacao", 0))
-
-                    # Trata o campo 'detalhes' (jsonb ou string) e campos clássicos 'link'/'comentarios'
-                    link = dados.get("link")
-                    comentarios = dados.get("comentarios")
-                    detalhes_campo = dados.get("detalhes")
-
-                    detalhe_texto = []
-                    if link and str(link) not in ["EMPTY_STRING", "None", ""]:
-                        detalhe_texto.append(f"Link: {link}")
-
-                    if comentarios and str(comentarios) not in [
-                        "EMPTY_STRING",
-                        "[]",
-                        "None",
-                        "",
-                    ]:
-                        detalhe_texto.append(f"Comentários: {comentarios}")
-
-                    if detalhes_campo and str(detalhes_campo) not in [
-                        "EMPTY_STRING",
-                        "{}",
-                        "[]",
-                        "None",
-                        "",
-                    ]:
-                        detalhe_texto.append(f"Detalhes: {detalhes_campo}")
-
-                    txt_detalhes = (
-                        " | ".join(detalhe_texto)
-                        if detalhe_texto
-                        else "Sem observações adicionais."
-                    )
-
-                    return {
-                        "resposta": resp_val,
-                        "detalhes": txt_detalhes,
-                        "pontuacao_obtida": pontos_val,
-                    }
-                else:
-                    return {
-                        "resposta": "Sem registro",
-                        "detalhes": (
-                            f"Nenhum registro encontrado em {tabela} para o"
-                            f" item {codigo_quesito} no ano {ano}."
-                        ),
-                        "pontuacao_obtida": 0,
-                    }
-        except Exception as e:
-            return {
-                "resposta": "Erro na consulta",
-                "detalhes": f"Erro SQL ao consultar {tabela}: {e}",
-                "pontuacao_obtida": 0,
-            }
-        finally:
-            if conn:
-                conn.close()
-
-
-def mostrar_chat_hal():
-    """Função para desenhar a interface do Streamlit."""
-    st.title("Sistema HAL - Consulta")
-
-    hal = SistemaHAL()
-
-    dimensoes = hal.get_dimensoes()
-    if dimensoes:
-        dim_selecionada = st.selectbox("Selecione a Dimensão:", dimensoes)
-
-        quesitos = hal.get_quesitos_por_dimensao(dim_selecionada)
-        if quesitos:
-            quesito_selecionado = st.selectbox(
-                "Selecione o Quesito:", quesitos
-            )
-            # Extrai apenas o código (ex: "1.0" de "1.0 - Texto...")
             codigo_quesito = quesito_selecionado.split(" - ")[0]
 
             ano = st.number_input(
