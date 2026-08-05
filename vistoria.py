@@ -4,6 +4,9 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 
+# SENHA DE ACESSO AO MÓDULO
+SENHA_ACESSO = "fidelios"
+
 # --- DICIONÁRIO DE ESCOLAS E SUAS MODALIDADES ---
 ESCOLAS_DATA = {
     "E.M. Alfredo Volpi": "Creche",
@@ -88,7 +91,7 @@ QUESTIONARIO_SECOES = {
         "3.2 Ventilação natural, com janelas em bom estado de conservação",
         "3.3 Ventilação artificial (ventilador)",
         "3.4 Limpeza dos filtros (possuem registros e atualizados)",
-        "3.5 Áreas iluminadas naturally ou artificialmente",
+        "3.5 Áreas iluminadas naturalmente ou artificialmente",
         "3.6 Nas chuvas, as salas de aula estão protegidas contra a água",
     ],
     "4. SALA DE ATIVIDADES EDUCATIVAS, UNIFORME E EQUIPAMENTOS": [
@@ -193,7 +196,7 @@ def init_db():
             tipo_local TEXT,
             nome_local TEXT,
             modalidade TEXT,
-            auditor TEXT,
+            servidor_responsavel TEXT,
             status TEXT,
             resumo_apontamentos TEXT,
             dados_questionario TEXT
@@ -203,16 +206,16 @@ def init_db():
     conn.commit()
     conn.close()
 
-def salvar_vistoria(ano, data_vistoria, tipo_local, nome_local, modalidade, auditor, status, resumo_apontamentos, dados_questionario):
+def salvar_vistoria(ano, data_vistoria, tipo_local, nome_local, modalidade, servidor_responsavel, status, resumo_apontamentos, dados_questionario):
     """Salva a vistoria completa e o questionario em formato JSON."""
     conn = sqlite3.connect("sistema_gestao.db")
     c = conn.cursor()
     c.execute(
         """
-        INSERT INTO vistorias (ano, data_vistoria, tipo_local, nome_local, modalidade, auditor, status, resumo_apontamentos, dados_questionario)
+        INSERT INTO vistorias (ano, data_vistoria, tipo_local, nome_local, modalidade, servidor_responsavel, status, resumo_apontamentos, dados_questionario)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
-        (ano, data_vistoria, tipo_local, nome_local, modalidade, auditor, status, resumo_apontamentos, json.dumps(dados_questionario, ensure_ascii=False)),
+        (ano, data_vistoria, tipo_local, nome_local, modalidade, servidor_responsavel, status, resumo_apontamentos, json.dumps(dados_questionario, ensure_ascii=False)),
     )
     conn.commit()
     conn.close()
@@ -220,14 +223,54 @@ def salvar_vistoria(ano, data_vistoria, tipo_local, nome_local, modalidade, audi
 def carregar_vistorias(ano):
     """Carrega o histórico de vistorias."""
     conn = sqlite3.connect("sistema_gestao.db")
-    df = pd.read_sql_query("SELECT id, data_vistoria, tipo_local, nome_local, modalidade, auditor, status, resumo_apontamentos FROM vistorias WHERE ano = ? ORDER BY id DESC", conn, params=(ano,))
+    df = pd.read_sql_query("SELECT id, data_vistoria, tipo_local, nome_local, modalidade, servidor_responsavel, status, resumo_apontamentos FROM vistorias WHERE ano = ? ORDER BY id DESC", conn, params=(ano,))
     conn.close()
     return df
 
+def verificar_autenticacao():
+    """Controla o acesso restrito por senha no módulo."""
+    if "vistoria_autenticado" not in st.session_state:
+        st.session_state["vistoria_autenticado"] = False
+
+    if not st.session_state["vistoria_autenticado"]:
+        st.markdown("## 🔒 Acesso Restrito — Módulo de Vistorias")
+        st.info("Este módulo requer autenticação prévia para acesso às fichas e registros de fiscalização.")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            senha_input = st.text_input("Digite a senha de acesso:", type="password", key="input_senha_vistoria")
+        with col2:
+            st.write("") # Espaçamento
+            st.write("")
+            btn_acessar = st.button("🔓 Acessar Módulo", use_container_width=True)
+
+        if btn_acessar or senha_input:
+            if senha_input == SENHA_ACESSO:
+                st.session_state["vistoria_autenticado"] = True
+                st.success("Acesso liberado!")
+                st.rerun()
+            else:
+                st.error("Senha incorreta! Tente novamente.")
+        return False
+    return True
+
 def mostrar_painel_vistoria(year):
     init_db()
-    st.markdown("## 🔍 Controle Interno — Módulo de Vistorias In Loco")
-    st.caption(f"Exercício: **{year}**")
+
+    # Validação da senha de acesso
+    if not verificar_autenticacao():
+        return
+
+    # Cabeçalho principal com opção de logout
+    col_head, col_logout = st.columns([5, 1])
+    with col_head:
+        st.markdown("## 🔍 Controle Interno — Módulo de Vistorias In Loco")
+        st.caption(f"Exercício: **{year}**")
+    with col_logout:
+        st.write("")
+        if st.button("🔒 Sair", use_container_width=True):
+            st.session_state["vistoria_autenticado"] = False
+            st.rerun()
 
     tab1, tab2 = st.tabs(["📝 Novo Checklist de Vistoria", "📊 Painel & Histórico"])
 
@@ -238,8 +281,12 @@ def mostrar_painel_vistoria(year):
         col1, col2 = st.columns(2)
         with col1:
             tipo_local = st.selectbox("Tipo de Local", ["Escola Municipal", "Equipamento Esportivo / Outro"])
-            data_vistoria = st.date_input("Data da Vistoria", datetime.now())
-            auditor = st.text_input("Auditor / Fiscal Responsável", placeholder="Ex: Maria Oliveira")
+            data_vistoria = st.date_input(
+                "Data da Vistoria (DD/MM/AAAA)",
+                datetime.now(),
+                format="DD/MM/YYYY"
+            )
+            servidor_responsavel = st.text_input("Servidor/Responsável", placeholder="Ex: Maria Oliveira")
 
         with col2:
             if tipo_local == "Escola Municipal":
@@ -312,7 +359,7 @@ def mostrar_painel_vistoria(year):
 
         # Upload de Imagens / Evidências Fotográficas
         fotos_evidencia = st.file_uploader(
-            "📷 Adicionar Fotos da Vistoria (Evidências Visual):",
+            "📷 Adicionar Fotos da Vistoria (Evidência Visual):",
             type=["png", "jpg", "jpeg"],
             accept_multiple_files=True,
         )
@@ -326,8 +373,8 @@ def mostrar_painel_vistoria(year):
 
         st.markdown("---")
         if st.button("💾 Finalizar e Salvar Relatório de Vistoria", use_container_width=True):
-            if not auditor:
-                st.error("Por favor, preencha o nome do auditor responsável antes de salvar.")
+            if not servidor_responsavel:
+                st.error("Por favor, preencha o nome do Servidor/Responsável antes de salvar.")
             else:
                 salvar_vistoria(
                     year,
@@ -335,7 +382,7 @@ def mostrar_painel_vistoria(year):
                     tipo_local,
                     nome_local,
                     modalidade,
-                    auditor,
+                    servidor_responsavel,
                     status,
                     resumo_apontamentos,
                     respostas_questionario,
@@ -364,7 +411,7 @@ def mostrar_painel_vistoria(year):
                     "tipo_local": "Tipo",
                     "nome_local": "Unidade / Local",
                     "modalidade": "Modalidade",
-                    "auditor": "Auditor",
+                    "servidor_responsavel": "Servidor/Responsável",
                     "status": "Status Geral",
                     "resumo_apontamentos": "Resumo de Inconformidades",
                 },
