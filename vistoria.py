@@ -184,9 +184,11 @@ QUESTIONARIO_CRECHE = {
 }
 
 def init_db():
-    """Inicializa a tabela de vistorias estruturada no banco SQLite."""
+    """Inicializa a tabela de vistorias e garante a compatibilidade das colunas."""
     conn = sqlite3.connect("sistema_gestao.db")
     c = conn.cursor()
+    
+    # 1. Cria a tabela caso ela não exista
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS vistorias (
@@ -203,6 +205,17 @@ def init_db():
         )
     """
     )
+    
+    # 2. Verifica se a tabela tem a coluna antiga 'auditor' e atualiza para 'servidor_responsavel'
+    c.execute("PRAGMA table_info(vistorias)")
+    colunas = [col[1] for col in c.fetchall()]
+    
+    if "auditor" in colunas and "servidor_responsavel" not in colunas:
+        try:
+            c.execute("ALTER TABLE vistorias RENAME COLUMN auditor TO servidor_responsavel")
+        except Exception:
+            pass
+
     conn.commit()
     conn.close()
 
@@ -240,7 +253,7 @@ def verificar_autenticacao():
         with col1:
             senha_input = st.text_input("Digite a senha de acesso:", type="password", key="input_senha_vistoria")
         with col2:
-            st.write("") # Espaçamento
+            st.write("")
             st.write("")
             btn_acessar = st.button("🔓 Acessar Módulo", use_container_width=True)
 
