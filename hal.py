@@ -947,6 +947,346 @@ class SistemaHAL:
                 ),
             },
         }
+        "iFiscal": {
+                "1.0": (
+                    "Há estrutura administrativa voltada para a administração"
+                    " tributária?"
+                ),
+                "1.1": (
+                    "O Município possui lei que defina a estrutura"
+                    " organizacional da Administração Tributária?"
+                ),
+                "1.2": (
+                    "Qual o número de cargos de fiscais/auditores tributários"
+                    " preenchidos?"
+                ),
+                "1.3": (
+                    "Os fiscais tributários recebem treinamento específico para"
+                    " execução das atividades inerentes ao cargo?"
+                ),
+                "1.4": (
+                    "O Município possui Plano de Cargos e Salários específico"
+                    " para seus fiscais tributários?"
+                ),
+                "1.4.1": (
+                    "Informe o instrumento normativo de regulamentação do Plano"
+                    " de Cargos e Salários específico para seus fiscais"
+                    " tributários."
+                ),
+                "1.4.2": (
+                    "Informe a página eletrônica de divulgação do Plano de"
+                    " Cargos e Salários específico para os fiscais tributários."
+                ),
+                "1.5": (
+                    "Há segregação de funções entre os setores de lançadoria,"
+                    " arrecadação, fiscalização e contabilidade?"
+                ),
+                "1.5.1": (
+                    "Há segregação nas permissões de acesso do sistema, com"
+                    " identificação do usuário e registro das transações"
+                    " efetuadas?"
+                ),
+                "2.0": (
+                    "O servidor responsável pela contabilidade do município é"
+                    " ocupante de cargo de provimento efetivo?"
+                ),
+                "3.0": (
+                    "O Município adotou medidas efetivas para aumento da"
+                    " arrecadação?"
+                ),
+                "3.1": (
+                    "Assinale as medidas implementadas para aumento da"
+                    " arrecadação."
+                ),
+                "4.0": (
+                    "Foi instituído procedimento de revisão do cadastro"
+                    " imobiliário estabelecendo a sua periodicidade?"
+                ),
+                "4.1": (
+                    "Informe o instrumento normativo e endereço eletrônico de"
+                    " divulgação do procedimento de revisão do cadastro"
+                    " imobiliário."
+                ),
+                "4.2": (
+                    "Qual a periodicidade da revisão geral do Cadastro"
+                    " Imobiliário?"
+                ),
+                "4.3": (
+                    "O cadastro imobiliário está com a revisão periódica ou"
+                    " geral atualizada?"
+                ),
+                "5.0": (
+                    "O instrumento da Planta Genérica de Valores (PGV) foi"
+                    " aprovado por lei?"
+                ),
+                "5.1": "Informe o instrumento normativo de aprovação da PGV.",
+                "5.2": "Informe a página eletrônica de divulgação da PGV.",
+                "5.3": (
+                    "O Código Tributário Municipal prevê revisão periódica"
+                    " obrigatória da PGV?"
+                ),
+                "5.3.1": (
+                    "Informe o instrumento normativo de revisão da PGV."
+                ),
+                "5.3.2": (
+                    "Informe a página eletrônica de divulgação da revisão da"
+                    " PGV."
+                ),
+                "5.3.3": "Informe a data da última revisão da PGV.",
+                "5.3.4": "Informe a periodicidade de revisão da PGV.",
+                "5.4": (
+                    "Os dados da PGV e do Cadastro Imobiliário atualizam a base"
+                    " de cálculo do IPTU?"
+                ),
+                "6.0": (
+                    "Sobre a alíquota do IPTU, quais critérios o município"
+                    " instituiu para a cobrança do imposto?"
+                ),
+                "7.0": "O município adotou programa de isenção do IPTU?",
+                "7.1": (
+                    "Informe o instrumento normativo de regulamentação do"
+                    " programa de isenção do IPTU."
+                ),
+                "7.2": (
+                    "Informe a página eletrônica de divulgação do programa de"
+                    " isenção do IPTU."
+                ),
+                "7.3": (
+                    "Assinale os critérios estabelecidos para a concessão de"
+                    " isenção total ou parcial do IPTU."
+                ),
+                "8.0": "O ISSQN foi instituído no município?",
+                "8.1": (
+                    "O Município atualizou sua legislação conforme a LC"
+                    " 157/2016?"
+                ),
+                "8.2": (
+                    "Houve rotina de fiscalização para detectar sonegação do"
+                    " ISSQN?"
+                ),
+                "8.3": (
+                    "A pesquisa de autenticidade de notas fiscais eletrônicas"
+                    " está disponível ao público?"
+                ),
+                "9.0": "O ITBI foi regulamentado?",
+                "9.1": (
+                    "Informe o instrumento normativo de regulamentação do ITBI."
+                ),
+                "9.2": (
+                    "Informe a página eletrônica de divulgação da"
+                    " regulamentação do ITBI."
+                ),
+                "9.3": (
+                    "Assinale a forma de registro e emissão da guia de"
+                    " recolhimento do ITBI."
+                ),
+                "9.4": (
+                    "O município instituiu norma para comunicação periódica dos"
+                    " Cartórios sobre transmissões imobiliárias?"
+                ),
+                "9.4.1": (
+                    "O município aplica penalidade ou multa aos Cartórios pelo"
+                    " descumprimento?"
+                ),
+                "9.5": "Assinale a forma de recolhimento da guia do ITBI.",
+                "9.6": (
+                    "O município estabelece alíquotas progressivas para o ITBI?"
+                ),
+                "10.0": "A CIP/COSIP foi instituída?",
+                "10.1": "Informe o instrumento normativo de instituição da CIP.",
+                "10.2": "Informe a página eletrônica de divulgação da CIP.",
+                "10.3": (
+                    "Os recursos da CIP foram movimentados em contas"
+                    " específicas?"
+                ),
+                "11.0": (
+                    "Houve regulamentação sobre a retenção de IRRF das"
+                    " contratações efetuadas pelo município?"
+                ),
+                "12.0": (
+                    "Houve concessão de benefícios e incentivos com renúncia de"
+                    " receita em 2025?"
+                ),
+                "12.1": (
+                    "Há normas e procedimentos relativos à renúncia de receita?"
+                ),
+                "12.1.1": (
+                    "Informe o instrumento normativo de regulamentação dos"
+                    " procedimentos relativos à renúncia de receita."
+                ),
+                "12.1.2": (
+                    "Informe a página eletrônica de divulgação da"
+                    " regulamentação."
+                ),
+                "12.2": (
+                    "A Prefeitura realizou acompanhamento e reavaliação das"
+                    " renúncias de receita?"
+                ),
+                "12.3": (
+                    "O Anexo de Metas Fiscais contém demonstrativo da estimativa"
+                    " e compensação da renúncia de receita?"
+                ),
+                "12.3.1": (
+                    "O valor da renúncia de receita de 2025 está compatível com"
+                    " a estimativa constante na LDO?"
+                ),
+                "12.4": "Informe o valor das renúncias no exercício de 2025.",
+                "12.5": (
+                    "Houve publicidade e transparência dos benefícios"
+                    " concedidos por renúncia de receitas?"
+                ),
+                "12.5.1": (
+                    "Assinale as informações divulgadas referentes aos"
+                    " benefícios concedidos."
+                ),
+                "12.5.2": (
+                    "Informe a página eletrônica de divulgação dessas"
+                    " informações."
+                ),
+                "13.0": "O município possui regulamentação sobre dívida ativa?",
+                "13.1": (
+                    "Informe o instrumento normativo de regulamentação da"
+                    " dívida ativa."
+                ),
+                "13.2": (
+                    "Informe a página eletrônica de divulgação da regulamentação"
+                    " da dívida ativa."
+                ),
+                "13.3": (
+                    "Assinale os critérios estabelecidos na legislação sobre"
+                    " dívida ativa."
+                ),
+                "14.0": (
+                    "O Município possui dívida ativa executada de forma judicial"
+                    " em 2025?"
+                ),
+                "14.1": (
+                    "Informe o valor total da dívida ativa executada"
+                    " judicialmente em 2025."
+                ),
+                "15.0": (
+                    "A Prefeitura realiza cobrança de dívida ativa de forma"
+                    " extrajudicial?"
+                ),
+                "15.1": (
+                    "Informe o valor total da dívida ativa cobrada"
+                    " extrajudicialmente em 2025."
+                ),
+                "15.2": (
+                    "Assinale as modalidades de cobrança extrajudicial da"
+                    " dívida ativa."
+                ),
+                "16.0": "No exercício de 2025 houve dívidas prescritas?",
+                "16.1": (
+                    "Informe o valor da dívida ativa prescrita na execução"
+                    " judicial em 2025."
+                ),
+                "16.2": (
+                    "Informe o valor da dívida ativa cobrada de forma"
+                    " extrajudicial prescrita em 2025."
+                ),
+                "16.3": (
+                    "O montante da dívida ativa prescrita estava registrado na"
+                    " conta de Provisão para Perdas de Dívida Ativa?"
+                ),
+                "17.0": (
+                    "A Prefeitura possui controle das ações judiciais em que é"
+                    " parte (polo passivo)?"
+                ),
+                "17.1": (
+                    "Descreva de que forma é realizado o controle dessas ações."
+                ),
+                "17.2": (
+                    "Qual o valor atualizado em 31/12/2025 de todas as ações"
+                    " judiciais em que é parte?"
+                ),
+                "18.0": (
+                    "Os dados relativos à transparência na gestão fiscal são"
+                    " divulgados na página eletrônica do Município?"
+                ),
+                "18.1": (
+                    "Assinale os itens divulgados na página eletrônica do"
+                    " Município."
+                ),
+                "19.0": "Houve divulgação das receitas arrecadadas em tempo real?",
+                "19.1": "Assinale os itens da receita divulgados em tempo real.",
+                "20.0": "Houve divulgação das despesas executadas em tempo real?",
+                "20.1": (
+                    "Assinale os itens das despesas divulgados em tempo real."
+                ),
+                "21.0": (
+                    "Houve divulgação de remuneração individualizada por nome"
+                    " do agente público?"
+                ),
+                "21.1": (
+                    "Informe a página eletrônica de divulgação da remuneração"
+                    " individualizada."
+                ),
+                "22.0": (
+                    "Houve divulgação de diárias e passagens por nome de"
+                    " favorecido?"
+                ),
+                "22.1": (
+                    "Informe a página eletrônica de divulgação de diárias e"
+                    " passagens."
+                ),
+                "23.0": (
+                    "Os repasses para o RGPS da competência de 2025 foram"
+                    " realizados em qual prazo?"
+                ),
+                "24.0": (
+                    "A Prefeitura aderiu a parcelamento de encargos sociais"
+                    " junto ao RGPS?"
+                ),
+                "24.1": (
+                    "As parcelas referentes ao parcelamento com vencimento em"
+                    " 2025 foram pagas em qual prazo?"
+                ),
+                "25.0": (
+                    "O Município efetuou compensação de encargos sociais junto"
+                    " à Receita Federal do Brasil?"
+                ),
+                "25.1": (
+                    "Houve autorização formal da Receita Federal ou decisão"
+                    " judicial para realizar as compensações?"
+                ),
+                "26.0": (
+                    "Gostaria de registrar suas impressões, comentários e"
+                    " sugestões a respeito do presente questionário?"
+                ),
+                "F1": "Análise da Receita (Execução Orçamentária)",
+                "F2": "Análise da Despesa (Execução Orçamentária)",
+                "F3": "Análise do Resultado da Execução Orçamentária",
+                "F4": (
+                    "Análise do Esforço para Pagamento de Restos a Pagar até o"
+                    " Bimestre"
+                ),
+                "F5": "Análise do Nível de Cancelamento de Restos a Pagar",
+                "F6": "Despesas com Pessoal – Poder Executivo",
+                "F7": "Despesas com Pessoal – Poder Legislativo",
+                "F8": (
+                    "Apuração do Resultado Financeiro (Superávit/Déficit)"
+                ),
+                "F9": "Apuração da Dívida Fundada (Aumento/Redução)",
+                "F10": "Apuração dos Pagamentos dos Precatórios",
+                "F11": "Repasse de Duodécimos às Câmaras",
+                "F12": "Pontualidade na Prestação de Contas",
+                "F13": "Dívida Ativa: Percentual de Recebimento",
+                "F14": "Dívida Ativa: Percentual de Cancelamento",
+                "F15": "Alertas do Sistema AUDESP",
+                "F16": "Balancetes Rejeitados",
+                "F17": "Resultado Primário (Operacional)",
+                "F18": "Índice de Liquidez Imediata",
+                "F19": "Limite de Endividamento – Regra de Ouro",
+                "F20": "Percentual da Taxa de Investimento",
+                "F21": "Relação entre Despesas Correntes e Receitas Correntes",
+                "F22": "Liquidez dos Restos a Pagar",
+                "F23": (
+                    "Análise das Despesas Assumidas nos Últimos Quatro"
+                    " Bimestres"
+                ),
+            },
+        }
 
     def get_db_connection(self):
         return criar_conexao_direta()
@@ -972,6 +1312,7 @@ class SistemaHAL:
             "iGov-Ti": "respostas_igov",
             "i-Amb": "respostas_iamb",
             "iPlan": "respostas_iplan",
+            "iFiscal": "respostas_ifiscal",  # 👈 Adicionada nova dimensão
         }
 
         if dimensao not in tabelas_map:
@@ -995,7 +1336,12 @@ class SistemaHAL:
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                if tabela in ["respostas_iamb", "respostas_iplan"]:
+                # 👈 Tabela respostas_ifiscal utiliza 'quesito' ao invés de 'id'
+                if tabela in [
+                    "respostas_iamb",
+                    "respostas_iplan",
+                    "respostas_ifiscal",
+                ]:
                     query = f"SELECT * FROM {tabela} WHERE quesito::text = %s AND ano = %s;"
                 else:
                     query = f"SELECT * FROM {tabela} WHERE id::text = %s AND ano = %s;"
@@ -1111,3 +1457,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+   
