@@ -22,16 +22,155 @@ class SistemaHAL:
         self.carregar_dicionarios_globais()
 
     def carregar_dicionarios_globais(self):
-        # Apenas iCidade configurado para este teste
+        # Dicionário unificado com as 3 dimensões operacionais
         self.questoes_por_dimensao = {
             "iCidade": {
                 "1.0": (
                     "Foi criada a Coordenadoria Municipal de Proteção e Defesa"
-                    " Civil (COMPDEC)..."
+                    " Civil (COMPDEC) ou órgão similar responsável pela"
+                    " execução, coordenação e mobilização de todas as ações de"
+                    " defesa civil no município?"
                 ),
                 "1.3": (
                     "A COMPDEC ou órgão similar está associada ou subordinada"
                     " a qual secretaria/diretoria?"
+                ),
+                "1.4": (
+                    "Os órgãos e entidades da administração pública municipal"
+                    " atuam de forma sistêmica, articulados com a COMPDEC, nas"
+                    " ações de prevenção, mitigação, preparação, resposta e"
+                    " recuperação, de acordo com a Política Nacional de"
+                    " Proteção e Defesa Civil (PNPDEC)?"
+                ),
+                "2.0": (
+                    "Sobre treinamento e capacitação em Proteção e Defesa"
+                    " Civil, a Prefeitura capacita seus agentes para ações"
+                    " municipais de Defesa Civil?"
+                ),
+                "2.1": (
+                    "Qual a data da última classificação dos agentes"
+                    " municipais para ações de Defesa Civil?"
+                ),
+                "2.2": (
+                    "A Prefeitura Municipal ofereceu cursos/treinamentos sobre"
+                    " Proteção e Defesa Civil para qual público?"
+                ),
+                "3.0": (
+                    "O Município realiza ações para estimular a participação de"
+                    " entidades privadas, associações de voluntários, clubes"
+                    " de serviços, organizações não governamentais e"
+                    " associações de classe e comunitárias nas ações de"
+                    " proteção e defesa civil?"
+                ),
+                "3.1.1": (
+                    "Qual a data do último treinamento de associações de"
+                    " voluntários?"
+                ),
+                "4.2": (
+                    "A Carta Geotécnica de Suscetibilidade, Aptidão à"
+                    " Urbanização e Risco consta no Plano Diretor, conforme"
+                    " art. 42-A, §§ 1º, 2º e 3º, da Lei Federal nº 10.257, de"
+                    " 10 de julho de 2001?"
+                ),
+                "5.0": (
+                    "O Município realizou, por conta própria, o mapeamento e"
+                    " identificação das principais ameaças existentes em seu"
+                    " território?"
+                ),
+                "5.1.1": (
+                    "As secretarias setoriais realizam a fiscalização das áreas"
+                    " de risco?"
+                ),
+                "5.2": (
+                    "A população foi informada sobre todas as ameaças"
+                    " identificadas pelo município?"
+                ),
+                "6.0": (
+                    "A Secretaria responsável realizou vistorias in edificações"
+                    " vulneráveis com o objetivo de identificar a necessidade"
+                    " de intervenção preventiva nos imóveis?"
+                ),
+                "7.0": (
+                    "O Município possui Plano de Contingência Municipal"
+                    " (PLANCON) de Defesa Civil?"
+                ),
+                "7.1": (
+                    "Foi elaborado um PLANCON específico para cada ameaça"
+                    " identificada?"
+                ),
+                "7.2": (
+                    "São realizados regularmente exercícios simulados para as"
+                    " contingências previstas no PLANCON?"
+                ),
+                "7.3": "O Município possui sistema de alerta para desastres?",
+                "7.4": (
+                    "O Município dispõe de sinal, dispositivo ou sistema de"
+                    " alarme para desastres?"
+                ),
+                "7.5": (
+                    "Possui cadastro dos locais para abrigo da população em"
+                    " situação de desastre junto à Coordenadoria Estadual de"
+                    " Proteção e Defesa Civil (CEPDEC)?"
+                ),
+                "7.6": (
+                    "O Município possui cadastro da lista de fornecedores para"
+                    " coleta e distribuição de suprimentos de ajuda humanitária"
+                    " para o caso de desastre?"
+                ),
+                "8.0": (
+                    "O Município possui um canal de atendimento de emergência à"
+                    " população para registro de ocorrências de desastres?"
+                ),
+                "8.1.1.1": "O telefone 199 tem atendimento 24 horas por dia?",
+                "8.2": (
+                    "O Município registra as ocorrências de Defesa Civil de"
+                    " forma eletrônica?"
+                ),
+                "9.0": (
+                    "O Município realizou estudo de avaliação da estrutura de"
+                    " todas as escolas e unidades de saúde para garantir que,"
+                    " em caso de desastre, esses locais estejam preparados para"
+                    " abrigar e atender a população afetada?"
+                ),
+                "10.0": "O Município elaborou seu Plano de Mobilidade Urbana?",
+                "11.1": (
+                    "Foram estabelecidas metas de qualidade e desempenho para"
+                    " o transporte público coletivo municipal?"
+                ),
+                "11.1.1": (
+                    "As metas de qualidade e desempenho do transporte público"
+                    " coletivo estão sendo atingidas?"
+                ),
+                "11.2": (
+                    "Foi realizada pesquisa de satisfação dos usuários do"
+                    " transporte público coletivo em 2025?"
+                ),
+                "12.1": (
+                    "Informe o instrumento normativo, número e data da"
+                    " publicação do transporte regulamentado."
+                ),
+                "12.1.3": (
+                    "O Município fiscaliza regularmente o transporte"
+                    " remunerado privado individual de passageiros (táxi por"
+                    " aplicativo)?"
+                ),
+                "14.0": (
+                    "O Município adequou os calçamentos públicos para"
+                    " acessibilidade das pessoas com deficiência e restrição"
+                    " de mobilidade?"
+                ),
+                "15.0": (
+                    "As vias públicas pavimentadas estão devidamente"
+                    " sinalizadas (vertical e horizontalmente) de forma a"
+                    " garantir condições adequadas de segurança na"
+                    " circulação?"
+                ),
+                "16.0": (
+                    "Há manutenção adequada das vias públicas no Município?"
+                ),
+                "C1.1": (
+                    "Indique os pontos de controle externos da auditoria ou"
+                    " controle de metas vigentes."
                 ),
             }
         }
@@ -62,7 +201,6 @@ class SistemaHAL:
                 "pontuacao_obtida": 0,
             }
 
-        # Apontando para a tabela 'respostas' visível no Neon
         tabela = "respostas"
 
         conn, erro = criar_conexao_direta()
