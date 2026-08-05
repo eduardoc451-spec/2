@@ -22,7 +22,7 @@ class SistemaHAL:
         self.carregar_dicionarios_globais()
 
     def carregar_dicionarios_globais(self):
-        # Dicionário unificado com as 3 dimensões operacionais
+        # Dicionário unificado com as dimensões operacionais
         self.questoes_por_dimensao = {
             "iCidade": {
                 "1.0": (
@@ -172,7 +172,219 @@ class SistemaHAL:
                     "Indique os pontos de controle externos da auditoria ou"
                     " controle de metas vigentes."
                 ),
-            }
+            },
+            "iGov-Ti": {
+                "1.0": (
+                    "A Prefeitura possui uma área ou setor que cuida de"
+                    " Tecnologia da Informação e Comunicação (TIC)?"
+                ),
+                "1.1": (
+                    "Informe a quantidade de funcionários concursados,"
+                    " comissionados e estagiários no suporte e atendimento de"
+                    " primeiro nível."
+                ),
+                "1.2": (
+                    "A prefeitura municipal definiu formalmente as atribuições"
+                    " do pessoal do setor de Tecnologia da Informação e"
+                    " Comunicação (TIC)?"
+                ),
+                "1.3": (
+                    "A prefeitura disponibilizou capacitação para o pessoal da"
+                    " área de Tecnologia da Informação e Comunicação (TIC)?"
+                ),
+                "1.3.1": "Informe em quais áreas houve capacitação.",
+                "1.4": (
+                    "Nas licitações e contratos que tenham como soluções o uso"
+                    " de TIC, houve participação formalizada do pessoal de TIC?"
+                    " (Verba municipal)"
+                ),
+                "1.4.1": "Assinale as etapas que o pessoal de TIC participa.",
+                "1.4.2": (
+                    "Sobre softwares adquiridos/licenciados nos últimos 5 anos,"
+                    " foi realizada análise ou estudo prévio com a participação"
+                    " de TIC?"
+                ),
+                "2.0": (
+                    "A prefeitura municipal possui um PDTIC vigente que"
+                    " estabeleça diretrizes e metas de atingimento no futuro?"
+                ),
+                "2.1": "Informe a página eletrônica (link na internet) do PDTIC.",
+                "2.2": (
+                    "O plano de TIC vigente contempla as metas operacionais"
+                    " estratégicas municipais?"
+                ),
+                "2.3": "Qual a data da última atualização do PDTIC?",
+                "3.0": (
+                    "A Prefeitura dispõe de Política de Segurança da"
+                    " Informação formalmente instituída e de cumprimento"
+                    " obrigatório?"
+                ),
+                "3.1": (
+                    "A Prefeitura establishes procedimentos e"
+                    " responsabilidades quanto ao uso de TI (Termo de"
+                    " Responsabilidade/Compromisso)?"
+                ),
+                "3.1.1": (
+                    "O Termo de Responsabilidade/Compromisso dispõe sobre o"
+                    " uso da assinatura eletrônica pelos funcionários?"
+                ),
+                "3.1.1.1": (
+                    "Informe o tipo de assinatura eletrônica utilizada nos"
+                    " documentos digitais."
+                ),
+                "3.2": (
+                    "Os riscos de TIC são identificados de acordo com as normas"
+                    " brasileiras da família ISO/IEC 27000?"
+                ),
+                "3.2.1": (
+                    "As secretarias realizam a fiscalização das áreas de risco?"
+                    " Informe quais normas ISO/IEC 27000 são utilizadas."
+                ),
+                "3.3": (
+                    "Os riscos de TIC são identificados de acordo com as normas"
+                    " da ABNT NBR ISO/IEC 31000?"
+                ),
+                "3.4": (
+                    "A Prefeitura possui um Plano de Continuidade dos Serviços"
+                    " de Tecnologia da Informação e Comunicação (TIC)?"
+                ),
+                "3.5": (
+                    "A Prefeitura dispõe de política de cópias de segurança"
+                    " (backup) formalmente instituída como norma obrigatória?"
+                ),
+                "3.6": "A Prefeitura possui inventário atualizado dos ativos de TIC?",
+                "3.6.1": "Como é composta a base de ativos?",
+                "4.0": (
+                    "O município regulamentou a Lei de Acesso à Informação (Lei"
+                    " Federal nº 12.527/2011)?"
+                ),
+                "4.1": (
+                    "Informe o Instrumento normativo, Número e Data da"
+                    " publicação (LAI)."
+                ),
+                "4.2": (
+                    "Página eletrônica (link na internet) do instrumento"
+                    " normativo da LAI."
+                ),
+                "5.0": (
+                    "O município regulamentou a Lei sobre Eficiência Pública"
+                    " (Governo Digital - Lei Federal nº 14.129/2021)?"
+                ),
+                "5.1": (
+                    "Informe o Instrumento normativo, Número e Data da"
+                    " publicação (Governo Digital)."
+                ),
+                "5.2": (
+                    "Página eletrônica (link na internet) do instrumento"
+                    " normativo (Governo Digital)."
+                ),
+                "5.3": (
+                    "A Prefeitura implantou soluções digitais para trâmite de"
+                    " processos administrativos?"
+                ),
+                "6.0": (
+                    "A prefeitura mantém site na internet com informações"
+                    " atualizadas?"
+                ),
+                "6.1": (
+                    "O site eletrônico da prefeitura continha ferramenta de"
+                    " pesquisa/busca interna de conteúdo?"
+                ),
+                "6.2": (
+                    "O site possibilita o download de dados e informações em"
+                    " formatos abertos e não proprietários?"
+                ),
+                "6.3": (
+                    "O site disponibiliza as respostas a perguntas mais"
+                    " frequentes da sociedade?"
+                ),
+                "6.4": (
+                    "O site disponibiliza acessibilidade de conteúdo para"
+                    " pessoas com deficiência?"
+                ),
+                "7.0": (
+                    "A Prefeitura disponibiliza no site o Serviço de"
+                    " Informação ao Cidadão (e-SIC)?"
+                ),
+                "7.1": "A solicitação por meio do e-SIC é simplificada?",
+                "7.2": (
+                    "O e-SIC apresenta possibilidade de acompanhamento da"
+                    " solicitação?"
+                ),
+                "7.3": (
+                    "Há necessidade de informar os motivos para a solicitação"
+                    " de informações de interesse público?"
+                ),
+                "8.0": (
+                    "A Prefeitura possui programas de computador (softwares)"
+                    " para gestão de processos?"
+                ),
+                "8.1": (
+                    "Os programas de computador (softwares) englobam quais"
+                    " processos/setores?"
+                ),
+                "8.2": (
+                    "Informe quais sistemas encontram-se integrados ao Sistema"
+                    " de Contabilidade do município."
+                ),
+                "8.2.1": (
+                    "Informe o nível de integração entre o Sistema da Dívida"
+                    " Ativa e o de Contabilidade."
+                ),
+                "8.2.2": (
+                    "Informe o nível de integração entre o Sistema de"
+                    " Precatórios e o de Contabilidade."
+                ),
+                "8.3": (
+                    "Assinale quais bases de dados encontram-se sob gestão"
+                    " direta da Prefeitura (Risco de Perdas)."
+                ),
+                "8.4": (
+                    "Assinale quais sistemas possuem controle de acesso à"
+                    " informação."
+                ),
+                "9.0": "A Prefeitura ofereceu serviços de forma online?",
+                "9.1": "Quais tipos de serviços são oferecidos online?",
+                "9.2": (
+                    "Quais as formas de atendimento à distância disponibilizadas"
+                    " ao público pela Prefeitura?"
+                ),
+                "10.0": (
+                    "A Prefeitura Municipal regulamentou o tratamento de dados"
+                    " pessoais, inclusive nos meios digitais, segundo a LGPD"
+                    " (Lei Federal nº 13.709/2018)?"
+                ),
+                "10.1": (
+                    "Informe o instrumento normativo, número e data da"
+                    " publicação."
+                ),
+                "10.2": "Informe a página eletrônica (link na internet).",
+                "10.3": (
+                    "Os contratos com os prestadores de serviços contêm"
+                    " cláusulas de observância à LGPD?"
+                ),
+                "10.4": (
+                    "A Prefeitura Municipal realizou mapeamento de dados (data"
+                    " mapping)?"
+                ),
+                "10.5": (
+                    "Foram adotadas medidas de segurança, técnicas e"
+                    " administrativas para proteção dos dados pessoais?"
+                ),
+                "10.5.1": "Informe as medidas adotadas.",
+                "11.0": (
+                    "A Prefeitura Municipal designou um encarregado para as"
+                    " operações de tratamento de dados pessoais?"
+                ),
+                "11.1": (
+                    "Informe a página eletrônica que contenha a identidade e as"
+                    " informações de contato do encarregado."
+                ),
+                "12.0": (
+                    "Gostaria de registrar suas impressões, comentários e"
+                    " sugestões a respeito do presente questionário?"
+                ),
+            },
         }
 
     def get_db_connection(self):
@@ -192,16 +404,22 @@ class SistemaHAL:
         return []
 
     def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca a resposta na tabela respostas fazendo cast do id para texto."""
+        """Busca a resposta na tabela correspondente à dimensão fornecida."""
 
-        if dimensao != "iCidade":
+        # Mapeamento dinâmico de tabelas
+        tabelas_map = {
+            "iCidade": "respostas",
+            "iGov-Ti": "respostas_igov",
+        }
+
+        if dimensao not in tabelas_map:
             return {
                 "resposta": "Dimensão em teste",
-                "detalhes": "Apenas a dimensão iCidade está ativa no momento.",
+                "detalhes": f"A dimensão '{dimensao}' não possui tabela configurada.",
                 "pontuacao_obtida": 0,
             }
 
-        tabela = "respostas"
+        tabela = tabelas_map[dimensao]
 
         conn, erro = criar_conexao_direta()
         if not conn:
@@ -213,7 +431,6 @@ class SistemaHAL:
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                # O segredo tá aqui: id::text faz o PostgreSQL aceitar "1.0" ou "1"
                 query = f"SELECT * FROM {tabela} WHERE id::text = %s AND ano = %s;"
                 cur.execute(query, (str(codigo_quesito), int(ano)))
                 resultado = cur.fetchone()
@@ -221,7 +438,6 @@ class SistemaHAL:
                 if resultado:
                     dados = dict(resultado)
 
-                    # Busca flexível da coluna de resposta
                     resp_val = (
                         dados.get("valor")
                         or dados.get("resposta")
@@ -229,9 +445,7 @@ class SistemaHAL:
                         or "Resposta cadastrada sem texto"
                     )
 
-                    # Busca flexível dos pontos
                     pontos_val = dados.get("pontos", dados.get("pontuacao", 0))
-
                     link = dados.get("link")
                     comentarios = dados.get("comentarios")
 
