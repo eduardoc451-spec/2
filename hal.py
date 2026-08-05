@@ -52,7 +52,7 @@ class SistemaHAL:
             ]
         return []
 
-   def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
+    def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
         """Busca a resposta em respostas_iplan fazendo cast do id para texto."""
 
         if dimensao != "iCidade":
