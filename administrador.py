@@ -98,7 +98,8 @@ def verificar_autenticacao_admin():
         return False
     return True
 
-def mostrar_painel_admin():
+# --- ASSINATURA AJUSTADA PARA ACEITAR O PARÂMETRO 'year' DO MAIN.PY ---
+def mostrar_painel_admin(year=None):
     if not verificar_autenticacao_admin():
         return
 
@@ -106,7 +107,8 @@ def mostrar_painel_admin():
     col_head, col_logout = st.columns([5, 1])
     with col_head:
         st.markdown("## 🔑 Módulo Administrador — Usuários & Sessões")
-        st.caption("Gerenciamento sem Banco de Dados (Armazenamento via JSON Local)")
+        subtitulo = f"Exercício: **{year}** | Gerenciamento de Acessos e Logs" if year else "Gerenciamento de Acessos e Logs"
+        st.caption(subtitulo)
     with col_logout:
         st.write("")
         if st.button("🔒 Sair", use_container_width=True, key="btn_logout_admin"):
