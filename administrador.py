@@ -1,195 +1,192 @@
-import io
-import re
+import json
+import os
 import streamlit as st
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, landscape
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from datetime import datetime
 
-def localizar_colunas_exatas(df):
-    """
-    Identifica de forma inteligente e por exclusão as colunas corretas,
-    impedindo que colunas de anexos/links sejam confundidas com o usuário.
-    """
-    colunas = list(df.columns)
+# SENHA MASTER PARA ACESSAR O PAINEL DE ADMINISTRAÇÃO
+SENHA_ADMIN = "fidelios"
+ARQUIVO_DADOS = "usuarios_e_logs.json"
+
+# ESTRUTURA INICIAL PADRÃO (SE O ARQUIVO NÃO EXISTIR)
+DADOS_INICIAIS = {
+    "usuarios": [
+        {"id": 1, "usuario": "admin", "senha": "123", "perfil": "Administrador"},
+        {"id": 2, "usuario": "auditor", "senha": "456", "perfil": "Auditor"},
+        {"id": 3, "usuario": "gestor", "senha": "789", "perfil": "Gestor"}
+    ],
+    "logs": []
+}
+
+def carregar_dados_json():
+    """Lê os usuários e logs do arquivo JSON local (Sem BD)."""
+    if not os.path.exists(ARQUIVO_DADOS):
+        salvar_dados_json(DADOS_INICIAIS)
+        return DADOS_INICIAIS
+    try:
+        with open(ARQUIVO_DADOS, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return DADOS_INICIAIS
+
+def salvar_dados_json(dados):
+    """Grava as alterações no arquivo JSON local."""
+    with open(ARQUIVO_DADOS, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=4)
+
+def registrar_login(usuario_nome):
+    """Registra o início do acesso no JSON local e retorna o ID do log."""
+    dados = carregar_dados_json()
+    novo_id = len(dados["logs"]) + 1
+    now_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     
-    # 1. Identifica Código (ID) e Descrição por texto ou posição inicial
-    col_codigo = "id_quesito" if "id_quesito" in colunas else colunas[0]
+    novo_log = {
+        "id": novo_id,
+        "usuario": usuario_nome,
+        "data_hora_login": now_str,
+        "data_hora_logout": "Sessão Ativa",
+        "duracao_minutos": 0.0,
+        "status": "Ativo"
+    }
     
-    col_desc = "Descrição do Quesito"
-    if col_desc not in colunas:
-        col_desc = colunas[1] if len(colunas) > 1 else colunas[0]
+    dados["logs"].append(novo_log)
+    salvar_dados_json(dados)
+    return novo_id
 
-    # 2. Identifica a Nota (geralmente tem 'nota' ou 'pontos' no nome)
-    col_nota = None
-    for col in colunas:
-        if "nota" in col.lower() or "pontos" in col.lower() or "pts" in col.lower():
-            col_nota = col
-            break
-    if not col_nota:
-        col_nota = colunas[3] if len(colunas) > 3 else colunas[-2]
-
-    # 3. Identifica a Resposta Principal
-    col_resposta = "Resposta / Situação"
-    if col_resposta not in colunas:
-        col_resposta = colunas[2] if len(colunas) > 2 else colunas[1]
-
-    # 4. PEGA O USUÁRIO DE FORMA RIGOROSA (Ignora colunas de links/metadados)
-    col_usuario = None
-    for col in colunas:
-        if col.lower() in ["usuário responsável", "usuario", "responsavel", "usuario_responsavel", "login"]:
-            col_usuario = col
+def registrar_logout(log_id):
+    """Encerra a sessão e calcula o tempo total de permanência logado."""
+    if not log_id:
+        return
+    dados = carregar_dados_json()
+    for log in dados["logs"]:
+        if log["id"] == log_id and log["status"] == "Ativo":
+            dt_login = datetime.strptime(log["data_hora_login"], "%d/%m/%Y %H:%M:%S")
+            dt_logout = datetime.now()
+            
+            duracao = round((dt_logout - dt_login).total_seconds() / 60.0, 2)
+            
+            log["data_hora_logout"] = dt_logout.strftime("%d/%m/%Y %H:%M:%S")
+            log["duracao_minutos"] = duracao
+            log["status"] = "Encerrada"
             break
             
-    if not col_usuario:
-        for col in colunas:
-            if col in [col_codigo, col_desc, col_resposta, col_nota]:
-                continue
-            
-            # Pega uma amostra da linha para analisar o conteúdo
-            amostra = str(df[col].dropna().iloc[0]).lower() if not df[col].dropna().empty else ""
-            
-            # Se a coluna tiver links ou metadados, ela NÃO é o usuário!
-            if "http" in amostra or "drive.google" in amostra or "c:" in amostra or "link:" in amostra:
-                continue
-                
-            col_usuario = col
-            break
+    salvar_dados_json(dados)
 
-    if not col_usuario:
-        col_usuario = colunas[-1]
+def verificar_autenticacao_admin():
+    """Valida o acesso de Administrador."""
+    if "admin_autenticado" not in st.session_state:
+        st.session_state["admin_autenticado"] = False
 
-    return col_codigo, col_desc, col_resposta, col_nota, col_usuario
+    if not st.session_state["admin_autenticado"]:
+        st.markdown("## 🛡️ Painel Administrador — Controle de Acessos")
+        st.info("Acesso restrito para consulta de credenciais, logs e tempo de sessão.")
 
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            senha_input = st.text_input("Digite a senha de Administrador:", type="password", key="input_senha_admin")
+        with col2:
+            st.write("")
+            st.write("")
+            btn_acessar = st.button("🔓 Acessar Módulo", use_container_width=True, key="btn_admin_login")
 
-def aplicar_ordenacao_natural(df, col_codigo):
-    """
-    Ordena o DataFrame dividindo os códigos dos quesitos em blocos numéricos.
-    Funciona perfeitamente para: 1.0, 1.4, 8.2, 8.2.1, 8.2.11, etc.
-    """
-    df_copia = df.copy()
+        if btn_acessar or senha_input:
+            if senha_input == SENHA_ADMIN:
+                st.session_state["admin_autenticado"] = True
+                st.success("Acesso liberado!")
+                st.rerun()
+            else:
+                st.error("Senha de administrador incorreta!")
+        return False
+    return True
+
+def mostrar_painel_admin():
+    if not verificar_autenticacao_admin():
+        return
+
+    # Cabeçalho
+    col_head, col_logout = st.columns([5, 1])
+    with col_head:
+        st.markdown("## 🔑 Módulo Administrador — Usuários & Sessões")
+        st.caption("Gerenciamento sem Banco de Dados (Armazenamento via JSON Local)")
+    with col_logout:
+        st.write("")
+        if st.button("🔒 Sair", use_container_width=True, key="btn_logout_admin"):
+            st.session_state["admin_autenticado"] = False
+            st.rerun()
+
+    st.markdown("---")
+
+    # Carrega dados do JSON
+    dados = carregar_dados_json()
+    usuarios = dados.get("usuarios", [])
+    logs = dados.get("logs", [])
+
+    # Métricas do Topo
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Usuários Cadastrados", len(usuarios))
+    c2.metric("Total de Acessos Registrados", len(logs))
     
-    def converter_para_tupla_chave(texto):
-        blocos = re.findall(r'\d+', str(texto))
-        if not blocos:
-            return (9999,)
-        return tuple(int(b) for b in blocos)
+    # Tempo Médio
+    duracoes = [l["duracao_minutos"] for l in logs if l["duracao_minutos"] > 0]
+    media_tempo = round(sum(duracoes) / len(duracoes), 1) if duracoes else 0.0
+    c3.metric("Tempo Médio de Permanência", f"{media_tempo} min")
 
-    df_copia['temp_chave_ordem'] = df_copia[col_codigo].apply(converter_para_tupla_chave)
-    df_copia = df_copia.sort_values(by='temp_chave_ordem')
-    df_copia = df_copia.drop(columns=['temp_chave_ordem'])
-    return df_copia
+    st.markdown("---")
 
+    tab1, tab2 = st.tabs(["🔐 Visualização de Senhas & Usuários", "⏱️ Histórico de Logins & Permanência"])
 
-def gerar_pdf_reportlab(ano, dimensão, df_filtrado):
-    """Gera o arquivo PDF estruturando os dados de forma estrita ao que está gravado no banco."""
-    buffer = io.BytesIO()
-    
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=landscape(letter), 
-        rightMargin=20, 
-        leftMargin=20, 
-        topMargin=30, 
-        bottomMargin=30
-    )
-    story = []
-    
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, leading=22, textColor=colors.HexColor('#001A4D'), alignment=1)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=12, leading=16, textColor=colors.HexColor('#64748B'), alignment=1, spaceAfter=20)
-    
-    cell_text_style = ParagraphStyle('CellTextStyle', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.black)
-    cell_header_style = ParagraphStyle('CellHeaderStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=12, textColor=colors.HexColor('#001A4D'))
+    # TAB 1: VISUALIZAÇÃO E ALTERAÇÃO DE SENHAS
+    with tab1:
+        st.subheader("Lista de Credenciais dos Usuários")
+        st.dataframe(usuarios, use_container_width=True, hide_index=True)
 
-    story.append(Paragraph("IEG-M Francisco Morato", title_style))
-    story.append(Paragraph("EXTRATO OFICIAL DE AUDITORIA E RASTREABILIDADE", subtitle_style))
-    story.append(Spacer(1, 10))
-    
-    story.append(Paragraph(f"<b>Ano de Referência:</b> {ano}", cell_text_style))
-    story.append(Paragraph(f"<b>Dimensão Selecionada:</b> {dimensão}", cell_text_style))
-    story.append(Spacer(1, 15))
-    
-    # Obtém o mapeamento rigoroso e inteligente das colunas
-    col_codigo, col_desc, col_resposta, col_nota, col_usuario = localizar_colunas_exatas(df_filtrado)
-    df_ordenado = aplicar_ordenacao_natural(df_filtrado, col_codigo)
-
-    data_tabela = [[
-        Paragraph("Nº Quesito", cell_header_style),
-        Paragraph("Descrição do Quesito", cell_header_style), 
-        Paragraph("Resposta / Situação", cell_header_style), 
-        Paragraph("Nota", cell_header_style), 
-        Paragraph("Usuário Responsável", cell_header_style)
-    ]]
-    
-    dimensao_normalizada = str(dimensão).lower().replace(" ", "").replace("-", "")
-    is_igov_ti = "igovti" in dimensao_normalizada
-
-    for _, linha in df_ordenado.iterrows():
-        id_original = str(linha[col_codigo]).strip()
-        if id_original.isdigit():
-            id_original = f"{id_original}.0"
+        st.markdown("---")
+        st.subheader("🔑 Alterar Senha de Usuário")
         
-        # 1. TRADUÇÃO DO ENUNCIADO
-        if is_igov_ti:
-            try:
-                # Caso a função higienizar_e_traduzir_quesito exista no seu escopo
-                texto_final = higienizar_e_traduzir_quesito(id_original)
-                if not texto_final: 
-                    texto_final = str(linha[col_desc])
-            except NameError:
-                texto_final = str(linha[col_desc])
-        else:
-            texto_final = str(linha[col_desc])
-
-        if "qid" in texto_final or "str(" in texto_final or "pts" in texto_final or texto_final.strip() == id_original:
-            texto_final = f"Quesito de Auditoria Técnica — Referência {id_original}"
-
-        # 2. LIMPEZA DA RESPOSTA
-        resposta_crua = str(linha[col_resposta]).strip()
-        if resposta_crua.startswith("[") and resposta_crua.endswith("]"):
-            resposta_crua = resposta_crua.replace("[", "").replace("]", "").replace("'", "").replace('"', '').strip()
-        if resposta_crua.lower() in ["none", "null", "nan", "", "selecione..."]:
-            resposta_crua = "Não Respondido / Em Branco"
-
-        # 3. LEITURA PURA E FILTRADA DA COLUNA DE USUÁRIO
-        banco_user = str(linha[col_usuario]).strip()
-        banco_user_clean = banco_user.replace("[", "").replace("]", "").replace("'", "").replace('"', '').strip()
+        lista_nomes_user = [u["usuario"] for u in usuarios]
+        col_u, col_p, col_b = st.columns([2, 2, 1])
         
-        if banco_user_clean.lower() in ["none", "null", "nan", "", "[]", "['']", "undefined"]:
-            responsavel_final = "Não Gravado"
-        else:
-            responsavel_final = banco_user_clean
-            
-        # 4. TRATAMENTO DA NOTA
-        nota_final = str(linha[col_nota]).strip()
-        if nota_final.lower() in ["none", "null", "nan", ""]:
-            nota_final = "0.0"
+        with col_u:
+            user_sel = st.selectbox("Selecione o Usuário:", lista_nomes_user)
+        with col_p:
+            nova_senha = st.text_input("Nova Senha:", type="password", key="input_nova_senha_json")
+        with col_b:
+            st.write("")
+            st.write("")
+            if st.button("Salvar Nova Senha", use_container_width=True):
+                if nova_senha.strip():
+                    for u in usuarios:
+                        if u["usuario"] == user_sel:
+                            u["senha"] = nova_senha
+                            break
+                    salvar_dados_json(dados)
+                    st.success(f"Senha do usuário **{user_sel}** alterada com sucesso!")
+                    st.rerun()
+                else:
+                    st.warning("Preencha a nova senha.")
 
-        data_tabela.append([
-            Paragraph(id_original, cell_text_style),
-            Paragraph(texto_final, cell_text_style),
-            Paragraph(resposta_crua, cell_text_style),
-            Paragraph(nota_final, cell_text_style),
-            Paragraph(responsavel_final, cell_text_style)
-        ])
-    
-    larguras = [62, 235, 235, 40, 180]
-    
-    t = Table(data_tabela, colWidths=larguras, repeatRows=1, splitByRow=1)
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E6F0FF')),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (0, 0), (0, -1), 'CENTER'),  
-        ('ALIGN', (3, 0), (3, -1), 'CENTER'),  
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-    ]))
-    
-    story.append(t)
-    
-    doc.build(story)
-    buffer.seek(0)
-    return buffer.getvalue()
+    # TAB 2: TEMPO DE PERMANÊNCIA E LOGINS
+    with tab2:
+        st.subheader("Rastreamento de Sessões de Usuários")
+
+        if not logs:
+            st.info("Nenhum histórico de acesso registrado até o momento.")
+        else:
+            st.dataframe(
+                logs,
+                column_config={
+                    "id": "ID Sessão",
+                    "usuario": "Usuário Logado",
+                    "data_hora_login": "Início da Sessão",
+                    "data_hora_logout": "Fim da Sessão",
+                    "duracao_minutos": st.column_config.NumberColumn("Tempo Logado (Min)", format="%.2f min"),
+                    "status": "Status da Sessão"
+                },
+                use_container_width=True,
+                hide_index=True
+            )
+
+def main():
+    mostrar_painel_admin()
+
+if __name__ == "__main__":
+    main()
