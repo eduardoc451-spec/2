@@ -342,7 +342,7 @@ def dashboard_page():
     )
     st.markdown("---")
 
-  # SISTEMA DE GESTÃO AVANÇADA
+ # SISTEMA DE GESTÃO AVANÇADA
     st.markdown("### 📊 Sistema de Gestão Avançada")
     dim_cols = st.columns(4)
 
@@ -455,7 +455,12 @@ def dashboard_page():
 
 
 def dimension_page():
-    """Página de exibição dinâmica com Lazy Loading habilitado."""
+    """Página de exibição dinâmica."""
+    st.markdown(
+        "<script>setTimeout(function() { window.scrollTo(0, 0); }, 100);</script>",
+        unsafe_allow_html=True,
+    )
+
     dimension = st.session_state.selected_dimension
     year = st.session_state.ano_referencia_global
 
@@ -481,14 +486,16 @@ def dimension_page():
 
     st.markdown("---")
 
-    # --- ROTEAMENTO DINÂMICO COM LAZY LOADING ---
+    # Roteamento central das subpáginas do ecossistema
     if dimension == "Administrador":
-        admin_core = get_module("administrador")
-        if admin_core and hasattr(admin_core, "mostrar_painel_admin"):
+        if admin_core:
             admin_core.mostrar_painel_admin(year)
         else:
-            st.error("Erro técnico: O arquivo 'administrador.py' não foi detectado ou é inválido.")
+            st.error(
+                "Erro técnico: O arquivo 'administrador.py' não foi detectado no sistema."
+            )
 
+    # CORRIGIDO: Acesso Direto ao Drive (Sem bib_core.gerenciar_upload_e_arquivos)
     elif dimension == "Biblioteca":
         st.subheader("📚 Biblioteca de Documentos")
         st.markdown(
@@ -500,120 +507,126 @@ def dimension_page():
             use_container_width=True,
         )
 
+    # Bloco dinâmico do HAL 9000
     elif dimension == "HAL 9000":
         st.subheader("🔴 HAL 9000 — Inteligência Artificial")
-        hal_core = get_module("hal")
         if hal_core:
             if hasattr(hal_core, "mostrar_chat_hal"):
                 hal_core.mostrar_chat_hal()
             elif hasattr(hal_core, "main"):
                 hal_core.main()
             else:
-                st.warning("Módulo 'hal.py' carregado, mas nenhuma função de renderização conhecida foi encontrada.")
+                st.warning(
+                    "Módulo 'hal.py' carregado, mas nenhuma função de renderização conhecida ('mostrar_chat_hal' ou 'main') foi encontrada."
+                )
                 st.chat_input("Como posso ajudar hoje? (Modo de Segurança)")
         else:
-            st.error("Erro técnico: O arquivo 'hal.py' não foi detectado no sistema.")
+            st.error(
+                "Erro técnico: O arquivo 'hal.py' não foi detectado no sistema."
+            )
+            st.chat_input("Como posso ajudar hoje? (Modo Offline)")
 
     elif dimension == "i-Cidade":
-        icidade = get_module("icidade_completo")
-        if icidade:
+        if icidade is None:
+            st.error(
+                "❌ O arquivo 'icidade_completo.py' não foi encontrado ou falhou ao ser importado."
+            )
+        else:
             try:
                 if hasattr(icidade, "init_db"):
                     icidade.init_db()
 
-                for nome_fn in ["mostrar_formulario_cidade", "mostrar_formulario_icidade", "mostrar_icidade", "run", "main", "app"]:
+                funcao_encontrada = None
+                for nome_fn in [
+                    "mostrar_formulario_cidade",
+                    "mostrar_formulario_icidade",
+                    "mostrar_icidade",
+                    "run",
+                    "main",
+                    "app",
+                ]:
                     if hasattr(icidade, nome_fn):
-                        getattr(icidade, nome_fn)()
+                        funcao_encontrada = getattr(icidade, nome_fn)
                         break
+
+                if funcao_encontrada:
+                    funcao_encontrada()
                 else:
-                    st.warning("⚠️ Nenhuma função padrão foi encontrada no 'icidade_completo.py'.")
+                    funcoes_disponiveis = [
+                        f
+                        for f in dir(icidade)
+                        if not f.startswith("_")
+                        and callable(getattr(icidade, f))
+                    ]
+                    st.warning(
+                        f"⚠️ Nenhuma função padrão foi encontrada. Funções detectadas no arquivo: {funcoes_disponiveis}"
+                    )
             except Exception as e:
                 st.error(f"❌ Erro ao executar o i-Cidade: {e}")
-        else:
-            st.error("❌ O arquivo 'icidade_completo.py' não foi encontrado.")
 
-    elif dimension == "i-Gov TI":
-        igov = get_module("igov")
-        if igov and hasattr(igov, "mostrar_formulario_igov"):
-            igov.mostrar_formulario_igov()
-        else:
-            st.error("Erro ao carregar o módulo 'igov.py'.")
-
-    elif dimension == "i-Amb":
-        iamb = get_module("iamb")
-        if iamb and hasattr(iamb, "mostrar_formulario_iamb"):
-            iamb.mostrar_formulario_iamb()
-        else:
-            st.error("Erro ao carregar o módulo 'iamb.py'.")
-
-    elif dimension == "i-Fiscal":
-        ifiscal = get_module("ifiscal")
-        if ifiscal and hasattr(ifiscal, "mostrar_formulario_ifiscal"):
-            ifiscal.mostrar_formulario_ifiscal()
-        else:
-            st.error("Erro ao carregar o módulo 'ifiscal.py'.")
-
-    elif dimension == "i-Plan":
-        iplan = get_module("iplan")
-        if iplan and hasattr(iplan, "mostrar_formulario_plan"):
-            iplan.mostrar_formulario_plan()
-        else:
-            st.error("Erro ao carregar o módulo 'iplan.py'.")
-
-    elif dimension == "i-Educ":
-        ieduc = get_module("ieduc")
-        if ieduc and hasattr(ieduc, "mostrar_formulario_educ"):
-            ieduc.mostrar_formulario_educ()
-        else:
-            st.error("Erro ao carregar o módulo 'ieduc.py'.")
-
-    elif dimension == "i-Saúde":
-        isaude = get_module("isaude")
-        if isaude and hasattr(isaude, "mostrar_formulario_saude"):
-            isaude.mostrar_formulario_saude()
-        else:
-            st.error("Erro ao carregar o módulo 'isaude.py'.")
-
+    elif dimension == "i-Gov TI" and igov:
+        igov.mostrar_formulario_igov()
+    elif dimension == "i-Amb" and iamb:
+        iamb.mostrar_formulario_iamb()
+    elif dimension == "i-Fiscal" and ifiscal:
+        ifiscal.mostrar_formulario_ifiscal()
+    elif dimension == "i-Plan" and iplan:
+        iplan.mostrar_formulario_plan()
+    elif dimension == "i-Educ" and ieduc:
+        ieduc.mostrar_formulario_educ()
+    elif dimension == "i-Saúde" and isaude:
+        isaude.mostrar_formulario_saude()
     elif dimension == "ieg-m":
-        iegm_final = get_module("iegmfinal")
-        if iegm_final and hasattr(iegm_final, "mostrar_painel_iegm_final"):
+        if iegm_final:
             iegm_final.mostrar_painel_iegm_final(year)
         else:
             st.error("Erro: Módulo 'iegmfinal.py' não localizado.")
 
     elif dimension == "Relatório de Atividades":
-        atividade = get_module("atividade")
-        if atividade and hasattr(atividade, "mostrar_formulario_atividade"):
-            atividade.mostrar_formulario_atividade()
+        if atividade:
+            if hasattr(atividade, "mostrar_formulario_atividade"):
+                atividade.mostrar_formulario_atividade()
+            else:
+                st.warning(
+                    "Módulo 'atividade.py' carregado, mas a função 'mostrar_formulario_atividade' não foi encontrada."
+                )
         else:
-            st.error("Erro: Módulo 'atividade.py' não localizado ou função ausente.")
+            st.error("Erro: Módulo 'atividade.py' não localizado.")
 
     elif dimension == "Plano de Ação":
-        plano_acao = get_module("plano_acao")
         if plano_acao:
             if hasattr(plano_acao, "mostrar_formulario_plano_acao"):
                 plano_acao.mostrar_formulario_plano_acao()
             elif hasattr(plano_acao, "mostrar_painel_plano_acao"):
                 plano_acao.mostrar_painel_plano_acao()
             else:
-                st.warning("Módulo 'plano_acao.py' carregado, mas nenhuma função de renderização foi encontrada.")
+                st.warning(
+                    "Módulo carregado, mas a função de renderização padrão não foi encontrada."
+                )
         else:
             st.error("Erro: Módulo 'plano_acao.py' não localizado.")
 
     elif dimension == "Área de treinamento":
         st.subheader("🎓 Área de Treinamento e Capacitação")
-        treinamento = get_module("treinamento")
         if treinamento:
-            for fn in ["mostrar_painel_treinamento", "mostrar_formulario_treinamento", "main"]:
-                if hasattr(treinamento, fn):
-                    getattr(treinamento, fn)()
-                    break
+            if hasattr(treinamento, "mostrar_painel_treinamento"):
+                treinamento.mostrar_painel_treinamento()
+            elif hasattr(treinamento, "mostrar_formulario_treinamento"):
+                treinamento.mostrar_formulario_treinamento()
+            elif hasattr(treinamento, "main"):
+                treinamento.main()
+            else:
+                st.warning(
+                    "Módulo 'treinamento.py' carregado, mas nenhuma função de renderização padrão foi detectada."
+                )
         else:
-            st.error("Erro técnico: O arquivo 'treinamento.py' não foi detectado no sistema.")
+            st.error(
+                "Erro técnico: O arquivo 'treinamento.py' não foi detectado no sistema."
+            )
 
+    # MÓDULOS ADICIONADOS: SISTEMA DE CONTROLE INTERNO
     elif dimension == "Vistorias in loco":
         st.subheader("🔍 Vistorias in loco")
-        vistoria = get_module("vistoria")
         if vistoria:
             if hasattr(vistoria, "mostrar_painel_vistoria"):
                 vistoria.mostrar_painel_vistoria(year)
@@ -621,12 +634,17 @@ def dimension_page():
                 vistoria.mostrar_formulario_vistoria()
             elif hasattr(vistoria, "main"):
                 vistoria.main()
+            else:
+                st.warning(
+                    "Módulo 'vistoria.py' carregado, mas nenhuma função de renderização foi encontrada."
+                )
         else:
-            st.error("Erro técnico: O arquivo 'vistoria.py' não foi detectado no sistema.")
+            st.error(
+                "Erro técnico: O arquivo 'vistoria.py' não foi detectado no sistema."
+            )
 
     elif dimension == "Planos municipais":
         st.subheader("📜 Planos Municipais")
-        planos = get_module("planos")
         if planos:
             if hasattr(planos, "mostrar_painel_planos"):
                 planos.mostrar_painel_planos(year)
@@ -634,12 +652,17 @@ def dimension_page():
                 planos.mostrar_formulario_planos()
             elif hasattr(planos, "main"):
                 planos.main()
+            else:
+                st.warning(
+                    "Módulo 'planos.py' carregado, mas nenhuma função de renderização foi encontrada."
+                )
         else:
-            st.error("Erro técnico: O arquivo 'planos.py' não foi detectado no sistema.")
+            st.error(
+                "Erro técnico: O arquivo 'planos.py' não foi detectado no sistema."
+            )
 
     elif dimension == "Contratos":
         st.subheader("📝 Contratos")
-        contratos = get_module("contratos")
         if contratos:
             if hasattr(contratos, "mostrar_painel_contratos"):
                 contratos.mostrar_painel_contratos(year)
@@ -647,14 +670,20 @@ def dimension_page():
                 contratos.mostrar_formulario_contratos()
             elif hasattr(contratos, "main"):
                 contratos.main()
+            else:
+                st.warning(
+                    "Módulo 'contratos.py' carregado, mas nenhuma função de renderização foi encontrada."
+                )
         else:
-            st.error("Erro técnico: O arquivo 'contratos.py' não foi detectado no sistema.")
+            st.error(
+                "Erro técnico: O arquivo 'contratos.py' não foi detectado no sistema."
+            )
 
     else:
         st.info(f"Módulo {dimension} pronto para integração.")
 
 
-# --- GERENCIADOR DE ESTADO DE TELAS DO STREAMLIT ---
+# Gerenciador de Estado de Telas do Streamlit
 if not st.session_state.authenticated:
     login_page()
 else:
