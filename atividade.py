@@ -17,15 +17,17 @@ UNIDADES_MEDIDA = ["Unidade / Mensurável", "Não Mensurável"]
 def ler_json_disco(caminho_arquivo):
     """Lê o arquivo do disco apenas 1 vez e armazena na memória (Cache)"""
     if os.path.exists(caminho_arquivo):
-        with open(caminho_arquivo, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(caminho_arquivo, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {}
     return {}
 
 def salvar_p1():
     with open(ARQUIVO_P1, "w", encoding="utf-8") as f:
-        # Removido indent=4 para gravação ultra-rápida (Compact JSON)
         json.dump(st.session_state.programas, f, ensure_ascii=False)
-    ler_json_disco.clear() # Limpa o cache após alterar o arquivo
+    st.cache_data.clear()  # Limpa o cache global do Streamlit
     st.sidebar.success("💾 Dados do P1 Salvos!")
 
 def carregar_p1():
@@ -34,24 +36,38 @@ def carregar_p1():
 def salvar_p2():
     with open(ARQUIVO_P2, "w", encoding="utf-8") as f:
         json.dump(st.session_state.programas_p2, f, ensure_ascii=False)
-    ler_json_disco.clear()
+    st.cache_data.clear()
     st.sidebar.success("💾 Dados do P2 Salvos!")
 
 def carregar_p2():
     st.session_state.programas_p2 = ler_json_disco(ARQUIVO_P2)
 
-# --- FUNÇÕES MATEMÁTICAS P1 (VETORIZADAS/SIMPLIFICADAS) ---
+# --- FUNÇÕES MATEMÁTICAS P1 ---
 def calcular_e1_p1(indicadores):
-    if not indicadores: return 0.0
-    return sum(min(i['B'] / i['A'], 1.0) if i['A'] > 0 else 0.0 for i in indicadores) / len(indicadores)
+    if not indicadores: 
+        return 0.0
+    
+    soma = 0.0
+    for i in indicadores:
+        a = float(i.get('A', 0) or 0)
+        b = float(i.get('B', 0) or 0)
+        soma += min(b / a, 1.0) if a > 0 else 0.0
+        
+    return soma / len(indicadores)
 
 def calcular_e2_p1(acoes):
-    if not acoes: return 0.0
-    valores = [
-        0.0 if a.get('unidade') == "Não Mensurável" 
-        else (min(a['D'] / a['C'], 1.0) if a['C'] > 0 else 0.0) 
-        for a in acoes
-    ]
+    if not acoes: 
+        return 0.0
+    
+    valores = []
+    for a in acoes:
+        if a.get('unidade') == "Não Mensurável":
+            valores.append(0.0)
+        else:
+            c = float(a.get('C', 0) or 0)
+            d = float(a.get('D', 0) or 0)
+            valores.append(min(d / c, 1.0) if c > 0 else 0.0)
+            
     return sum(valores) / len(valores)
 
 # --- FUNÇÕES MATEMÁTICAS P2 ---
@@ -59,13 +75,24 @@ def calcular_h1_p2(acoes):
     return calcular_e2_p1(acoes)
 
 def calcular_h2_p2(acoes):
-    if not acoes: return 0.0
-    return sum(min(a['G'] / a['F'], 1.0) if a['F'] > 0 else 0.0 for a in acoes) / len(acoes)
+    if not acoes: 
+        return 0.0
+    
+    valores = []
+    for a in acoes:
+        f = float(a.get('F', 0) or 0)
+        g = float(a.get('G', 0) or 0)
+        valores.append(min(g / f, 1.0) if f > 0 else 0.0)
+        
+    return sum(valores) / len(valores)
 
 def pontuacao(valor):
-    if valor <= 0.2: return 250.0
-    elif valor >= 0.4: return 0.0
-    else: return ((0.4 - valor) / 0.2) * 250.0
+    if valor <= 0.2: 
+        return 250.0
+    elif valor >= 0.4: 
+        return 0.0
+    else: 
+        return ((0.4 - valor) / 0.2) * 250.0
 
 # --- INTERFACE PRINCIPAL ---
 def mostrar_formulario_atividade():
@@ -87,9 +114,9 @@ def mostrar_formulario_atividade():
     if st.sidebar.button("💾 Salvar Tudo (P1 e P2)", use_container_width=True):
         salvar_p1()
         salvar_p2()
-    
+     
     if st.sidebar.button("🔄 Recarregar Backups", use_container_width=True):
-        ler_json_disco.clear()
+        st.cache_data.clear()
         carregar_p1()
         carregar_p2()
         st.rerun()
@@ -113,7 +140,7 @@ def mostrar_formulario_atividade():
                     st.rerun()
 
         if not st.session_state.programas:
-            st.info("💡 Clique no botão '🔄 Recarregar Backups' para carregar os dados.")
+            st.info("💡 Clique no botão '🔄 Recarregar Backups' para carregar os dados ou adicione um programa na barra lateral.")
         else:
             p_ativo_p1 = st.selectbox("Selecione o Programa em Execução (P1):", list(st.session_state.programas.keys()), key="sel_p1")
             
@@ -194,6 +221,7 @@ def mostrar_formulario_atividade():
                         st.rerun()
                     if c_ex.button("❌", key=f"ex_ind_{idx}"):
                         st.session_state.programas[p_ativo_p1]["indicadores"].pop(idx)
+                        st.session_state.edit_idx_p1_ind = None
                         st.rerun()
 
             with c_lista2:
@@ -206,6 +234,7 @@ def mostrar_formulario_atividade():
                         st.rerun()
                     if c_ex.button("❌", key=f"ex_ac_p1_{idx}"):
                         st.session_state.programas[p_ativo_p1]["acoes"].pop(idx)
+                        st.session_state.edit_idx_p1_ac = None
                         st.rerun()
 
             st.markdown("---")
@@ -303,6 +332,7 @@ def mostrar_formulario_atividade():
                     st.rerun()
                 if c_ex.button("❌", key=f"ex_ac_p2_{idx}"):
                     st.session_state.programas_p2[p_ativo_p2]["acoes"].pop(idx)
+                    st.session_state.edit_idx_p2_ac = None
                     st.rerun()
 
             st.markdown("---")
@@ -313,11 +343,11 @@ def mostrar_formulario_atividade():
             tot_c_p2, tot_f_p2 = 0, 0
             
             for p, d in st.session_state.programas_p2.items():
-                s_c = sum(a['C'] for a in d["acoes"])
-                s_f = sum(a['F'] for a in d["acoes"])
+                s_c = sum(a['C'] for a in d.get("acoes", []))
+                s_f = sum(a['F'] for a in d.get("acoes", []))
                 tot_c_p2 += s_c; tot_f_p2 += s_f
                 
-                if not d["acoes"] or (s_c == 0 and not any(x['unidade']=="Não Mensurável" for x in d["acoes"])) or s_f == 0:
+                if not d.get("acoes") or (s_c == 0 and not any(x['unidade']=="Não Mensurável" for x in d["acoes"])) or s_f == 0:
                     h_p = 1.0; m_h1 = 0.0; m_h2 = 0.0
                 else:
                     m_h1 = calcular_h1_p2(d["acoes"])
