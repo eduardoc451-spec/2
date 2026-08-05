@@ -946,8 +946,8 @@ class SistemaHAL:
                     "Impressões, comentários e sugestões sobre o questionário."
                 ),
             },
-        },
-        "iFiscal": {
+            }, 
+            "iFiscal": {
                 "1.0": (
                     "Há estrutura administrativa voltada para a administração"
                     " tributária?"
@@ -1286,7 +1286,7 @@ class SistemaHAL:
                     " Bimestres"
                 ),
             },
-        }
+        }  # 👈 Fecha o dicionário de questões por dimensão (questoes_por_dimensao)
 
     def get_db_connection(self):
         return criar_conexao_direta()
@@ -1457,5 +1457,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-   
