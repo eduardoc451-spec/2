@@ -385,6 +385,427 @@ class SistemaHAL:
                     " sugestões a respeito do presente questionário?"
                 ),
             },
+            "i-Amb": {
+                "1.0": (
+                    "Existe estrutura organizacional instalada para tratar de"
+                    " assuntos ligados ao Meio Ambiente Municipal?"
+                ),
+                "1.1": (
+                    "Informe a disponibilidade de recursos humanos para"
+                    " operacionalização dos assuntos ligados ao Meio Ambiente."
+                ),
+                "1.1.1": (
+                    "Informe o detalhamento e informações sobre os recursos"
+                    " humanos da área."
+                ),
+                "1.1.2": (
+                    "A prefeitura realizou treinamento específico voltado ao"
+                    " Meio Ambiente no ano de 2025?"
+                ),
+                "1.1.3": (
+                    "Informe os cursos e treinamentos de educação ambiental"
+                    " ofertados pela Secretaria de Meio Ambiente."
+                ),
+                "1.2": (
+                    "Informe quais recursos foram disponibilizados para a"
+                    " operacionalização das atividades de meio ambiente."
+                ),
+                "2.0": (
+                    "O Município promove a participação em Programas de"
+                    " Educação Ambiental?"
+                ),
+                "2.1": (
+                    "Há programas ou ações de educação ambiental implementadas"
+                    " na rede escolar municipal?"
+                ),
+                "3.0": (
+                    "O Município promove estímulo a projetos e ações para o uso"
+                    " racional de recursos naturais?"
+                ),
+                "3.1": (
+                    "Assinale quais tipos de ações são realizadas para o uso"
+                    " racional de recursos naturais."
+                ),
+                "4.0": (
+                    "Há fiscalização da emissão de poluentes de combustíveis"
+                    " fósseis (diesel) na frota municipal?"
+                ),
+                "5.0": (
+                    "Existe contrato vigente para a prestação de serviços de"
+                    " poda e corte de árvores, arbustos e outras plantas"
+                    " lenhosas?"
+                ),
+                "5.1": (
+                    "Informe o número do contrato e o respectivo prestador de"
+                    " serviço."
+                ),
+                "5.2": (
+                    "Qual a periodicidade definida para a realização de poda e"
+                    " manutenção das árvores?"
+                ),
+                "5.2.1": (
+                    "Informe a destinação final dada aos resíduos decorrentes"
+                    " das podas de árvores."
+                ),
+                "5.3": (
+                    "Houve capacitação específica para os responsáveis pela"
+                    " execução da manutenção e poda de árvores?"
+                ),
+                "6.0": (
+                    "O Município adota ações e medidas preventivas de"
+                    " contingenciamento para períodos de estiagem?"
+                ),
+                "6.1": (
+                    "Informe os tipos de ações e medidas preventivas que foram"
+                    " executadas."
+                ),
+                "6.2": (
+                    "Indique os setores envolvidos com ações específicas para a"
+                    " provisão de água potável."
+                ),
+                "7.0": (
+                    "Existe Plano Municipal ou Regional de Saneamento Básico"
+                    " instituído e vigente?"
+                ),
+                "7.1": "Informe o instrumento normativo de aprovação do Plano.",
+                "7.2": (
+                    "Informe a página eletrônica (link na internet) para acesso"
+                    " ao Plano."
+                ),
+                "7.3": (
+                    "O Plano establishes metas específicas de abastecimento de"
+                    " água potável?"
+                ),
+                "7.3.1": (
+                    "Informe detalhadamente as metas estabelecidas para o"
+                    " abastecimento de água."
+                ),
+                "7.3.2": (
+                    "Qual a data prevista para a universalização do"
+                    " atendimento de abastecimento de água?"
+                ),
+                "7.4": (
+                    "O Plano estabelece metas de coleta de esgoto sanitário?"
+                ),
+                "7.4.1": (
+                    "Informe as metas estabelecidas para o serviço de coleta de"
+                    " esgoto."
+                ),
+                "7.4.2": (
+                    "Qual a data prevista para a universalização da coleta de"
+                    " esgoto?"
+                ),
+                "7.5": (
+                    "O Plano estabelece metas para o tratamento do esgoto"
+                    " coletado?"
+                ),
+                "7.5.1": (
+                    "Qual a data prevista para a universalização do tratamento"
+                    " de esgoto?"
+                ),
+                "7.6": (
+                    "O Plano contempla metas de drenagem e manejo de águas"
+                    " pluviais urbanas?"
+                ),
+                "7.6.1": (
+                    "Informe as metas estabelecidas voltadas à drenagem e"
+                    " manejo de águas pluviais."
+                ),
+                "7.7": (
+                    "O Município realiza o monitoramento e avaliação das ações"
+                    " e metas de abastecimento de água e esgotamento sanitário?"
+                ),
+                "7.7.1": (
+                    "Informe de qual forma é realizado este monitoramento e"
+                    " avaliação."
+                ),
+                "7.8": (
+                    "Existe um cronograma formalizado de metas para o"
+                    " saneamento básico?"
+                ),
+                "7.8.1": (
+                    "As metas estabelecidas estão sendo cumpridas dentro do"
+                    " prazo estipulado?"
+                ),
+                "7.8.1.1": (
+                    "Informe os principais motivos que justificam o não"
+                    " cumprimento das metas."
+                ),
+                "7.9": (
+                    "O Plano apresenta previsão de áreas prioritárias ou"
+                    " críticas para intervenções de abastecimento de água e"
+                    " esgotamento sanitário?"
+                ),
+                "7.10": (
+                    "Qual a data da última revisão realizada no Plano de"
+                    " Saneamento Básico?"
+                ),
+                "8.0": (
+                    "Existe Plano Municipal ou Regional de Gestão Integrada de"
+                    " Resíduos Sólidos instituído?"
+                ),
+                "8.1": (
+                    "Informe o instrumento normativo de aprovação do Plano de"
+                    " Resíduos Sólidos."
+                ),
+                "8.2": (
+                    "Informe a página eletrônica (link na internet) para acesso"
+                    " ao Plano."
+                ),
+                "8.3": (
+                    "O Plano apresenta a caracterização qualitativa e"
+                    " quantitativa dos resíduos sólidos urbanos?"
+                ),
+                "8.3.1": (
+                    "Informe a metodologia ou forma utilizada para a"
+                    " caracterização dos resíduos."
+                ),
+                "8.4": (
+                    "Existe um cronograma formalizado de metas para a gestão de"
+                    " resíduos sólidos?"
+                ),
+                "8.4.1": (
+                    "Informe as metas que foram formalmente estabelecidas sobre"
+                    " os resíduos sólidos."
+                ),
+                "8.4.2": (
+                    "O Município realiza o monitoramento e avaliação das ações"
+                    " e metas deste Plano?"
+                ),
+                "8.4.2.1": (
+                    "Informe de qual forma é realizado esse monitoramento e"
+                    " avaliação."
+                ),
+                "8.4.3": (
+                    "As metas estabelecidas estão sendo cumpridas dentro do"
+                    " prazo estipulado?"
+                ),
+                "8.4.3.1": (
+                    "Informe os principais motivos para o não cumprimento das"
+                    " metas no prazo."
+                ),
+                "8.4.4": (
+                    "Qual a data da última revisão do Plano de Gestão"
+                    " Integrada de Resíduos Sólidos?"
+                ),
+                "9.0": (
+                    "O Município realiza de forma efetiva a coleta seletiva de"
+                    " resíduos sólidos?"
+                ),
+                "9.1": (
+                    "Existe um cronograma ou planejamento de coleta seletiva"
+                    " programada?"
+                ),
+                "9.2": (
+                    "A prestação da coleta seletiva atende a todas as regiões"
+                    " do território municipal?"
+                ),
+                "9.3": (
+                    "São promovidas ações e campanhas institucionais de"
+                    " incentivo à coleta seletiva?"
+                ),
+                "9.3.1": (
+                    "Informe quais tipos de ações e campanhas de"
+                    " conscientização foram realizadas."
+                ),
+                "10.0": (
+                    "O Município realiza o serviço regular de coleta de lixo"
+                    " doméstico (resíduos domiciliares)?"
+                ),
+                "10.1": (
+                    "Existe um cronograma de atendimento para a coleta"
+                    " programada?"
+                ),
+                "10.2": (
+                    "O serviço regular de coleta de lixo domiciliar atende a"
+                    " todas as regiões do município?"
+                ),
+                "10.3": (
+                    "O Município dispõe de Área de Transbordo e Triagem (ATT)"
+                    " para resíduos sólidos urbanos?"
+                ),
+                "10.3.1": (
+                    "A referida ATT possui licença de operação ativa emitida"
+                    " pela CETESB?"
+                ),
+                "10.3.1.1": (
+                    "Informe o prazo de validade da licença de operação da"
+                    " CETESB."
+                ),
+                "11.0": (
+                    "Existe Plano de Gerenciamento de Resíduos da Construção"
+                    " Civil (PGRCC) instituído?"
+                ),
+                "11.1": (
+                    "Informe o instrumento normativo que regulamenta o PGRCC."
+                ),
+                "11.2": "Informe a página eletrônica (link na internet) do PGRCC.",
+                "11.3": (
+                    "Existe um cronograma de metas definido no âmbito do PGRCC?"
+                ),
+                "11.3.1": (
+                    "Informe as metas previstas no Plano de Resíduos da"
+                    " Construção Civil."
+                ),
+                "11.3.2": (
+                    "Há monitoramento e avaliação das ações e metas do PGRCC?"
+                ),
+                "11.3.2.1": (
+                    "Informe de qual forma é realizado o monitoramento e a"
+                    " avaliação."
+                ),
+                "11.3.3": (
+                    "As metas estabelecidas no PGRCC estão sendo cumpridas no"
+                    " prazo estipulado?"
+                ),
+                "11.3.3.1": (
+                    "Informe os motivos identificados para o não cumprimento"
+                    " das metas estruturadas."
+                ),
+                "11.4": (
+                    "Quem é o agente ou setor responsável pela triagem dos"
+                    " resíduos da construção civil?"
+                ),
+                "11.5": (
+                    "O Município realiza a fiscalização activa das atividades"
+                    " relacionadas aos resíduos da construção civil?"
+                ),
+                "11.5.1": (
+                    "Informe quais as principais atividades que são"
+                    " fiscalizadas pelo órgão municipal."
+                ),
+                "11.6": (
+                    "Existe Área de Transbordo e Triagem (ATT) específica para"
+                    " resíduos da construção civil?"
+                ),
+                "11.6.1": (
+                    "A referida ATT de resíduos da construção civil possui"
+                    " licença de operação da CETESB?"
+                ),
+                "11.6.1.1": (
+                    "Informe o prazo de validade da licença emitida pela"
+                    " CETESB."
+                ),
+                "12.0": (
+                    "O Município adota alguma forma de processamento de"
+                    " resíduos antes da sua disposição final?"
+                ),
+                "12.1": (
+                    "Informe detalhadamente qual a forma de processamento"
+                    " utilizada nos resíduos."
+                ),
+                "13.0": (
+                    "Existe aterro sanitário ou industrial para destinação de"
+                    " resíduos sólidos urbanos no território municipal ou"
+                    " consorciado?"
+                ),
+                "13.1": (
+                    "Informe as características e a situação atual do local de"
+                    " destinação final dos resíduos."
+                ),
+                "13.1.1": (
+                    "Informe a data provável estimada para o fechamento ou"
+                    " esgotamento do aterro."
+                ),
+                "13.2": (
+                    "O aterro utilizado possui licença de operação regular"
+                    " emitida pela CETESB?"
+                ),
+                "13.2.1": (
+                    "Informe o prazo de validade da respectiva licença de"
+                    " operação."
+                ),
+                "14.0": (
+                    "Foram identificados pontos de descarte irregular de lixo"
+                    " ou entulho no município?"
+                ),
+                "14.1": (
+                    "Informe a quantidade total de pontos de descarte irregular"
+                    " atualmente identificados."
+                ),
+                "14.2": (
+                    "Indique os endereços ou localizações dos pontos críticos"
+                    " identificados."
+                ),
+                "14.3": (
+                    "Quais ações práticas e fiscalizatórias foram promovidas"
+                    " para combater e mitigar o descarte irregular?"
+                ),
+                "15.0": (
+                    "Está definida qual a entidade responsável pela regulação e"
+                    " fiscalização dos serviços de saneamento básico?"
+                ),
+                "15.1": (
+                    "Assinale quais serviços municipais possuem entidade"
+                    " reguladora e fiscalizadora externa ou interna."
+                ),
+                "15.1.1": (
+                    "Informe a entidade responsável pela regulação do"
+                    " abastecimento de água potável."
+                ),
+                "15.1.2": (
+                    "Informe a entidade responsável pela regulação do"
+                    " esgotamento sanitário."
+                ),
+                "15.1.3": (
+                    "Informe a entidade responsável pela regulação da limpeza"
+                    " urbana e manejo de resíduos sólidos."
+                ),
+                "15.1.4": (
+                    "Informe a entidade responsável pela regulação da drenagem"
+                    " e manejo das águas pluviais urbanas."
+                ),
+                "16.0": (
+                    "Gostaria de registrar suas impressões, comentários e"
+                    " sugestões gerais a respeito deste bloco do"
+                    " questionário?"
+                ),
+                "A1": (
+                    "O Município possui Zoneamento Ecológico-Econômico (ZEE)"
+                    " instituído ou em andamento?"
+                ),
+                "A2": (
+                    "Há monitoramento sistemático da qualidade do ar nas zones"
+                    " urbanas ou industriais do município?"
+                ),
+                "A3": (
+                    "O município possui mapeamento atualizado e proteção ativa"
+                    " de suas Áreas de Preservação Permanente (APP)?"
+                ),
+                "A4": (
+                    "Existe programa municipal voltado para a proteção e"
+                    " bem-estar de animais domésticos e controle de zoonoses?"
+                ),
+                "A4.1.1": (
+                    "Informe a capacidade física e operacional do abrigo ou"
+                    " canil municipal."
+                ),
+                "A4.1.1.1": (
+                    "Há veterinário responsável contratado em regime"
+                    " definitivo ou plantonista?"
+                ),
+                "A4.1.2": (
+                    "O município realiza campanhas periódicas e gratuitas de"
+                    " castração de cães e gatos?"
+                ),
+                "A4.1.3": (
+                    "Informe o número de procedimentos de esterilização animal"
+                    " realizados no último ano de exercício."
+                ),
+                "A4.1.4": (
+                    "Existem parcerias ativas com ONGs e protetores"
+                    " independentes locais registradas?"
+                ),
+                "A5": (
+                    "O Município possui plano de prevenção e combate a"
+                    " incêndios florestais e queimadas urbanas?"
+                ),
+                "A6": (
+                    "O órgão ambiental municipal possui equipamentos adequados"
+                    " para atendimento e contenção de emergências químicas ou"
+                    " derramamentos?"
+                ),
+            },
         }
 
     def get_db_connection(self):
@@ -406,16 +827,18 @@ class SistemaHAL:
     def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
         """Busca a resposta na tabela correspondente à dimensão fornecida."""
 
-        # Mapeamento dinâmico de tabelas
         tabelas_map = {
             "iCidade": "respostas",
             "iGov-Ti": "respostas_igov",
+            "i-Amb": "respostas_iamb",
         }
 
         if dimensao not in tabelas_map:
             return {
                 "resposta": "Dimensão em teste",
-                "detalhes": f"A dimensão '{dimensao}' não possui tabela configurada.",
+                "detalhes": (
+                    f"A dimensão '{dimensao}' não possui tabela configurada."
+                ),
                 "pontuacao_obtida": 0,
             }
 
@@ -431,7 +854,12 @@ class SistemaHAL:
 
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                query = f"SELECT * FROM {tabela} WHERE id::text = %s AND ano = %s;"
+                # respostas_iamb utiliza a coluna 'quesito' ao invés de 'id'
+                if tabela == "respostas_iamb":
+                    query = f"SELECT * FROM {tabela} WHERE quesito::text = %s AND ano = %s;"
+                else:
+                    query = f"SELECT * FROM {tabela} WHERE id::text = %s AND ano = %s;"
+
                 cur.execute(query, (str(codigo_quesito), int(ano)))
                 resultado = cur.fetchone()
 
@@ -446,8 +874,11 @@ class SistemaHAL:
                     )
 
                     pontos_val = dados.get("pontos", dados.get("pontuacao", 0))
+
+                    # Trata o campo 'detalhes' (jsonb ou string) e campos clássicos 'link'/'comentarios'
                     link = dados.get("link")
                     comentarios = dados.get("comentarios")
+                    detalhes_campo = dados.get("detalhes")
 
                     detalhe_texto = []
                     if link and str(link) not in ["EMPTY_STRING", "None", ""]:
@@ -460,6 +891,15 @@ class SistemaHAL:
                         "",
                     ]:
                         detalhe_texto.append(f"Comentários: {comentarios}")
+
+                    if detalhes_campo and str(detalhes_campo) not in [
+                        "EMPTY_STRING",
+                        "{}",
+                        "[]",
+                        "None",
+                        "",
+                    ]:
+                        detalhe_texto.append(f"Detalhes: {detalhes_campo}")
 
                     txt_detalhes = (
                         " | ".join(detalhe_texto)
