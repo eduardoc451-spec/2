@@ -53,7 +53,7 @@ class SistemaHAL:
         return []
 
     def get_resposta_municipio(self, dimensao, codigo_quesito, ano):
-        """Busca a resposta em respostas_iplan fazendo cast do id para texto."""
+        """Busca a resposta na tabela respostas fazendo cast do id para texto."""
 
         if dimensao != "iCidade":
             return {
@@ -62,7 +62,8 @@ class SistemaHAL:
                 "pontuacao_obtida": 0,
             }
 
-        tabela = "respostas_iplan"
+        # Apontando para a tabela 'respostas' visível no Neon
+        tabela = "respostas"
 
         conn, erro = criar_conexao_direta()
         if not conn:
@@ -140,7 +141,7 @@ class SistemaHAL:
 
 
 def mostrar_chat_hal():
-    """Função de renderização para a interface do Streamlit."""
+    """Função para desenhar a interface do Streamlit."""
     st.title("Sistema HAL - Consulta")
 
     hal = SistemaHAL()
@@ -158,7 +159,7 @@ def mostrar_chat_hal():
             codigo_quesito = quesito_selecionado.split(" - ")[0]
 
             ano = st.number_input(
-                "Ano:", min_value=2000, max_value=2030, value=2024
+                "Ano:", min_value=2000, max_value=2030, value=2026
             )
 
             if st.button("Buscar Resposta"):
@@ -174,7 +175,7 @@ def mostrar_chat_hal():
 
 
 def main():
-    """Ponto de entrada padrão caso o script seja executado diretamente."""
+    """Ponto de entrada do script."""
     mostrar_chat_hal()
 
 
