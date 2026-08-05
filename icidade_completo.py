@@ -1476,8 +1476,314 @@ def mostrar_formulario_cidade():
     if st.session_state.get(f"gatilho_modal_1_2_{ano_sel}", False):
         modal_aviso_link("1.2", st.session_state.get(f"links_pendentes_1_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_1_2_{ano_sel}"] = False
-       
-   # =============================================================================
+
+    # =============================================================================
+    # QUESITO 1.3 • SUBORDINAÇÃO DA COMPDEC
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_1_3_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 1.3 - Secretaria ou Diretoria de Subordinação", expanded=True):
+            st.subheader("1.3 • Estrutura Organizacional")
+            st.write("**A COMPDEC ou órgão similar está associada ou subordinada a qual secretaria/diretoria?**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.3' para registrar.*")
+            
+            # Mapeamento oficial de opções e pontuações do quesito 1.3
+            opcoes_13 = {
+                "Selecione...": 0.0,
+                "Gabinete do Prefeito (05 pts)": 5.0, 
+                "Segurança Pública (00 pts)": 0.0, 
+                "Controladoria (00 pts)": 0.0, 
+                "Outra (00 pts)": 0.0
+            }
+            
+            # Estado inicial / persistente
+            d13 = res_data.get("1.3") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_13 = d13.get("valor", "Selecione...")
+            
+            # Chaves fixas por componente e ano
+            chave_radio_13 = f"r_13_{ano_sel}"
+            chave_link_13 = f"l_13_txt_{ano_sel}"
+            chave_coment_13 = f"coment_1.3_{ano_sel}"
+
+            c13_1, c13_2 = st.columns([1, 1])
+            with c13_1:
+                lista_opcoes_13 = list(opcoes_13.keys())
+                idx_13 = lista_opcoes_13.index(v_salvo_13) if v_salvo_13 in lista_opcoes_13 else 0
+                
+                val_radio_13 = st.radio(
+                    "Selecione a subordinação:",
+                    options=lista_opcoes_13,
+                    index=idx_13,
+                    key=chave_radio_13,
+                    label_visibility="collapsed"
+                )
+                
+            with c13_2:
+                link_13 = st.text_area(
+                    "Link de Evidência / Organograma (1.3):", 
+                    value=d13.get("link", ""), 
+                    key=chave_link_13, 
+                    height=135
+                )
+                placeholder_links_13 = st.empty()
+                links_13_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_13 or "")]
+                if links_13_visuais:
+                    placeholder_links_13.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_13_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.3", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.3", key=f"btn_salvar_1_3_{ano_sel}", type="primary"):
+                pts_13 = opcoes_13.get(val_radio_13, 0.0)
+                
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_13, d13.get("comentario", ""))
+                
+                # 2. Salva no banco/backend
+                save_resp("1.3", val_radio_13, pts_13, link_13, comentario_para_salvar)
+                
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["1.3"] = {
+                    "valor": val_radio_13, 
+                    "pontos": pts_13, 
+                    "link": link_13, 
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_13 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d13.get("link", "") or "")]
+
+                if link_13 != d13.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_3_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 1.3 salvos com sucesso!", icon="✅")
+                
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_13 = d13.get("pontos", 0.0)
+            cor_txt_13 = "#28a745" if pts_atuais_13 == 5.0 else ("#dc3545" if v_salvo_13 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_13}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.3: {pts_atuais_13:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.3
+    if st.session_state.get(f"gatilho_modal_1_3_{ano_sel}", False):
+        modal_aviso_link("1.3", st.session_state.get(f"links_pendentes_1_3_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_3_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 1.4 • ATUAÇÃO SISTÊMICA DA COMPDEC
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_1_4_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 1.4 - Atuação Sistêmica e Articulação da Defesa Civil", expanded=True):
+            st.subheader("1.4 • Articulação Sistêmica (PNPDEC)")
+            st.write("**Os órgãos e entidades da administração pública municipal atuam de forma sistêmica, articulados com a COMPDEC, nas ações de prevenção, mitigação, preparação, resposta e recuperação de acordo com a Política Nacional de Proteção e Defesa Civil - PNPDEC?**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.4' para registrar.*")
+            
+            # Mapeamento oficial de opções e pontuações do quesito 1.4
+            opcoes_14 = {
+                "Selecione...": 0.0,
+                "Sim, inclusive com a participação de entidades privadas e da comunidade (50 pts)": 50.0,
+                "Sim, com participação de entidades privadas (20 pts)": 20.0,
+                "Sim, com participação da comunidade (20 pts)": 20.0,
+                "Sim, apenas com representantes da administração municipal (10 pts)": 10.0,
+                "Não atuam de forma sistêmica (00 pts)": 0.0
+            }
+            
+            # Estado inicial / persistente
+            d14 = res_data.get("1.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_14 = d14.get("valor", "Selecione...")
+            
+            # Chaves fixas por componente e ano
+            chave_radio_14 = f"r_14_{ano_sel}"
+            chave_link_14 = f"l_14_txt_{ano_sel}"
+            chave_coment_14 = f"coment_1.4_{ano_sel}"
+
+            c14_1, c14_2 = st.columns([1, 1])
+            with c14_1:
+                lista_opcoes_14 = list(opcoes_14.keys())
+                idx_14 = lista_opcoes_14.index(v_salvo_14) if v_salvo_14 in lista_opcoes_14 else 0
+                
+                val_radio_14 = st.radio(
+                    "Nível de atuação:",
+                    options=lista_opcoes_14,
+                    index=idx_14,
+                    key=chave_radio_14,
+                    label_visibility="collapsed"
+                )
+                
+            with c14_2:
+                link_14 = st.text_area(
+                    "Link de Evidência / Relatórios / Atas (1.4):", 
+                    value=d14.get("link", ""), 
+                    key=chave_link_14, 
+                    height=155
+                )
+                placeholder_links_14 = st.empty()
+                links_14_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_14 or "")]
+                if links_14_visuais:
+                    placeholder_links_14.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_14_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.4", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.4", key=f"btn_salvar_1_4_{ano_sel}", type="primary"):
+                pts_14 = opcoes_14.get(val_radio_14, 0.0)
+                
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_14, d14.get("comentario", ""))
+                
+                # 2. Salva no banco/backend
+                save_resp("1.4", val_radio_14, pts_14, link_14, comentario_para_salvar)
+                
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["1.4"] = {
+                    "valor": val_radio_14, 
+                    "pontos": pts_14, 
+                    "link": link_14, 
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_14 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d14.get("link", "") or "")]
+
+                if link_14 != d14.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_4_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 1.4 salvos com sucesso!", icon="✅")
+                
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_14 = d14.get("pontos", 0.0)
+            cor_txt_14 = "#28a745" if pts_atuais_14 >= 20.0 else ("#dc3545" if v_salvo_14 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_14}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.4: {pts_atuais_14:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.4
+    if st.session_state.get(f"gatilho_modal_1_4_{ano_sel}", False):
+        modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
+
+    # =============================================================================
+    # QUESITO 1.5 • MOTIVO DA NÃO INSTITUIÇÃO DA COMPDEC
+    # =============================================================================
+    with st.container(key=f"container_bloco_compdec_1_5_final_{ano_sel}", border=True):
+        with st.expander(f"📌 Quesito 1.5 - Motivo da Não Instituição da COMPDEC", expanded=True):
+            st.subheader("1.5 • Justificativa de Não Instituição")
+            st.write("**Motivo da COMPDEC não ter sido instituída:**")
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.5' para registrar.*")
+            
+            # Mapeamento oficial de opções e pontuações do quesito 1.5
+            opcoes_15 = {
+                "Selecione...": 0.0,
+                "Instrumento normativo em elaboração": 0.0, 
+                "Falta de estrutura": 0.0, 
+                "Outros": 0.0
+            }
+            
+            # Estado inicial / persistente
+            d15 = res_data.get("1.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            v_salvo_15 = d15.get("valor", "Selecione...")
+            
+            # Chaves fixas por componente e ano
+            chave_radio_15 = f"r_15_{ano_sel}"
+            chave_link_15 = f"l_15_txt_{ano_sel}"
+            chave_coment_15 = f"coment_1.5_{ano_sel}"
+
+            c15_1, c15_2 = st.columns([1, 1])
+            with c15_1:
+                lista_opcoes_15 = list(opcoes_15.keys())
+                idx_15 = lista_opcoes_15.index(v_salvo_15) if v_salvo_15 in lista_opcoes_15 else 0
+                
+                val_radio_15 = st.radio(
+                    "Selecione o motivo:",
+                    options=lista_opcoes_15,
+                    index=idx_15,
+                    key=chave_radio_15,
+                    label_visibility="collapsed"
+                )
+                
+            with c15_2:
+                link_15 = st.text_area(
+                    "Link de Evidência / Ofício Justificativo (1.5):", 
+                    value=d15.get("link", ""), 
+                    key=chave_link_15, 
+                    height=115
+                )
+                placeholder_links_15 = st.empty()
+                links_15_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_15 or "")]
+                if links_15_visuais:
+                    placeholder_links_15.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_15_visuais]))
+
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.5", res_data, ano_sel)
+
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.5", key=f"btn_salvar_1_5_{ano_sel}", type="primary"):
+                pts_15 = opcoes_15.get(val_radio_15, 0.0)
+                
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar = st.session_state.get(chave_coment_15, d15.get("comentario", ""))
+                
+                # 2. Salva no banco/backend
+                save_resp("1.5", val_radio_15, pts_15, link_15, comentario_para_salvar)
+                
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["1.5"] = {
+                    "valor": val_radio_15, 
+                    "pontos": pts_15, 
+                    "link": link_15, 
+                    "comentario": comentario_para_salvar
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal
+                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_15 or "")]
+                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d15.get("link", "") or "")]
+
+                if link_15 != d15.get("link", "") and links_atuais and links_atuais != links_antigos:
+                    st.session_state[f"links_pendentes_1_5_{ano_sel}"] = links_atuais
+                    st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = True
+
+                st.toast("Resposta e comentário do Quesito 1.5 salvos com sucesso!", icon="✅")
+                
+                # 5. FORÇA O RECARREGAMENTO DA TELA
+                st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_15 = d15.get("pontos", 0.0)
+            cor_txt_15 = "#6c757d" if v_salvo_15 == "Selecione..." else "#28a745"
+            st.markdown(
+                f"<span style='color:{cor_txt_15}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.5: {pts_atuais_15:.1f} pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
+
+    # GATILHO DO MODAL 1.5
+    if st.session_state.get(f"gatilho_modal_1_5_{ano_sel}", False):
+        modal_aviso_link("1.5", st.session_state.get(f"links_pendentes_1_5_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = False
+        
+    # =============================================================================
     # QUESITO 2.0 • TREINAMENTO E CAPACITAÇÃO EM DEFESA CIVIL
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_2_0_final_{ano_sel}", border=True):
