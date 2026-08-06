@@ -5,10 +5,16 @@ import sys
 import pandas as pd
 import streamlit as st
 
-# --- INJEÇÃO AUTOMÁTICA DE SECRETS NO RENDER ---
+# --- TRATAMENTO PARA LER O DATABASE_URL NO RENDER ---
+# Se o arquivo de segredos não existir fisicamente, criamos ele dinamicamente com a variável do Render
 if "DATABASE_URL" in os.environ:
-    st.secrets["DATABASE_URL"] = os.environ["DATABASE_URL"]
-# -----------------------------------------------
+    secrets_dir = os.path.expanduser("~/.streamlit")
+    secrets_path = os.path.join(secrets_dir, "secrets.toml")
+    if not os.path.exists(secrets_path):
+        os.makedirs(secrets_dir, exist_ok=True)
+        with open(secrets_path, "w") as f:
+            f.write(f'DATABASE_URL = "{os.environ["DATABASE_URL"]}"\n')
+# ----------------------------------------------------
 
 # Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
 current_dir = (
