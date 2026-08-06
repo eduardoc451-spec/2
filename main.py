@@ -1,25 +1,16 @@
-import base64
-from datetime import datetime
 import os
 import sys
-
-# --- CRIAR SECRETS.TOML ANTES DO STREAMLIT SER IMPORTADO ---
-if "DATABASE_URL" in os.environ:
-    # 1. Cria na pasta atual do app (.streamlit/secrets.toml)
-    os.makedirs(".streamlit", exist_ok=True)
-    with open(".streamlit/secrets.toml", "w", encoding="utf-8") as f:
-        f.write(f'DATABASE_URL = "{os.environ["DATABASE_URL"]}"\n')
-    
-    # 2. Cria no home do usuário (/root/.streamlit/secrets.toml) por garantia
-    home_dir = os.path.expanduser("~/.streamlit")
-    os.makedirs(home_dir, exist_ok=True)
-    with open(os.path.join(home_dir, "secrets.toml"), "w", encoding="utf-8") as f:
-        f.write(f'DATABASE_URL = "{os.environ["DATABASE_URL"]}"\n')
-# -----------------------------------------------------------
-
-# AGORA SIM IMPORTAMOS O STREAMLIT (com os arquivos secrets.toml já criados nos caminhos corretos)
+import base64
+from datetime import datetime
 import pandas as pd
 import streamlit as st
+
+# =============================================================================
+# INJEÇÃO GLOBAL DE SECRETS PARA TODOS OS MÓDULOS
+# =============================================================================
+if "DATABASE_URL" in os.environ and "DATABASE_URL" not in st.secrets:
+    st.secrets._secrets["DATABASE_URL"] = os.environ["DATABASE_URL"]
+# =============================================================================
 
 # Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
 current_dir = (
@@ -29,6 +20,8 @@ current_dir = (
 )
 if current_dir not in sys.path:
     sys.path.append(current_dir)
+
+# ... Resto do seu código normal sem alterar nenhum módulo!
 
 # Importar módulos locais com tratamento de erros dinâmico
 def import_local_module(module_name):
