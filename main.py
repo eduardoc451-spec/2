@@ -5,19 +5,7 @@ import sys
 import pandas as pd
 import streamlit as st
 
-# =============================================================================
-# GAMBIARRA MESTRA: INJETA O DATABASE_URL NO ST.SECRETS GLOBALMENTE NO RENDER
-# =============================================================================
-if "DATABASE_URL" in os.environ:
-    # 1. Se o st.secrets estiver vazio/inacessível, cria a estrutura interna
-    if not hasattr(st.secrets, "_secrets") or st.secrets._secrets is None:
-        object.__setattr__(st.secrets, "_secrets", {})
-    
-    # 2. Injeta a URL do Neon vinda da variável do Render direto na memória do st.secrets
-    st.secrets._secrets["DATABASE_URL"] = os.environ["DATABASE_URL"]
-# =============================================================================
-
-# Força o interpretador a enxergar a pasta atual
+# Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
 current_dir = (
     os.path.dirname(os.path.abspath(__file__))
     if "__file__" in locals()
