@@ -777,7 +777,9 @@ def dimension_page():
         st.info(f"Módulo {dimension} pronto para integração.")
 
 
-# Gerenciador de Estado de Telas do Streamlit
+# =============================================================================
+# ROTEAMENTO ÚNICO DE PÁGINAS (Substitua todo aquele bloco final por este)
+# =============================================================================
 if not st.session_state.authenticated:
     login_page()
 else:
@@ -786,14 +788,9 @@ else:
     elif st.session_state.current_page == "dashboard":
         dashboard_page()
     elif st.session_state.current_page == "dimension":
-        dimension_page()
-
-
-# Roteamento de Páginas Principais
-if not st.session_state.authenticated:
-    login_page()
-elif st.session_state.needs_password_change:
-    change_password_page()
-else:
-    dashboard_page()
+        # Garante que a página de dimensão/módulo seja chamada quando selecionada
+        if "dimension_page" in globals():
+            dimension_page()
+        else:
+            dashboard_page()
 
