@@ -6,9 +6,8 @@ import pandas as pd
 import streamlit as st
 
 # =============================================================================
-# INJEÇÃO DEFINITIVA E BLINDADA NO ST.SECRETS
+# INJEÇÃO DEFINITIVA E BLINDADA NO ST.SECRETS (RENDER / NEON)
 # =============================================================================
-# URL de fallback do Neon caso a variável do Render falhe no boot
 NEON_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
 SecretsClass = type(st.secrets)
@@ -18,13 +17,10 @@ _orig_getattr = getattr(SecretsClass, "__getattr__", None)
 
 
 def _patched_getitem(self, key):
-    # 1. Procura primeiro nas variáveis de ambiente do sistema (Render)
     if key in os.environ and os.environ[key]:
         return os.environ[key]
-    # 2. Se for a chave do banco, garante a URL do Neon sem deixar dar erro
     if key == "DATABASE_URL":
         return os.environ.get("DATABASE_URL", NEON_URL)
-    # 3. Se for outra chave, tenta o comportamento original com segurança
     if _orig_getitem:
         try:
             return _orig_getitem(self, key)
@@ -46,12 +42,11 @@ def _patched_getattr(self, key):
     raise AttributeError(f"st.secrets has no attribute '{key}'")
 
 
-# Aplica as interceptações diretamente na classe do Streamlit
 SecretsClass.__getitem__ = _patched_getitem
 SecretsClass.__getattr__ = _patched_getattr
 # =============================================================================
 
-# Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
+# Força o interpretador a enxergar a pasta atual
 current_dir = (
     os.path.dirname(os.path.abspath(__file__))
     if "__file__" in locals()
@@ -61,17 +56,17 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 
-# Importar módulos locais com tratamento de erros dinâmico
+# --- CARREGAMENTO OTIMIZADO DE MÓDULOS (SEM IMPORTLIB.RELOAD) ---
 def import_local_module(module_name):
     try:
         import importlib
 
-        if module_name in sys.modules:
-            return importlib.reload(sys.modules[module_name])
         return importlib.import_module(module_name)
     except Exception:
         return None
 
+
+# Importação de Módulos IEG-M
 icidade = import_local_module("icidade_completo") or import_local_module(
     "icidade"
 )
@@ -83,19 +78,19 @@ ieduc = import_local_module("ieduc")
 isaude = import_local_module("isaude")
 iegm_final = import_local_module("iegmfinal")
 
-# Novos módulos integrados
+# Módulos de Gestão
 bib_core = import_local_module("biblioteca")
 admin_core = import_local_module("administrador")
 atividade = import_local_module("atividade")
 plano_acao = import_local_module("plano_acao")
-treinamento = import_local_module("treinamento")  # Módulo de treinamento
+treinamento = import_local_module("treinamento")
 
-# Novas importações do Sistema de Controle Interno
+# Módulos do Sistema de Controle Interno
 vistoria = import_local_module("vistoria")
 planos = import_local_module("planos")
 contratos = import_local_module("contratos")
 
-# Importação do módulo HAL 9000
+# Módulo Inteligência Artificial
 hal_core = import_local_module("hal")
 
 # Configuração da página
@@ -107,7 +102,7 @@ st.set_page_config(
 )
 
 
-# FUNÇÃO: Converte a imagem local para Base64
+# FUNÇÃO: Converte imagem local para Base64
 def get_image_base64(filename):
     full_path = os.path.join(current_dir, filename)
     if os.path.exists(full_path):
@@ -116,7 +111,7 @@ def get_image_base64(filename):
     return None
 
 
-# CSS Avançado
+# Estilização CSS
 st.markdown(
     """
     <style>
@@ -125,7 +120,6 @@ st.markdown(
         color: #333333;
     }
     
-    /* Quadro de login */
     .cad-frame {
         border: 2px solid #001A4D;
         border-radius: 4px;
@@ -136,7 +130,6 @@ st.markdown(
         max-width: 320px;
     }
 
-    /* CONTAINER DO CARD */
     .card-container {
         position: relative;
         background: #FFFFFF;
@@ -190,7 +183,6 @@ st.markdown(
         pointer-events: none;
     }
 
-    /* Esconde o botão nativo do Streamlit */
     .hidden-btn-container {
         position: absolute;
         top: 0;
@@ -212,7 +204,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Inicialização do banco de dados simulado
+# Inicialização de Estado Global
 if "users_db" not in st.session_state:
     st.session_state.users_db = {
         "jefferson.espanha": {
@@ -273,7 +265,6 @@ DIMENSIONS_DATA = {
     },
 }
 
-# Sistema de Controle Interno
 CONTROLE_INTERNO_DATA = {
     "Vistorias in loco": {
         "img": "vistoria.png",
@@ -291,7 +282,6 @@ CONTROLE_INTERNO_DATA = {
 
 
 def login_page():
-    """Página de login."""
     col1, col2, col3 = st.columns([1.1, 1.6, 1.1])
     with col2:
         logo_b64 = get_image_base64("iegm.png")
@@ -393,7 +383,6 @@ def login_page():
 
 
 def change_password_page():
-    """Tela intermediária obrigatória para alteração do primeiro acesso."""
     col1, col2, col3 = st.columns([1.1, 1.6, 1.1])
     with col2:
         st.markdown(
@@ -425,7 +414,6 @@ def change_password_page():
 
 
 def dashboard_page():
-    """Página principal."""
     st.markdown(
         f'<div style="text-align: center; padding: 10px;"><h1 style="color: #001A4D;">IEG-M Francisco Morato</h1><p style="color: #003D99; font-weight: bold;">Bem-vindo, {st.session_state.username}!</p></div>',
         unsafe_allow_html=True,
@@ -533,6 +521,15 @@ def dashboard_page():
             st.session_state.current_page = "dimension"
             st.rerun()
         st.markdown("</div></div>", unsafe_allow_html=True)
+
+
+# Roteamento de Páginas Principais
+if not st.session_state.authenticated:
+    login_page()
+elif st.session_state.needs_password_change:
+    change_password_page()
+else:
+    dashboard_page()
 
     # SISTEMA DE CONTROLE INTERNO
     st.markdown("### 🛡️ Sistema de Controle Interno")
