@@ -1,18 +1,23 @@
-import os
-import sys
 import base64
 from datetime import datetime
+import os
+import sys
 import pandas as pd
 import streamlit as st
 
 # =============================================================================
-# INJEÇÃO GLOBAL DE SECRETS PARA TODOS OS MÓDULOS
+# GAMBIARRA MESTRA: INJETA O DATABASE_URL NO ST.SECRETS GLOBALMENTE NO RENDER
 # =============================================================================
-if "DATABASE_URL" in os.environ and "DATABASE_URL" not in st.secrets:
+if "DATABASE_URL" in os.environ:
+    # 1. Se o st.secrets estiver vazio/inacessível, cria a estrutura interna
+    if not hasattr(st.secrets, "_secrets") or st.secrets._secrets is None:
+        object.__setattr__(st.secrets, "_secrets", {})
+    
+    # 2. Injeta a URL do Neon vinda da variável do Render direto na memória do st.secrets
     st.secrets._secrets["DATABASE_URL"] = os.environ["DATABASE_URL"]
 # =============================================================================
 
-# Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
+# Força o interpretador a enxergar a pasta atual
 current_dir = (
     os.path.dirname(os.path.abspath(__file__))
     if "__file__" in locals()
@@ -21,7 +26,7 @@ current_dir = (
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
-# ... Resto do seu código normal sem alterar nenhum módulo!
+# ... Resto das suas importações e código sem alterar NENHUM módulo!
 
 # Importar módulos locais com tratamento de erros dinâmico
 def import_local_module(module_name):
