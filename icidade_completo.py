@@ -274,19 +274,50 @@ def renderizar_questao(qid, res_data):
             st.markdown("<br>", unsafe_allow_html=True)
             
             if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
+                usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+                
+                # 1. Recupera o histórico de comentários já existente no banco/estado
+                historico_comentarios = list(dados_q.get("comentarios", []))
+                
+                # 2. Captura eventual comentário digitado na caixa e ainda não postado
+                key_texto = f"v_txt_com_{qid}_{ano_sel}"
+                texto_comentario_pendente = st.session_state.get(key_texto, "").strip()
+                
+                if texto_comentario_pendente:
+                    # Determina o status atual para registrar a mensagem
+                    status_atual = "Resolvido"
+                    for com in historico_comentarios:
+                        if isinstance(com, dict) and "status_definido" in com:
+                            status_atual = com["status_definido"]
+                            
+                    historico_comentarios.append({
+                        "autor": usuario_atual,
+                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "texto": texto_comentario_pendente,
+                        "status_definido": status_atual
+                    })
+                    # Sinaliza para limpar o campo após o rerun
+                    key_estado_limpar = f"limpar_input_{qid}_{ano_sel}"
+                    st.session_state[key_estado_limpar] = True
+
+                # 3. Executa o salvamento completo com os comentários atualizados
                 links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
                 
                 save_resp(
                     qid=qid, 
                     valor=novo_valor, 
                     pontos=novos_pontos, 
-                    link=novo_link
+                    link=novo_link,
+                    comentarios=historico_comentarios  # <--- PASSAGEM EXPLÍCITA DOS COMENTÁRIOS
                 )
                 
-                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
+                st.toast(f"Questão {qid} e comentários salvos com sucesso!", icon="✅")
                 
                 if links and "modal_aviso_link" in globals():
                     modal_aviso_link(qid, links)
+                else:
+                    st.rerun()
 
         # Diálogo Interno (Comentários)
         bloco_comentarios(qid, res_data)
@@ -327,7 +358,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             key=key_radio
         )
         
-        # CORREÇÃO DO LOOP: Verifica se o valor mudou em relação ao estado gravado no widget (interação do usuário)
+        # CORREÇÃO DO LOOP: Verifica se o valor mudou em relação ao estado gravado no widget
         if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
@@ -384,8 +415,8 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                         )
                         st.rerun()
         
-        # CORREÇÃO DA LIMPEZA: Aplica a limpeza antes de renderizar a caixa de texto
-        if st.session_state[key_estado_limpar]:
+        # Aplica a limpeza do input antes de renderizá-lo
+        if st.session_state.get(key_estado_limpar, False):
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
             
