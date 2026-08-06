@@ -522,15 +522,6 @@ def dashboard_page():
             st.rerun()
         st.markdown("</div></div>", unsafe_allow_html=True)
 
-
-# Roteamento de Páginas Principais
-if not st.session_state.authenticated:
-    login_page()
-elif st.session_state.needs_password_change:
-    change_password_page()
-else:
-    dashboard_page()
-
     # SISTEMA DE CONTROLE INTERNO
     st.markdown("### 🛡️ Sistema de Controle Interno")
     ci_cols = st.columns(3)
@@ -796,3 +787,13 @@ else:
         dashboard_page()
     elif st.session_state.current_page == "dimension":
         dimension_page()
+
+
+# Roteamento de Páginas Principais
+if not st.session_state.authenticated:
+    login_page()
+elif st.session_state.needs_password_change:
+    change_password_page()
+else:
+    dashboard_page()
+
