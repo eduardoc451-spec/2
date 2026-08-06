@@ -239,7 +239,7 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
 # =============================================================================
 
 def renderizar_questao(qid, res_data):
-    """Renderiza a questão de forma performática com botão manual de salvamento."""
+    """Renderiza a questão de forma performática com salvamento completo."""
     dados_q = res_data.get(qid, {})
     
     val_existente = dados_q.get("valor", "")
@@ -273,58 +273,59 @@ def renderizar_questao(qid, res_data):
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            if st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True):
-                ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
-                usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
-                
-                # 1. Recupera o histórico de comentários já existente no banco/estado
-                historico_comentarios = list(dados_q.get("comentarios", []))
-                
-                # 2. Captura eventual comentário digitado na caixa e ainda não postado
-                key_texto = f"v_txt_com_{qid}_{ano_sel}"
-                texto_comentario_pendente = st.session_state.get(key_texto, "").strip()
-                
-                if texto_comentario_pendente:
-                    # Determina o status atual para registrar a mensagem
-                    status_atual = "Resolvido"
-                    for com in historico_comentarios:
-                        if isinstance(com, dict) and "status_definido" in com:
-                            status_atual = com["status_definido"]
-                            
-                    historico_comentarios.append({
-                        "autor": usuario_atual,
-                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "texto": texto_comentario_pendente,
-                        "status_definido": status_atual
-                    })
-                    # Sinaliza para limpar o campo após o rerun
-                    key_estado_limpar = f"limpar_input_{qid}_{ano_sel}"
-                    st.session_state[key_estado_limpar] = True
+            btn_salvar_questao = st.button("💾 Salvar Questão", key=f"btn_save_{qid}", type="primary", use_container_width=True)
 
-                # 3. Executa o salvamento completo com os comentários atualizados
-                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
-                
-                save_resp(
-                    qid=qid, 
-                    valor=novo_valor, 
-                    pontos=novos_pontos, 
-                    link=novo_link,
-                    comentarios=historico_comentarios  # <--- PASSAGEM EXPLÍCITA DOS COMENTÁRIOS
-                )
-                
-                st.toast(f"Questão {qid} e comentários salvos com sucesso!", icon="✅")
-                
-                if links and "modal_aviso_link" in globals():
-                    modal_aviso_link(qid, links)
-                else:
-                    st.rerun()
+        # Renderiza o bloco de comentários e verifica se um novo comentário foi digitado/postado
+        comentario_postado = bloco_comentarios(qid, res_data)
 
-        # Diálogo Interno (Comentários)
-        bloco_comentarios(qid, res_data)
+        # Lógica de Salvamento Principal ao clicar em "💾 Salvar Questão"
+        if btn_salvar_questao:
+            ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
+            usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+            
+            # Carrega o histórico atual de comentários da questão
+            historico_atual = list(dados_q.get("comentarios", []))
+            
+            # Se o usuário digitou algum texto na caixa de comentário mas apertou em "Salvar Questão" direto
+            key_texto = f"v_txt_com_{qid}_{ano_sel}"
+            texto_pendente = st.session_state.get(key_texto, "").strip()
+            
+            if texto_pendente:
+                status_atual = "Resolvido"
+                for com in historico_atual:
+                    if isinstance(com, dict) and "status_definido" in com:
+                        status_atual = com["status_definido"]
+
+                historico_atual.append({
+                    "autor": usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": texto_pendente,
+                    "status_definido": status_atual
+                })
+                # Marca para limpar o input de texto
+                st.session_state[f"limpar_input_{qid}_{ano_sel}"] = True
+
+            links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
+            
+            # Salva resposta + histórico atualizado no PostgreSQL
+            save_resp(
+                qid=qid, 
+                valor=novo_valor, 
+                pontos=novos_pontos, 
+                link=novo_link,
+                comentarios=historico_atual
+            )
+            
+            st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
+            
+            if links and "modal_aviso_link" in globals():
+                modal_aviso_link(qid, links)
+            else:
+                st.rerun()
 
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
-    """Gera o diálogo interno avançado com histórico e status."""
+    """Gera o diálogo interno avançado e lida com postagens de comentários isoladas."""
     ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
     
@@ -358,7 +359,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             key=key_radio
         )
         
-        # CORREÇÃO DO LOOP: Verifica se o valor mudou em relação ao estado gravado no widget
+        # Alteração de status via Radio Button
         if key_radio in st.session_state and st.session_state[key_radio] != status_global:
             log_mudanca = {
                 "autor": "Sistema / " + usuario_atual,
@@ -376,6 +377,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             )
             st.rerun()
 
+        # Exibição do histórico de mensagens
         if historico:
             for idx, com in enumerate(historico):
                 if not isinstance(com, dict):
@@ -415,13 +417,14 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                         )
                         st.rerun()
         
-        # Aplica a limpeza do input antes de renderizá-lo
+        # Limpa o campo de texto se necessário
         if st.session_state.get(key_estado_limpar, False):
             st.session_state[key_texto] = ""
             st.session_state[key_estado_limpar] = False
             
         novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
         
+        # Botão "Postar Comentário" isolado
         if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
             if novo_texto.strip():
                 nova_mensagem = {
@@ -431,6 +434,8 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                     "status_definido": status_global
                 }
                 historico.append(nova_mensagem)
+                
+                # Salva mantendo os valores atuais de resposta, pontos e link
                 save_resp(
                     qid=questao_id, 
                     valor=dados_questao.get("valor", ""), 
