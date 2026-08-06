@@ -5,6 +5,32 @@ import sys
 import pandas as pd
 import streamlit as st
 
+# =============================================================================
+# SOLUÇÃO DEFINITIVA: MONKEY PATCH NO ST.SECRETS (INTERCEPTAÇÃO NA MEMÓRIA)
+# =============================================================================
+# Pegamos a Classe interna do st.secrets
+SecretsClass = type(st.secrets)
+
+# Sobrescrevemos o método de busca por chave [...]
+_orig_getitem = SecretsClass.__getitem__
+def _patched_getitem(self, key):
+    if key in os.environ:
+        return os.environ[key]
+    return _orig_getitem(self, key)
+SecretsClass.__getitem__ = _patched_getitem
+
+# Sobrescrevemos o método de busca por atributo .chave
+try:
+    _orig_getattr = SecretsClass.__getattr__
+    def _patched_getattr(self, key):
+        if key in os.environ:
+            return os.environ[key]
+        return _orig_getattr(self, key)
+    SecretsClass.__getattr__ = _patched_getattr
+except AttributeError:
+    pass
+# =============================================================================
+
 # Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
 current_dir = (
     os.path.dirname(os.path.abspath(__file__))
@@ -13,7 +39,6 @@ current_dir = (
 )
 if current_dir not in sys.path:
     sys.path.append(current_dir)
-
 # ... Resto das suas importações e código sem alterar NENHUM módulo!
 
 # Importar módulos locais com tratamento de erros dinâmico
