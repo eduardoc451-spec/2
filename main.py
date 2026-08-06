@@ -6,29 +6,49 @@ import pandas as pd
 import streamlit as st
 
 # =============================================================================
-# SOLUÇÃO DEFINITIVA: MONKEY PATCH NO ST.SECRETS (INTERCEPTAÇÃO NA MEMÓRIA)
+# INJEÇÃO DEFINITIVA E BLINDADA NO ST.SECRETS
 # =============================================================================
-# Pegamos a Classe interna do st.secrets
+# URL de fallback do Neon caso a variável do Render falhe no boot
+NEON_URL = "postgresql://neondb_owner:npg_beMKhVR2N4wo@ep-divine-sky-awx1636y-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require"
+
 SecretsClass = type(st.secrets)
 
-# Sobrescrevemos o método de busca por chave [...]
-_orig_getitem = SecretsClass.__getitem__
-def _patched_getitem(self, key):
-    if key in os.environ:
-        return os.environ[key]
-    return _orig_getitem(self, key)
-SecretsClass.__getitem__ = _patched_getitem
+_orig_getitem = getattr(SecretsClass, "__getitem__", None)
+_orig_getattr = getattr(SecretsClass, "__getattr__", None)
 
-# Sobrescrevemos o método de busca por atributo .chave
-try:
-    _orig_getattr = SecretsClass.__getattr__
-    def _patched_getattr(self, key):
-        if key in os.environ:
-            return os.environ[key]
-        return _orig_getattr(self, key)
-    SecretsClass.__getattr__ = _patched_getattr
-except AttributeError:
-    pass
+
+def _patched_getitem(self, key):
+    # 1. Procura primeiro nas variáveis de ambiente do sistema (Render)
+    if key in os.environ and os.environ[key]:
+        return os.environ[key]
+    # 2. Se for a chave do banco, garante a URL do Neon sem deixar dar erro
+    if key == "DATABASE_URL":
+        return os.environ.get("DATABASE_URL", NEON_URL)
+    # 3. Se for outra chave, tenta o comportamento original com segurança
+    if _orig_getitem:
+        try:
+            return _orig_getitem(self, key)
+        except Exception:
+            pass
+    raise KeyError(f"st.secrets has no key '{key}'")
+
+
+def _patched_getattr(self, key):
+    if key in os.environ and os.environ[key]:
+        return os.environ[key]
+    if key == "DATABASE_URL":
+        return os.environ.get("DATABASE_URL", NEON_URL)
+    if _orig_getattr:
+        try:
+            return _orig_getattr(self, key)
+        except Exception:
+            pass
+    raise AttributeError(f"st.secrets has no attribute '{key}'")
+
+
+# Aplica as interceptações diretamente na classe do Streamlit
+SecretsClass.__getitem__ = _patched_getitem
+SecretsClass.__getattr__ = _patched_getattr
 # =============================================================================
 
 # Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
@@ -39,18 +59,18 @@ current_dir = (
 )
 if current_dir not in sys.path:
     sys.path.append(current_dir)
-# ... Resto das suas importações e código sem alterar NENHUM módulo!
+
 
 # Importar módulos locais com tratamento de erros dinâmico
 def import_local_module(module_name):
     try:
         import importlib
+
         if module_name in sys.modules:
             return importlib.reload(sys.modules[module_name])
         return importlib.import_module(module_name)
     except Exception:
         return None
-
 
 icidade = import_local_module("icidade_completo") or import_local_module(
     "icidade"
