@@ -9,5 +9,5 @@ COPY . .
 
 EXPOSE 8501
 
-# Cria o diretório .streamlit e escreve a chave DATABASE_URL exatamente como o Streamlit espera
-CMD ["sh", "-c", "mkdir -p .streamlit && echo \"DATABASE_URL = \\\"$DATABASE_URL\\\"\" > .streamlit/secrets.toml && streamlit run main.py --server.port=8501 --server.address=0.0.0.0"]
+# Cria a pasta e grava o secrets.toml de forma limpa e segura
+CMD ["sh", "-c", "mkdir -p .streamlit && printf '[default]\nDATABASE_URL = \"%s\"\n' \"$DATABASE_URL\" > .streamlit/secrets.toml && streamlit run main.py --server.port=8501 --server.address=0.0.0.0"]
