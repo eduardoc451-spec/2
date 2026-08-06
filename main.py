@@ -5,6 +5,11 @@ import sys
 import pandas as pd
 import streamlit as st
 
+# --- INJEÇÃO AUTOMÁTICA DE SECRETS NO RENDER ---
+if "DATABASE_URL" in os.environ:
+    st.secrets["DATABASE_URL"] = os.environ["DATABASE_URL"]
+# -----------------------------------------------
+
 # Força o interpretador a enxergar a pasta atual para evitar erros de importação dos módulos locais
 current_dir = (
     os.path.dirname(os.path.abspath(__file__))
@@ -20,7 +25,7 @@ def import_local_module(module_name):
     try:
         import importlib
         if module_name in sys.modules:
-            return importlib.reload(sys.modules[module_name]) # <-- AQUI ESTÁ O PERIGO!
+            return importlib.reload(sys.modules[module_name])
         return importlib.import_module(module_name)
     except Exception:
         return None
