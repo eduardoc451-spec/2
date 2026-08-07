@@ -1350,71 +1350,87 @@ def mostrar_formulario_cidade():
                 st.rerun()             
 
     # =============================================================================
-    # QUESITO 1.1 • INSTRUMENTO NORMATIVO COMPDEC (NOVO PADRÃO 1.0)
+    # QUESITO 1.1 • INSTRUMENTO NORMATIVO COMPDEC
     # =============================================================================
-    dq11 = res_data.get("1.1") or {"valor": "", "pontos": 0.0, "link": ""}
-    v_salvo_11 = dq11.get("valor", "")
-    l_salvo_11 = dq11.get("link", "")
-    p_salvo_11 = float(dq11.get("pontos", 0.0))
-
     with st.container(key=f"container_bloco_compdec_1_1_final_{ano_sel}", border=True):
-        st.markdown("#### Quesito: `1.1` - Dados do Instrumento Normativo COMPDEC")
-        st.write("**Informe o Instrumento normativo, Número e Data da publicação da criação da COMPDEC ou órgão similar:**")
-
-        col_txt_11, col_meta_11 = st.columns([3, 1])
-
-        with col_txt_11:
-            novo_valor_11 = st.text_area(
-                "Dados do instrumento normativo / Evidência:",
-                value=v_salvo_11,
-                key=f"txt_val_1_1_{ano_sel}",
-                height=100,
-                placeholder="Ex: Decreto nº 123 de 01/01/2025"
+        with st.expander("📌 Quesito 1.1 - Dados do Instrumento Normativo COMPDEC", expanded=True):
+            st.subheader("1.1 • Instrumento Normativo")
+            st.write(
+                "**Informe o Instrumento normativo, Número e Data da publicação "
+                "da criação da COMPDEC ou órgão similar:**"
             )
-            novo_link_11 = st.text_input(
-                "Link da Evidência / Diário Oficial (1.1):",
-                value=l_salvo_11,
-                key=f"txt_link_1_1_{ano_sel}"
-            )
+            st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.1' para registrar.*")
 
-            # Exibição inline dos links detectados
-            links_visuais_11 = [u[0] for u in re.findall(REGEX_PURE_URL, novo_link_11 or "")] + \
-                               [u[0] for u in re.findall(REGEX_PURE_URL, novo_valor_11 or "")]
-            if links_visuais_11:
-                st.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_visuais_11]))
+            # Estado inicial / persistente
+            d11 = res_data.get("1.1") or {"valor": "", "pontos": 0.0, "link": "", "comentarios": []}
+            v_salvo_11 = d11.get("valor", "")
+            l_salvo_11 = d11.get("link", "")
 
-        with col_meta_11:
-            # Mantido como 0.0 por ser um quesito meramente informativo
-            novos_pontos_11 = st.number_input(
-                "Pontuação (Informativo):",
-                value=p_salvo_11,
-                key=f"num_pts_1_1_{ano_sel}",
-                disabled=True
-            )
+            # Chaves fixas por componente e ano
+            chave_txt_11 = f"txt_val_1_1_{ano_sel}"
+            chave_link_11 = f"txt_link_1_1_{ano_sel}"
+
+            c11_1, c11_2 = st.columns([1, 1])
+            with c11_1:
+                novo_valor_11 = st.text_area(
+                    "Dados do instrumento normativo:",
+                    value=v_salvo_11,
+                    key=chave_txt_11,
+                    height=100,
+                    placeholder="Ex: Decreto nº 123 de 01/01/2025"
+                )
+
+            with c11_2:
+                novo_link_11 = st.text_area(
+                    "Link da Evidência / Diário Oficial (1.1):",
+                    value=l_salvo_11,
+                    key=chave_link_11,
+                    height=100
+                )
+                placeholder_links_11 = st.empty()
+                links_11_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, novo_link_11 or "")] + \
+                                   [u[0] for u in re.findall(REGEX_PURE_URL, novo_valor_11 or "")]
+                if links_11_visuais:
+                    placeholder_links_11.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_11_visuais]))
+
+            # Renderiza o bloco de comentários
+            bloco_comentarios("1.1", res_data)
 
             st.markdown("<br>", unsafe_allow_html=True)
-
-            # O BANCO DE DADOS SÓ É ACIONADO NESTE BOTÃO
-            if st.button("💾 Salvar Questão", key=f"btn_save_1_1_{ano_sel}", type="primary", use_container_width=True):
-                # Extrai links para validação do modal
-                links_encontrados_11 = re.findall(r'https?://[^\s]+', novo_valor_11) + re.findall(r'https?://[^\s]+', novo_link_11)
-
+            
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 1.1
+            if st.button("💾 Salvar Quesito 1.1", key=f"btn_salvar_q11_{ano_sel}", type="primary"):
+                # Resgata a lista atual do histórico direto dos dados carregados para NÃO sobrescrever com vazio
+                coments_atuais_11 = res_data.get("1.1", {}).get("comentarios", [])
+                
                 save_resp(
                     qid="1.1",
                     valor=novo_valor_11,
                     pontos=0.0,
-                    link=novo_link_11
+                    link=novo_link_11,
+                    comentarios=coments_atuais_11
                 )
-
+                
+                # ATUALIZA A MEMÓRIA LOCAL: Garante que o painel abaixo leia a memória atualizada na hora
+                if "1.1" not in res_data:
+                    res_data["1.1"] = {}
+                res_data["1.1"]["pontos"] = 0.0
+                res_data["1.1"]["valor"] = novo_valor_11
+                res_data["1.1"]["link"] = novo_link_11
+                
                 st.toast("Quesito 1.1 salvo com sucesso!", icon="✅")
 
-                if links_encontrados_11:
+                # Validação/Aviso complementar de links (caso implementado no modal)
+                links_encontrados_11 = re.findall(r'https?://[^\s]+', novo_valor_11) + re.findall(r'https?://[^\s]+', novo_link_11)
+                if links_encontrados_11 and 'modal_aviso_link' in globals():
                     modal_aviso_link("1.1", links_encontrados_11)
 
-        st.markdown("<span style='color:#28a745; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 1.1: 0.0 pontos (Informativo)</span>", unsafe_allow_html=True)
-
-        # Diálogo Interno (Comentários)
-        bloco_comentarios("1.1", res_data, ano_sel)
+            # Exibição dinamicamente atualizada da pontuação (Informativo)
+            st.markdown(
+                "<span style='color:#6c757d; font-weight:bold;'>"
+                "📊 Impacto de Pontuação no Quesito 1.1: 0.0 pontos (Informativo)</span>",
+                unsafe_allow_html=True
+            )
 
     # =============================================================================
     # QUESITO 1.2 • PÁGINA ELETRÔNICA COMPDEC (100% INDEPENDENTE)
