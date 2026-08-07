@@ -1275,7 +1275,7 @@ def mostrar_formulario_cidade():
 
     with aba_graficos:
         render_graficos(res_data, ano_sel)
-    # =============================================================================
+   # =============================================================================
     # QUESITO 1.0 • COORDENADORIA MUNICIPAL DE DEFESA CIVIL (COMPDEC)
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_1_0_final_{ano_sel}", border=True):
@@ -1346,7 +1346,25 @@ def mostrar_formulario_cidade():
                     comentarios=coments_atuais
                 )
                 
+                # ATUALIZA A MEMÓRIA LOCAL: Garante que o painel abaixo leia os novos pontos na hora
+                if "1.0" not in res_data:
+                    res_data["1.0"] = {}
+                res_data["1.0"]["pontos"] = pts_calc_10
+                res_data["1.0"]["valor"] = val_radio_10
+                
                 st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
+
+            # Exibição dinamicamente atualizada da pontuação
+            d10_atualizado = res_data.get("1.0", {})
+            pts_atuais_10 = d10_atualizado.get("pontos", 0.0)
+            val_atual_10 = d10_atualizado.get("valor", "Selecione...")
+            
+            cor_txt_10 = "#28a745" if pts_atuais_10 >= 20.0 else ("#dc3545" if val_atual_10 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.0: {pts_atuais_10:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
              
 
     # =============================================================================
