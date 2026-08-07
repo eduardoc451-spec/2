@@ -231,21 +231,18 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
 # =============================================================================
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
-    """Gera o diálogo interno avançado com histórico e status."""
+    """Gera o diálogo interno avançado com histórico e status sem perder o texto digitado."""
     ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
     usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
     
     id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
     key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
-    key_estado_limpar = f"limpar_input_{id_chave}_{ano_sel}"
     key_radio = f"rad_status_{id_chave}_{ano_sel}"
     
-    if key_estado_limpar not in st.session_state:
-        st.session_state[key_estado_limpar] = False
-        
     dados_questao = res_data.get(questao_id, {})
     historico = list(dados_questao.get("comentarios", []))
     
+    # Identifica o último status definido no histórico registrado no banco
     status_global = "Resolvido"
     for com in historico:
         if isinstance(com, dict) and "status_definido" in com:
@@ -257,7 +254,8 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
         opcoes_status = ["Resolvido", "Pendente"]
         idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 0
         
-        novo_status_clicado = st.radio(
+        # Seletor de Status (sem trigger imediato de rerun)
+        novo_status = st.radio(
             f"Definir status para {id_chave}:",
             options=opcoes_status,
             index=idx_status_atual,
@@ -265,23 +263,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             key=key_radio
         )
         
-        if key_radio in st.session_state and st.session_state[key_radio] != status_global:
-            log_mudanca = {
-                "autor": "Sistema / " + usuario_atual,
-                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status_clicado.upper()}**.",
-                "status_definido": novo_status_clicado
-            }
-            historico.append(log_mudanca)
-            save_resp(
-                qid=questao_id,
-                valor=dados_questao.get("valor", ""),
-                pontos=dados_questao.get("pontos", 0),
-                link=dados_questao.get("link", ""),
-                comentarios=historico
-            )
-            st.rerun()
-
+        # Exibição do histórico existente
         if historico:
             for idx, com in enumerate(historico):
                 if not isinstance(com, dict):
@@ -320,22 +302,37 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                             comentarios=historico
                         )
                         st.rerun()
-        
-        if st.session_state[key_estado_limpar]:
-            st.session_state[key_texto] = ""
-            st.session_state[key_estado_limpar] = False
-            
+
+        # Entrada de Texto
         novo_texto = st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
         
+        # Botão de Envio Unificado
         if st.button("Postar Comentário", key=f"btn_com_{id_chave}_{ano_sel}", type="primary"):
-            if novo_texto.strip():
+            texto_limpo = novo_texto.strip()
+            houve_mudanca_status = (novo_status != status_global)
+            
+            # 1. Se alterou o status, adiciona a mensagem do sistema
+            if houve_mudanca_status:
+                log_mudanca = {
+                    "autor": "Sistema / " + usuario_atual,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status.upper()}**.",
+                    "status_definido": novo_status
+                }
+                historico.append(log_mudanca)
+            
+            # 2. Se digitou comentário em texto, adiciona a mensagem do usuário
+            if texto_limpo:
                 nova_mensagem = {
                     "autor": usuario_atual,
                     "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "texto": novo_texto.strip(),
-                    "status_definido": status_global
+                    "texto": texto_limpo,
+                    "status_definido": novo_status
                 }
                 historico.append(nova_mensagem)
+            
+            # 3. Salva no Neon apenas se houver texto ou mudança de status
+            if texto_limpo or houve_mudanca_status:
                 save_resp(
                     qid=questao_id, 
                     valor=dados_questao.get("valor", ""), 
@@ -343,8 +340,10 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
                     link=dados_questao.get("link", ""),
                     comentarios=historico
                 )
-                st.session_state[key_estado_limpar] = True
+                st.session_state[key_texto] = ""  # Limpa o campo de texto
                 st.rerun()
+            else:
+                st.warning("Digite um comentário ou altere o status antes de postar.")
 
 # =============================================================================
 # 3. RENDERIZAR QUESTÃO (CHAMA BLOCO_COMENTARIOS)
