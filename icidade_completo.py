@@ -168,7 +168,7 @@ def load_respostas(ano: int) -> dict:
                         except Exception:
                             comentarios = []
 
-                    respostas[row["id"]] = {
+                    respostas[str(row["id"])] = {
                         "valor": row["valor"] or "",
                         "pontos": float(row["pontos"] or 0.0),
                         "link": row["link"] or "",
@@ -180,21 +180,22 @@ def load_respostas(ano: int) -> dict:
 
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Salva/Atualiza a resposta no Neon gravando a lista de comentários via Json."""
-    from psycopg2.extras import Json  # Garante a importação do adapter do PostgreSQL
-
+    """Salva/Atualiza a resposta no Neon gravando a lista de comentários como JSONB nativo."""
     ano_sel = st.session_state.get("ano_referencia_global")
     if not ano_sel:
         st.warning("Nenhum ano de referência selecionado!")
         return
 
+    # Recupera comentários atuais em memória/banco caso a chamada não envie explicitamente
     if comentarios is None:
         dados_atuais = load_respostas(ano_sel)
-        comentarios = dados_atuais.get(qid, {}).get("comentarios", [])
+        comentarios = dados_atuais.get(str(qid), {}).get("comentarios", [])
 
     if not isinstance(comentarios, list):
         comentarios = []
 
+    # Converte a lista em String JSON usando a lib nativa json (evita dependencia do psycopg2.extras.Json)
+    comentarios_json = json.dumps(comentarios, ensure_ascii=False)
     timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
@@ -202,7 +203,7 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO respostas (id, ano, valor, pontos, link, comentarios, atualizado_em)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
                     ON CONFLICT (id, ano) DO UPDATE SET
                         valor = EXCLUDED.valor,
                         pontos = EXCLUDED.pontos,
@@ -215,7 +216,7 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
                     str(valor), 
                     float(pontos), 
                     str(link), 
-                    Json(comentarios), # Grava como JSONB nativo no Neon
+                    comentarios_json,  # Passa como string JSON e o PostgreSQL faz o cast ::jsonb
                     timestamp_atual
                 ))
             conn.commit()
@@ -401,11 +402,11 @@ def renderizar_questao(qid, res_data):
                 if links and "modal_aviso_link" in globals():
                     modal_aviso_link(qid, links)
 
-        # Diálogo Interno (Comentários) - Agora a função já foi declarada acima!
+        # Diálogo Interno (Comentários)
         bloco_comentarios(qid, res_data)
 
 # =============================================================================
-# 3. FUNÇÕES DE ANÁLISE E HISTÓRICO
+# 4. FUNÇÕES DE ANÁLISE E HISTÓRICO
 # =============================================================================
 
 @st.cache_data(ttl=60)
@@ -418,11 +419,15 @@ def get_all_years_data():
                 cursor.execute("SELECT id, ano, valor, pontos, link, comentarios FROM respostas ORDER BY ano DESC")
                 rows = cursor.fetchall()
                 for row in rows:
-                    qid, ano = row["id"], row["ano"]
-                    comentarios = row["comentarios"] or []
-                    if isinstance(comentarios, str):
+                    qid, ano = str(row["id"]), row["ano"]
+                    comentarios_bruto = row.get("comentarios")
+                    comentarios = []
+                    
+                    if isinstance(comentarios_bruto, list):
+                        comentarios = comentarios_bruto
+                    elif isinstance(comentarios_bruto, str) and comentarios_bruto and comentarios_bruto != "EMPTY_STRING":
                         try:
-                            comentarios = json.loads(comentarios)
+                            comentarios = json.loads(comentarios_bruto)
                         except Exception:
                             comentarios = []
 
@@ -430,7 +435,7 @@ def get_all_years_data():
                         all_data[ano] = {}
                     all_data[ano][qid] = {
                         "valor": row["valor"] or "", 
-                        "pontos": row["pontos"] or 0.0, 
+                        "pontos": float(row["pontos"] or 0.0), 
                         "link": row["link"] or "", 
                         "comentarios": comentarios
                     }
@@ -470,25 +475,26 @@ def analyze_performance(res_data):
             return "Baixa"
 
     for qid, info in res_data.items():
-        if qid.startswith("COM_") or qid not in pontuacoes_referencia:
+        qid_str = str(qid)
+        if qid_str.startswith("COM_") or qid_str not in pontuacoes_referencia:
             continue
 
         pontos_atuais = info.get("pontos", 0)
-        max_pontos = pontuacoes_referencia[qid]["max"]
+        max_pontos = pontuacoes_referencia[qid_str]["max"]
 
         if pontos_atuais == max_pontos:
-            pontos_fortes.append((qid, pontos_atuais, info.get("valor", ""), info.get("link", "")))
+            pontos_fortes.append((qid_str, pontos_atuais, info.get("valor", ""), info.get("link", "")))
         else:
             impacto = max_pontos - pontos_atuais
             relevancia = classificar_relevancia(impacto)
 
             if pontos_atuais < 0:
                 criticos_negativos[relevancia].append(
-                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
+                    (qid_str, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
                 )
             else:
                 criticos_zero[relevancia].append(
-                    (qid, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
+                    (qid_str, pontos_atuais, info.get("valor", ""), info.get("link", ""), impacto)
                 )
 
     pontos_fortes.sort(key=lambda x: x[1], reverse=True)
@@ -511,22 +517,21 @@ def analyze_recurrence(ano_atual, res_data_atual):
         "11.1.1", "11.2", "12.1", "12.1.3", "14.0", "15.0", "16.0", "C1.1"
     ]
 
-    # Seleciona os anos anteriores ordenados do mais recente para o mais antigo
     anos_anteriores = sorted([a for a in all_data.keys() if a < ano_atual], reverse=True)
 
     for qid_atual, info_atual in res_data_atual.items():
-        if qid_atual.startswith("COM_") or qid_atual not in qids_pontuaveis:
+        qid_str = str(qid_atual)
+        if qid_str.startswith("COM_") or qid_str not in qids_pontuaveis:
             continue
             
         pontos_atual = info_atual.get("pontos", 0)
         
-        # Considera que houve perda/problema se os pontos forem <= 0
         if pontos_atual <= 0:
             for ano_anterior in anos_anteriores:
-                if qid_atual in all_data[ano_anterior]:
-                    pontos_anterior = all_data[ano_anterior][qid_atual].get("pontos", 0)
+                if qid_str in all_data[ano_anterior]:
+                    pontos_anterior = all_data[ano_anterior][qid_str].get("pontos", 0)
                     if pontos_anterior <= 0:
-                        reincidencias.append((qid_atual, ano_anterior, pontos_anterior, pontos_atual))
+                        reincidencias.append((qid_str, ano_anterior, pontos_anterior, pontos_atual))
                         break
 
     return reincidencias
