@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import html
 import json
 import warnings
 import logging
