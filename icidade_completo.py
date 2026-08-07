@@ -1294,13 +1294,12 @@ def mostrar_formulario_cidade():
             }
 
             # Estado inicial / persistente
-            d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_10 = d10.get("valor", "Selecione...")
 
             # Chaves fixas por componente e ano
             chave_radio_10 = f"r_10_{ano_sel}"
             chave_link_10 = f"l_10_txt_{ano_sel}"
-            chave_coment_10 = f"coment_1.0_{ano_sel}"
 
             c10_1, c10_2 = st.columns([1, 1])
             with c10_1:
@@ -1323,11 +1322,14 @@ def mostrar_formulario_cidade():
                     height=100
                 )
                 placeholder_links_10 = st.empty()
-                links_10_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
+                
+                # Extrai os links do campo
+                raw_links_10 = re.findall(REGEX_PURE_URL, link_10 or "")
+                links_10_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_10]
                 if links_10_visuais:
                     placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
+            # Renderiza o bloco de comentários do Diálogo Interno
             bloco_comentarios("1.0", res_data, ano_sel)
 
             # -----------------------------------------------------------------
@@ -1336,31 +1338,31 @@ def mostrar_formulario_cidade():
             if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
                 pts_10 = opcoes_10.get(val_radio_10, 0.0)
                 
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar_10 = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
+                # 1. PASSO CRÍTICO: Checa se adicionou/alterou link ANTES de alterar a memória d10
+                link_antigo_banco = d10.get("link", "")
+                if link_10 and link_10 != link_antigo_banco and links_10_visuais:
+                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_10_visuais
+                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+
+                # 2. Resgata a lista atual do histórico de chat para NÃO APAGAR o Diálogo Interno
+                comentarios_preservados = res_data.get("1.0", {}).get("comentarios", [])
+                if not isinstance(comentarios_preservados, list):
+                    comentarios_preservados = d10.get("comentarios", []) if isinstance(d10.get("comentarios"), list) else []
+
+                # 3. Salva no banco de dados mantendo a lista de comentários intacta
+                save_resp("1.0", val_radio_10, pts_10, link_10, comentarios_preservados)
                 
-                # 2. Salva no banco/backend
-                save_resp("1.0", val_radio_10, pts_10, link_10, comentario_para_salvar_10)
-                
-                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                # 4. Atualiza o dicionário em memória
                 res_data["1.0"] = {
                     "valor": val_radio_10, 
                     "pontos": pts_10, 
                     "link": link_10, 
-                    "comentario": comentario_para_salvar_10
+                    "comentarios": comentarios_preservados
                 }
 
-                # 4. Validação/Processamento de links para exibição de modal (IDÊNTICO AO 1.4)
-                links_atuais_10 = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
-                links_antigos_10 = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
-
-                if link_10 != d10.get("link", "") and links_atuais_10 and links_atuais_10 != links_antigos_10:
-                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais_10
-                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
-
-                st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
                 
-                # 5. FORÇA O RECARREGAMENTO DA TELA
+                # 5. Recarrega a página para acionar o gatilho do Modal
                 st.rerun()
 
             # Exibição da pontuação dentro do expander
@@ -1372,7 +1374,7 @@ def mostrar_formulario_cidade():
                 unsafe_allow_html=True
             )
 
-    # GATILHO DO MODAL 1.0 (Fora do container principal)
+    # GATILHO DO MODAL 1.0 (Fora do container - Dispara na re-execução da página)
     if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
         modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
