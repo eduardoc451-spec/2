@@ -4782,12 +4782,12 @@ def mostrar_formulario_cidade():
     # QUESITO 9.0 • AVALIAÇÃO ESTRUTURAL DE ESCOLAS E SAÚDE
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_9_0_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 9.0 - Estudo de Estrutura de Escolas e Unidades de Saúde", expanded=True):
+        with st.expander("📌 Quesito 9.0 - Estudo de Estrutura de Escolas e Unidades de Saúde", expanded=True):
             st.subheader("9.0 • Escolas e Saúde")
             st.write("**O Município realizou um estudo de avaliação da estrutura de todas as escolas e unidades de saúde para garantir que, em caso de desastre, esses locais estejam preparados para abrigar e atender a população afetada?**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 9.0' para registrar.*")
 
-            # Mapeamento oficial de opções e pontuações progressivas
+            # Mapeamento oficial de opções e pontuações
             opcoes_90 = {
                 "Selecione...": 0.0,
                 "Sim, em todas as escolas e centros de saúde (100 pts)": 100.0,
@@ -4823,8 +4823,8 @@ def mostrar_formulario_cidade():
                     "Link do Estudo / Relatório (9.0):",
                     value=d90.get("link", ""),
                     key=chave_link_90,
-                    placeholder="Ex: https://sistema.defesacivil.gov.br/relatorios/estudo-estrutural.pdf",
-                    height=120
+                    placeholder="Ex: Link do estudo, relatório estrutural, laudos das edificações...",
+                    height=100
                 )
                 placeholder_links_90 = st.empty()
                 links_90_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_90 or "")]
@@ -4834,27 +4834,31 @@ def mostrar_formulario_cidade():
             # Renderiza o bloco de comentários
             bloco_comentarios("9.0", res_data, ano_sel)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 9.0
             if st.button("💾 Salvar Quesito 9.0", key=f"btn_salvar_9_0_{ano_sel}", type="primary"):
-                # 1. Coleta os dados dos campos do Streamlit
                 val_selecionado_90 = st.session_state.get(chave_radio_90, v_salvo_90)
-                pts_90 = opcoes_90.get(val_selecionado_90, 0.0)
+                pts_calc_90 = opcoes_90.get(val_selecionado_90, 0.0)
                 comentario_para_salvar = st.session_state.get(chave_coment_90, d90.get("comentario", ""))
 
-                # 2. Persiste no backend / banco de dados
-                save_resp("9.0", val_selecionado_90, pts_90, link_90, comentario_para_salvar)
+                save_resp(
+                    qid="9.0",
+                    valor=val_selecionado_90,
+                    pontos=pts_calc_90,
+                    link=link_90,
+                    comentarios=comentario_para_salvar
+                )
 
-                # 3. Atualiza a estrutura no dicionário local res_data
-                res_data["9.0"] = {
-                    "valor": val_selecionado_90,
-                    "pontos": pts_90,
-                    "link": link_90,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "9.0" not in res_data:
+                    res_data["9.0"] = {}
+                res_data["9.0"]["pontos"] = pts_calc_90
+                res_data["9.0"]["valor"] = val_selecionado_90
+                res_data["9.0"]["link"] = link_90
+                res_data["9.0"]["comentario"] = comentario_para_salvar
 
-                # 4. Validação e verificação de alteração de links para disparo do modal
+                # Validação e verificação de alteração de links para disparo do modal
                 links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_90 or "")]
                 links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d90.get("link", "") or "")]
 
@@ -4863,30 +4867,34 @@ def mostrar_formulario_cidade():
                     st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = True
 
                 st.toast("Quesito 9.0 salvo com sucesso!", icon="✅")
-
-                # 5. Força a atualização dos componentes na tela
                 st.rerun()
 
             # Exibição do status visual do impacto de pontuação
-            pts_atuais_90 = d90.get("pontos", 0.0)
-            cor_txt_90 = "#28a745" if pts_atuais_90 > 0.0 else ("#dc3545" if v_salvo_90 == "Não (00 pts)" else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_90}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 9.0: +{pts_atuais_90:.1f} pontos</span>", unsafe_allow_html=True)
+            pts_atuais_90 = res_data.get("9.0", {}).get("pontos", 0.0)
+            val_atual_90 = res_data.get("9.0", {}).get("valor", "Selecione...")
+            cor_txt_90 = "#28a745" if pts_atuais_90 > 0.0 else ("#dc3545" if val_atual_90 != "Selecione..." and pts_atuais_90 == 0.0 else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_90}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 9.0: +{pts_atuais_90:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
     # GATILHO DO MODAL 9.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_9_0_{ano_sel}", False):
         modal_aviso_link("9.0", st.session_state.get(f"links_pendentes_9_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_9_0_{ano_sel}"] = False
 
-  # =============================================================================
+
+    # =============================================================================
     # QUESITO 10.0 • PLANO DE MOBILIDADE URBANA
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_10_0_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 10.0 - Plano de Mobilidade Urbana", expanded=True):
+        with st.expander("📌 Quesito 10.0 - Plano de Mobilidade Urbana", expanded=True):
             st.subheader("10.0 • Mobilidade Urbana")
             st.write("**O Município elaborou seu Plano de Mobilidade Urbana?**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 10.0' para registrar.*")
 
-            # Mapeamento oficial de opções e pontuações (com penalização)
+            # Mapeamento oficial de opções e pontuações
             opcoes_100 = {
                 "Selecione...": 0.0,
                 "Sim (00 pts)": 0.0,
@@ -4922,7 +4930,7 @@ def mostrar_formulario_cidade():
                     value=d100.get("link", ""),
                     key=chave_link_100,
                     placeholder="Ex: Link do plano publicado, lei municipal ou justificativa legal de não aplicabilidade...",
-                    height=120
+                    height=100
                 )
                 placeholder_links_100 = st.empty()
                 links_100_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_100 or "")]
@@ -4932,27 +4940,31 @@ def mostrar_formulario_cidade():
             # Renderiza o bloco de comentários
             bloco_comentarios("10.0", res_data, ano_sel)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 10.0
             if st.button("💾 Salvar Quesito 10.0", key=f"btn_salvar_10_0_{ano_sel}", type="primary"):
-                # 1. Coleta os dados dos campos do Streamlit
                 val_selecionado_100 = st.session_state.get(chave_radio_100, v_salvo_100)
-                pts_100 = opcoes_100.get(val_selecionado_100, 0.0)
+                pts_calc_100 = opcoes_100.get(val_selecionado_100, 0.0)
                 comentario_para_salvar = st.session_state.get(chave_coment_100, d100.get("comentario", ""))
 
-                # 2. Persiste no backend / banco de dados
-                save_resp("10.0", val_selecionado_100, pts_100, link_100, comentario_para_salvar)
+                save_resp(
+                    qid="10.0",
+                    valor=val_selecionado_100,
+                    pontos=pts_calc_100,
+                    link=link_100,
+                    comentarios=comentario_para_salvar
+                )
 
-                # 3. Atualiza a estrutura no dicionário local res_data
-                res_data["10.0"] = {
-                    "valor": val_selecionado_100,
-                    "pontos": pts_100,
-                    "link": link_100,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "10.0" not in res_data:
+                    res_data["10.0"] = {}
+                res_data["10.0"]["pontos"] = pts_calc_100
+                res_data["10.0"]["valor"] = val_selecionado_100
+                res_data["10.0"]["link"] = link_100
+                res_data["10.0"]["comentario"] = comentario_para_salvar
 
-                # 4. Validação e verificação de alteração de links para disparo do modal
+                # Validação e verificação de alteração de links para disparo do modal
                 links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_100 or "")]
                 links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d100.get("link", "") or "")]
 
@@ -4961,26 +4973,28 @@ def mostrar_formulario_cidade():
                     st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = True
 
                 st.toast("Quesito 10.0 salvo com sucesso!", icon="✅")
-
-                # 5. Força a atualização dos componentes na tela
                 st.rerun()
 
             # Exibição do status visual do impacto de pontuação
-            pts_atuais_100 = d100.get("pontos", 0.0)
+            pts_atuais_100 = res_data.get("10.0", {}).get("pontos", 0.0)
+            val_atual_100 = res_data.get("10.0", {}).get("valor", "Selecione...")
             if pts_atuais_100 < 0.0:
                 cor_txt_100 = "#dc3545"  # Vermelho para penalização (-100)
-            elif v_salvo_100 in ["Sim (00 pts)", "Não se aplica (00 pts)"]:
+            elif val_atual_100 in ["Sim (00 pts)", "Não se aplica (00 pts)"]:
                 cor_txt_100 = "#28a745"  # Verde para neutro/regularizado
             else:
                 cor_txt_100 = "#6c757d"  # Cinza para não selecionado
 
-            st.markdown(f"<span style='color:{cor_txt_100}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 10.0: {pts_atuais_100:.1f} pontos</span>", unsafe_allow_html=True)
+            st.markdown(
+                f"<span style='color:{cor_txt_100}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 10.0: {pts_atuais_100:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
     # GATILHO DO MODAL 10.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_10_0_{ano_sel}", False):
         modal_aviso_link("10.0", st.session_state.get(f"links_pendentes_10_0_{ano_sel}", []))
         st.session_state[f"gatilho_modal_10_0_{ano_sel}"] = False
-
    # =============================================================================
     # QUESITO 11.0 • TRANSPORTE PÚBLICO COLETIVO
     # =============================================================================
