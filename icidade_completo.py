@@ -1322,63 +1322,32 @@ def mostrar_formulario_cidade():
                     height=100
                 )
                 placeholder_links_10 = st.empty()
-                
-                # Extração rápida idêntica ao 1.5
                 links_10_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
                 if links_10_visuais:
                     placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("1.0", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("1.0", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL QUESITO 1.0
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
-                pts_10 = opcoes_10.get(val_radio_10, 0.0)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 1.0
+            if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_q10_{ano_sel}", type="primary"):
+                pts_calc_10 = opcoes_10.get(val_radio_10, 0.0)
                 
-                # 1. Resgata histórico de comentários em lista
-                comentarios_preservados = res_data.get("1.0", {}).get("comentarios", [])
-                if not isinstance(comentarios_preservados, list):
-                    comentarios_preservados = d10.get("comentarios", []) if isinstance(d10.get("comentarios"), list) else []
-
-                # 2. Salva no banco/backend
-                save_resp("1.0", val_radio_10, pts_10, link_10, comentarios_preservados)
-
-                # 3. Atualiza o dicionário local antes do modal (RÁPIDO)
-                res_data["1.0"] = {
-                    "valor": val_radio_10, 
-                    "pontos": pts_10, 
-                    "link": link_10, 
-                    "comentarios": comentarios_preservados
-                }
-
-                # 4. Processamento de links idêntico ao do 1.5
-                links_atuais_10 = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
-                links_antigos_10 = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
-
-                if link_10 != d10.get("link", "") and links_atuais_10 and links_atuais_10 != links_antigos_10:
-                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais_10
-                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
-
+                # Resgata a lista atual do histórico direto dos dados carregados para NÃO sobrescrever com vazio
+                coments_atuais = res_data.get("1.0", {}).get("comentarios", [])
+                
+                save_resp(
+                    qid="1.0",
+                    valor=val_radio_10,
+                    pontos=pts_calc_10,
+                    link=link_10,
+                    comentarios=coments_atuais
+                )
+                
                 st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
-                
-                # 5. Rerun instantâneo
                 st.rerun()
-
-            # Exibição da pontuação dentro do expander
-            pts_atuais_10 = d10.get("pontos", 0.0)
-            cor_txt_10 = "#28a745" if pts_atuais_10 >= 20.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
-            st.markdown(
-                f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
-                f"📊 Impacto de Pontuação no Quesito 1.0: {pts_atuais_10:.1f} pontos</span>",
-                unsafe_allow_html=True
-            )
-
-    # GATILHO DO MODAL 1.0 (Fora do container - Igualzinho ao 1.5)
-    if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
-        modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 1.1 • INSTRUMENTO NORMATIVO COMPDEC (NOVO PADRÃO 1.0)
