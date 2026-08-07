@@ -181,13 +181,13 @@ def load_respostas(ano: int) -> dict:
 
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
-    """Salva/Atualiza a resposta no Neon gravando a lista de comentários como JSONB nativo."""
+    """Salva/Atualiza a resposta mantendo os comentários intactos caso não sejam informados."""
     ano_sel = st.session_state.get("ano_referencia_global")
     if not ano_sel:
         st.warning("Nenhum ano de referência selecionado!")
         return
 
-    # Recupera comentários atuais em memória/banco caso a chamada não envie explicitamente
+    # Se a chamada não enviou a lista de comentários, busca do banco/memória para NÃO apagar/sobrescrever!
     if comentarios is None:
         dados_atuais = load_respostas(ano_sel)
         comentarios = dados_atuais.get(str(qid), {}).get("comentarios", [])
@@ -195,7 +195,6 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
     if not isinstance(comentarios, list):
         comentarios = []
 
-    # Converte a lista em String JSON usando a lib nativa json (evita dependencia do psycopg2.extras.Json)
     comentarios_json = json.dumps(comentarios, ensure_ascii=False)
     timestamp_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -217,15 +216,72 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
                     str(valor), 
                     float(pontos), 
                     str(link), 
-                    comentarios_json,  # Passa como string JSON e o PostgreSQL faz o cast ::jsonb
+                    comentarios_json,
                     timestamp_atual
                 ))
             conn.commit()
         
+        # Limpa o cache do Streamlit para forçar a releitura atualizada do banco
         st.cache_data.clear()
     except Exception as e:
         st.error(f"Erro ao salvar {qid} no banco de dados: {e}")
 
+
+def renderizar_questao(qid, res_data):
+    """Renderiza a questão sem risco de apagar o histórico de comentários."""
+    dados_q = res_data.get(qid, {})
+    
+    val_existente = dados_q.get("valor", "")
+    pts_existente = float(dados_q.get("pontos", 0.0))
+    link_existente = dados_q.get("link", "")
+    
+    with st.container(border=True):
+        st.markdown(f"#### Quesito: `{qid}`")
+        
+        col_txt, col_meta = st.columns([3, 1])
+        
+        with col_txt:
+            novo_valor = st.text_area(
+                "Resposta / Evidência:", 
+                value=val_existente, 
+                key=f"txt_val_{qid}",
+                height=100
+            )
+            novo_link = st.text_input(
+                "Link da Evidência (opcional):", 
+                value=link_existente, 
+                key=f"txt_link_{qid}"
+            )
+
+        with col_meta:
+            novos_pontos = st.number_input(
+                "Pontuação:", 
+                value=pts_existente, 
+                key=f"num_pts_{qid}"
+            )
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if st.button(f"💾 Salvar Quesito {qid}", key=f"btn_save_{qid}", type="primary", use_container_width=True):
+                links = re.findall(r'https?://[^\s]+', novo_valor) + re.findall(r'https?://[^\s]+', novo_link)
+                
+                # Chamamos SEM passar comentarios=... para que o save_resp preserve o que já está gravado
+                save_resp(
+                    qid=qid, 
+                    valor=novo_valor, 
+                    pontos=novos_pontos, 
+                    link=novo_link
+                )
+                
+                st.toast(f"Questão {qid} salva com sucesso!", icon="✅")
+                
+                if links and "modal_aviso_link" in globals():
+                    modal_aviso_link(qid, links)
+                
+                st.rerun()
+
+        # Diálogo Interno (Comentários)
+        bloco_comentarios(qid, res_data)
 # =============================================================================
 # 2. BLOCO DE COMENTÁRIOS (DEFINIDO PRIMEIRO)
 # =============================================================================
