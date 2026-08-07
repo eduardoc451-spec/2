@@ -2277,7 +2277,7 @@ def mostrar_formulario_cidade():
                 unsafe_allow_html=True
             )
 
-    # =============================================================================
+   # =============================================================================
     # QUESITO 3.1.1 • DATA DE TREINAMENTO DINÂMICA
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_3_1_1_final_{ano_sel}", border=True):
@@ -2294,7 +2294,7 @@ def mostrar_formulario_cidade():
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.1.1' para registrar.*")
 
             # Recupera os dados históricos salvos no dicionário
-            d311 = res_data.get("3.1.1") or {"valor": None, "pontos": 0.0, "link": "", "comentario": ""}
+            d311 = res_data.get("3.1.1") or {"valor": None, "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_311 = d311.get("valor", None)
 
             # Tratamento da data salva para exibição no componente
@@ -2306,7 +2306,6 @@ def mostrar_formulario_cidade():
             # Chaves fixas por componente e ano
             chave_date_311 = f"dt_311_{ano_sel}"
             chave_link_311 = f"l_311_txt_{ano_sel}"
-            chave_coment_311 = f"coment_3.1.1_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             col_d311, col_j311 = st.columns([1, 1])
             with col_d311:
@@ -2336,50 +2335,50 @@ def mostrar_formulario_cidade():
                 if links_311_visuais:
                     placeholder_links_311.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_311_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("3.1.1", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("3.1.1", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 3.1.1", key=f"btn_salvar_3_1_1_{ano_sel}", type="primary"):
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 3.1.1
+            if st.button("💾 Salvar Quesito 3.1.1", key=f"btn_salvar_q311_{ano_sel}", type="primary"):
                 # Lógica matemática de pontuação baseada na data informada
                 if data_sel_311 and data_sel_311 >= date(ano_sel, 1, 1) and data_sel_311.year == ano_sel:
-                    pts_311 = 10.0
+                    pts_calc_311 = 10.0
                 else:
-                    pts_311 = 0.0
+                    pts_calc_311 = 0.0
 
                 val_str_311 = str(data_sel_311) if data_sel_311 else ""
 
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar = st.session_state.get(chave_coment_311, d311.get("comentario", ""))
+                # Resgata a lista atual do histórico direto dos dados carregados
+                coments_atuais_311 = res_data.get("3.1.1", {}).get("comentarios", [])
 
-                # 2. Salva no banco/backend
-                save_resp("3.1.1", val_str_311, pts_311, link_311, comentario_para_salvar)
+                save_resp(
+                    qid="3.1.1",
+                    valor=val_str_311,
+                    pontos=pts_calc_311,
+                    link=link_311,
+                    comentarios=coments_atuais_311
+                )
 
-                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
-                res_data["3.1.1"] = {
-                    "valor": val_str_311,
-                    "pontos": pts_311,
-                    "link": link_311,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "3.1.1" not in res_data:
+                    res_data["3.1.1"] = {}
+                res_data["3.1.1"]["pontos"] = pts_calc_311
+                res_data["3.1.1"]["valor"] = val_str_311
+                res_data["3.1.1"]["link"] = link_311
 
-                # 4. Validação/Processamento de links para exibição de modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_311 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d311.get("link", "") or "")]
+                st.toast("Quesito 3.1.1 salvo com sucesso!", icon="✅")
 
-                if link_311 != d311.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_3_1_1_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_3_1_1_{ano_sel}"] = True
+                # Validação/Aviso complementar de links
+                links_encontrados_311 = re.findall(r'https?://[^\s]+', link_311 or "")
+                if links_encontrados_311 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("3.1.1", links_encontrados_311)
 
-                st.toast("Resposta e comentário do Quesito 3.1.1 salvos com sucesso!", icon="✅")
+            # Exibição dinamicamente atualizada da pontuação
+            d311_atualizado = res_data.get("3.1.1", {})
+            pts_atuais_311 = d311_atualizado.get("pontos", 0.0)
 
-                # 5. FORÇA O RECARREGAMENTO DA TELA
-                st.rerun()
-
-            # Exibição da pontuação dentro do expander
-            pts_atuais_311 = d311.get("pontos", 0.0)
             cor_txt_311 = "#28a745" if pts_atuais_311 == 10.0 else "#dc3545"
             st.markdown(
                 f"<span style='color:{cor_txt_311}; font-weight:bold;'>"
@@ -2387,12 +2386,7 @@ def mostrar_formulario_cidade():
                 unsafe_allow_html=True
             )
 
-    # GATILHO DO MODAL 3.1.1 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_3_1_1_{ano_sel}", False):
-        modal_aviso_link("3.1.1", st.session_state.get(f"links_pendentes_3_1_1_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_3_1_1_{ano_sel}"] = False
-
-   # =============================================================================
+    # =============================================================================
     # QUESITO 4.0 • CARTA GEOTÉCNICA DE SUSCETIBILIDADE
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_4_0_final_{ano_sel}", border=True):
@@ -2409,13 +2403,12 @@ def mostrar_formulario_cidade():
             }
 
             # Estado inicial / persistente
-            d40 = res_data.get("4.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            d40 = res_data.get("4.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_40 = d40.get("valor", "Selecione...")
 
             # Chaves fixas por componente e ano
             chave_radio_40 = f"r_40_{ano_sel}"
             chave_link_40 = f"l_40_txt_{ano_sel}"
-            chave_coment_40 = f"coment_4.0_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             col_r40, col_j40 = st.columns([1, 1])
             with col_r40:
@@ -2443,56 +2436,51 @@ def mostrar_formulario_cidade():
                 if links_40_visuais:
                     placeholder_links_40.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_40_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("4.0", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("4.0", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 4.0", key=f"btn_salvar_4_0_{ano_sel}", type="primary"):
-                # Cálculo da pontuação
-                pts_40 = opcoes_40.get(val_radio_40, 0.0)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar = st.session_state.get(chave_coment_40, d40.get("comentario", ""))
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 4.0
+            if st.button("💾 Salvar Quesito 4.0", key=f"btn_salvar_q40_{ano_sel}", type="primary"):
+                pts_calc_40 = opcoes_40.get(val_radio_40, 0.0)
 
-                # 2. Salva no banco/backend
-                save_resp("4.0", val_radio_40, pts_40, link_40, comentario_para_salvar)
+                # Resgata a lista atual do histórico direto dos dados carregados
+                coments_atuais_40 = res_data.get("4.0", {}).get("comentarios", [])
 
-                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
-                res_data["4.0"] = {
-                    "valor": val_radio_40,
-                    "pontos": pts_40,
-                    "link": link_40,
-                    "comentario": comentario_para_salvar
-                }
+                save_resp(
+                    qid="4.0",
+                    valor=val_radio_40,
+                    pontos=pts_calc_40,
+                    link=link_40,
+                    comentarios=coments_atuais_40
+                )
 
-                # 4. Validação/Processamento de links para exibição de modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_40 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d40.get("link", "") or "")]
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "4.0" not in res_data:
+                    res_data["4.0"] = {}
+                res_data["4.0"]["pontos"] = pts_calc_40
+                res_data["4.0"]["valor"] = val_radio_40
+                res_data["4.0"]["link"] = link_40
 
-                if link_40 != d40.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_4_0_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = True
+                st.toast("Quesito 4.0 salvo com sucesso!", icon="✅")
 
-                st.toast("Resposta e comentário do Quesito 4.0 salvos com sucesso!", icon="✅")
+                # Validação/Aviso complementar de links
+                links_encontrados_40 = re.findall(r'https?://[^\s]+', link_40 or "")
+                if links_encontrados_40 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("4.0", links_encontrados_40)
 
-                # 5. FORÇA O RECARREGAMENTO DA TELA
-                st.rerun()
+            # Exibição dinamicamente atualizada da pontuação
+            d40_atualizado = res_data.get("4.0", {})
+            pts_atuais_40 = d40_atualizado.get("pontos", 0.0)
+            val_atual_40 = d40_atualizado.get("valor", "Selecione...")
 
-            # Exibição da pontuação dentro do expander
-            pts_atuais_40 = d40.get("pontos", 0.0)
-            cor_txt_40 = "#28a745" if pts_atuais_40 == 10.0 else ("#dc3545" if v_salvo_40 != "Selecione..." else "#6c757d")
+            cor_txt_40 = "#28a745" if pts_atuais_40 == 10.0 else ("#dc3545" if val_atual_40 != "Selecione..." else "#6c757d")
             st.markdown(
                 f"<span style='color:{cor_txt_40}; font-weight:bold;'>"
                 f"📊 Impacto de Pontuação no Quesito 4.0: {pts_atuais_40:.1f} pontos</span>",
                 unsafe_allow_html=True
             )
-
-    # GATILHO DO MODAL 4.0 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_4_0_{ano_sel}", False):
-        modal_aviso_link("4.0", st.session_state.get(f"links_pendentes_4_0_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_4_0_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 4.1 • AMEAÇAS IDENTIFICADAS NA CARTA GEOTÉCNICA
