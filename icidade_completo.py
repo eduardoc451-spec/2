@@ -109,39 +109,6 @@ class get_connection:
                     pass
 
 # =============================================================================
-# MODAL DE AVISO AUTOMÁTICO
-# =============================================================================
-@st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados):
-    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    for lk in links_encontrados:
-        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
-        
-    st.markdown("""
-    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
-    
-    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
-    """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
-        st.rerun()
-# =============================================================================
-# MODAL DE AVISO AUTOMÁTICO
-# =============================================================================
-@st.dialog("⚠️ Atenção! Evidência em Link Externo")
-def modal_aviso_link(qid, links_encontrados):
-    st.warning(f"Detectamos a inclusão de link(s) no campo de evidências da questão **{qid}**.")
-    for lk in links_encontrados:
-        st.markdown(f"🔗 **Endereço:** [{lk}]({lk})")
-        
-    st.markdown("""
-    **Por favor, verifique se este link está configurado para acesso público/compartilhado.**
-    
-    Se as credenciais estiverem privadas ou exigirem login e senha do seu município, as equipes avaliadoras externas **não conseguirão acessar as provas**, invalidando os pontos desse quesito.
-    """)
-    if st.button("Confirmo que o link está liberado para o público", key=f"btn_conf_{qid}"):
-        st.rerun()
-
-# =============================================================================
 # 1. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL)
 # =============================================================================
 
