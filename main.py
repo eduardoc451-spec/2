@@ -1,5 +1,6 @@
 import base64
-from datetime import datetime
+from datetime import datetime, date
+import json
 import os
 import sys
 import pandas as pd
@@ -56,7 +57,7 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 
-# --- CARREGAMENTO OTIMIZADO DE MÓDULOS (SEM IMPORTLIB.RELOAD) ---
+# --- CARREGAMENTO OTIMIZADO DE MÓDULOS ---
 def import_local_module(module_name):
     try:
         import importlib
@@ -102,7 +103,277 @@ st.set_page_config(
 )
 
 
-# FUNÇÃO: Converte imagem local para Base64
+# =============================================================================
+# HELPER DE SANITIZAÇÃO DE COMENTÁRIOS (CORRIGE O EMPTY_STRING)
+# =============================================================================
+def _obter_lista_comentarios(dados_banco):
+    """Garante que o retorno de 'comentarios' seja sempre uma lista Python válida."""
+    raw = dados_banco.get("comentarios", [])
+    if isinstance(raw, str):
+        if raw in ["EMPTY_STRING", "", "null", "None"]:
+            return []
+        try:
+            raw = json.loads(raw)
+        except Exception:
+            return []
+    if isinstance(raw, list):
+        return raw
+    return []
+
+
+# =============================================================================
+# CALLBACKS DE COMENTÁRIO E QUESITO (CORRIGIDOS)
+# =============================================================================
+
+def cb_postar_comentario(qid, ano_sel, usuario_atual, id_chave=None):
+    """Callback disparado ao clicar em 'Postar Comentário'."""
+    chave_busca = id_chave if id_chave else qid
+    key_texto = f"v_txt_com_{chave_busca}_{ano_sel}"
+    texto = st.session_state.get(key_texto, "").strip()
+    
+    if texto:
+        dados_banco = load_respostas(ano_sel).get(qid, {})
+        comentarios = _obter_lista_comentarios(dados_banco)
+        
+        status_atual = "Pendente"
+        for com in reversed(comentarios):
+            if isinstance(com, dict) and "status_definido" in com:
+                status_atual = com["status_definido"]
+                break
+                
+        nova_mensagem = {
+            "autor": usuario_atual,
+            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "texto": texto,
+            "status_definido": status_atual
+        }
+        comentarios.append(nova_mensagem)
+        
+        save_resp(
+            qid=qid,
+            valor=dados_banco.get("valor", ""),
+            pontos=dados_banco.get("pontos", 0),
+            link=dados_banco.get("link", ""),
+            comentarios=comentarios
+        )
+        st.session_state[key_texto] = ""
+        if hasattr(load_respostas, "clear"):
+            load_respostas.clear()
+
+
+def cb_alterar_status(qid, ano_sel, usuario_atual, id_chave=None):
+    """Callback disparado ao trocar o Radio Button de Pendente/Resolvido."""
+    chave_busca = id_chave if id_chave else qid
+    key_radio = f"rad_status_{chave_busca}_{ano_sel}"
+    novo_status = st.session_state.get(key_radio)
+    
+    if not novo_status:
+        return
+
+    dados_banco = load_respostas(ano_sel).get(qid, {})
+    comentarios = _obter_lista_comentarios(dados_banco)
+    
+    log_mudanca = {
+        "autor": "Sistema / " + usuario_atual,
+        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status.upper()}**.",
+        "status_definido": novo_status
+    }
+    comentarios.append(log_mudanca)
+    
+    save_resp(
+        qid=qid,
+        valor=dados_banco.get("valor", ""),
+        pontos=dados_banco.get("pontos", 0),
+        link=dados_banco.get("link", ""),
+        comentarios=comentarios
+    )
+    if hasattr(load_respostas, "clear"):
+        load_respostas.clear()
+
+
+def cb_deletar_comentario(qid, ano_sel, idx):
+    """Callback para apagar um comentário específico."""
+    dados_banco = load_respostas(ano_sel).get(qid, {})
+    comentarios = _obter_lista_comentarios(dados_banco)
+    
+    if 0 <= idx < len(comentarios):
+        comentarios.pop(idx)
+        save_resp(
+            qid=qid,
+            valor=dados_banco.get("valor", ""),
+            pontos=dados_banco.get("pontos", 0),
+            link=dados_banco.get("link", ""),
+            comentarios=comentarios
+        )
+        if hasattr(load_respostas, "clear"):
+            load_respostas.clear()
+
+
+def cb_salvar_questao(qid, ano_sel, usuario_atual):
+    """Callback acionado ao clicar em 'Salvar Quesito'."""
+    key_val = f"txt_val_{qid}"
+    key_link = f"txt_link_{qid}"
+    key_pts = f"num_pts_{qid}"
+    key_texto = f"v_txt_com_{qid}_{ano_sel}"
+    
+    novo_valor = st.session_state.get(key_val, "")
+    novo_link = st.session_state.get(key_link, "")
+    novos_pontos = st.session_state.get(key_pts, 0.0)
+    
+    dados_banco = load_respostas(ano_sel).get(qid, {})
+    comentarios = _obter_lista_comentarios(dados_banco)
+    texto_pendente = st.session_state.get(key_texto, "").strip()
+    
+    if texto_pendente:
+        status_atual = "Pendente"
+        for com in reversed(comentarios):
+            if isinstance(com, dict) and "status_definido" in com:
+                status_atual = com["status_definido"]
+                break
+                
+        comentarios.append({
+            "autor": usuario_atual,
+            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "texto": texto_pendente,
+            "status_definido": status_atual
+        })
+        st.session_state[key_texto] = ""
+        
+    save_resp(
+        qid=qid,
+        valor=novo_valor,
+        pontos=novos_pontos,
+        link=novo_link,
+        comentarios=comentarios
+    )
+    if hasattr(load_respostas, "clear"):
+        load_respostas.clear()
+
+
+# =============================================================================
+# COMPONENTES DE INTERFACE DE RENDERIZAÇÃO
+# =============================================================================
+
+def renderizar_questao(qid, res_data):
+    """Renderiza a questão."""
+    dados_q = res_data.get(qid, {})
+    ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
+    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+    
+    val_existente = dados_q.get("valor", "")
+    pts_existente = float(dados_q.get("pontos", 0.0))
+    link_existente = dados_q.get("link", "")
+    
+    with st.container(border=True):
+        st.markdown(f"#### Quesito: `{qid}`")
+        
+        col_txt, col_meta = st.columns([3, 1])
+        
+        with col_txt:
+            st.text_area("Resposta / Evidência:", value=val_existente, key=f"txt_val_{qid}", height=100)
+            st.text_input("Link da Evidência (opcional):", value=link_existente, key=f"txt_link_{qid}")
+
+        with col_meta:
+            st.number_input("Pontuação:", value=pts_existente, key=f"num_pts_{qid}")
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            st.button(
+                f"💾 Salvar Quesito {qid}", 
+                key=f"btn_save_{qid}", 
+                type="primary", 
+                use_container_width=True,
+                on_click=cb_salvar_questao,
+                args=(qid, ano_sel, usuario_atual)
+            )
+
+        bloco_comentarios(qid, res_data)
+
+
+def bloco_comentarios(questao_id, res_data, sufixo=None):
+    """Renderiza a caixa de comentários e histórico formatado."""
+    ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
+    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+    
+    id_chave = f"{questao_id}_{sufixo}" if sufixo else questao_id
+    key_texto = f"v_txt_com_{id_chave}_{ano_sel}"
+    key_radio = f"rad_status_{id_chave}_{ano_sel}"
+    
+    dados_questao = res_data.get(questao_id, {})
+    historico = _obter_lista_comentarios(dados_questao)
+    
+    status_global = "Pendente"
+    for com in reversed(historico):
+        if isinstance(com, dict) and "status_definido" in com:
+            status_global = com["status_definido"]
+            break
+            
+    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
+    
+    with st.expander(f"💬 Diálogo Interno {id_chave} | Status: {badge_status}", expanded=(status_global == "Pendente")):
+        opcoes_status = ["Resolvido", "Pendente"]
+        idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 1
+        
+        st.radio(
+            f"Definir status para {id_chave}:",
+            options=opcoes_status,
+            index=idx_status_atual,
+            horizontal=True,
+            key=key_radio,
+            on_change=cb_alterar_status,
+            args=(questao_id, ano_sel, usuario_atual, id_chave)
+        )
+
+        if historico:
+            for idx, com in enumerate(historico):
+                if isinstance(com, str):
+                    com = {"autor": "Usuário", "data": "", "texto": com}
+
+                col_balao, col_lixeira = st.columns([11, 1])
+                
+                with col_balao:
+                    autor = com.get('autor', 'Anônimo')
+                    data_com = com.get('data', '')
+                    texto_com = com.get('texto', '')
+                    
+                    if "Sistema /" in autor:
+                        st.markdown(
+                            f"""<div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
+                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{autor} - {data_com}</span>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            f"""<div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e88e5;">
+                                <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">👤 {autor}</span> 
+                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{data_com}</span>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{texto_com}</p>
+                            </div>""", unsafe_allow_html=True
+                        )
+                
+                with col_lixeira:
+                    st.button(
+                        "🗑️", 
+                        key=f"btn_del_com_{id_chave}_{idx}_{ano_sel}",
+                        on_click=cb_deletar_comentario,
+                        args=(questao_id, ano_sel, idx)
+                    )
+        
+        st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
+        
+        st.button(
+            "Postar Comentário", 
+            key=f"btn_com_{id_chave}_{ano_sel}", 
+            type="primary",
+            on_click=cb_postar_comentario,
+            args=(questao_id, ano_sel, usuario_atual, id_chave)
+        )
+
+
+# =============================================================================
+# FUNÇÃO AUXILIAR DE IMAGEM
+# =============================================================================
 def get_image_base64(filename):
     full_path = os.path.join(current_dir, filename)
     if os.path.exists(full_path):
