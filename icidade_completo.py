@@ -1,10 +1,27 @@
 import json
 import logging
-from datetime import datetime, date
+import os
+from datetime import date, datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import streamlit as st
 
 # =============================================================================
-# 1. FUNÇÕES DE BANCO DE DADOS (NEON POSTGRESQL) - BLINDADAS
+# CONEXÃO COM O BANCO DE DADOS (NEON POSTGRESQL)
+# =============================================================================
+
+def get_connection():
+    """Cria e retorna uma conexão ativa com o banco de dados Neon/PostgreSQL."""
+    db_url = st.secrets.get("DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not db_url:
+        raise ValueError(
+            "A variável/secret 'DATABASE_URL' não foi configurada no Streamlit ou no ambiente."
+        )
+    return psycopg2.connect(db_url)
+
+
+# =============================================================================
+# 1. FUNÇÕES DE BANCO DE DADOS - BLINDADAS
 # =============================================================================
 
 def init_db():
@@ -135,7 +152,7 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
 
 
 # =============================================================================
-# 2. HELPER E CALLBACKS DE INTERFACE
+# 2. HELPER DE DADOS
 # =============================================================================
 
 def _obter_lista_comentarios(dados_banco):
@@ -153,9 +170,14 @@ def _obter_lista_comentarios(dados_banco):
     return []
 
 
-def cb_postar_comentario(qid, ano_sel, usuario_atual):
-    """Callback sincronizado para inclusão de comentários."""
-    key_texto = f"txt_com_{qid}_{ano_sel}"
+# =============================================================================
+# 3. CALLBACKS DE COMENTÁRIO E QUESITO
+# =============================================================================
+
+def cb_postar_comentario(qid, ano_sel, usuario_atual, id_chave=None):
+    """Callback disparado ao clicar em 'Postar Comentário'."""
+    chave_alvo = id_chave if id_chave else qid
+    key_texto = f"v_txt_com_{chave_alvo}_{ano_sel}"
     texto = st.session_state.get(key_texto, "").strip()
     
     if texto:
@@ -187,9 +209,10 @@ def cb_postar_comentario(qid, ano_sel, usuario_atual):
             st.session_state[key_texto] = ""
 
 
-def cb_alterar_status(qid, ano_sel, usuario_atual):
-    """Callback para alternar entre Pendente e Resolvido."""
-    key_radio = f"rad_status_{qid}_{ano_sel}"
+def cb_alterar_status(qid, ano_sel, usuario_atual, id_chave=None):
+    """Callback disparado ao trocar o Radio Button de Pendente/Resolvido."""
+    chave_alvo = id_chave if id_chave else qid
+    key_radio = f"rad_status_{chave_alvo}_{ano_sel}"
     novo_status = st.session_state.get(key_radio)
     
     if not novo_status:
@@ -216,7 +239,7 @@ def cb_alterar_status(qid, ano_sel, usuario_atual):
 
 
 def cb_deletar_comentario(qid, ano_sel, idx):
-    """Callback para apagar um comentário pelo índice."""
+    """Callback para apagar um comentário específico."""
     dados_banco = load_respostas(ano_sel).get(qid, {})
     comentarios = _obter_lista_comentarios(dados_banco)
     
@@ -231,12 +254,13 @@ def cb_deletar_comentario(qid, ano_sel, idx):
         )
 
 
-def cb_salvar_questao(qid, ano_sel, usuario_atual):
-    """Callback para salvar todo o quesito."""
+def cb_salvar_questao(qid, ano_sel, usuario_atual, id_chave=None):
+    """Callback acionado ao clicar em 'Salvar Quesito'."""
+    chave_alvo = id_chave if id_chave else qid
     key_val = f"txt_val_{qid}"
     key_link = f"txt_link_{qid}"
     key_pts = f"num_pts_{qid}"
-    key_texto = f"txt_com_{qid}_{ano_sel}"
+    key_texto = f"v_txt_com_{chave_alvo}_{ano_sel}"
     
     novo_valor = st.session_state.get(key_val, "")
     novo_link = st.session_state.get(key_link, "")
@@ -272,246 +296,8 @@ def cb_salvar_questao(qid, ano_sel, usuario_atual):
 
 
 # =============================================================================
-# 3. COMPONENTE DE RENDERIZAÇÃO
+# 4. COMPONENTES DE INTERFACE DE RENDERIZAÇÃO
 # =============================================================================
-
-def bloco_comentarios(questao_id, res_data, sufixo=None):
-    """Renderiza a caixa de comentários e histórico formatado."""
-    ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
-    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
-    
-    # Unificação determinística de chaves
-    key_texto = f"txt_com_{questao_id}_{ano_sel}"
-    key_radio = f"rad_status_{questao_id}_{ano_sel}"
-    
-    dados_questao = res_data.get(questao_id, {})
-    historico = _obter_lista_comentarios(dados_questao)
-    
-    status_global = "Pendente"
-    for com in reversed(historico):
-        if isinstance(com, dict) and "status_definido" in com:
-            status_global = com["status_definido"]
-            break
-            
-    badge_status = "🔴 PENDENTE" if status_global == "Pendente" else "🟢 RESOLVIDO"
-    
-    with st.expander(f"💬 Diálogo Interno {questao_id} | Status: {badge_status}", expanded=(status_global == "Pendente")):
-        opcoes_status = ["Resolvido", "Pendente"]
-        idx_status_atual = opcoes_status.index(status_global) if status_global in opcoes_status else 1
-        
-        st.radio(
-            f"Definir status para {questao_id}:",
-            options=opcoes_status,
-            index=idx_status_atual,
-            horizontal=True,
-            key=key_radio,
-            on_change=cb_alterar_status,
-            args=(questao_id, ano_sel, usuario_atual)
-        )
-
-        if historico:
-            for idx, com in enumerate(historico):
-                if isinstance(com, str):
-                    com = {"autor": "Usuário", "data": "", "texto": com}
-
-                col_balao, col_lixeira = st.columns([11, 1])
-                
-                with col_balao:
-                    autor = com.get('autor', 'Anônimo')
-                    data_com = com.get('data', '')
-                    texto_com = com.get('texto', '')
-                    
-                    if "Sistema /" in autor:
-                        st.markdown(
-                            f"""<div style="background-color: #f1f3f5; padding: 6px 12px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid #ced4da;">
-                                <span style="font-size: 11px; color: #6c757d; font-style: italic;">{autor} - {data_com}</span>
-                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #495057;">{texto_com}</p>
-                            </div>""", unsafe_allow_html=True
-                        )
-                    else:
-                        st.markdown(
-                            f"""<div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #1e88e5;">
-                                <span style="font-size: 11px; color: #1e88e5; font-weight: bold;">👤 {autor}</span> 
-                                <span style="font-size: 10px; color: #999; margin-left: 10px;">{data_com}</span>
-                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #333;">{texto_com}</p>
-                            </div>""", unsafe_allow_html=True
-                        )
-                
-                with col_lixeira:
-                    st.button(
-                        "🗑️", 
-                        key=f"btn_del_com_{questao_id}_{idx}_{ano_sel}",
-                        on_click=cb_deletar_comentario,
-                        args=(questao_id, ano_sel, idx)
-                    )
-        
-        st.text_area("Novo comentário:", key=key_texto, height=70, label_visibility="collapsed")
-        
-        st.button(
-            "Postar Comentário", 
-            key=f"btn_com_{questao_id}_{ano_sel}", 
-            type="primary",
-            on_click=cb_postar_comentario,
-            args=(questao_id, ano_sel, usuario_atual)
-        )
-
-# =============================================================================
-# CALLBACKS DE COMENTÁRIO (CORRIGIDOS)
-# =============================================================================
-
-def cb_postar_comentario(qid, ano_sel, usuario_atual):
-    """Callback disparado ao clicar em 'Postar Comentário'."""
-    key_texto = f"v_txt_com_{qid}_{ano_sel}"
-    texto = st.session_state.get(key_texto, "").strip()
-    
-    if texto:
-        # Busca SEMPRE os dados atualizados direto do banco para não sobrescrever histórico
-        dados_banco = load_respostas(ano_sel).get(qid, {})
-        comentarios = list(dados_banco.get("comentarios", []))
-        
-        # Pega o último status gravado no histórico (ou Pendente por padrão)
-        status_atual = "Pendente"
-        for com in reversed(comentarios):
-            if isinstance(com, dict) and "status_definido" in com:
-                status_atual = com["status_definido"]
-                break
-                
-        nova_mensagem = {
-            "autor": usuario_atual,
-            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "texto": texto,
-            "status_definido": status_atual
-        }
-        comentarios.append(nova_mensagem)
-        
-        save_resp(
-            qid=qid,
-            valor=dados_banco.get("valor", ""),
-            pontos=dados_banco.get("pontos", 0),
-            link=dados_banco.get("link", ""),
-            comentarios=comentarios
-        )
-        # Limpa o campo de texto
-        st.session_state[key_texto] = ""
-
-
-def cb_alterar_status(qid, ano_sel, usuario_atual):
-    """Callback disparado ao trocar o Radio Button de Pendente/Resolvido."""
-    key_radio = f"rad_status_{qid}_{ano_sel}"
-    novo_status = st.session_state.get(key_radio)
-    
-    dados_banco = load_respostas(ano_sel).get(qid, {})
-    comentarios = list(dados_banco.get("comentarios", []))
-    
-    log_mudanca = {
-        "autor": "Sistema / " + usuario_atual,
-        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-        "texto": f"ℹ️ Alterou o status do quesito para: **{novo_status.upper()}**.",
-        "status_definido": novo_status
-    }
-    comentarios.append(log_mudanca)
-    
-    save_resp(
-        qid=qid,
-        valor=dados_banco.get("valor", ""),
-        pontos=dados_banco.get("pontos", 0),
-        link=dados_banco.get("link", ""),
-        comentarios=comentarios
-    )
-
-
-def cb_deletar_comentario(qid, ano_sel, idx):
-    """Callback para apagar um comentário específico."""
-    dados_banco = load_respostas(ano_sel).get(qid, {})
-    comentarios = list(dados_banco.get("comentarios", []))
-    
-    if 0 <= idx < len(comentarios):
-        comentarios.pop(idx)
-        save_resp(
-            qid=qid,
-            valor=dados_banco.get("valor", ""),
-            pontos=dados_banco.get("pontos", 0),
-            link=dados_banco.get("link", ""),
-            comentarios=comentarios
-        )
-
-
-def cb_salvar_questao(qid, ano_sel, usuario_atual):
-    """Callback acionado ao clicar em 'Salvar Quesito'."""
-    key_val = f"txt_val_{qid}"
-    key_link = f"txt_link_{qid}"
-    key_pts = f"num_pts_{qid}"
-    key_texto = f"v_txt_com_{qid}_{ano_sel}"
-    
-    novo_valor = st.session_state.get(key_val, "")
-    novo_link = st.session_state.get(key_link, "")
-    novos_pontos = st.session_state.get(key_pts, 0.0)
-    
-    dados_banco = load_respostas(ano_sel).get(qid, {})
-    comentarios = list(dados_banco.get("comentarios", []))
-    texto_pendente = st.session_state.get(key_texto, "").strip()
-    
-    if texto_pendente:
-        status_atual = "Pendente"
-        for com in reversed(comentarios):
-            if isinstance(com, dict) and "status_definido" in com:
-                status_atual = com["status_definido"]
-                break
-                
-        comentarios.append({
-            "autor": usuario_atual,
-            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "texto": texto_pendente,
-            "status_definido": status_atual
-        })
-        st.session_state[key_texto] = ""
-        
-    save_resp(
-        qid=qid,
-        valor=novo_valor,
-        pontos=novos_pontos,
-        link=novo_link,
-        comentarios=comentarios
-    )
-
-# =============================================================================
-# COMPONENTES DE INTERFACE DE RENDERIZAÇÃO
-# =============================================================================
-
-def renderizar_questao(qid, res_data):
-    """Renderiza a questão."""
-    dados_q = res_data.get(qid, {})
-    ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
-    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
-    
-    val_existente = dados_q.get("valor", "")
-    pts_existente = float(dados_q.get("pontos", 0.0))
-    link_existente = dados_q.get("link", "")
-    
-    with st.container(border=True):
-        st.markdown(f"#### Quesito: `{qid}`")
-        
-        col_txt, col_meta = st.columns([3, 1])
-        
-        with col_txt:
-            st.text_area("Resposta / Evidência:", value=val_existente, key=f"txt_val_{qid}", height=100)
-            st.text_input("Link da Evidência (opcional):", value=link_existente, key=f"txt_link_{qid}")
-
-        with col_meta:
-            st.number_input("Pontuação:", value=pts_existente, key=f"num_pts_{qid}")
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            st.button(
-                f"💾 Salvar Quesito {qid}", 
-                key=f"btn_save_{qid}", 
-                type="primary", 
-                use_container_width=True,
-                on_click=cb_salvar_questao,
-                args=(qid, ano_sel, usuario_atual)
-            )
-
-        bloco_comentarios(qid, res_data)
-
 
 def bloco_comentarios(questao_id, res_data, sufixo=None):
     """Renderiza a caixa de comentários e histórico formatado."""
@@ -523,7 +309,7 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
     key_radio = f"rad_status_{id_chave}_{ano_sel}"
     
     dados_questao = res_data.get(questao_id, {})
-    historico = list(dados_questao.get("comentarios", []))
+    historico = _obter_lista_comentarios(dados_questao)
     
     # Descobre o status do ÚLTIMO comentário registrado no histórico
     status_global = "Pendente"
@@ -545,13 +331,12 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             horizontal=True,
             key=key_radio,
             on_change=cb_alterar_status,
-            args=(questao_id, ano_sel, usuario_atual)
+            args=(questao_id, ano_sel, usuario_atual, id_chave)
         )
 
         # Exibição do histórico de mensagens
         if historico:
             for idx, com in enumerate(historico):
-                # Se for uma string simples antiga, converte dinamicamente em dict
                 if isinstance(com, str):
                     com = {"autor": "Usuário", "data": "", "texto": com}
 
@@ -593,8 +378,44 @@ def bloco_comentarios(questao_id, res_data, sufixo=None):
             key=f"btn_com_{id_chave}_{ano_sel}", 
             type="primary",
             on_click=cb_postar_comentario,
-            args=(questao_id, ano_sel, usuario_atual)
+            args=(questao_id, ano_sel, usuario_atual, id_chave)
         )
+
+
+def renderizar_questao(qid, res_data):
+    """Renderiza o formulário completo da questão."""
+    dados_q = res_data.get(qid, {})
+    ano_sel = st.session_state.get("ano_referencia_global", date.today().year)
+    usuario_atual = st.session_state.get("username", st.session_state.get("usuario", "Usuário Anônimo"))
+    
+    val_existente = dados_q.get("valor", "")
+    pts_existente = float(dados_q.get("pontos", 0.0))
+    link_existente = dados_q.get("link", "")
+    
+    with st.container(border=True):
+        st.markdown(f"#### Quesito: `{qid}`")
+        
+        col_txt, col_meta = st.columns([3, 1])
+        
+        with col_txt:
+            st.text_area("Resposta / Evidência:", value=val_existente, key=f"txt_val_{qid}", height=100)
+            st.text_input("Link da Evidência (opcional):", value=link_existente, key=f"txt_link_{qid}")
+
+        with col_meta:
+            st.number_input("Pontuação:", value=pts_existente, key=f"num_pts_{qid}")
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            st.button(
+                f"💾 Salvar Quesito {qid}", 
+                key=f"btn_save_{qid}", 
+                type="primary", 
+                use_container_width=True,
+                on_click=cb_salvar_questao,
+                args=(qid, ano_sel, usuario_atual)
+            )
+
+        bloco_comentarios(qid, res_data)
+        
 # =============================================================================
 # 3. FUNÇÕES DE ANÁLISE E HISTÓRICO
 # =============================================================================
