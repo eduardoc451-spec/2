@@ -1983,7 +1983,7 @@ def mostrar_formulario_cidade():
                 unsafe_allow_html=True
             )
 
-    # =============================================================================
+   # =============================================================================
     # QUESITO 2.2 • PÚBLICO-ALVO DOS CURSOS E TREINAMENTOS
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_2_2_final_{ano_sel}", border=True):
@@ -1993,7 +1993,7 @@ def mostrar_formulario_cidade():
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 2.2' para registrar.*")
 
             # Estado inicial / persistente
-            d22 = res_data.get("2.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+            d22 = res_data.get("2.2") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": []}
             valor_salvo_22 = d22.get("valor", "[]")
 
             # Chaves fixas por componente e ano
@@ -2002,7 +2002,6 @@ def mostrar_formulario_cidade():
             chk_key_3 = f"c22c_chk_{ano_sel}"
             chk_key_4 = f"c22d_chk_{ano_sel}"
             chave_link_22 = f"l_22_txt_{ano_sel}"
-            chave_coment_22 = f"coment_2.2_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             c22_1, c22_2 = st.columns([1, 1])
             with c22_1:
@@ -2023,74 +2022,70 @@ def mostrar_formulario_cidade():
                 if links_22_visuais:
                     placeholder_links_22.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_22_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("2.2", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("2.2", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 2.2", key=f"btn_salvar_2_2_{ano_sel}", type="primary"):
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 2.2
+            if st.button("💾 Salvar Quesito 2.2", key=f"btn_salvar_q22_{ano_sel}", type="primary"):
                 sel22 = []
-                pts_22 = 0.0
+                pts_calc_22 = 0.0
 
                 # Regra de negócio acumulativa ou exclusão mútua por "Nenhum"
                 if chk_nenhum:
                     sel22 = ["Nenhum"]
-                    pts_22 = 0.0
+                    pts_calc_22 = 0.0
                 else:
                     if chk_escolas:
-                        pts_22 += 5.0
+                        pts_calc_22 += 5.0
                         sel22.append("Escolas")
                     if chk_secretarias:
-                        pts_22 += 3.0
+                        pts_calc_22 += 3.0
                         sel22.append("Secretarias")
                     if chk_municipes:
-                        pts_22 += 2.0
+                        pts_calc_22 += 2.0
                         sel22.append("Munícipes")
 
                 val_str_22 = str(sel22)
 
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar = st.session_state.get(chave_coment_22, d22.get("comentario", ""))
+                # Resgata o histórico atual de comentários para não sobrescrever
+                coments_atuais_22 = res_data.get("2.2", {}).get("comentarios", [])
 
-                # 2. Salva no banco/backend
-                save_resp("2.2", val_str_22, pts_22, link_22, comentario_para_salvar)
+                save_resp(
+                    qid="2.2",
+                    valor=val_str_22,
+                    pontos=pts_calc_22,
+                    link=link_22,
+                    comentarios=coments_atuais_22
+                )
 
-                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
-                res_data["2.2"] = {
-                    "valor": val_str_22,
-                    "pontos": pts_22,
-                    "link": link_22,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "2.2" not in res_data:
+                    res_data["2.2"] = {}
+                res_data["2.2"]["pontos"] = pts_calc_22
+                res_data["2.2"]["valor"] = val_str_22
+                res_data["2.2"]["link"] = link_22
 
-                # 4. Validação/Processamento de links para exibição de modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_22 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d22.get("link", "") or "")]
+                st.toast("Quesito 2.2 salvo com sucesso!", icon="✅")
 
-                if link_22 != d22.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_2_2_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = True
+                # Validação/Aviso complementar de links
+                links_encontrados_22 = re.findall(r'https?://[^\s]+', link_22 or "")
+                if links_encontrados_22 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("2.2", links_encontrados_22)
 
-                st.toast("Resposta e comentário do Quesito 2.2 salvos com sucesso!", icon="✅")
+            # Exibição dinamicamente atualizada da pontuação
+            d22_atualizado = res_data.get("2.2", {})
+            pts_atuais_22 = d22_atualizado.get("pontos", 0.0)
+            val_atual_22 = d22_atualizado.get("valor", "[]")
 
-                # 5. FORÇA O RECARREGAMENTO DA TELA (Evita inconsistências de estado)
-                st.rerun()
-
-            # Exibição da pontuação dentro do expander
-            pts_atuais_22 = d22.get("pontos", 0.0)
-            cor_txt_22 = "#28a745" if pts_atuais_22 > 0.0 else ("#dc3545" if "Nenhum" in valor_salvo_22 else "#6c757d")
+            cor_txt_22 = "#28a745" if pts_atuais_22 > 0.0 else ("#dc3545" if "Nenhum" in val_atual_22 else "#6c757d")
             st.markdown(
                 f"<span style='color:{cor_txt_22}; font-weight:bold;'>"
                 f"📊 Impacto de Pontuação no Quesito 2.2: {pts_atuais_22:.1f} pontos</span>",
                 unsafe_allow_html=True
             )
 
-    # GATILHO DO MODAL 2.2 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_2_2_{ano_sel}", False):
-        modal_aviso_link("2.2", st.session_state.get(f"links_pendentes_2_2_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_2_2_{ano_sel}"] = False
-    
     # =============================================================================
     # QUESITO 3.0 • PARTICIPAÇÃO DA SOCIEDADE CIVIL
     # =============================================================================
@@ -2104,7 +2099,6 @@ def mostrar_formulario_cidade():
             )
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.0' para registrar.*")
 
-            # Mapeamento oficial de opções e pontuações do quesito 3.0
             opcoes_30 = {
                 "Selecione...": 0.0,
                 "Sim – 10 pts": 10.0,
@@ -2112,13 +2106,12 @@ def mostrar_formulario_cidade():
             }
 
             # Estado inicial / persistente
-            d30 = res_data.get("3.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            d30 = res_data.get("3.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_30 = d30.get("valor", "Selecione...")
 
             # Chaves fixas por componente e ano
             chave_radio_30 = f"r_30_{ano_sel}"
             chave_link_30 = f"l_30_txt_{ano_sel}"
-            chave_coment_30 = f"coment_3.0_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             c30_1, c30_2 = st.columns([1, 1])
             with c30_1:
@@ -2146,56 +2139,51 @@ def mostrar_formulario_cidade():
                 if links_30_visuais:
                     placeholder_links_30.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_30_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("3.0", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("3.0", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 3.0", key=f"btn_salvar_3_0_{ano_sel}", type="primary"):
-                # Cálculo da pontuação
-                pts_30 = opcoes_30.get(val_radio_30, 0.0)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar = st.session_state.get(chave_coment_30, d30.get("comentario", ""))
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 3.0
+            if st.button("💾 Salvar Quesito 3.0", key=f"btn_salvar_q30_{ano_sel}", type="primary"):
+                pts_calc_30 = opcoes_30.get(val_radio_30, 0.0)
 
-                # 2. Salva no banco/backend
-                save_resp("3.0", val_radio_30, pts_30, link_30, comentario_para_salvar)
+                # Resgata a lista atual do histórico direto dos dados carregados
+                coments_atuais_30 = res_data.get("3.0", {}).get("comentarios", [])
 
-                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
-                res_data["3.0"] = {
-                    "valor": val_radio_30,
-                    "pontos": pts_30,
-                    "link": link_30,
-                    "comentario": comentario_para_salvar
-                }
+                save_resp(
+                    qid="3.0",
+                    valor=val_radio_30,
+                    pontos=pts_calc_30,
+                    link=link_30,
+                    comentarios=coments_atuais_30
+                )
 
-                # 4. Validação/Processamento de links para exibição de modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_30 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d30.get("link", "") or "")]
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "3.0" not in res_data:
+                    res_data["3.0"] = {}
+                res_data["3.0"]["pontos"] = pts_calc_30
+                res_data["3.0"]["valor"] = val_radio_30
+                res_data["3.0"]["link"] = link_30
 
-                if link_30 != d30.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_3_0_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = True
+                st.toast("Quesito 3.0 salvo com sucesso!", icon="✅")
 
-                st.toast("Resposta e comentário do Quesito 3.0 salvos com sucesso!", icon="✅")
+                # Validação/Aviso complementar de links
+                links_encontrados_30 = re.findall(r'https?://[^\s]+', link_30 or "")
+                if links_encontrados_30 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("3.0", links_encontrados_30)
 
-                # 5. FORÇA O RECARREGAMENTO DA TELA
-                st.rerun()
+            # Exibição dinamicamente atualizada da pontuação
+            d30_atualizado = res_data.get("3.0", {})
+            pts_atuais_30 = d30_atualizado.get("pontos", 0.0)
+            val_atual_30 = d30_atualizado.get("valor", "Selecione...")
 
-            # Exibição da pontuação dentro do expander
-            pts_atuais_30 = d30.get("pontos", 0.0)
-            cor_txt_30 = "#28a745" if pts_atuais_30 == 10.0 else ("#dc3545" if v_salvo_30 != "Selecione..." else "#6c757d")
+            cor_txt_30 = "#28a745" if pts_atuais_30 == 10.0 else ("#dc3545" if val_atual_30 != "Selecione..." else "#6c757d")
             st.markdown(
                 f"<span style='color:{cor_txt_30}; font-weight:bold;'>"
                 f"📊 Impacto de Pontuação no Quesito 3.0: {pts_atuais_30:.1f} pontos</span>",
                 unsafe_allow_html=True
             )
-
-    # GATILHO DO MODAL 3.0 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_3_0_{ano_sel}", False):
-        modal_aviso_link("3.0", st.session_state.get(f"links_pendentes_3_0_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_3_0_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 3.1 • AÇÕES REALIZADAS
@@ -2206,7 +2194,6 @@ def mostrar_formulario_cidade():
             st.write("**Assinale quais ações foram realizadas:**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 3.1' para registrar.*")
 
-            # Lista de opções disponíveis para o quesito
             opcoes_31 = [
                 "Workshop / Palestra",
                 "Reunião",
@@ -2218,16 +2205,14 @@ def mostrar_formulario_cidade():
             ]
 
             # Estado inicial / persistente
-            d31 = res_data.get("3.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentario": ""}
+            d31 = res_data.get("3.1") or {"valor": "[]", "pontos": 0.0, "link": "", "comentarios": []}
             valor_salvo_31 = d31.get("valor", "[]")
 
             # Chaves fixas por componente e ano
             chave_link_31 = f"l_31_txt_{ano_sel}"
-            chave_coment_31 = f"coment_3.1_{ano_sel}" # Chave padrão usada pela função bloco_comentarios
 
             c31_1, c31_2 = st.columns([1, 1])
             with c31_1:
-                # Dicionário dinâmico para capturar as seleções diretamente da interface
                 checks_31 = {}
                 for opcao in opcoes_31:
                     checks_31[opcao] = st.checkbox(
@@ -2249,56 +2234,48 @@ def mostrar_formulario_cidade():
                 if links_31_visuais:
                     placeholder_links_31.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_31_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("3.1", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("3.1", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 3.1", key=f"btn_salvar_3_1_{ano_sel}", type="primary"):
-                # Coleta todas as opções marcadas
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 3.1
+            if st.button("💾 Salvar Quesito 3.1", key=f"btn_salvar_q31_{ano_sel}", type="primary"):
                 selecionados_31 = [op for op, marcou in checks_31.items() if marcou]
                 val_str_31 = str(selecionados_31)
-                pts_31 = 0.0  # Quesito informativo/textual, pontuação fixa em 0.0
+                pts_calc_31 = 0.0  # Quesito informativo/textual
 
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar = st.session_state.get(chave_coment_31, d31.get("comentario", ""))
+                # Resgata a lista atual do histórico direto dos dados carregados
+                coments_atuais_31 = res_data.get("3.1", {}).get("comentarios", [])
 
-                # 2. Salva no banco/backend
-                save_resp("3.1", val_str_31, pts_31, link_31, comentario_para_salvar)
+                save_resp(
+                    qid="3.1",
+                    valor=val_str_31,
+                    pontos=pts_calc_31,
+                    link=link_31,
+                    comentarios=coments_atuais_31
+                )
 
-                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
-                res_data["3.1"] = {
-                    "valor": val_str_31,
-                    "pontos": pts_31,
-                    "link": link_31,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "3.1" not in res_data:
+                    res_data["3.1"] = {}
+                res_data["3.1"]["pontos"] = pts_calc_31
+                res_data["3.1"]["valor"] = val_str_31
+                res_data["3.1"]["link"] = link_31
 
-                # 4. Validação/Processamento de links para exibição de modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_31 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d31.get("link", "") or "")]
+                st.toast("Quesito 3.1 salvo com sucesso!", icon="✅")
 
-                if link_31 != d31.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_3_1_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = True
+                # Validação/Aviso complementar de links
+                links_encontrados_31 = re.findall(r'https?://[^\s]+', link_31 or "")
+                if links_encontrados_31 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("3.1", links_encontrados_31)
 
-                st.toast("Resposta e comentário do Quesito 3.1 salvos com sucesso!", icon="✅")
-
-                # 5. FORÇA O RECARREGAMENTO DA TELA
-                st.rerun()
-
-            # Exibição da pontuação dentro do expander
+            # Exibição dinamicamente atualizada da pontuação (Informativo)
             st.markdown(
                 "<span style='color:#28a745; font-weight:bold;'>"
                 "📊 Impacto de Pontuação no Quesito 3.1: 0.0 pontos (Informativo)</span>",
                 unsafe_allow_html=True
             )
-
-    # GATILHO DO MODAL 3.1 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_3_1_{ano_sel}", False):
-        modal_aviso_link("3.1", st.session_state.get(f"links_pendentes_3_1_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_3_1_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 3.1.1 • DATA DE TREINAMENTO DINÂMICA
