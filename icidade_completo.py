@@ -2891,13 +2891,12 @@ def mostrar_formulario_cidade():
             }
 
             # Estado inicial / persistente
-            d511 = res_data.get("5.1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            d511 = res_data.get("5.1.1") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_511 = d511.get("valor", "Selecione...")
 
             # Chaves fixas por componente e ano
             chave_radio_511 = f"r_511_{ano_sel}"
             chave_link_511 = f"l_511_txt_{ano_sel}"
-            chave_coment_511 = f"coment_5.1.1_{ano_sel}"  # Chave padrão da função bloco_comentarios
 
             col_r511, col_j511 = st.columns([1, 1])
             with col_r511:
@@ -2925,56 +2924,51 @@ def mostrar_formulario_cidade():
                 if links_511_visuais:
                     placeholder_links_511.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_511_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("5.1.1", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("5.1.1", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 5.1.1", key=f"btn_salvar_5_1_1_{ano_sel}", type="primary"):
-                # Cálculo da pontuação com base na seleção realizada
-                pts_511 = opcoes_511.get(val_radio_511, 0.0)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # 1. Captura o comentário do session_state
-                comentario_para_salvar = st.session_state.get(chave_coment_511, d511.get("comentario", ""))
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 5.1.1
+            if st.button("💾 Salvar Quesito 5.1.1", key=f"btn_salvar_q511_{ano_sel}", type="primary"):
+                pts_calc_511 = opcoes_511.get(val_radio_511, 0.0)
 
-                # 2. Persiste no banco de dados / backend
-                save_resp("5.1.1", val_radio_511, pts_511, link_511, comentario_para_salvar)
+                # Resgata a lista atual do histórico direto dos dados carregados
+                coments_atuais_511 = res_data.get("5.1.1", {}).get("comentarios", [])
 
-                # 3. Atualiza o dicionário local res_data
-                res_data["5.1.1"] = {
-                    "valor": val_radio_511,
-                    "pontos": pts_511,
-                    "link": link_511,
-                    "comentario": comentario_para_salvar
-                }
+                save_resp(
+                    qid="5.1.1",
+                    valor=val_radio_511,
+                    pontos=pts_calc_511,
+                    link=link_511,
+                    comentarios=coments_atuais_511
+                )
 
-                # 4. Processamento e validação de links para disparo do modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_511 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d511.get("link", "") or "")]
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "5.1.1" not in res_data:
+                    res_data["5.1.1"] = {}
+                res_data["5.1.1"]["pontos"] = pts_calc_511
+                res_data["5.1.1"]["valor"] = val_radio_511
+                res_data["5.1.1"]["link"] = link_511
 
-                if link_511 != d511.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_5_1_1_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_5_1_1_{ano_sel}"] = True
+                st.toast("Quesito 5.1.1 salvo com sucesso!", icon="✅")
 
-                st.toast("Resposta e comentário do Quesito 5.1.1 salvos com sucesso!", icon="✅")
+                # Validação/Aviso complementar de links
+                links_encontrados_511 = re.findall(r'https?://[^\s]+', link_511 or "")
+                if links_encontrados_511 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("5.1.1", links_encontrados_511)
 
-                # 5. Força a atualização da tela
-                st.rerun()
+            # Exibição dinamicamente atualizada da pontuação
+            d511_atualizado = res_data.get("5.1.1", {})
+            pts_atuais_511 = d511_atualizado.get("pontos", 0.0)
+            val_atual_511 = d511_atualizado.get("valor", "Selecione...")
 
-            # Exibição do impacto da pontuação
-            pts_atuais_511 = d511.get("pontos", 0.0)
-            cor_txt_511 = "#28a745" if pts_atuais_511 == 0.0 and v_salvo_511 != "Selecione..." else ("#dc3545" if pts_atuais_511 < 0.0 else "#6c757d")
+            cor_txt_511 = "#28a745" if pts_atuais_511 == 0.0 and val_atual_511 != "Selecione..." else ("#dc3545" if pts_atuais_511 < 0.0 else "#6c757d")
             st.markdown(
                 f"<span style='color:{cor_txt_511}; font-weight:bold;'>"
                 f"📊 Impacto de Pontuação no Quesito 5.1.1: {pts_atuais_511:.1f} pontos</span>",
                 unsafe_allow_html=True
             )
-
-    # GATILHO DO MODAL 5.1.1 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_5_1_1_{ano_sel}", False):
-        modal_aviso_link("5.1.1", st.session_state.get(f"links_pendentes_5_1_1_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_5_1_1_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 5.1.2 • ÁREAS DE RISCO COM RISCO DE INVASÃO
@@ -2993,13 +2987,12 @@ def mostrar_formulario_cidade():
             }
 
             # Estado inicial / persistente
-            d512 = res_data.get("5.1.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            d512 = res_data.get("5.1.2") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_512 = d512.get("valor", "Selecione...")
 
             # Chaves fixas por componente e ano
             chave_radio_512 = f"r_512_{ano_sel}"
             chave_link_512 = f"l_512_txt_{ano_sel}"
-            chave_coment_512 = f"coment_5.1.2_{ano_sel}"  # Chave padrão da função bloco_comentarios
 
             col_r512, col_j512 = st.columns([1, 1])
             with col_r512:
@@ -3027,53 +3020,46 @@ def mostrar_formulario_cidade():
                 if links_512_visuais:
                     placeholder_links_512.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_512_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("5.1.2", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("5.1.2", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 5.1.2", key=f"btn_salvar_5_1_2_{ano_sel}", type="primary"):
-                pts_512 = 0.0  # Quesito estritamente informativo
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # 1. Captura o comentário do session_state
-                comentario_para_salvar = st.session_state.get(chave_coment_512, d512.get("comentario", ""))
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 5.1.2
+            if st.button("💾 Salvar Quesito 5.1.2", key=f"btn_salvar_q512_{ano_sel}", type="primary"):
+                pts_calc_512 = 0.0  # Quesito estritamente informativo
 
-                # 2. Persiste no banco de dados / backend
-                save_resp("5.1.2", val_radio_512, pts_512, link_512, comentario_para_salvar)
+                # Resgata a lista atual do histórico direto dos dados carregados
+                coments_atuais_512 = res_data.get("5.1.2", {}).get("comentarios", [])
 
-                # 3. Atualiza o dicionário local res_data
-                res_data["5.1.2"] = {
-                    "valor": val_radio_512,
-                    "pontos": pts_512,
-                    "link": link_512,
-                    "comentario": comentario_para_salvar
-                }
+                save_resp(
+                    qid="5.1.2",
+                    valor=val_radio_512,
+                    pontos=pts_calc_512,
+                    link=link_512,
+                    comentarios=coments_atuais_512
+                )
 
-                # 4. Processamento e validação de links para disparo do modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_512 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d512.get("link", "") or "")]
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "5.1.2" not in res_data:
+                    res_data["5.1.2"] = {}
+                res_data["5.1.2"]["pontos"] = pts_calc_512
+                res_data["5.1.2"]["valor"] = val_radio_512
+                res_data["5.1.2"]["link"] = link_512
 
-                if link_512 != d512.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_5_1_2_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_5_1_2_{ano_sel}"] = True
+                st.toast("Quesito 5.1.2 salvo com sucesso!", icon="✅")
 
-                st.toast("Resposta e comentário do Quesito 5.1.2 salvos com sucesso!", icon="✅")
+                # Validação/Aviso complementar de links
+                links_encontrados_512 = re.findall(r'https?://[^\s]+', link_512 or "")
+                if links_encontrados_512 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("5.1.2", links_encontrados_512)
 
-                # 5. Força a atualização da tela
-                st.rerun()
-
-            # Exibição da pontuação informativa
+            # Exibição de pontuação informativa
             st.markdown(
                 "<span style='color:#28a745; font-weight:bold;'>"
                 "📊 Impacto de Pontuação no Quesito 5.1.2: 0.0 pontos (Informativo)</span>",
                 unsafe_allow_html=True
             )
-
-    # GATILHO DO MODAL 5.1.2 (Fora do container principal)
-    if st.session_state.get(f"gatilho_modal_5_1_2_{ano_sel}", False):
-        modal_aviso_link("5.1.2", st.session_state.get(f"links_pendentes_5_1_2_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_5_1_2_{ano_sel}"] = False
         
   # =============================================================================
     # QUESITO 5.1.2.1 • MECANISMOS CONTRA NOVAS OCUPAÇÕES
