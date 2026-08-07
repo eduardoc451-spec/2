@@ -181,6 +181,8 @@ def load_respostas(ano: int) -> dict:
 
 def save_resp(qid, valor, pontos, link, comentarios=None):
     """Salva/Atualiza a resposta no Neon gravando a lista de comentários via Json."""
+    from psycopg2.extras import Json  # Garante a importação do adapter do PostgreSQL
+
     ano_sel = st.session_state.get("ano_referencia_global")
     if not ano_sel:
         st.warning("Nenhum ano de referência selecionado!")
@@ -213,7 +215,7 @@ def save_resp(qid, valor, pontos, link, comentarios=None):
                     str(valor), 
                     float(pontos), 
                     str(link), 
-                    Json(comentarios), # Salva como JSONB nativo no Neon
+                    Json(comentarios), # Grava como JSONB nativo no Neon
                     timestamp_atual
                 ))
             conn.commit()
