@@ -1323,7 +1323,7 @@ def mostrar_formulario_cidade():
                 )
                 placeholder_links_10 = st.empty()
                 
-                # Extrai os links digitados usando REGEX_PURE_URL
+                # Extração de URLs ativas
                 raw_links = re.findall(REGEX_PURE_URL, link_10 or "")
                 links_10_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links]
                 
@@ -1342,6 +1342,7 @@ def mostrar_formulario_cidade():
                 # Resgata a lista atual dos comentários para NÃO zerar o chat
                 coments_atuais = res_data.get("1.0", {}).get("comentarios", [])
                 
+                # Grava no banco Neon
                 save_resp(
                     qid="1.0",
                     valor=val_radio_10,
@@ -1350,13 +1351,18 @@ def mostrar_formulario_cidade():
                     comentarios=coments_atuais
                 )
                 
-                st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
-                
-                # Gatilho do Modal de Links se houver links presentes e a função do modal existir
-                if links_10_visuais and "modal_aviso_link" in globals():
-                    modal_aviso_link("1.0", links_10_visuais)
+                # Seta as variáveis de estado do Modal se houver links
+                if links_10_visuais:
+                    st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
+                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_10_visuais
 
+                st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
                 st.rerun()
+
+    # GATILHO DO MODAL 1.0 (Fora do container principal)
+    if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
+        modal_aviso_link("1.0", st.session_state.get(f"links_pendentes_1_0_{ano_sel}", []))
+        st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = False
 
     # =============================================================================
     # QUESITO 1.1 • INSTRUMENTO NORMATIVO COMPDEC (NOVO PADRÃO 1.0)
