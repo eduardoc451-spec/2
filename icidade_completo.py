@@ -9,7 +9,7 @@ from io import BytesIO
 
 import psycopg2
 from psycopg2 import pool
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, Json  # <--- 'Json' ADICIONADO AQUI!
 import streamlit as st
 
 # Silencia alertas e logs não críticos no console/interface
