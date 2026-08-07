@@ -1584,12 +1584,15 @@ def mostrar_formulario_cidade():
     # QUESITO 1.4 • ATUAÇÃO SISTÊMICA DA COMPDEC
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_1_4_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 1.4 - Atuação Sistêmica e Articulação da Defesa Civil", expanded=True):
+        with st.expander("📌 Quesito 1.4 - Atuação Sistêmica e Articulação da Defesa Civil", expanded=True):
             st.subheader("1.4 • Articulação Sistêmica (PNPDEC)")
-            st.write("**Os órgãos e entidades da administração pública municipal atuam de forma sistêmica, articulados com a COMPDEC, nas ações de prevenção, mitigação, preparação, resposta e recuperação de acordo com a Política Nacional de Proteção e Defesa Civil - PNPDEC?**")
+            st.write(
+                "**Os órgãos e entidades da administração pública municipal atuam de forma sistêmica, "
+                "articulados com a COMPDEC, nas ações de prevenção, mitigação, preparação, resposta e "
+                "recuperação de acordo com a Política Nacional de Proteção e Defesa Civil - PNPDEC?**"
+            )
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.4' para registrar.*")
-            
-            # Mapeamento oficial de opções e pontuações do quesito 1.4
+
             opcoes_14 = {
                 "Selecione...": 0.0,
                 "Sim, inclusive com a participação de entidades privadas e da comunidade (50 pts)": 50.0,
@@ -1598,11 +1601,11 @@ def mostrar_formulario_cidade():
                 "Sim, apenas com representantes da administração municipal (10 pts)": 10.0,
                 "Não atuam de forma sistêmica (00 pts)": 0.0
             }
-            
-            # Estado inicial / persistente (buscando 'comentarios' no plural como lista)
+
+            # Estado inicial / persistente
             d14 = res_data.get("1.4") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_14 = d14.get("valor", "Selecione...")
-            
+
             # Chaves fixas por componente e ano
             chave_radio_14 = f"r_14_{ano_sel}"
             chave_link_14 = f"l_14_txt_{ano_sel}"
@@ -1611,7 +1614,7 @@ def mostrar_formulario_cidade():
             with c14_1:
                 lista_opcoes_14 = list(opcoes_14.keys())
                 idx_14 = lista_opcoes_14.index(v_salvo_14) if v_salvo_14 in lista_opcoes_14 else 0
-                
+
                 val_radio_14 = st.radio(
                     "Nível de atuação:",
                     options=lista_opcoes_14,
@@ -1619,106 +1622,94 @@ def mostrar_formulario_cidade():
                     key=chave_radio_14,
                     label_visibility="collapsed"
                 )
-                
+
             with c14_2:
                 link_14 = st.text_area(
-                    "Link de Evidência / Relatórios / Atas (1.4):", 
-                    value=d14.get("link", ""), 
-                    key=chave_link_14, 
+                    "Link de Evidência / Relatórios / Atas (1.4):",
+                    value=d14.get("link", ""),
+                    key=chave_link_14,
                     height=155
                 )
                 placeholder_links_14 = st.empty()
-                
-                # Extração correta de links
-                raw_links_14 = re.findall(REGEX_PURE_URL, link_14 or "")
-                links_14_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links_14]
-                
+                links_14_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_14 or "")]
                 if links_14_visuais:
                     placeholder_links_14.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_14_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("1.4", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("1.4", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 1.4", key=f"btn_salvar_1_4_{ano_sel}", type="primary"):
-                pts_14 = opcoes_14.get(val_radio_14, 0.0)
-                
-                # Resgata a lista atual do histórico de comentários do banco/res_data para NÃO apagar/sobrescrever o chat!
-                coment_lista_14 = res_data.get("1.4", {}).get("comentarios", [])
-                if not isinstance(coment_lista_14, list):
-                    coment_lista_14 = d14.get("comentarios", []) if isinstance(d14.get("comentarios"), list) else []
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # 2. Salva no banco/backend mantendo a estrutura JSON dos comentários intacta
-                save_resp("1.4", val_radio_14, pts_14, link_14, coment_lista_14)
-                
-                # 3. Atualiza o dicionário local em memória para refletir na UI imediatamente
-                res_data["1.4"] = {
-                    "valor": val_radio_14, 
-                    "pontos": pts_14, 
-                    "link": link_14, 
-                    "comentarios": coment_lista_14
-                }
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 1.4
+            if st.button("💾 Salvar Quesito 1.4", key=f"btn_salvar_q14_{ano_sel}", type="primary"):
+                pts_calc_14 = opcoes_14.get(val_radio_14, 0.0)
 
-                # 4. Processamento de links para exibição do modal
-                raw_antigos = re.findall(REGEX_PURE_URL, d14.get("link", "") or "")
-                links_antigos = [u[0] if isinstance(u, tuple) else u for u in raw_antigos]
+                # Resgata a lista atual do histórico direto dos dados carregados para NÃO sobrescrever com vazio
+                coments_atuais_14 = res_data.get("1.4", {}).get("comentarios", [])
 
-                if link_14 != d14.get("link", "") and links_14_visuais and links_14_visuais != links_antigos:
-                    st.session_state[f"links_pendentes_1_4_{ano_sel}"] = links_14_visuais
-                    st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = True
+                save_resp(
+                    qid="1.4",
+                    valor=val_radio_14,
+                    pontos=pts_calc_14,
+                    link=link_14,
+                    comentarios=coments_atuais_14
+                )
 
-                st.toast("Resposta do Quesito 1.4 salva com sucesso!", icon="✅")
-                
-                # 5. Força o recarregamento da tela para exibir os dados salvos atualizados
-                st.rerun()
+                # ATUALIZA A MEMÓRIA LOCAL: Garante que o painel abaixo leia os novos pontos na hora
+                if "1.4" not in res_data:
+                    res_data["1.4"] = {}
+                res_data["1.4"]["pontos"] = pts_calc_14
+                res_data["1.4"]["valor"] = val_radio_14
+                res_data["1.4"]["link"] = link_14
 
-            # Exibição da pontuação dentro do expander
-            pts_atuais_14 = d14.get("pontos", 0.0)
-            cor_txt_14 = "#28a745" if pts_atuais_14 >= 20.0 else ("#dc3545" if v_salvo_14 != "Selecione..." else "#6c757d")
+                st.toast("Quesito 1.4 salvo com sucesso!", icon="✅")
+
+                # Validação/Aviso complementar de links (caso implementado no modal)
+                links_encontrados_14 = re.findall(r'https?://[^\s]+', link_14 or "")
+                if links_encontrados_14 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("1.4", links_encontrados_14)
+
+            # Exibição dinamicamente atualizada da pontuação
+            d14_atualizado = res_data.get("1.4", {})
+            pts_atuais_14 = d14_atualizado.get("pontos", 0.0)
+            val_atual_14 = d14_atualizado.get("valor", "Selecione...")
+
+            cor_txt_14 = "#28a745" if pts_atuais_14 >= 20.0 else ("#dc3545" if val_atual_14 != "Selecione..." else "#6c757d")
             st.markdown(
                 f"<span style='color:{cor_txt_14}; font-weight:bold;'>"
                 f"📊 Impacto de Pontuação no Quesito 1.4: {pts_atuais_14:.1f} pontos</span>",
                 unsafe_allow_html=True
             )
 
-    # GATILHO DO MODAL 1.4 (Mantido idêntico)
-    if st.session_state.get(f"gatilho_modal_1_4_{ano_sel}", False):
-        modal_aviso_link("1.4", st.session_state.get(f"links_pendentes_1_4_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_1_4_{ano_sel}"] = False
-
     # =============================================================================
     # QUESITO 1.5 • MOTIVO DA NÃO INSTITUIÇÃO DA COMPDEC
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_1_5_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 1.5 - Motivo da Não Instituição da COMPDEC", expanded=True):
+        with st.expander("📌 Quesito 1.5 - Motivo da Não Instituição da COMPDEC", expanded=True):
             st.subheader("1.5 • Justificativa de Não Instituição")
             st.write("**Motivo da COMPDEC não ter sido instituída:**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 1.5' para registrar.*")
-            
-            # Mapeamento oficial de opções e pontuações do quesito 1.5
+
             opcoes_15 = {
                 "Selecione...": 0.0,
-                "Instrumento normativo em elaboração": 0.0, 
-                "Falta de estrutura": 0.0, 
+                "Instrumento normativo em elaboração": 0.0,
+                "Falta de estrutura": 0.0,
                 "Outros": 0.0
             }
-            
+
             # Estado inicial / persistente
-            d15 = res_data.get("1.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
+            d15 = res_data.get("1.5") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
             v_salvo_15 = d15.get("valor", "Selecione...")
-            
+
             # Chaves fixas por componente e ano
             chave_radio_15 = f"r_15_{ano_sel}"
             chave_link_15 = f"l_15_txt_{ano_sel}"
-            chave_coment_15 = f"coment_1.5_{ano_sel}"
 
             c15_1, c15_2 = st.columns([1, 1])
             with c15_1:
                 lista_opcoes_15 = list(opcoes_15.keys())
                 idx_15 = lista_opcoes_15.index(v_salvo_15) if v_salvo_15 in lista_opcoes_15 else 0
-                
+
                 val_radio_15 = st.radio(
                     "Selecione o motivo:",
                     options=lista_opcoes_15,
@@ -1726,12 +1717,12 @@ def mostrar_formulario_cidade():
                     key=chave_radio_15,
                     label_visibility="collapsed"
                 )
-                
+
             with c15_2:
                 link_15 = st.text_area(
-                    "Link de Evidência / Ofício Justificativo (1.5):", 
-                    value=d15.get("link", ""), 
-                    key=chave_link_15, 
+                    "Link de Evidência / Ofício Justificativo (1.5):",
+                    value=d15.get("link", ""),
+                    key=chave_link_15,
                     height=115
                 )
                 placeholder_links_15 = st.empty()
@@ -1739,56 +1730,50 @@ def mostrar_formulario_cidade():
                 if links_15_visuais:
                     placeholder_links_15.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_15_visuais]))
 
-            # Renderiza o bloco de comentários dentro do expander
-            bloco_comentarios("1.5", res_data, ano_sel)
+            # Renderiza o bloco de comentários
+            bloco_comentarios("1.5", res_data)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
-            if st.button("💾 Salvar Quesito 1.5", key=f"btn_salvar_1_5_{ano_sel}", type="primary"):
-                pts_15 = opcoes_15.get(val_radio_15, 0.0)
-                
-                # 1. Captura o comentário atual do session_state antes do rerun
-                comentario_para_salvar = st.session_state.get(chave_coment_15, d15.get("comentario", ""))
-                
-                # 2. Salva no banco/backend
-                save_resp("1.5", val_radio_15, pts_15, link_15, comentario_para_salvar)
-                
-                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
-                res_data["1.5"] = {
-                    "valor": val_radio_15, 
-                    "pontos": pts_15, 
-                    "link": link_15, 
-                    "comentario": comentario_para_salvar
-                }
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # 4. Validação/Processamento de links para exibição de modal
-                links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_15 or "")]
-                links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d15.get("link", "") or "")]
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 1.5
+            if st.button("💾 Salvar Quesito 1.5", key=f"btn_salvar_q15_{ano_sel}", type="primary"):
+                pts_calc_15 = opcoes_15.get(val_radio_15, 0.0)
 
-                if link_15 != d15.get("link", "") and links_atuais and links_atuais != links_antigos:
-                    st.session_state[f"links_pendentes_1_5_{ano_sel}"] = links_atuais
-                    st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = True
+                # Resgata a lista atual do histórico direto dos dados carregados para NÃO sobrescrever com vazio
+                coments_atuais_15 = res_data.get("1.5", {}).get("comentarios", [])
 
-                st.toast("Resposta e comentário do Quesito 1.5 salvos com sucesso!", icon="✅")
-                
-                # 5. FORÇA O RECARREGAMENTO DA TELA
-                st.rerun()
+                save_resp(
+                    qid="1.5",
+                    valor=val_radio_15,
+                    pontos=pts_calc_15,
+                    link=link_15,
+                    comentarios=coments_atuais_15
+                )
 
-            # Exibição da pontuação dentro do expander
-            pts_atuais_15 = d15.get("pontos", 0.0)
-            cor_txt_15 = "#6c757d" if v_salvo_15 == "Selecione..." else "#28a745"
+                # ATUALIZA A MEMÓRIA LOCAL: Garante que o painel abaixo leia a memória atualizada na hora
+                if "1.5" not in res_data:
+                    res_data["1.5"] = {}
+                res_data["1.5"]["pontos"] = pts_calc_15
+                res_data["1.5"]["valor"] = val_radio_15
+                res_data["1.5"]["link"] = link_15
+
+                st.toast("Quesito 1.5 salvo com sucesso!", icon="✅")
+
+                # Validação/Aviso complementar de links (caso implementado no modal)
+                links_encontrados_15 = re.findall(r'https?://[^\s]+', link_15 or "")
+                if links_encontrados_15 and 'modal_aviso_link' in globals():
+                    modal_aviso_link("1.5", links_encontrados_15)
+
+            # Exibição dinamicamente atualizada da pontuação (Informativo)
+            d15_atualizado = res_data.get("1.5", {})
+            val_atual_15 = d15_atualizado.get("valor", "Selecione...")
+
+            cor_txt_15 = "#6c757d" if val_atual_15 == "Selecione..." else "#28a745"
             st.markdown(
                 f"<span style='color:{cor_txt_15}; font-weight:bold;'>"
-                f"📊 Impacto de Pontuação no Quesito 1.5: {pts_atuais_15:.1f} pontos (Informativo)</span>",
+                f"📊 Impacto de Pontuação no Quesito 1.5: 0.0 pontos (Informativo)</span>",
                 unsafe_allow_html=True
             )
-
-    # GATILHO DO MODAL 1.5
-    if st.session_state.get(f"gatilho_modal_1_5_{ano_sel}", False):
-        modal_aviso_link("1.5", st.session_state.get(f"links_pendentes_1_5_{ano_sel}", []))
-        st.session_state[f"gatilho_modal_1_5_{ano_sel}"] = False
-        
     # =============================================================================
     # QUESITO 2.0 • TREINAMENTO E CAPACITAÇÃO EM DEFESA CIVIL
     # =============================================================================
