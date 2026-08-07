@@ -1294,12 +1294,13 @@ def mostrar_formulario_cidade():
             }
 
             # Estado inicial / persistente
-            d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentarios": []}
+            d10 = res_data.get("1.0") or {"valor": "Selecione...", "pontos": 0.0, "link": "", "comentario": ""}
             v_salvo_10 = d10.get("valor", "Selecione...")
 
             # Chaves fixas por componente e ano
             chave_radio_10 = f"r_10_{ano_sel}"
             chave_link_10 = f"l_10_txt_{ano_sel}"
+            chave_coment_10 = f"coment_1.0_{ano_sel}"
 
             c10_1, c10_2 = st.columns([1, 1])
             with c10_1:
@@ -1322,42 +1323,54 @@ def mostrar_formulario_cidade():
                     height=100
                 )
                 placeholder_links_10 = st.empty()
-                
-                # Extração de URLs ativas
-                raw_links = re.findall(REGEX_PURE_URL, link_10 or "")
-                links_10_visuais = [u[0] if isinstance(u, tuple) else u for u in raw_links]
-                
+                links_10_visuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
                 if links_10_visuais:
                     placeholder_links_10.markdown("**Links Ativos:** " + " | ".join([f"🔗 [{u}]({u})" for u in links_10_visuais]))
 
-            # Renderiza o bloco de comentários
-            bloco_comentarios("1.0", res_data)
+            # Renderiza o bloco de comentários dentro do expander
+            bloco_comentarios("1.0", res_data, ano_sel)
 
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 1.0
-            if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_q10_{ano_sel}", type="primary"):
-                pts_calc_10 = opcoes_10.get(val_radio_10, 0.0)
+            # -----------------------------------------------------------------
+            # BOTÃO DE SALVAMENTO MANUAL QUESITO 1.0
+            # -----------------------------------------------------------------
+            if st.button("💾 Salvar Quesito 1.0", key=f"btn_salvar_1_0_{ano_sel}", type="primary"):
+                pts_10 = opcoes_10.get(val_radio_10, 0.0)
                 
-                # Resgata a lista atual dos comentários para NÃO zerar o chat
-                coments_atuais = res_data.get("1.0", {}).get("comentarios", [])
+                # 1. Captura o comentário atual do session_state antes do rerun
+                comentario_para_salvar_10 = st.session_state.get(chave_coment_10, d10.get("comentario", ""))
                 
-                # Grava no banco Neon
-                save_resp(
-                    qid="1.0",
-                    valor=val_radio_10,
-                    pontos=pts_calc_10,
-                    link=link_10,
-                    comentarios=coments_atuais
-                )
+                # 2. Salva no banco/backend
+                save_resp("1.0", val_radio_10, pts_10, link_10, comentario_para_salvar_10)
                 
-                # Seta as variáveis de estado do Modal se houver links
-                if links_10_visuais:
+                # 3. Atualiza o dicionário local para refletir na UI antes do rerun
+                res_data["1.0"] = {
+                    "valor": val_radio_10, 
+                    "pontos": pts_10, 
+                    "link": link_10, 
+                    "comentario": comentario_para_salvar_10
+                }
+
+                # 4. Validação/Processamento de links para exibição de modal (IDÊNTICO AO 1.4)
+                links_atuais_10 = [u[0] for u in re.findall(REGEX_PURE_URL, link_10 or "")]
+                links_antigos_10 = [u[0] for u in re.findall(REGEX_PURE_URL, d10.get("link", "") or "")]
+
+                if link_10 != d10.get("link", "") and links_atuais_10 and links_atuais_10 != links_antigos_10:
+                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_atuais_10
                     st.session_state[f"gatilho_modal_1_0_{ano_sel}"] = True
-                    st.session_state[f"links_pendentes_1_0_{ano_sel}"] = links_10_visuais
 
-                st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
+                st.toast("Resposta e comentário do Quesito 1.0 salvos com sucesso!", icon="✅")
+                
+                # 5. FORÇA O RECARREGAMENTO DA TELA
                 st.rerun()
+
+            # Exibição da pontuação dentro do expander
+            pts_atuais_10 = d10.get("pontos", 0.0)
+            cor_txt_10 = "#28a745" if pts_atuais_10 >= 20.0 else ("#dc3545" if v_salvo_10 != "Selecione..." else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_10}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 1.0: {pts_atuais_10:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
     # GATILHO DO MODAL 1.0 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_1_0_{ano_sel}", False):
