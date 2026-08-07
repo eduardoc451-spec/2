@@ -4384,7 +4384,7 @@ def mostrar_formulario_cidade():
     # QUESITO 8.1 • CANAIS DE ATENDIMENTO DISPONÍVEIS
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_8_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 8.1 - Canais de Comunicação Disponíveis", expanded=True):
+        with st.expander("📌 Quesito 8.1 - Canais de Comunicação Disponíveis", expanded=True):
             st.subheader("8.1 • Detalhamento dos Canais")
             st.write("**Assinale os canais que o município possui:**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.1' para registrar.*")
@@ -4429,11 +4429,11 @@ def mostrar_formulario_cidade():
             # Renderiza o bloco de comentários
             bloco_comentarios("8.1", res_data, ano_sel)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 8.1
             if st.button("💾 Salvar Quesito 8.1", key=f"btn_salvar_8_1_{ano_sel}", type="primary"):
-                # 1. Coleta os checkboxes marcados no session_state
+                # Coleta os checkboxes marcados no session_state
                 sel_81 = []
                 for c in canais:
                     c_key = c.replace(" ", "_").replace("(", "").replace(")", "").replace("-", "_").lower()
@@ -4441,21 +4441,26 @@ def mostrar_formulario_cidade():
                         sel_81.append(c)
 
                 val_str_81 = str(sel_81)
-                pts_81 = 0.0  # Quesito informativo
+                pts_calc_81 = 0.0  # Quesito Informativo
                 comentario_para_salvar = st.session_state.get(chave_coment_81, d81.get("comentario", ""))
 
-                # 2. Persiste no backend / banco de dados
-                save_resp("8.1", val_str_81, pts_81, link_81, comentario_para_salvar)
+                save_resp(
+                    qid="8.1",
+                    valor=val_str_81,
+                    pontos=pts_calc_81,
+                    link=link_81,
+                    comentarios=comentario_para_salvar
+                )
 
-                # 3. Atualiza a estrutura no dicionário local res_data
-                res_data["8.1"] = {
-                    "valor": val_str_81,
-                    "pontos": pts_81,
-                    "link": link_81,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "8.1" not in res_data:
+                    res_data["8.1"] = {}
+                res_data["8.1"]["pontos"] = pts_calc_81
+                res_data["8.1"]["valor"] = val_str_81
+                res_data["8.1"]["link"] = link_81
+                res_data["8.1"]["comentario"] = comentario_para_salvar
 
-                # 4. Validação e verificação de alteração de links para disparo do modal
+                # Validação e verificação de alteração de links para disparo do modal
                 links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_81 or "")]
                 links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d81.get("link", "") or "")]
 
@@ -4464,8 +4469,6 @@ def mostrar_formulario_cidade():
                     st.session_state[f"gatilho_modal_8_1_{ano_sel}"] = True
 
                 st.toast("Quesito 8.1 salvo com sucesso!", icon="✅")
-
-                # 5. Força a atualização dos componentes na tela
                 st.rerun()
 
             # Exibição do status visual do impacto de pontuação
@@ -4480,7 +4483,7 @@ def mostrar_formulario_cidade():
     # QUESITO 8.1.1 • UTILIZAÇÃO DO NÚMERO 199
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_8_1_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 8.1.1 - Utilização do Número Nacional 199", expanded=True):
+        with st.expander("📌 Quesito 8.1.1 - Utilização do Número Nacional 199", expanded=True):
             st.subheader("8.1.1 • Linha Telefônica 199")
             st.write("**Sobre o número de telefone de emergência, utiliza o número 199 da Defesa Civil?**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.1.1' para registrar.*")
@@ -4528,27 +4531,31 @@ def mostrar_formulario_cidade():
             # Renderiza o bloco de comentários
             bloco_comentarios("8.1.1", res_data, ano_sel)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 8.1.1
             if st.button("💾 Salvar Quesito 8.1.1", key=f"btn_salvar_8_1_1_{ano_sel}", type="primary"):
-                # 1. Coleta os dados dos campos do Streamlit
                 val_selecionado_811 = st.session_state.get(chave_radio_811, v_salvo_811)
-                pts_811 = 0.0  # Quesito informativo
+                pts_calc_811 = 0.0  # Quesito Informativo
                 comentario_para_salvar = st.session_state.get(chave_coment_811, d811.get("comentario", ""))
 
-                # 2. Persiste no backend / banco de dados
-                save_resp("8.1.1", val_selecionado_811, pts_811, link_811, comentario_para_salvar)
+                save_resp(
+                    qid="8.1.1",
+                    valor=val_selecionado_811,
+                    pontos=pts_calc_811,
+                    link=link_811,
+                    comentarios=comentario_para_salvar
+                )
 
-                # 3. Atualiza a estrutura no dicionário local res_data
-                res_data["8.1.1"] = {
-                    "valor": val_selecionado_811,
-                    "pontos": pts_811,
-                    "link": link_811,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "8.1.1" not in res_data:
+                    res_data["8.1.1"] = {}
+                res_data["8.1.1"]["pontos"] = pts_calc_811
+                res_data["8.1.1"]["valor"] = val_selecionado_811
+                res_data["8.1.1"]["link"] = link_811
+                res_data["8.1.1"]["comentario"] = comentario_para_salvar
 
-                # 4. Validação e verificação de alteração de links para disparo do modal
+                # Validação e verificação de alteração de links para disparo do modal
                 links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_811 or "")]
                 links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d811.get("link", "") or "")]
 
@@ -4557,8 +4564,6 @@ def mostrar_formulario_cidade():
                     st.session_state[f"gatilho_modal_8_1_1_{ano_sel}"] = True
 
                 st.toast("Quesito 8.1.1 salvo com sucesso!", icon="✅")
-
-                # 5. Força a atualização dos componentes na tela
                 st.rerun()
 
             # Exibição do status visual do impacto de pontuação
@@ -4573,7 +4578,7 @@ def mostrar_formulario_cidade():
     # QUESITO 8.1.1.1 • DISPONIBILIDADE 24 HORAS DO 199
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_8_1_1_1_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 8.1.1.1 - Atendimento Continuado 24 Horas", expanded=True):
+        with st.expander("📌 Quesito 8.1.1.1 - Atendimento Continuado 24 Horas", expanded=True):
             st.subheader("8.1.1.1 • Regime de Operação (24h)")
             st.write("**O telefone 199 tem atendimento 24 horas por dia?**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.1.1.1' para registrar.*")
@@ -4623,27 +4628,31 @@ def mostrar_formulario_cidade():
             # Renderiza o bloco de comentários
             bloco_comentarios("8.1.1.1", res_data, ano_sel)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 8.1.1.1
             if st.button("💾 Salvar Quesito 8.1.1.1", key=f"btn_salvar_8_1_1_1_{ano_sel}", type="primary"):
-                # 1. Coleta os dados dos campos do Streamlit
                 val_selecionado_8111 = st.session_state.get(chave_radio_8111, v_salvo_8111)
-                pts_8111 = opcoes_8111.get(val_selecionado_8111, 0.0)
+                pts_calc_8111 = opcoes_8111.get(val_selecionado_8111, 0.0)
                 comentario_para_salvar = st.session_state.get(chave_coment_8111, d8111.get("comentario", ""))
 
-                # 2. Persiste no backend / banco de dados
-                save_resp("8.1.1.1", val_selecionado_8111, pts_8111, link_8111, comentario_para_salvar)
+                save_resp(
+                    qid="8.1.1.1",
+                    valor=val_selecionado_8111,
+                    pontos=pts_calc_8111,
+                    link=link_8111,
+                    comentarios=comentario_para_salvar
+                )
 
-                # 3. Atualiza a estrutura no dicionário local res_data
-                res_data["8.1.1.1"] = {
-                    "valor": val_selecionado_8111,
-                    "pontos": pts_8111,
-                    "link": link_8111,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "8.1.1.1" not in res_data:
+                    res_data["8.1.1.1"] = {}
+                res_data["8.1.1.1"]["pontos"] = pts_calc_8111
+                res_data["8.1.1.1"]["valor"] = val_selecionado_8111
+                res_data["8.1.1.1"]["link"] = link_8111
+                res_data["8.1.1.1"]["comentario"] = comentario_para_salvar
 
-                # 4. Validação e verificação de alteração de links para disparo do modal
+                # Validação e verificação de alteração de links para disparo do modal
                 links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_8111 or "")]
                 links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d8111.get("link", "") or "")]
 
@@ -4652,24 +4661,24 @@ def mostrar_formulario_cidade():
                     st.session_state[f"gatilho_modal_8_1_1_1_{ano_sel}"] = True
 
                 st.toast("Quesito 8.1.1.1 salvo com sucesso!", icon="✅")
-
-                # 5. Força a atualização dos componentes na tela
                 st.rerun()
 
             # Exibição do status visual do impacto de pontuação
-            pts_atuais_8111 = d8111.get("pontos", 0.0)
-            cor_txt_8111 = "#28a745" if pts_atuais_8111 == 20.0 else ("#dc3545" if v_salvo_8111 != "Selecione..." else "#6c757d")
+            pts_atuais_8111 = res_data.get("8.1.1.1", {}).get("pontos", 0.0)
+            val_atual_8111 = res_data.get("8.1.1.1", {}).get("valor", "Selecione...")
+            cor_txt_8111 = "#28a745" if pts_atuais_8111 == 20.0 else ("#dc3545" if val_atual_8111 != "Selecione..." and pts_atuais_8111 == 0.0 else "#6c757d")
             st.markdown(f"<span style='color:{cor_txt_8111}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.1.1.1: +{pts_atuais_8111:.1f} pontos</span>", unsafe_allow_html=True)
 
     # GATILHO DO MODAL 8.1.1.1 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_8_1_1_1_{ano_sel}", False):
         modal_aviso_link("8.1.1.1", st.session_state.get(f"links_pendentes_8_1_1_1_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_1_1_1_{ano_sel}"] = False
+
     # =============================================================================
     # QUESITO 8.2 • REGISTRO ELETRÔNICO DE OCORRÊNCIAS
     # =============================================================================
     with st.container(key=f"container_bloco_compdec_8_2_final_{ano_sel}", border=True):
-        with st.expander(f"📌 Quesito 8.2 - Registro Eletrônico de Ocorrências", expanded=True):
+        with st.expander("📌 Quesito 8.2 - Registro Eletrônico de Ocorrências", expanded=True):
             st.subheader("8.2 • Registro Eletrônico")
             st.write("**O Município registra as ocorrências de Defesa Civil de forma eletrônica?**")
             st.caption("ℹ *Preencha os campos abaixo e clique no botão 'Salvar Quesito 8.2' para registrar.*")
@@ -4719,27 +4728,31 @@ def mostrar_formulario_cidade():
             # Renderiza o bloco de comentários
             bloco_comentarios("8.2", res_data, ano_sel)
 
-            # -----------------------------------------------------------------
-            # BOTÃO DE SALVAMENTO MANUAL
-            # -----------------------------------------------------------------
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # BOTÃO DE SALVAMENTO PRINCIPAL DO QUESITO 8.2
             if st.button("💾 Salvar Quesito 8.2", key=f"btn_salvar_8_2_{ano_sel}", type="primary"):
-                # 1. Coleta os dados dos campos do Streamlit
                 val_selecionado_82 = st.session_state.get(chave_radio_82, v_salvo_82)
-                pts_82 = opcoes_82.get(val_selecionado_82, 0.0)
+                pts_calc_82 = opcoes_82.get(val_selecionado_82, 0.0)
                 comentario_para_salvar = st.session_state.get(chave_coment_82, d82.get("comentario", ""))
 
-                # 2. Persiste no backend / banco de dados
-                save_resp("8.2", val_selecionado_82, pts_82, link_82, comentario_para_salvar)
+                save_resp(
+                    qid="8.2",
+                    valor=val_selecionado_82,
+                    pontos=pts_calc_82,
+                    link=link_82,
+                    comentarios=comentario_para_salvar
+                )
 
-                # 3. Atualiza a estrutura no dicionário local res_data
-                res_data["8.2"] = {
-                    "valor": val_selecionado_82,
-                    "pontos": pts_82,
-                    "link": link_82,
-                    "comentario": comentario_para_salvar
-                }
+                # ATUALIZA A MEMÓRIA LOCAL: Atualização reativa em tempo real
+                if "8.2" not in res_data:
+                    res_data["8.2"] = {}
+                res_data["8.2"]["pontos"] = pts_calc_82
+                res_data["8.2"]["valor"] = val_selecionado_82
+                res_data["8.2"]["link"] = link_82
+                res_data["8.2"]["comentario"] = comentario_para_salvar
 
-                # 4. Validação e verificação de alteração de links para disparo do modal
+                # Validação e verificação de alteração de links para disparo do modal
                 links_atuais = [u[0] for u in re.findall(REGEX_PURE_URL, link_82 or "")]
                 links_antigos = [u[0] for u in re.findall(REGEX_PURE_URL, d82.get("link", "") or "")]
 
@@ -4748,20 +4761,23 @@ def mostrar_formulario_cidade():
                     st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = True
 
                 st.toast("Quesito 8.2 salvo com sucesso!", icon="✅")
-
-                # 5. Força a atualização dos componentes na tela
                 st.rerun()
 
             # Exibição do status visual do impacto de pontuação
-            pts_atuais_82 = d82.get("pontos", 0.0)
-            cor_txt_82 = "#28a745" if pts_atuais_82 == 50.0 else ("#dc3545" if v_salvo_82 != "Selecione..." else "#6c757d")
-            st.markdown(f"<span style='color:{cor_txt_82}; font-weight:bold;'>📊 Impacto de Pontuação no Quesito 8.2: +{pts_atuais_82:.1f} pontos</span>", unsafe_allow_html=True)
+            pts_atuais_82 = res_data.get("8.2", {}).get("pontos", 0.0)
+            val_atual_82 = res_data.get("8.2", {}).get("valor", "Selecione...")
+            cor_txt_82 = "#28a745" if pts_atuais_82 == 50.0 else ("#dc3545" if val_atual_82 != "Selecione..." and pts_atuais_82 == 0.0 else "#6c757d")
+            st.markdown(
+                f"<span style='color:{cor_txt_82}; font-weight:bold;'>"
+                f"📊 Impacto de Pontuação no Quesito 8.2: +{pts_atuais_82:.1f} pontos</span>",
+                unsafe_allow_html=True
+            )
 
     # GATILHO DO MODAL 8.2 (Fora do container principal)
     if st.session_state.get(f"gatilho_modal_8_2_{ano_sel}", False):
         modal_aviso_link("8.2", st.session_state.get(f"links_pendentes_8_2_{ano_sel}", []))
         st.session_state[f"gatilho_modal_8_2_{ano_sel}"] = False
-
+        
     # =============================================================================
     # QUESITO 9.0 • AVALIAÇÃO ESTRUTURAL DE ESCOLAS E SAÚDE
     # =============================================================================
