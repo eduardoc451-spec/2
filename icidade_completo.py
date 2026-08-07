@@ -1347,7 +1347,7 @@ def mostrar_formulario_cidade():
                 )
                 
                 st.toast("Quesito 1.0 salvo com sucesso!", icon="✅")
-                st.rerun()
+             
 
     # =============================================================================
     # QUESITO 1.1 • INSTRUMENTO NORMATIVO COMPDEC (NOVO PADRÃO 1.0)
